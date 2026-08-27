@@ -1,0 +1,123 @@
+name: Migrate frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-pages-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply GitHub Pages wiring only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          github_base = 'https://2qt9wrwbj9-web.github.io/jugest'
+          relay = 'https://jugest.netlify.app/api/relay'
+
+          # Tool frontend: keep the existing Netlify relay backend during the transition.
+          old = 'const RELAY_API="/api/relay",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";'
+          new = f'const RELAY_API="{relay}",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";'
+          for path in [root / 'index.html', root / 'public/index.html']:
+              text = path.read_text()
+              if old in text:
+                  text = text.replace(old, new, 1)
+              elif new not in text:
+                  raise SystemExit(f'Unexpected relay wiring in {path}')
+              path.write_text(text)
+
+          main_bm = (
+              "javascript:(()=>{var s=document.createElement('script');"
+              f"s.src=\"{github_base}/ana-launcher.js?v=4500\"+'&t='+Date.now();"
+              "s.onerror=()=>alert('取得ランチャーを読み込めなかったよ');"
+              "document.documentElement.appendChild(s)})()\n"
+          )
+          single_bm = (
+              "javascript:(()=>{var s=document.createElement('script');"
+              f"s.src='{github_base}/ana-single-day.js?v=1000&t='+Date.now();"
+              "s.onerror=()=>alert('単日取得スクリプトを読み込めなかったよ');"
+              "document.documentElement.appendChild(s)})()\n"
+          )
+          (root / 'BOOKMARKLET_v4500.txt').write_text(main_bm)
+          (root / 'BOOKMARKLET_SINGLE_DAY_v1000.txt').write_text(single_bm)
+          (root / 'public/BOOKMARKLET_SINGLE_DAY_v1000.txt').write_text(single_bm)
+
+          for path in [root / 'README_SINGLE_DAY_v1000.md', root / 'public/README_SINGLE_DAY_v1000.md']:
+              text = path.read_text().replace(
+                  'https://jugest.netlify.app/ana-single-day.js',
+                  f'{github_base}/ana-single-day.js'
+              )
+              path.write_text(text)
+
+          # Prepare the transitional Netlify relay source to accept the Pages origin.
+          # This source change is harmless until Netlify is redeployed, and will be
+          # required only until the relay moves to the VPS.
+          relay_file = root / 'netlify/functions/relay.mjs'
+          text = relay_file.read_text()
+          github_origin = "  'https://2qt9wrwbj9-web.github.io',\n"
+          if github_origin not in text:
+              marker = "  'https://jugest.netlify.app',\n"
+              if marker not in text:
+                  raise SystemExit('Relay origin marker not found')
+              text = text.replace(marker, marker + github_origin, 1)
+          relay_file.write_text(text)
+
+          # Future pushes deploy the exact same public/ directory that Netlify used.
+          pages = root / '.github/workflows/pages.yml'
+          pages.write_text('''name: Deploy GitHub Pages\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Configure Pages\n        uses: actions/configure-pages@v5\n        with:\n          enablement: true\n      - name: Upload static site\n        uses: actions/upload-pages-artifact@v3\n        with:\n          path: public\n      - name: Deploy to GitHub Pages\n        id: deployment\n        uses: actions/deploy-pages@v4\n''')
+          PY
+
+      - name: Verify semantic regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          npm test
+
+      - name: Commit migration wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html public/index.html BOOKMARKLET_v4500.txt BOOKMARKLET_SINGLE_DAY_v1000.txt public/BOOKMARKLET_SINGLE_DAY_v1000.txt README_SINGLE_DAY_v1000.md public/README_SINGLE_DAY_v1000.md netlify/functions/relay.mjs .github/workflows/pages.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "Wire v4.7.8 frontend for GitHub Pages"
+            git push
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
