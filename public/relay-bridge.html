@@ -1,7 +1,7 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Juggler Relay Bridge</title></head><body><script>
 (()=>{'use strict';
 const API='/api/relay';
-const ALLOWED=new Set(['https://ana-slo.com','https://www.ana-slo.com']);
+const ALLOWED=new Set(['https://ana-slo.com','https://www.ana-slo.com','https://2qt9wrwbj9-web.github.io']);
 const safePost=(target,origin,data)=>{try{target&&target.postMessage(data,origin)}catch{}};
 window.addEventListener('message',async e=>{
   if(!ALLOWED.has(e.origin)||!e.source)return;
