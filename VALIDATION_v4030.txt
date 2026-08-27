@@ -1,0 +1,57 @@
+Juggler tool v4.0.3 validation
+Date: 2026-08-24
+
+Scope
+- Add optional Launcher -> Netlify relay -> tool direct JSON transfer.
+- Preserve manual JSON export/import fallback.
+- Auto-add previously unknown shop names when received from Launcher.
+- Do not alter setting discrimination, reverse-difference inference, store-analysis, v4 prediction, calibration, or move logic.
+
+Automated tests
+Command: npm test
+Result: PASS
+
+Passed suites
+- launcher parser: PASS
+- launcher init: PASS
+- launcher adaptive policy: PASS
+- launcher JSON export: PASS
+- launcher relay chunking: PASS (180 days -> 4 chunks in test fixture; each <=45 days)
+- relay function round trip: PASS
+  createPair -> claimPair -> pairStatus -> send -> peek -> receive -> ack
+  invalid sender token rejected
+- app smoke: PASS
+  existing external JSON pipeline still works
+  relay import auto-adds unseen shop and saves imported day data
+
+Notes on Node test warnings
+- launcher init/policy tests intentionally run without a browser IndexedDB implementation, so the launcher logs "IndexedDB unavailable" in the test harness. The tests are designed for this and still pass; this is not a production error.
+
+Exact source-preservation checks against v4.0.2
+- reverse inference block (logBonus -> revcalc): BYTE IDENTICAL
+  SHA-256 prefix: 305c171c485bb09b
+- external setting judge + JSON normalization block (externalBonusJudgeQ -> extAgg): BYTE IDENTICAL
+  SHA-256 prefix: d9bdd0fc8db2324c
+- v4 decision-support layer (v4Clamp -> v4InvalidatePredictionCache): BYTE IDENTICAL
+  SHA-256 prefix: a4bb794ae41de0f0
+- Launcher page parser core: BYTE IDENTICAL
+  SHA-256 prefix: e8c4eb4c0e582f6d
+- Launcher adaptive acquisition policy core: BYTE IDENTICAL
+  SHA-256 prefix: ba3c3b65b37f3437
+- Launcher fetch-day core: BYTE IDENTICAL
+  SHA-256 prefix: 6c0f804b96cef60d
+
+Relay transport safeguards
+- 6-digit pairing code expires after 10 minutes.
+- Tool and Launcher receive separate random long tokens.
+- Server stores token hashes, not raw tokens.
+- Netlify Blob store uses strong consistency so pair/send/receive transitions are immediately visible across requests.
+- Relay messages are logically expired after 24 hours and pruned when that channel is accessed; successful tool import ACK deletes the received message immediately.
+- Bulk JSON is compacted and chunked on Launcher side at <=45 days and about <=2.5 MB per message, below the relay/server payload ceilings used by this release.
+- Function-level Netlify rate limiting configured at 120 requests / 60 seconds aggregated by IP + domain.
+- Manual JSON copy/file save + manual tool JSON import remain available if relay is unavailable.
+
+Deployment limitation / production check
+- The relay Function was tested locally with a deterministic in-memory mock of Netlify Blobs and end-to-end action flow.
+- The actual user's live Netlify project cannot be deployed or invoked from this build environment, so the first real pairing after deployment is the production integration check.
+- v4.0.3 requires the whole project to be built/deployed by Netlify (package.json, netlify.toml, netlify/functions, public). Deploying only public will leave the tool functional but the direct relay endpoint absent.

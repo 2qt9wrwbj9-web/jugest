@@ -1,0 +1,58 @@
+JUGGLER TOOL v4.1.0 VALIDATION — 2026-08-24
+
+SCOPE
+- Base: v4.0.7 jugest.netlify.app build.
+- Added only: Launcher night/slow bulk acquisition + 13-month export/relay, and tool-side Juggler data-site UI/aggregation.
+- Launcher parserVersion remains 4070 intentionally so valid v4.0.7 acquisition cache is retained.
+
+NIGHT ACQUISITION
+- Target: latest 13 calendar months (e.g. 2025-07-23 through 2026-08-23 = 397 dates).
+- Ordinary delay: random 35–55 sec.
+- Every 15 completed dates: random 2–4 min rest.
+- Every 60 completed dates: random 8–12 min rest (replaces the overlapping 15-day rest).
+- Nominal no-error 397-date waiting time at midpoint delays: ~6.63 hours, plus page response time.
+- Transient/network/quality-D failure: 15–20 min wait + retry; second failure -> 30–40 min wait + final retry; if still failing, leave that date missing and continue.
+- HTTP 403/429: 45–60 min wait + one retry; repeated 403/429 ends the night run.
+- Night checkpoint is separate from normal checkpoint and night sessions do not enter normal adaptive acquisition-policy learning.
+- Wake Lock request remains enabled; OS/Safari background suspension cannot be guaranteed and is handled by date-level persistence/resume.
+
+JUGGLER DATA SITE
+- Separate menu/page: ジャグラーデータ.
+- Shop + date selection and previous/next AVAILABLE data-day navigation.
+- Daily all-Juggler KPIs: average difference, average G, posterior expected average setting, positive-table rate, estimated P4+ proportion.
+- Machine summary is limited to the existing 8 supported Juggler keys.
+- Machine drill-down: table no / G / BB / RB / difference / posterior expected setting / P4+.
+- Expected setting and P4+ summaries are one-table-one-vote averages (not game-weighted); realized average difference and average G are displayed separately.
+
+AUTOMATED TESTS
+PASS node syntax: ana-launcher.js
+PASS node syntax: netlify/functions/relay.mjs
+PASS launcher parser base/hardening tests
+PASS all-8 alias/diagnostic parser tests
+PASS 96-machine / 11-Girls regression
+PASS launcher init including night button, 13-month JSON and relay controls
+PASS existing adaptive normal-session policy tests
+PASS JSON export tests
+PASS relay tests including 397-day chunk preservation (<=45 days per relay message)
+PASS bridge and Netlify Function tests
+PASS app smoke test: externalJudge + JSON normalize + unseen-shop relay import
+PASS Juggler-data KPI arithmetic and page render smoke test
+PASS v4.1.0 static feature assertions
+
+ROOT LOGIC REGRESSION AGAINST v4.0.7
+IDENTICAL reverseCore()
+IDENTICAL externalJudge()
+IDENTICAL externalBonusJudgeQ()
+IDENTICAL normalizeExternalDay()
+IDENTICAL brutePrepare()
+IDENTICAL bruteGenerate()
+IDENTICAL v4PredictStore()
+IDENTICAL v4SettingDistributionModel()
+IDENTICAL v4CalendarLongMemory()
+IDENTICAL v4MoveDecision()
+IDENTICAL v4PairwiseMoveStats()
+
+NOT LIVE-TESTED HERE
+- A real 6–8 hour foreground iPhone Safari overnight acquisition against ana-slo.
+- Real Netlify production relay of a full 13-month data set after deployment.
+These require the deployed jugest.netlify.app + iPhone/Safari environment. Existing parser/relay components are regression-tested locally.

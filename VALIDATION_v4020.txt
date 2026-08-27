@@ -1,0 +1,32 @@
+Juggler Tool v4.0.2 validation
+Date: 2026-08-24
+
+Scope
+- iPhone Safari JSON-copy reliability only.
+- No acquisition parser/pacing/storage logic or setting/store-analysis maths changed.
+
+Root cause addressed
+- v4.0.1 awaited IndexedDB before calling clipboard APIs, which can lose Safari transient user activation.
+- The legacy document.execCommand('copy') fallback did not check its boolean result and displayed a success alert even when nothing had been copied.
+
+Fix
+- First tap prepares JSON and opens a dedicated export panel.
+- Second tap on JSONをコピー occurs with a fresh user gesture.
+- Legacy copy result is checked; Clipboard API rejection is reported rather than falsely claiming success.
+- Visible readonly JSON textarea supports native manual copy; share/file-save is available from the same panel.
+
+Tests
+- npm test
+- node syntax check
+- launcher parser/init/adaptive-policy regressions
+- dedicated export regression test
+- main-app JSON import + externalJudge smoke test
+
+Observed result
+- npm test: PASS.
+- root/public index.html: byte-identical.
+- root/public ana-launcher.js: byte-identical.
+- old unconditional copy-success alert: absent.
+- in-app datafetch page remains absent.
+- v4.0.1 -> v4.0.2 setting-judge + JSON-normalization core: byte-identical (SHA-256 prefix de7a21489980fc2b).
+- v4.0.1 -> v4.0.2 store-analysis / v4 prediction core: byte-identical (SHA-256 prefix 7c97d22794a51a7f).

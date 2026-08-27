@@ -1,0 +1,71 @@
+JUGGLER / HANA HANA TOOL v4.7.1 VALIDATION — PERFORMANCE / LATENCY
+Date: 2026-08-25
+
+RESULT: PASS
+
+Scope
+-----
+Performance-only maintenance based on v4.7.0.
+No intended statistical/judgement/ranking semantic changes.
+
+Implemented optimizations
+-------------------------
+- Cached date-shift, calendar metadata and chronological scope/block metadata.
+- One bounded history-window build per prepared row for repeated 2/5/7/14-day feature derivation.
+- Streamed single-condition emission and reused condition metadata.
+- Shared store/machine condition-group traversal where possible.
+- Compacted post-analysis state: feature-packed full historical rows are not retained after the compact result/forecast summaries have been computed.
+- Precomputed recent store/machine forecast baselines instead of scanning all historical rows separately for each target table.
+- Target-day feature preparation reads the latest 35 calendar days; active target-side lookback is <=30 days.
+- Reused v4 machine/global fit baselines across features on an identical row split and cached parsed cross-feature parts.
+
+Semantic parity check
+---------------------
+`tests/v471-performance-regression.mjs` loads:
+- `index.before_v471.html` = untouched v4.7.0 baseline
+- `index.html` = optimized v4.7.1
+
+Both receive the same chronological synthetic shop history and target date. The regression requires exact equality of a serialized prediction/ranking snapshot including:
+- Champion result
+- store target P4+
+- root single-evidence summary
+- every target table's machine/table identity
+- strict predP4
+- rankValue
+- root rank/effect/P4 contribution/confidence/family count
+- human-readable root reasons
+
+Timing printed by this test is informational only; no speed threshold is used as a correctness gate.
+
+Large synthetic performance sanity
+----------------------------------
+A 177-day x 296-table (~52,392 table-day) synthetic v4 prediction completed in the optimized local Node test environment in ~26.9 seconds in one run. This is not an iPhone/Safari field benchmark and should not be interpreted as a promised device runtime.
+
+Regression suite
+----------------
+- node syntax: launcher / HANA judge / HANA UI / relay Function
+- launcher parser hardening / aliases / 96-table + 11 Girls
+- Launcher init / policy / export / relay
+- relay bridge / Function
+- app smoke / external judgement
+- 30 accesses / trailing 30 minutes limiter
+- HANA judge / integration / full integration
+- v4.5.2 / v4.5.3 UI regressions
+- v4.6 practical ranking / 2-day history regression
+- v4.7 single-condition evidence regression
+- v4.7.1 performance semantic parity regression
+
+Release invariants
+------------------
+- App visible/title/package/backup appVersion: 4.7.1
+- Launcher VERSION: 4.5.0
+- PARSER_VERSION: 4500
+- Existing BOOKMARKLET_v4500 remains valid.
+- ana-launcher.js must remain SHA-256:
+  964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4
+
+Not claimed
+-----------
+- This does not prove higher real-world setting-selection accuracy than v4.7.0; outputs are intentionally the same.
+- Local Node timing does not guarantee the same speedup on iPhone/Safari.
+- Multi-store Today Plan and optional 2/3-condition exhaustive exploration were not redesigned in this maintenance release because doing so would cross into behavior/scope trade-offs.

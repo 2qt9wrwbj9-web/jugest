@@ -1,0 +1,51 @@
+JUGGLER TOOL v4.1.2 VALIDATION — 2026-08-24
+
+SCOPE
+- Based on v4.1.1.
+- Replace fixed post-session 30-minute cooldown with rolling ana-slo request limiter.
+- No setting-analysis/model changes intended.
+
+ROLLING LIMIT SPEC
+- Window: exact trailing 30 minutes (1,800,000 ms)
+- Limit: 30 ana-slo network acquisition attempts
+- 30th attempt is allowed; before a 31st attempt, Launcher waits until the oldest in-window attempt reaches exactly 30 minutes old.
+- Successful requests, HTTP errors and night retry requests are counted because the network attempt occurred.
+- Current already-open page reuse is not counted as a new network request.
+- Netlify relay/JSON send is not counted.
+- Normal mode and night mode share the same history.
+- Access history persists in ana-slo localStorage and a .ana-slo.com shared cookie.
+- At cap: idle start controls are locked with countdown; active run waits and resumes automatically.
+
+TESTS
+PASS node --check ana-launcher.js
+PASS node --check netlify/functions/relay.mjs
+PASS launcher parser + 96-table/11-girls regression
+PASS launcher initialization
+PASS adaptive normal policy
+PASS JSON export fallbacks
+PASS Launcher↔Netlify relay chunking/diagnostics
+PASS relay bridge
+PASS relay Function
+PASS app smoke / externalJudge / JSON normalization
+PASS v4.1.0 night-mode + Juggler-data feature regression
+PASS v4.1.1 fixed cooldown removed
+PASS v4.1.2 rolling-window constants/hooks/persistence assertions
+PASS rolling math: at exactly oldest+30min, count drops from 30 to 29 and a slot reopens
+PASS all tests/*.mjs when executed individually
+
+CORE INVARIANTS VS v4.1.1
+IDENTICAL reverseCore()
+IDENTICAL externalJudge()
+IDENTICAL normalizeExternalDay()
+IDENTICAL normalizeExternalBulkImport()
+IDENTICAL runBruteAnalysis()
+IDENTICAL jdataMetrics()
+Launcher parserVersion remains 4070.
+
+ROOT/PUBLIC
+PASS ana-launcher.js root == public/ana-launcher.js
+PASS index.html root == public/index.html
+
+NOT FIELD-VERIFIED HERE
+- Real iPhone Safari persistence across process eviction.
+- Actual ana-slo server-side restriction behavior. The limiter enforces the requested client-side maximum but cannot guarantee ana-slo will never rate-limit for other criteria.

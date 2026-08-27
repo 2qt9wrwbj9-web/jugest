@@ -1,0 +1,22 @@
+v4.7.5 validation — trend lightweight roster
+Date: 2026-08-26
+
+Scope
+- UI/performance-only adjustment on top of v4.7.4 lazy execution.
+- Store trend page now preloads only unique table number + machine name from raw imported rows when the page/filter changes.
+- No setting judgement or date-cell matrix calculation runs in this lightweight roster path.
+- The computed trend matrix always shows table number + machine name in its sticky row header, even when a machine filter is selected.
+- Daily expected-setting/confidence cells still require explicit 「表示を更新」.
+- Analysis scope, externalJudge, single-evidence engine, ranking, strict Champion/calibration/store-share, HANA/Juggler formulas unchanged.
+
+Companion
+- ana-single-day.js and BOOKMARKLET_SINGLE_DAY_v1000 remain included and unchanged.
+- Existing BOOKMARKLET_v4500 / Launcher remain unchanged.
+
+Regression
+- npm test: PASS (all suites)
+- Added tests/v475-trend-roster.mjs.
+- v4.7.4 lazy semantic parity test still PASS under v4.7.5.
+- root/public index.html byte-identical.
+- root/public ana-launcher.js byte-identical.
+- root/public ana-single-day.js byte-identical.

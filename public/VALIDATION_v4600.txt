@@ -1,0 +1,85 @@
+JUGGLER / HANA HANA TOOL v4.6.0 VALIDATION — 2026-08-25
+
+RESULT
+------
+PASS
+
+SCOPE
+-----
+Base: v4.5.3 UI parity build.
+Purpose: make the future target ranking useful in practice without weakening the strict statistical certification layer.
+
+1. STRICT LAYER IS PRESERVED
+----------------------------
+- v4ModelEligibleScore Champion gate is unchanged:
+  score >= 53.5, adjusted p <= .05, winRate >= .58, blockWinRate >= .75, ES lift >= .07,
+  or the pre-existing rareValidated exception.
+- Strict P4+ prediction, calibration, store-share constraint, externalJudge, HANA judgement formulas,
+  HANA hard constraints, acquisition parser and rolling access limiter are not relaxed by v4.6.0.
+- Strict reasons and practical ranking reasons are stored/displayed separately.
+
+2. PRACTICAL RANKING LAYER
+--------------------------
+- Added a separate practical ranking engine for morning target ordering.
+- It may use evidence that has not passed the strict Champion gate, but only after chronological
+  discovery/confirmation checks and continuous shrinkage by confirmation p/q, sample size,
+  discovery-confirmation direction consistency and effect size.
+- Emerging evidence is never relabeled as a validated law and does not overwrite strict P4+.
+- Practical model quality is checked on untouched chronological score days using Top5 / Top10 / Top20
+  expected-setting lift and win rate. Weak or unstable models receive zero or small weight rather than
+  an all-or-nothing Champion label.
+- Added exact table-number practical history model. Table number is an observed identifier; no inferred
+  physical adjacency/position feature was reintroduced.
+- Target ordering now uses the practical rank value. UI continues to show strict P4+ separately.
+
+3. TWO-DAY HISTORY
+------------------
+Rationale: a 3-day short average can blur exactly the transitions the user wants to act on:
+- yesterday was depressed -> today may be raised;
+- yesterday was high after the preceding day -> one-day hold / continuation pattern.
+
+Added v4 prediction/ranking features including:
+- previous two-day band / two-day average,
+- two-days-ago -> yesterday setting-band sequence,
+- two-days-ago -> yesterday difference-band sequence,
+- 2-day vs 7-day setting/difference trend,
+- 2-day machine/store history,
+- 2-day loss/high/zero-bonus ratios and related short-context terms.
+
+The v4 short recent model is now explicitly labeled "直近2日履歴" and does not use the old 3-day
+short-history features. Legacy brute-force exploration retains its historical 3-day dimensions for
+backward-compatible analysis; they are not part of the new v4 short prediction/ranking model.
+
+4. EXPLAINABILITY / AI EXTENSION PAYLOAD
+----------------------------------------
+- AI analysis payload schema bumped from v2 to v3.
+- No AI API is called.
+- Added strict model rejection diagnostics (p, adjusted p, block win rate, rejection reasons).
+- Added practical ranking-engine confidence, model Top5/10/20 validation metrics, target rank value,
+  rank delta, rank confidence and emerging rank reasons.
+- This makes "Champion保留" explainable instead of hiding why an otherwise interesting model was rejected.
+
+5. VERSION / ACQUISITION INVARIANTS
+-----------------------------------
+- App visible/title/package/backup appVersion: 4.6.0.
+- Launcher VERSION intentionally remains 4.5.0.
+- PARSER_VERSION intentionally remains 4500.
+- Existing ?v=4500 bookmarklet remains valid because acquisition/parsing code was not changed.
+
+6. AUTOMATED / SYNTHETIC VALIDATION
+-----------------------------------
+- Existing full npm test regression suite: required PASS.
+- New tests/v460-ranking.mjs checks:
+  * strict Champion gate text remains unchanged;
+  * 2-day short features are wired and old 3-day short features are absent from the v4 recent model;
+  * exact-table practical model is present;
+  * practical ranking is explicitly separated from strict probability;
+  * payload v3 diagnostics are wired;
+  * synthetic 170-day / 20-table history produces non-zero practical ranking confidence;
+  * a persistent exact-table advantage differentiates that table and ranks it first;
+  * two-day sequence/trend fields are populated;
+  * a perfectly flat 100-day control produces practical ranking confidence 0 and no manufactured table differences.
+
+Synthetic ranking tests prove implementation behavior only. They do NOT establish real-world prediction accuracy.
+The important field validation is walk-forward / next-day behavior on real imported store history such as the
+177-day Espace Shinjuku Kabukicho dataset.

@@ -1,0 +1,34 @@
+v4.5.2 HANA UI / pickup transition correction — validation
+Date: 2026-08-25
+
+Fixed regressions
+1. HANA live judgement no longer shows the five HANA machine tabs above the 実戦台 card.
+   - Juggler live already hides the global machine tabs and selects machine inside 実戦台.
+   - HANA live now follows the same interaction pattern.
+   - HANA machine selection remains available in 実戦台 > 機種.
+
+2. HANA reverse/pickup page now exposes the shared top 「▶ 判別開始」 control.
+   - Root cause: CSS only enabled .beginlive-top on body.page-rev, not body.page-hana-rev.
+   - v4.5.2 enables it on both pages.
+   - beginFromRev() still snapshots G/BIG/REG/difference/reverse-bell style and routes to hana-live.
+
+UI parity rule
+- Live/実戦判別: machine selection is inside 実戦台 for both Juggler and HANA HANA.
+- Reverse/後ヅモ: machine tabs are visible for both Juggler and HANA HANA.
+- Shared top 判別開始 is visible for both reverse pages.
+
+Regression checks
+- node syntax checks: PASS
+- existing launcher parser tests: PASS
+- 96-machine / 11 Girls regression: PASS
+- HANA 5-machine alias/parser tests: PASS
+- 30-access / 30-minute limiter tests: PASS
+- relay tests: PASS
+- app smoke: PASS
+- HANA judge tests: PASS
+- HANA integration: PASS
+- v4.5.2 focused UI regression: PASS
+
+Launcher
+- ana-launcher.js is intentionally unchanged from v4.5.1 / v4.5.0 HANA acquisition release.
+- BOOKMARKLET v4500 remains valid; no bookmark replacement is required for this UI fix.

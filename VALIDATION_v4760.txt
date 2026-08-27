@@ -1,0 +1,12 @@
+v4.7.6 validation — hybrid ranking unification
+
+PASS criteria:
+1. root/public index.html are byte-identical.
+2. screen forecast obtains its rows from v4PredictStore() and does not run a second independent ordering.
+3. AI JSON targets are `pred.rows.slice(0,10)`, therefore screen and JSON share the same final ranking source.
+4. Hybrid engine reports 55% practical / 30% model / 15% strict plus max 5% validated-calendar bonus.
+5. Existing strict prediction fields remain semantically identical to pre-hybrid v4.7.x when compared by table identity; only final ordering is intentionally changed.
+6. Existing single-evidence regression still ranks the synthetic 7-day slump→raise table first.
+7. v4.7.4 lazy regression and v4.7.5 trend-roster regression still pass.
+8. Launcher SHA-256 remains unchanged.
+9. npm test full suite passes.

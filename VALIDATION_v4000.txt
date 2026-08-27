@@ -1,0 +1,10 @@
+Juggler Tool v4.0.0 final validation — 2026-08-24
+
+- Long high-intensity sealed cohort: 65 stores, 3–5 years, 32–96 tables, varied layouts/traffic. Negative/control stores: 0/30 false Champions. Positive/exploitable stores: 34/35 Champions.
+- Calendar-60 scenario: 5/5 Champions; dormant calendar: 0/5; revival calendar: 4/5.
+- externalJudge() regression vs v3.17.0: 6,400/6,400 inputs exactly identical, max numeric difference 0.
+- Fresh empirical-Bayes store-setting prior check improved P4+ Brier and expected-setting MAE at 500G, 1500G, and 3000G.
+- Fresh probability calibration cohort: n=512, ECE≈0.0201, Brier vs true P4 probability≈0.00618.
+- Final move-policy probe: 1,896 independent partial-observation comparisons. Strong move gate fired 66 times; lower-setting/worse-payout move rate≈3.03%, higher-setting/higher-payout rate≈77.27%, mean true setting lift≈+2.29, mean true payout-rate lift≈+4.51 percentage points.
+- Browser smoke confirms v4 prediction, long-term setting prior, calendar memory, pairwise move decision, 実戦判別, 移動比較, and 今日の作戦 are present.
+- Existing ana-slo acquisition, Shortcut/Safari handoff, and Netlify relay remain on their prior tested architecture; launcher version/cache-bust only was synchronized to 4.0.0.

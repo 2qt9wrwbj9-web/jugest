@@ -1,0 +1,86 @@
+VALIDATION v4.5.0 — Juggler + HANA HANA
+Date: 2026-08-25
+
+RESULT: PASS
+
+1. Static / syntax
+- ana-launcher.js: node --check PASS
+- hanahana-judge.js: node --check PASS
+- hanahana-ui.js: node --check PASS
+- netlify/functions/relay.mjs: node --check PASS
+- main app smoke test: PASS
+
+2. Existing Juggler regression
+- Existing launcher/parser hardening tests: PASS
+- 8 Juggler aliases: PASS
+- Known 96-machine regression: 96/96 PASS
+- Juggler Girls current label regression: 11/11 PASS
+- Existing relay / bridge / function tests: PASS
+- Existing v4.1.x night mode features retained: PASS
+- Rolling access limiter: max 30 attempts / immediately preceding 30 minutes: PASS
+
+3. HANA HANA parser
+Supported canonical IDs:
+- houou
+- king
+- dragon
+- star
+- newkingv
+
+Synthetic Ana-slo-style labels tested:
+- Sハナハナホウオウ～天翔～-30 -> houou
+- Lキングハナハナ-30 -> king
+- スマート沖スロ ドラゴンハナハナ～閃光～ -> dragon
+- スターハナハナ-25 -> star
+- スマート沖スロ ニューキングハナハナV -> newkingv
+
+New King V is matched before King, preventing substring collision.
+Unknown HANA-like names produce diagnostics instead of silent discard.
+sourceMachineName is retained through relay payloads for traceability.
+
+4. HANA judge invariants
+- All five machines return normalized probability distributions.
+- Numeric judge supports G/BB/REG + actual bell OR reverse bell from diff.
+- Actual bell supersedes diff-reversed bell to avoid double counting.
+- REG/BIG side-lamp sample count > applicable bonus count => factor excluded.
+- BIG-after colored count > normal BIG trials => factor excluded.
+- Setting-change first BIG is separated and excluded from regular BIG-after likelihood.
+- REG-after hard constraints: lower settings are exactly zero.
+- New King V purple REG-after => V > 0.999999; settings 1-4 exactly zero in test.
+- New King V expected setting uses V=5.
+- New King V common six-slot support forces setting6 probability = 0.
+- Bonus-in watermelon uses explicit bonus-game trials; defaults are machine-specific.
+- New King V BIG front default = 14G/BIG; REG small-role default = 10G/REG.
+
+5. Full-app integration
+- Main title: ジャグラー・ハナハナ設定判別
+- JUGGLER / HANA HANA family switch: wired
+- HANA rear judge includes 判別開始 snapshot: wired
+- HANA live UI does not expose predecessor play-style input: confirmed
+- 台比較 machine options: 13 machines
+- 移動比較: common-q / expected-rate machinery accepts Juggler and HANA targets/current machines
+- 店舗データ: Juggler/HANA category switch
+- Store trend / brute analysis / model filters: 13-machine registry
+- HANA live run can be sent to existing 稼働記録 flow
+- HANA personal analysis card uses bell / BIG / REG / combined / BIG-watermelon metrics rather than Juggler grape/cherry labels
+
+6. Self-consistency Monte Carlo
+This is an implementation/model self-consistency test, NOT proof of real-world setting accuracy.
+6000G-equivalent simulated cases from the probability tables currently implemented:
+
+machine     numeric high/low   live high/low   numeric exact   live exact
+houou       72.0%              79.3%           31.6%           48.4%
+king        74.6%              80.6%           31.0%           48.5%
+dragon      73.3%              79.8%           31.0%           47.7%
+star        75.7%              80.6%           32.9%           52.6%
+newkingv    71.4%              84.9%           34.6%           61.4%
+
+Adding live bell/small-role/lamp evidence improves discrimination in the same model and lowers Brier error for all five machines.
+
+7. Cache migration note
+PARSER_VERSION was intentionally bumped from 4070 to 4500.
+Reason: old Launcher IndexedDB cache contains Juggler-only parsed days. Keeping 4070 would cause those dates to be skipped and HANA rows never collected.
+Tool-side old imported data remains compatible; new combined days may replace the same shop/date when imported.
+
+Known modeling limitation
+Lamp/small-role probabilities include estimated/empirical values as previously agreed. They are treated as the working probabilities for v4.5.0. This validation confirms implementation consistency, not manufacturer confirmation of every probability.

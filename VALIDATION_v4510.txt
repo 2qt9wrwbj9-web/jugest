@@ -1,0 +1,31 @@
+v4.5.1 UI consistency correction — validation
+Date: 2026-08-25
+
+Scope
+- Corrected HANA UI/interaction only; existing Launcher acquisition/parser remains v4.5.0 / PARSER_VERSION 4500.
+- HANA judge core probabilities unchanged except display label "完全技術介入" -> "小役完全取得" and engine version 1.0.1.
+
+UI corrections
+- HANA live/reverse now reuse the Juggler visual language: machine tabs, card/revgrid inputs, r6 setting cards, sum result cards, global reset/判別開始 controls.
+- Removed separate HANA page title/dropdown layout.
+- HANA machine selection: 5 buttons (ホウオウ / キング / ドラゴン / スター / ニューキングV).
+- HANA live does not ask for predecessor play style and does not use live difference reversal.
+- HANA reverse keeps predecessor small-role acquisition only under a collapsed "ベル逆算補正" section.
+- HANA reverse global top "判別開始" snapshots G/BIG/REG/difference and starts own-play judgement.
+- HANA live uses own G/BIG/REG/actual bell + HANA-specific bonus/lamp evidence.
+- Pickup combination = pre-seat numeric likelihood + own-play likelihood, without using the pre-seat G as the denominator for the player's actual bell.
+- REG/BIG lamp categories remain separate; first BIG remains separate; REG-after hard constraints remain unchanged.
+
+Regression
+- npm test: PASS
+- Launcher 96-table / Girls-11 regression: PASS
+- HANA aliases/parser: PASS
+- 30 accesses / trailing 30 minutes limiter: PASS
+- relay: PASS
+- app smoke: PASS
+- 5 HANA judge tests: PASS
+- HANA full integration: PASS
+
+Launcher integrity
+- v4.5.1 ana-launcher.js is byte-identical to v4.5.0 ana-launcher.js.
+- Therefore the existing bookmarklet URL using ?v=4500 remains correct; no bookmarklet replacement is required for this UI-only correction.

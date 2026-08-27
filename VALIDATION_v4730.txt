@@ -1,0 +1,45 @@
+JUGGLER / HANA HANA TOOL v4.7.3 VALIDATION — RELAY RECEIVE INIT FIX
+
+Scope
+-----
+Bug-fix-only follow-up to v4.7.1. No prediction/judgement mathematics or acquisition behavior is intentionally changed.
+
+Fixed
+-----
+- Tool-side Launcher relay receiving could hit Safari/JavaScript TDZ error:
+  Cannot access 'externalStorageReadyPromise' before initialization
+- Root cause: relayReceiveAll() awaited a lexical const whose initializer lived near the end of the startup script.
+- Fix: create a deferred externalStorageReadyPromise readiness gate immediately after initExternalStorage() is defined, before relay receive handlers can await it. The actual initExternalStorage() call remains at the original late-startup phase and resolves the gate in finally(), preserving restore/UI initialization order.
+
+Safety / unchanged
+------------------
+- v4.7.1 performance optimizations unchanged.
+- v4.7.0 single-condition evidence/ranking unchanged.
+- Strict P4+/Champion, calibration, store-share constraint, externalJudge, Juggler/HANA formulas and HANA hard constraints unchanged.
+- Relay ACK behavior unchanged: only successfully imported/ACKed messages are removed; failed/unacked messages remain server-side.
+- Launcher VERSION 4.5.0 / PARSER_VERSION 4500 unchanged.
+- BOOKMARKLET_v4500 remains valid.
+- ana-launcher.js SHA-256 remains 964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4.
+
+Regression added
+----------------
+- tests/v473-relay-init.mjs
+  * exactly one externalStorageReadyPromise initializer
+  * initializer occurs before relayReceiveAll()
+  * root/public index.html byte parity
+  * appVersion/title 4.7.3
+  * root/public ana-launcher.js byte parity
+  * known Launcher SHA-256 unchanged
+  * BOOKMARKLET_v4500 still points to ?v=4500
+
+Versioning
+----------
+- v4.7.1 was the released performance maintenance build.
+- No distributed v4.7.2 build exists.
+- This requested bug-fix package is v4.7.3.
+
+Test status
+-----------
+- npm test: PASS (2026-08-25)
+- v4.7.3 relay-init regression: PASS
+- v4.7.3 performance semantic parity vs untouched v4.7.0 baseline: PASS

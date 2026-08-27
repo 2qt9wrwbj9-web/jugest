@@ -1,0 +1,36 @@
+JUGGLER TOOL v4.0.6 VALIDATION — 2026-08-24
+
+Purpose
+- Repair ana-launcher over-counting and shop-name splitting observed on ジアス大船 (physical supported-Juggler count 96, erroneous imports 115/134).
+- Preserve relay, JSON import, setting judgement, store analysis and v4 prediction logic.
+
+Implemented hardening
+1. Explicit machine-name tables are preferred. If a valid table with 機種名/機種 exists, inferred helper/per-machine tables are ignored for that page.
+2. Final acquisition de-duplication is store-wide by physical tableNo, not machine+tableNo.
+3. Same tableNo with conflicting machine identities is excluded and recorded in quality diagnostics rather than double-counted.
+4. High-side machine-count anomaly checks added (>110%, >120%, >135% of learned median tiers).
+5. Page title normalization removes データまとめ/まとめ so ジアス大船 データまとめ becomes ジアス大船.
+6. Tool-side external JSON normalization also canonicalizes trailing まとめ defensively.
+7. Re-importing corrected canonical shop-days removes same-date legacy trailing-まとめ duplicates.
+8. Launcher records created before parserVersion 4060 are treated as stale acquisition cache and are not exported/sent; they are automatically re-planned for re-fetch and overwritten by corrected data.
+
+Tests
+- node syntax check: PASS
+- parser legacy duplicate test: PASS
+- explicit-table-vs-helper-table regression: PASS
+- same-tableNo conflicting-machine regression: PASS
+- shop title normalization regression: PASS
+- launcher policy: PASS
+- JSON export: PASS
+- relay chunking/pairing: PASS
+- relay bridge: PASS
+- Netlify relay function: PASS
+- app smoke / JSON judgement: PASS
+
+Protected core comparison against v4.0.5
+- externalJudge(): byte-identical function body
+- reverseCore(): byte-identical function body
+- v4PredictStore(): byte-identical function body
+
+Notes
+- Existing setting-tool imports that were already produced by the buggy Launcher are not silently guessed/repaired. Corrected days should be re-fetched and re-sent. Same canonical shop/date is replaced; stale trailing-まとめ duplicate for that date is removed on corrected import.

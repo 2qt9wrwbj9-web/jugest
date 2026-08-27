@@ -1,0 +1,53 @@
+JUGGLER TOOL v4.1.1 VALIDATION — 2026-08-24
+
+SCOPE
+- Base: v4.1.0 jugest.netlify.app build.
+- Added only: persistent anti-burst cooldown for normal 30+ day acquisition sessions.
+- Launcher parserVersion remains 4070; existing valid acquisition cache is retained.
+
+COOLDOWN POLICY
+- Trigger: a normal acquisition session whose planned size is >=30 dates and that attempted at least one date.
+- Duration: 30 minutes from session finish.
+- Persistence: ana-slo localStorage, global across shop slugs. Reload/reopen/shop-switch does not bypass it.
+- Lock scope during cooldown: normal start + night start. Pause/stop are irrelevant because no new run may start.
+- UI: live mm:ss countdown and explanation. No manual bypass button.
+- 15/20-day normal sessions do not create a new cooldown.
+- Existing night-mode pacing and retry policy is unchanged.
+
+REGRESSION INTENT
+- No parserVersion bump.
+- No change to parseHtml machine parsing/96-table fix.
+- No change to JSON export/relay.
+- No change to Juggler-data page.
+- No change to externalJudge/reverseCore/store analysis/v4 prediction/calibration/move decision.
+
+AUTOMATED TESTS
+PASS node syntax: ana-launcher.js
+PASS node syntax: netlify/functions/relay.mjs
+PASS launcher parser base/hardening/aliases diagnostics
+PASS 96-machine / 11-Girls parser regression
+PASS launcher init
+PASS adaptive normal-session policy regression
+PASS JSON export
+PASS relay / bridge / Netlify Function
+PASS app smoke: externalJudge + JSON normalize
+PASS v4.1.0 data-site/night feature regression under v4.1.1 label
+PASS v4.1.1 cooldown static guards/persistence assertions
+
+ROOT LOGIC REGRESSION AGAINST v4.1.0
+IDENTICAL reverseCore()
+IDENTICAL externalJudge()
+IDENTICAL externalBonusJudgeQ()
+IDENTICAL normalizeExternalDay()
+IDENTICAL brutePrepare()
+IDENTICAL bruteGenerate()
+IDENTICAL v4PredictStore()
+IDENTICAL v4SettingDistributionModel()
+IDENTICAL v4CalendarLongMemory()
+IDENTICAL v4MoveDecision()
+IDENTICAL v4PairwiseMoveStats()
+IDENTICAL Launcher parseHtml()
+IDENTICAL Launcher buildBulk()
+IDENTICAL Launcher relayPayload()
+IDENTICAL Launcher nightFetchWithRetry()
+Launcher runNight() differs only by the new pre-start cooldown guard.

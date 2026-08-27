@@ -1,0 +1,53 @@
+Juggler tool v4.0.4 validation
+Date: 2026-08-24
+
+Scope
+- Improve iPhone Safari Launcher relay reliability.
+- Add detailed relay diagnostics instead of generic "Load failed" only.
+- Preserve manual JSON export/import fallback.
+- Do not alter setting discrimination, reverse-difference inference, acquisition parsing/pacing, store analysis, v4 prediction, calibration, or move logic.
+
+Transport changes
+- Normal Launcher relay route:
+  ana-slo page -> hidden iframe https://jugest.netlify.app/relay-bridge.html -> same-origin /api/relay.
+- The v4.0.3 direct ana-slo -> https://jugest.netlify.app/api/relay fetch remains only as transport fallback when the bridge itself cannot be used.
+- If the bridge reaches the API and receives an HTTP/server error, that server error is preserved instead of being hidden by a fallback attempt.
+
+Diagnostics
+Launcher and tool now expose expandable communication details including:
+- stage
+- transport (Launcher)
+- action
+- endpoint/current page/origin
+- online state
+- HTTP status/status text when a response exists
+- server error code/body snippet when available
+- browser exception name/message
+- timeout stages
+
+Automated tests
+Command: npm test
+Result: PASS
+
+Passed suites
+- launcher parser: PASS
+- launcher init: PASS
+- launcher adaptive policy: PASS
+- launcher JSON export: PASS
+- launcher relay chunking: PASS
+- relay bridge static protocol checks: PASS
+- relay function round trip: PASS
+- app smoke: PASS
+
+Node harness note
+- launcher init/policy tests intentionally lack browser IndexedDB, so expected "IndexedDB unavailable" warnings are printed by the test harness. The tests still PASS.
+
+Source-preservation checks against v4.0.3 jugest build
+- reverse inference block: BYTE IDENTICAL, SHA-256 prefix 305c171c485bb09b
+- external judge + JSON normalization block: BYTE IDENTICAL, SHA-256 prefix d9bdd0fc8db2324c
+- v4 decision-support layer: BYTE IDENTICAL, SHA-256 prefix a4bb794ae41de0f0
+- Launcher parser core: BYTE IDENTICAL, SHA-256 prefix 7be52cedd9564d0f
+- Launcher fetch-day core: BYTE IDENTICAL, SHA-256 prefix 44e5ed09ad6f2613
+
+Production limitation
+- The actual iPhone Safari + live jugest.netlify.app path cannot be executed from this environment. The first live pair attempt after deployment remains the production integration test.

@@ -1,0 +1,25 @@
+Juggler Tool v4.0.1 validation
+Date: 2026-08-24
+
+Scope
+- Architecture cleanup only: remove in-app acquisition and automatic handoff; use JSON as the sole boundary.
+- No setting-judgement, store-analysis, v4 prediction, calibration, or move-comparison maths changed.
+
+Checks
+- Main app contains no データ取得 page/menu, Safari-launch Shortcut UI, runner Shortcut UI, ana-slo link UI, handoff listener/poller, or integrated acquisition JS block.
+- JSON読み込み remains present.
+- externalJudge smoke case remains normalized and returns six probabilities summing to 1.
+- Imported JSON still runs normalizeExternalDay -> externalJudge and auto-registers its store in the shared store master.
+- Standalone ana-launcher parser/init/adaptive-policy tests remain enabled.
+- Standalone collector no longer exposes ツールへ戻って保存 or Netlify handoff; JSON export remains.
+
+Run: npm test
+Regression hashes against v4.0.0 source
+- Machine probability-table block: byte-identical.
+- Setting-judge + JSON-normalization core (safeNorm through normalizeExternalDay): byte-identical.
+- Store-analysis / v4 prediction core (trendDateWeekday through renderStoreManagement): byte-identical.
+
+Result
+- npm test: PASS.
+- Main-app acquisition references after <body>: 0 for datafetch / ANA_ / ana-handoff / Safari Shortcut launch strings.
+- Root/public index.html identical; root/public ana-launcher.js identical.

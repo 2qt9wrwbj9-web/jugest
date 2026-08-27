@@ -1,0 +1,94 @@
+JUGGLER / HANA HANA TOOL v4.7.0 VALIDATION — 2026-08-25
+
+RESULT
+------
+PASS
+
+SCOPE
+-----
+Base: v4.6.0 practical-ranking / 2-day build.
+Purpose: make simple, abundant, human-readable store-reading evidence the primary analysis primitive.
+
+1. SINGLE-CONDITION-FIRST ARCHITECTURE
+--------------------------------------
+- Added a dedicated single-condition evidence engine.
+- Fresh 店舗解析 defaults to 「単一条件のみ（最速・推奨）」 and 「単一根拠」.
+- Old 2/3-condition exhaustive exploration remains available as an optional auxiliary layer.
+- Next-target shortlist uses single evidence directly instead of requiring old complex S/A certification.
+
+2. SINGLE CONDITION CATALOG
+---------------------------
+Covered families include:
+- weekday / exact calendar day / date ending / calendar phase;
+- exact table number / table ending / numeric block / parity;
+- previous-day inferred setting / P4+ / difference / games / bonus state;
+- 2/5/7-day categorical history;
+- explicit 2/5/7/14-day cumulative-difference thresholds;
+- explicit 2/5/7/14-day average-setting and P4+ thresholds;
+- loss/high-setting/zero-bonus counts;
+- streak and recency states;
+- same-weekday (7-days-prior) state;
+- recent machine/store context.
+
+The new single engine excludes legacy 3-day short-history dimensions. 3-day dimensions remain only in the
+old optional brute explorer for backward compatibility.
+
+3. EVIDENCE / SHRINKAGE
+-----------------------
+Each single reason is evaluated on its own and reports sample size, ES/P4+ effect, chronology,
+OOS/block repeatability, p/q diagnostics and recent 30/60/90-day health.
+- Discovery and confirmation must agree in direction for practical contribution.
+- p/q are soft evidence-quality inputs, not a strict practical gate.
+- Contribution is continuously shrunk by sample, repeatability, effect size, p/q support and recency.
+- Reversing/unstable conditions contribute zero.
+- High-prevalence conditions receive a contrast penalty when almost the whole scope matches, reducing
+  artifacts caused by a tiny nonmatching comparison group.
+- Nested thresholds in the same family are evaluated separately but only the strongest supported family
+  member is aggregated, preventing duplicate counting.
+
+4. STRICT / ACQUISITION INVARIANTS
+----------------------------------
+- Existing strict Champion gate remains unchanged:
+  score >= 53.5, adjusted p <= .05, winRate >= .58, blockWinRate >= .75, ES lift >= .07,
+  or the pre-existing rareValidated exception.
+- Strict P4+, calibration, store-share constraint, externalJudge and HANA formulas/hard constraints are unchanged.
+- Launcher remains VERSION 4.5.0 / PARSER_VERSION 4500.
+- Existing BOOKMARKLET_v4500 remains valid.
+- 30 accesses / trailing 30 minutes limiter is unchanged.
+
+5. RELEASE / PAYLOAD
+--------------------
+- App visible/title/package/backup appVersion: 4.7.0.
+- AI extension payload schema: v4. No AI API is called.
+- Payload exposes root-evidence summaries and each target's root ES/P4+ contribution, confidence,
+  matched reason count and readable reasons.
+
+6. DEDICATED SYNTHETIC REGRESSION
+---------------------------------
+`tests/v470-single-evidence.mjs` verifies:
+- single-only UI/default and no legacy 3-day short keys in the new engine;
+- explicit 7-day cumulative-difference thresholds include -3k/-5k/-7k/-10k/-14k families;
+- a synthetic repeated 7-day slump -> next-day raise pattern is found as a simple root and the affected
+  table ranks first;
+- a broad catalog (>80 target-relevant conditions in the synthetic case) is generated;
+- a repeated previous-day dip -> next-day raise pattern is found and ranks the affected table first;
+- a repeated previous-day high -> one-day hold pattern is found and ranks the affected table first;
+- a completely flat 100-day control produces zero root effect and no fabricated table ordering.
+
+The test deliberately does not require one exact nested threshold (e.g. -5000) to win within the 7-day
+slump family: all pre-declared thresholds are tested and the historically strongest supported member is used.
+
+7. REAL-DATA VALIDATION STILL REQUIRED
+--------------------------------------
+Synthetic tests prove implementation self-consistency, not real-world profitability or prediction accuracy.
+The important field validation is the user's ~177-day / ~52k-table Espace Shinjuku Kabukicho history:
+check how many simple reasons are discovered, their sample/recent stability, and whether the morning shortlist
+now surfaces understandable evidence such as previous-day raise/hold, multi-day slump, special-date and table/machine roots.
+
+
+8. FULL REGRESSION RESULT
+-------------------------
+`npm test`: PASS after the v4.7.0 changes.
+This includes launcher syntax/parser/init/policy/export/relay, 96-table and 11-Girls parser regression,
+all five HANA aliases/judge/integration, relay bridge/function, app smoke, rolling 30-access/30-minute limiter,
+v4.5.2/v4.5.3 UI regressions, v4.6 practical-ranking/2-day regression, and the new v4.7 single-evidence regression.

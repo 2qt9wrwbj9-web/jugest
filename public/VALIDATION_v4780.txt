@@ -1,0 +1,10 @@
+v4.7.8 validation
+
+PASS: npm test full suite.
+PASS: new v478 runtime regression verifies ordinary prediction uses stored/fallback hybrid weights instead of invoking walk-forward optimization, explicit relearning exists, root/public index.html are byte-identical, and brute completion does not auto-run v4RenderTwin(true).
+PASS: existing v4.7.7 walk-forward optimizer/holdout tests remain green.
+PASS: existing hybrid screen/JSON order parity remains green.
+PASS: strict prediction semantic parity / single-evidence / lazy execution / trend roster / HANA / Launcher / relay suites remain green.
+
+Performance note:
+The largest new v4.7.7 avoidable cost (up to 8 historical re-predictions embedded in ordinary prediction) is removed from the normal path. Max-3 exhaustive exploration itself remains intentionally unchanged in search scope; v4.7.8 reduces surrounding memory pressure rather than silently removing candidate conditions.

@@ -1,0 +1,74 @@
+JUGGLER / HANA HANA TOOL v4.7.4 VALIDATION — LAZY EXECUTION / PERFORMANCE
+
+Scope
+-----
+Performance-only refactor on top of v4.7.3. Goal: preserve all analysis/judgement functionality while removing unnecessary work from startup and category navigation.
+
+Structural performance audit
+----------------------------
+Baseline v4.7.3:
+- initExternalStorage() called rejudgeAllExternalDays() after loading IndexedDB, forcing a full external-row judgement pass during startup.
+- restored startup also had a rejudgeAllExternalDays() call path.
+- queueAutoSave() used a 40ms debounce, so ordinary clicks could trigger near-immediate full state JSON serialization.
+- Today Plan could compute all stores on category render.
+- Trend/model/twin views could perform expensive calculation on category/filter entry.
+- large result/history/matrix views could create substantially more DOM than visible on a phone.
+
+v4.7.4:
+- no rejudgeAllExternalDays() call remains in startup or initExternalStorage().
+- compact IndexedDB unpack yields after roughly 1200 table rows.
+- missing external derived values are generated lazily by ensureExternalJudged()/ensureExternalJudgedSync() only for requested data.
+- autosave uses requestIdleCallback(timeout 1200ms) when available, otherwise a 450ms debounce; pagehide/beforeunload remain immediate.
+- selected-store Today Plan is explicit; all-store comparison remains available only as an explicit heavy option.
+- Trend filtering is staged and explicit; matrix DOM initially limits both table rows and date columns.
+- Model Performance and Digital Twin/lifecycle are not computed merely by category entry.
+- External history and single-evidence lists are incremental.
+
+Semantic parity
+---------------
+New tests/v474-lazy-execution.mjs builds a raw unjudged synthetic external history and:
+1. Uses untouched v4.7.3 (index.before_v474.html) with the same rows pre-judged.
+2. Uses v4.7.4 with raw G/BB/RB/diff rows only.
+3. Requires v4.7.4 to lazily derive missing judgement fields when predictStore() is actually requested.
+4. Compares Champion, storeTargetP4, rootEvidence and per-table predP4/rankValue/rootRankES/rootEffectES/rootP4Effect/rootConfidence/root reasons.
+5. Requires exact JSON-equivalent prediction/ranking output.
+Result: PASS.
+
+Existing mathematical regressions
+---------------------------------
+- v4.6 practical ranking + 2-day history regression: PASS.
+- v4.7 single-condition evidence regression: PASS.
+- v4.7.1 performance semantic parity vs untouched v4.7.0 baseline: PASS.
+- v4.7.3 relay storage readiness ordering regression: PASS.
+- Juggler parser/96-table/11-Girls regressions: PASS.
+- HANA alias/judge/integration/full wiring regressions: PASS.
+- Relay bridge/function and rolling 30-access limiter regressions: PASS.
+
+Launcher / bookmarklet safety
+-----------------------------
+- root/public ana-launcher.js: byte-identical.
+- SHA-256: 964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4
+- Launcher VERSION: 4.5.0
+- PARSER_VERSION: 4500
+- BOOKMARKLET_v4500 still references ana-launcher.js?v=4500.
+- No bookmarklet update required.
+
+File parity
+-----------
+- root/public index.html: byte-identical.
+- root/public ana-launcher.js: byte-identical.
+- root/public hanahana-judge.js: byte-identical.
+- root/public hanahana-ui.js: byte-identical.
+
+Test status
+-----------
+- npm test: PASS (2026-08-26)
+- v4.7.4 lazy execution regression: PASS
+- app smoke: PASS
+
+Limitations / next field check
+------------------------------
+- This validates semantic preservation and removes known eager work structurally; it is not an iPhone Safari benchmark.
+- Full 180-day prediction, explicit all-store Today Plan, and optional 2/3-condition exhaustive exploration remain computationally heavy by design when requested.
+- First priority after deployment: compare cold-start responsiveness, first category switch, repeat category switch, and first/repeat Today Plan on the real iPhone with the Kabukicho long-history database.
+- If explicit heavy operations still cause unacceptable UI stalls after this lazy pass, the next architectural step is moving the longest CPU-bound analysis loops into a Web Worker. That is intentionally not part of this no-semantic-change lazy pass because it changes execution architecture and should be field-justified first.

@@ -1,0 +1,1 @@
+javascript:(()=>{var s=document.createElement('script');s.src="https://jugest.netlify.app/ana-launcher.js?v=4100"+'&t='+Date.now();s.onerror=()=>alert('取得ランチャーを読み込めなかったよ');document.documentElement.appendChild(s)})()

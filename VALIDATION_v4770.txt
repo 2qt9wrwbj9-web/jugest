@@ -1,0 +1,8 @@
+VALIDATION v4.7.7
+
+- root/public index.html byte-identical
+- walk-forward optimizer has chronological sample gate, 5% weight grid, train/holdout split and conservative fallback
+- synthetic pure-optimizer regression raises the practical weight when only practical signal identifies the future top rows
+- insufficient-sample regression returns the conservative prior
+- screen + AI JSON continue to share pred.rows order
+- full npm test suite must pass

@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const ui=fs.readFileSync(new URL('../hanahana-ui.js',import.meta.url),'utf8');
+function ok(x,msg){if(!x)throw new Error(msg)}
+ok(html.includes('v4.5.3'),'version missing');
+for(const [k,label] of [['houou','ホウオウ'],['king','キング'],['dragon','ドラゴン'],['star','スター'],['newkingv','ニューキングV']]) ok(html.includes(`class="tab only-compare" data-m="${k}">${label}</button>`),`compare tab missing ${k}`);
+ok(/cmpData=\{[^}]*houou:\[\][^}]*newkingv:\[\][^}]*all:\[\]/.test(html),'HANA dedicated compare storage missing');
+ok(html.includes('[...ALL_MACHINE_KEYS,"all"].forEach'),'compare restore must include HANA keys');
+ok(html.includes('HANA_MACHINE_KEYS.includes(cur))&&page!=="cmp"'),'leaving compare must restore Juggler engine selection');
+ok(html.includes('"hana-live","hana-rev","movecompare"'),'HANA pages must be restorable');
+ok(!html.includes('data-jdata-family='),'duplicate JDATA family controls remain');
+ok(html.includes('上の JUGGLER / HANA HANA 切替に合わせて表示'),'JDATA shared-toggle hint missing');
+ok(html.includes('function v4CaptureMoveSource(')&&html.includes('function v4MoveSourceNow('),'move source snapshot missing');
+ok(html.includes('page==="movecompare"&&v4MoveSource?.context'),'move compare context must use captured source');
+ok(!html.includes('page==="hana-live"||page==="movecompare")?window.HanaJudgeUI?.currentSnapshot?.()'),'stale HANA movecompare shortcut remains');
+ok(ui.includes("getContextView?.('hanahana')"),'HANA live must use shared context view');
+ok(ui.includes('data-layout-change>配置変更</button>'),'HANA live layout-change control missing');
+ok(ui.includes('list="HANA_V4_TABLE_LIST"'),'HANA known-table datalist missing');
+ok(ui.includes('${esc(v.badge||\'未設定\')}'),'HANA context status badge missing');
+ok(ui.includes("commitContextMachine?.(state.machine)"),'HANA machine/layout commit missing');
+ok(html.includes('小役完全取得10%を尤度混合')&&html.includes('小役完全取得想定'),'HANA play-style wording not unified');
+ok(!html.includes('完全技術介入想定'),'obsolete HANA wording remains');
+console.log('v4.5.3 UI parity regression: PASS');

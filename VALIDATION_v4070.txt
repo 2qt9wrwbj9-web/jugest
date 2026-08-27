@@ -1,0 +1,33 @@
+JUGGLER TOOL v4.0.7 VALIDATION — 2026-08-24
+
+Purpose
+- Repair v4.0.6 under-counting observed on a 96-supported-Juggler store where ana-slo displayed ジャグラーガールズSS as 「ジャグラーガールズ」, producing 85 recognized machines.
+- Harden supported-machine name recognition without broadening into unrelated machine families.
+- Preserve setting judgement, store analysis, v4 prediction and relay behavior.
+
+Implemented
+1. Added 「ジャグラーガールズ」 as gg alias.
+2. Added Unicode NFKC normalization for machine labels so full-width digits / Roman numeral variants normalize consistently.
+3. Reviewed all 8 supported-machine aliases and added conservative current/common variants.
+4. Added explicit-table diagnostics for unrecognized labels containing 「ジャグ」; these are no longer silently skipped without a quality warning.
+5. Bumped parserVersion 4060 -> 4070 so v4.0.6 cached acquisition days are treated as stale and re-fetched before export/relay.
+
+Regression expectations
+- ジャグラーガールズ -> gg
+- ジャグラーガールズSS -> gg
+- マイジャグラーⅤ / マイジャグラー5 -> my
+- ゴーゴージャグラーⅢ / ゴーゴージャグラー3 -> go
+- ファンキージャグラーⅡ / ファンキージャグラー2 -> fk
+- ハッピージャグラーVⅢ / V3 -> hp
+- ネオアイムジャグラーEX -> im
+- ミスタージャグラー -> mr
+- ウルトラミラクルジャグラー -> um
+
+Protected core
+- externalJudge(): unchanged from v4.0.6
+- reverseCore(): unchanged from v4.0.6
+- v4PredictStore(): unchanged from v4.0.6
+- relay protocol / Function: unchanged from v4.0.6
+
+Additional regression
+- Synthetic 96-machine explicit-table page with 11 rows labeled 「ジャグラーガールズ」: PASS (96/96 recognized, gg=11).

@@ -1,0 +1,106 @@
+VALIDATION — v4.2.0 HANA HANA judge candidate
+2026-08-25
+
+SCOPE
+-----
+5 HANA HANA machine-level judges only.
+No HANA acquisition/parser/store-learning/data-site integration yet.
+Existing v4.1.2 Juggler pipeline is intentionally unchanged.
+
+STATIC / REGRESSION TESTS
+-------------------------
+PASS: node --check ana-launcher.js
+PASS: node --check hanahana-judge.js
+PASS: node --check hanahana-ui.js
+PASS: node --check netlify/functions/relay.mjs
+PASS: launcher parser suite
+PASS: launcher parser aliases/diagnostics
+PASS: 96-machine / 11-Girls parser regression
+PASS: launcher init/policy/export/relay
+PASS: relay bridge/function
+PASS: app smoke
+PASS: v4.1.0 feature regression
+PASS: v4.1.2 rolling 30-access/30-minute limiter regression
+PASS: HANA engine tests
+PASS: HANA integration tests
+
+HANA ENGINE INVARIANTS VERIFIED
+-------------------------------
+1. All five machines return normalized posterior distributions.
+2. NewKingV uses five labels 1/2/3/4/V and V=5 only in expected-setting summaries.
+3. Default BIG trial games:
+   HOUOU 24 / King 20 / Dragon 21 / Star 20 / NewKingV 14 per BIG.
+4. NewKingV REG trial games = 10 per REG.
+5. Actual bell replaces reverse-difference bell evidence; diff cannot be double-counted.
+6. REG-after hard constraints:
+   traditional green eliminates 1-3; red eliminates 1-4; rainbow leaves 6.
+   NewKingV purple leaves V only.
+7. Setting-change first BIG lamp color does not affect posterior.
+8. Cold/warm side-lamp evidence moves odd/even posterior in the expected direction.
+9. Impossible lamp counts (more lamp samples than corresponding bonus count) are warned and excluded from evidence.
+10. Reverse-bell does NOT add a fixed per-bonus alignment bet outside 3*G.
+11. 20,000 randomized numeric-judge stress calls produced normalized finite probabilities.
+12. Launcher is byte-identical to v4.1.2 in integration regression.
+
+REVERSE-BELL ACCOUNTING
+-----------------------
+Bell count is inferred from:
+normal-game stake (3*G) + actual difference - net bonus gain - expected other-role payouts,
+then divided by bell payout.
+
+No fixed +1/+3 coin per BB/RB is added for HANA. HANA announcement can be same-game or next-game lever-on; its normal-game bet belongs to the observed normal-game G accounting. A fixed Juggler-style alignment correction was deliberately not transferred.
+
+Other-role uncertainty (replay/cherry/watermelon) is propagated into inferred-bell variance. Unknown play style is a likelihood mixture, not an average of final posteriors.
+
+SELF-CONSISTENCY SIMULATION
+---------------------------
+Simulation setup:
+- 6000G per synthetic table
+- 1000 tables per setting
+- Data generated from the same machine probability model used by the judge
+- Reverse mode uses G/BB/RB/diff with unknown play style
+- Live mode adds actual bell, bonus-in small roles, and side/BIG-after lamps (plus NewKingV REG watermelon)
+
+Results:
+Machine       Reverse high/low   Live high/low   Reverse exact   Live exact   Reverse Brier   Live Brier
+HOUOU              72.0%             79.3%           31.6%          48.4%         0.184          0.147
+King               74.6%             80.6%           31.0%          48.5%         0.170          0.135
+Dragon             73.3%             79.8%           31.0%          47.7%         0.177          0.142
+Star               75.7%             80.6%           32.9%          52.6%         0.166          0.135
+NewKingV           71.4%             84.9%           34.6%          61.4%         0.186          0.107
+
+IMPORTANT: this is a self-consistency / implementation sanity test, NOT a claim of real-world accuracy. Because synthetic data is drawn from the same assumed probabilities that the judge uses, these figures only show that the evidence is combined coherently and that adding informative live evidence improves discrimination under the model.
+
+SOURCE / MODEL CAVEATS
+----------------------
+- Published BIG/REG values are treated as base machine specs.
+- Traditional HANA bell, bonus-in small-role, side-lamp and BIG-after tables include analysis/estimated model values rather than universally manufacturer-published current-machine distributions.
+- This build intentionally uses those probabilities as-is, per the current design decision; it does not add arbitrary confidence weights.
+- NewKingV prioritizes current 2026 empirical/predicted values where available. Lower-setting gaps are filled from the prior reference model and are identified in the engine source note.
+- REG-after “濃厚” is intentionally interpreted as a hard lower-bound constraint by product design.
+
+MAIN REFERENCES USED DURING IMPLEMENTATION
+------------------------------------------
+P-WORLD King HANA HANA:
+https://www.p-world.co.jp/machine/database/9783
+
+P-WORLD Star HANA HANA:
+https://www.p-world.co.jp/machine/database/10143
+
+KEN HANA HANA judgement/reference pages:
+https://kenslo65536.com/hanbetsu/hanahana-houou-tensyou-detail.html
+https://kenslo65536.com/hanbetsu/dragon-hanahana-senkou-30-detail.html
+
+King empirical/reference aggregation:
+https://ameblo.jp/datyo1062/entry-12863559694.html
+
+NewKingV current empirical/predicted aggregation:
+https://ameblo.jp/datyo1062/entry-12955505291.html
+
+NewKingV current game/announcement specs:
+https://hisshobon.com/machineinfo/88630/
+
+STATUS
+------
+READY AS A CANDIDATE for user-side acceptance testing.
+Not yet the final HANA acquisition/data-site expansion.

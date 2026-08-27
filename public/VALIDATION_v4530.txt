@@ -1,0 +1,61 @@
+v4.5.3 UI parity / move-source correction — validation
+Date: 2026-08-25
+
+Scope
+- UI/state-management corrections only around the v4.5 HANA integration.
+- HANA judgement probability tables/formulas were not changed.
+- ana-launcher.js was not changed from v4.5.2/v4.5.0 launcher (SHA-256 identical).
+
+Corrections
+1. 台比較 machine tabs
+   - Added dedicated compare tabs for all five HANA machines.
+   - Total dedicated machine tabs: 8 Juggler + 5 HANA; 機種横断 remains available.
+   - Added separate compare-state buckets for all five HANA machines.
+   - Leaving 台比較 from a HANA/all tab restores the last Juggler machine before entering Juggler pages.
+
+2. HANA 実戦台 context parity
+   - Same date/store/table/machine card concept as Juggler.
+   - Known-table datalist from store history.
+   - Date-effective machine recognition.
+   - Recognized machine locks the selector.
+   - 配置変更 unlock/commit flow records a date-effective override.
+   - Status badge uses 未設定 / 新規店舗 / 配置認識済み / 未知台番 / 他カテゴリ配置.
+   - Opposite-family recognized tables are surfaced instead of silently forcing a wrong family machine.
+
+3. ジャグラー・ハナハナデータ
+   - Removed duplicate in-card JUGGLER/HANA HANA toggle.
+   - Shared top family toggle is now the single family control.
+
+4. Page restore
+   - hana-live and hana-rev are valid restored pages.
+   - movecompare restore also renders its current state.
+
+5. HANA reverse-bell wording
+   - Unified HANA 'perfect' wording to 小役完全取得.
+   - Removed 完全技術介入想定 wording from HANA UI/compare output.
+
+6. Move comparison source isolation
+   - Captures current family/machine/probability/current-G/context before navigating to 移動比較.
+   - movecompare reads the captured source instead of querying whichever HANA session happens to exist later.
+   - Prevents stale HANA -> later Juggler contamination and the reverse direction.
+
+Regression / automated checks
+- node syntax checks: PASS
+- launcher parser base/hardening/aliases: PASS
+- 96-table + 11 Girls regression: PASS
+- all 5 HANA launcher aliases: PASS
+- launcher init/policy/export/relay: PASS
+- relay bridge/function: PASS
+- app smoke / external judge / JSON normalization: PASS
+- 30 accesses / 30 minutes rolling limiter: PASS
+- HANA judge regression + New King V hard constraint: PASS
+- HANA full integration: PASS
+- v4.5.2 legacy UI regression: PASS
+- v4.5.3 UI parity regression: PASS
+
+Launcher integrity
+- v4.5.3 ana-launcher.js SHA-256:
+  964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4
+- v4.5.2 ana-launcher.js SHA-256:
+  964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4
+- Therefore the existing ?v=4500 bookmarklet remains correct.

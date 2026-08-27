@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+const code=fs.readFileSync(new URL('../ana-launcher.js',import.meta.url),'utf8');
+const elems=new Map();let appended=false;
+function fake(){return new Proxy({id:'',innerHTML:'',textContent:'',className:'',style:{},value:'auto',disabled:false,onclick:null,onchange:null,scrollTop:0,scrollHeight:0,classList:{add(){},remove(){},toggle(){},contains(){return false}},appendChild(){},addEventListener(){},removeEventListener(){},setAttribute(){},removeAttribute(){}},{get(t,p){if(p in t)return t[p];return undefined},set(t,p,v){t[p]=v;return true}})}
+const body=fake();body.appendChild=(el)=>{appended=true;if(el?.id)elems.set(el.id,el)};
+const document={title:'AnaSlo Test',body,documentElement:{outerHTML:'<html></html>'},querySelectorAll(sel){return sel==='h1,h2'?[{textContent:'2026/08/23 ジアス大船 データまとめ'}]:[]},createElement(){return fake()},getElementById(id){if(id==='jugglerAnaRunner3160'&&!appended)return null;if(!appended)return null;if(!elems.has(id))elems.set(id,fake());return elems.get(id)},addEventListener(){},removeEventListener(){},execCommand(){return true}};
+const ls=new Map();
+const URLX=URL;URLX.createObjectURL=()=> 'blob:test';URLX.revokeObjectURL=()=>{};
+const sandbox={console,document,window:null,location:{hostname:'ana-slo.com',pathname:'/2026-08-23-test-shop-data/',hash:'',href:'https://ana-slo.com/2026-08-23-test-shop-data/',origin:'https://ana-slo.com'},localStorage:{getItem(k){return ls.get(k)??null},setItem(k,v){ls.set(k,String(v))},removeItem(k){ls.delete(k)}},navigator:{},indexedDB:undefined,alert(){},confirm(){return true},performance,fetch:async()=>{throw new Error('not used')},TextDecoder,TextEncoder,atob,btoa,crypto:globalThis.crypto,URL:URLX,Blob,File:globalThis.File??class File{},setTimeout,clearTimeout,setInterval,clearInterval,Date,Math,JSON,Map,Set,Array,Object,Number,String,Promise,parseInt,isFinite};sandbox.window=sandbox;sandbox.window.opener=null;
+vm.createContext(sandbox);await vm.runInContext(code,sandbox,{timeout:10000});
+if(!appended)throw new Error('panel not appended');
+if(typeof elems.get('jacStart')?.onclick!=='function')throw new Error('start handler missing');
+if(typeof elems.get('jacExport180')?.onclick!=='function')throw new Error('180-day JSON export handler missing');
+if(typeof elems.get('jacExport13')?.onclick!=='function')throw new Error('13-month JSON export handler missing');
+if(typeof elems.get('jacNightStart')?.onclick!=='function')throw new Error('night acquisition handler missing');
+if(typeof elems.get('jacRelaySend13')?.onclick!=='function')throw new Error('13-month relay handler missing');
+if(elems.has('jacReturnTool'))throw new Error('legacy return-to-tool button still present');
+if(!String(elems.get('jac180')?.textContent||'').includes('/180'))throw new Error('180 progress missing');
+if(!String(elems.get('jacMap')?.innerHTML||'').includes('jac-dot'))throw new Error('180 map missing');
+if(!String(elems.get('jacShop')?.textContent||'').startsWith('ジアス大船 /'))throw new Error('shop title normalization failed: '+elems.get('jacShop')?.textContent);
+if(!String(elems.get('jacNightStatus')?.innerHTML||'').includes('13か月'))throw new Error('night status missing');
+console.log('launcher init: ok',elems.get('jac180').textContent,elems.get('jacSession').textContent);

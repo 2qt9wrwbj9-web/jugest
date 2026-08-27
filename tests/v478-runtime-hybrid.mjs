@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+assert.match(html,/ジャグラー設定判別 v4\.7\.8/);
+assert.match(html,/function v4HybridStoredWeights\(/);
+assert.match(html,/function v4HybridRetrain\(/);
+assert.match(html,/V4_HYBRID_TRAIN/);
+assert.match(html,/forceHybridOptimize\?v4HybridWalkForwardWeights\(shop,targetDate,sourceDays\):v4HybridStoredWeights\(shop,targetDate,sourceDays\)/);
+assert.doesNotMatch(html,/renderBruteView\(\);await nextFrame\(\);v4RenderTwin\(true\)/);
+assert.match(html,/renderBruteView\(\);await nextFrame\(\);v4RenderTwin\(false\)/);
+assert.match(html,/v4HybridProfiles/);
+const pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+assert.equal(pub,html,'root/public index must remain byte-identical');
+console.log('PASS v4.7.8 runtime hybrid persistence + brute post-analysis hardening');
