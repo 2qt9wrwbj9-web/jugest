@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync('./index.html','utf8');
 const pub=fs.readFileSync('./public/index.html','utf8');
 assert.equal(html,pub,'root/public index must be byte-identical');
-assert.match(html,/ジャグラー設定判別 v4\.7\.8/);
+assert.match(html,/ジャグラー設定判別 v4\.7\.9/);
 assert.match(html,/ranking:\{version:4,separatedFromStrict:true,singleFirst:true,hybrid:true,hybridWeights:\{\.\.\.hybridWeights,validatedCalendarMax:\.05\},hybridOptimization/);
 assert.match(html,/function v4HybridApplyWeights\(rawRows,weights\)/);
 assert.match(html,/weights\.practical\*row\.practicalSignal\+weights\.model\*row\.modelSignal\+weights\.strict\*row\.strictSignal/);

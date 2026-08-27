@@ -1,0 +1,5 @@
+v4.7.9 validation
+- root/public index byte-identical
+- contribution UI uses existing rootReasons only
+- family collapse, decay weights and practical ES/P4 caps guarded unchanged
+- full npm test required before commit

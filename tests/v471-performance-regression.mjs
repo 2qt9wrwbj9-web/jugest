@@ -56,8 +56,8 @@ function snap(p){
 }
 
 const currentHtml=fs.readFileSync('./index.html','utf8');
-assert.match(currentHtml,/ジャグラー設定判別 v4\.7\.8/);
-assert.match(currentHtml,/appVersion:"4\.7\.8"/);
+assert.match(currentHtml,/ジャグラー設定判別 v4\.7\.9/);
+assert.match(currentHtml,/appVersion:"4\.7\.9"/);
 assert.match(currentHtml,/BRUTE_SHIFT_DATE_CACHE/);
 assert.match(currentHtml,/bruteForecastBaseFromPrep/);
 assert.match(currentHtml,/V4_FIT_BASE_CACHE/);

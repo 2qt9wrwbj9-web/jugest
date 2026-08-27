@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync('./index.html','utf8');
 const publicHtml=fs.readFileSync('./public/index.html','utf8');
 assert.equal(html,publicHtml,'root/public index.html must stay byte-identical');
-assert.match(html,/ジャグラー設定判別 v4\.7\.8/);
-assert.match(html,/appVersion:"4\.7\.8"/);
+assert.match(html,/ジャグラー設定判別 v4\.7\.9/);
+assert.match(html,/appVersion:"4\.7\.9"/);
 
 const initStart=html.indexOf('async function initExternalStorage()');
 const initEnd=html.indexOf('let externalStorageReadyResolve;',initStart);

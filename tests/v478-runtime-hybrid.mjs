@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(html,/ジャグラー設定判別 v4\.7\.8/);
+assert.match(html,/ジャグラー設定判別 v4\.7\.9/);
 assert.match(html,/function v4HybridStoredWeights\(/);
 assert.match(html,/function v4HybridRetrain\(/);
 assert.match(html,/V4_HYBRID_TRAIN/);

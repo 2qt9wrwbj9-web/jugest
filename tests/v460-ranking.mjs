@@ -7,9 +7,9 @@ const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), '
 const launcher = fs.readFileSync(new URL('../public/ana-launcher.js', import.meta.url), 'utf8');
 
 // Static release / invariant checks.
-assert.match(html, /<title>ジャグラー設定判別 v4\.7\.8<\/title>/);
-assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.7\.8<\/span>/);
-assert.match(html, /appVersion:"4\.7\.8"/);
+assert.match(html, /<title>ジャグラー設定判別 v4\.7\.9<\/title>/);
+assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.7\.9<\/span>/);
+assert.match(html, /appVersion:"4\.7\.9"/);
 assert.match(launcher, /const VERSION='4\.5\.0';/);
 assert.match(launcher, /const PARSER_VERSION=4500;/);
 assert.match(html, /function v4ModelEligibleScore\(x\)\{return!!x&&\(\(x\.score>=53\.5&&\(x\.adjP\?\?1\)<=\.05&&x\.winRate>=\.58&&x\.blockWinRate>=\.75&&x\.esLift>=\.07\)\|\|x\.rareValidated===true\)\}/);

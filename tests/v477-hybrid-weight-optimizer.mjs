@@ -4,7 +4,7 @@ import vm from 'node:vm';
 const html=fs.readFileSync('./index.html','utf8');
 const pub=fs.readFileSync('./public/index.html','utf8');
 assert.equal(html,pub,'root/public index must be byte-identical');
-assert.match(html,/ジャグラー設定判別 v4\.7\.8/);
+assert.match(html,/ジャグラー設定判別 v4\.7\.9/);
 assert.match(html,/function v4HybridWalkForwardWeights\(/);
 assert.match(html,/v4HybridOptimizeSamples\(samples,\{step:\.05\}\)/);
 assert.match(html,/holdout guard/);

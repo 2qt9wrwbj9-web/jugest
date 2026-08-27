@@ -18,8 +18,8 @@ assert.ok(html.indexOf(decl) > 0 && html.indexOf(decl) < html.indexOf(receive),
 assert.ok(html.indexOf('initExternalStorage().finally(()=>externalStorageReadyResolve());') > html.indexOf('let didRestore=restoreSavedState()'),
   'actual external storage initialization must remain in the late startup phase after restore setup');
 assert.equal(html, publicHtml, 'root/public index.html must stay byte-identical');
-assert.match(html, /ジャグラー設定判別 v4\.7\.8/);
-assert.match(html, /appVersion:"4\.7\.8"/);
+assert.match(html, /ジャグラー設定判別 v4\.7\.9/);
+assert.match(html, /appVersion:"4\.7\.9"/);
 
 const launcher = fs.readFileSync(path.join(base, 'ana-launcher.js'));
 const launcherPublic = fs.readFileSync(path.join(base, 'public', 'ana-launcher.js'));
