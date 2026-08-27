@@ -37,7 +37,6 @@ jobs:
           github_base = 'https://2qt9wrwbj9-web.github.io/jugest'
           relay = 'https://jugest.netlify.app/api/relay'
 
-          # Tool frontend: keep the existing Netlify relay backend during the transition.
           old = 'const RELAY_API="/api/relay",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";'
           new = f'const RELAY_API="{relay}",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";'
           for path in [root / 'index.html', root / 'public/index.html']:
@@ -71,9 +70,6 @@ jobs:
               )
               path.write_text(text)
 
-          # Prepare the transitional Netlify relay source to accept the Pages origin.
-          # This source change is harmless until Netlify is redeployed, and will be
-          # required only until the relay moves to the VPS.
           relay_file = root / 'netlify/functions/relay.mjs'
           text = relay_file.read_text()
           github_origin = "  'https://2qt9wrwbj9-web.github.io',\n"
@@ -83,10 +79,6 @@ jobs:
                   raise SystemExit('Relay origin marker not found')
               text = text.replace(marker, marker + github_origin, 1)
           relay_file.write_text(text)
-
-          # Future pushes deploy the exact same public/ directory that Netlify used.
-          pages = root / '.github/workflows/pages.yml'
-          pages.write_text('''name: Deploy GitHub Pages\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Configure Pages\n        uses: actions/configure-pages@v5\n        with:\n          enablement: true\n      - name: Upload static site\n        uses: actions/upload-pages-artifact@v3\n        with:\n          path: public\n      - name: Deploy to GitHub Pages\n        id: deployment\n        uses: actions/deploy-pages@v4\n''')
           PY
 
       - name: Verify semantic regression suite
@@ -102,7 +94,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html public/index.html BOOKMARKLET_v4500.txt BOOKMARKLET_SINGLE_DAY_v1000.txt public/BOOKMARKLET_SINGLE_DAY_v1000.txt README_SINGLE_DAY_v1000.md public/README_SINGLE_DAY_v1000.md netlify/functions/relay.mjs .github/workflows/pages.yml
+          git add index.html public/index.html BOOKMARKLET_v4500.txt BOOKMARKLET_SINGLE_DAY_v1000.txt public/BOOKMARKLET_SINGLE_DAY_v1000.txt README_SINGLE_DAY_v1000.md public/README_SINGLE_DAY_v1000.md netlify/functions/relay.mjs
           if ! git diff --cached --quiet; then
             git commit -m "Wire v4.7.8 frontend for GitHub Pages"
             git push
