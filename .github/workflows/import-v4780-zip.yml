@@ -1,0 +1,49 @@
+name: Import v4.7.8 project ZIP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'juggler_netlify_v4780_runtime_hardened*.zip'
+      - 'jugest_v4780_full_project.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate and extract project ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP=""
+          for f in juggler_netlify_v4780_runtime_hardened*.zip jugest_v4780_full_project.zip; do
+            if [ -f "$f" ]; then ZIP="$f"; break; fi
+          done
+          if [ -z "$ZIP" ]; then
+            echo "No v4.7.8 project ZIP found."
+            exit 1
+          fi
+          echo "Importing $ZIP"
+          unzip -o "$ZIP" -d .
+          rm -f "$ZIP"
+
+      - name: Commit extracted project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Import v4.7.8 runtime hardened baseline"
+          git push
