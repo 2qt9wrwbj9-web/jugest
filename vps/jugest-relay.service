@@ -1,0 +1,25 @@
+[Unit]
+Description=jugest VPS relay API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jugest
+Group=jugest
+WorkingDirectory=/opt/jugest
+Environment=HOST=127.0.0.1
+Environment=PORT=8787
+Environment=JUGEST_RELAY_DATA_DIR=/var/lib/jugest-relay
+Environment=JUGEST_ALLOWED_ORIGINS=https://2qt9wrwbj9-web.github.io,https://ana-slo.com,https://www.ana-slo.com
+ExecStart=/usr/bin/node /opt/jugest/vps/relay-server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jugest-relay
+
+[Install]
+WantedBy=multi-user.target
