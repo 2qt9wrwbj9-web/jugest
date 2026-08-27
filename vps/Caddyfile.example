@@ -1,0 +1,5 @@
+# Replace relay.example.com with the HTTPS hostname used for the VPS Relay API.
+relay.example.com {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:8787
+}
