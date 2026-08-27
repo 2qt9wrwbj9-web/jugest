@@ -1438,7 +1438,7 @@ function showRestoreToast(ok){
 
 
 const $=id=>document.getElementById(id), G=$("G"), inputs=$("inputs");
-const RELAY_API="/api/relay",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";
+const RELAY_API="https://jugest.netlify.app/api/relay",RELAY_STORAGE_KEY="jugglerRelayReceiver:v1";
 function loadRelayReceiver(){try{let x=JSON.parse(localStorage.getItem(RELAY_STORAGE_KEY)||"null");return x&&x.channelId&&x.receiverToken?x:null}catch(e){return null}}
 function saveRelayReceiver(x){try{if(x)localStorage.setItem(RELAY_STORAGE_KEY,JSON.stringify(x));else localStorage.removeItem(RELAY_STORAGE_KEY)}catch(e){}}
 let relayReceiver=loadRelayReceiver(),relayBusy=false,relayLastPeek=0;

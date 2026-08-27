@@ -7,6 +7,7 @@ const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_PAYLOAD_BYTES = 4_500_000;
 const ALLOWED_ORIGINS = new Set([
   'https://jugest.netlify.app',
+  'https://2qt9wrwbj9-web.github.io',
   'https://ana-slo.com',
   'https://www.ana-slo.com',
 ]);

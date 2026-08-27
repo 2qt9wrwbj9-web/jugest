@@ -7,7 +7,7 @@
 - 長期取得、IndexedDB保存、Relay、30回/30分カウンタは使用しない。
 
 ## 使い方
-1. `ana-single-day.js` を `https://jugest.netlify.app/ana-single-day.js` として配置。
+1. `ana-single-day.js` を `https://2qt9wrwbj9-web.github.io/jugest/ana-single-day.js` として配置。
 2. `BOOKMARKLET_SINGLE_DAY_v1000.txt` の1行をSafariブックマークのURL欄へ貼る。
 3. アナスロの日別データページを開き、読み込み完了後にブックマークレットを実行。
 4. 「JSONをコピー」または「共有 / ファイル保存」。

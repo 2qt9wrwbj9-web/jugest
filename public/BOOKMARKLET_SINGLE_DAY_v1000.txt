@@ -1,1 +1,1 @@
-javascript:(()=>{var s=document.createElement('script');s.src='https://jugest.netlify.app/ana-single-day.js?v=1000&t='+Date.now();s.onerror=()=>alert('単日取得スクリプトを読み込めなかったよ');document.documentElement.appendChild(s)})()
+javascript:(()=>{var s=document.createElement('script');s.src='https://2qt9wrwbj9-web.github.io/jugest/ana-single-day.js?v=1000&t='+Date.now();s.onerror=()=>alert('単日取得スクリプトを読み込めなかったよ');document.documentElement.appendChild(s)})()
