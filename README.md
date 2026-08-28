@@ -1,5 +1,5 @@
 # jugest
 
-Juggler / HANA analysis tool repository.
+Juggler / HANA HANA setting-analysis tool.
 
-Initial GitHub migration baseline: v4.7.8 runtime hardened.
+Static frontend: GitHub Pages. Relay migration target: VPS. See `vps/README.md` for the prepared Netlify-independent cutover path.
