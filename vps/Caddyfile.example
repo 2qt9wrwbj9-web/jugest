@@ -1,5 +1,19 @@
 # Replace relay.example.com with the HTTPS hostname used for the VPS Relay API.
 relay.example.com {
   encode zstd gzip
-  reverse_proxy 127.0.0.1:8787
+
+  # Safari Launcher bridge. Keep this same-origin with /api/relay.
+  @bridge path /relay-bridge.html
+  handle @bridge {
+    root * /opt/jugest
+    header Cache-Control "no-store"
+    header X-Content-Type-Options "nosniff"
+    header Referrer-Policy "no-referrer"
+    header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors https://ana-slo.com https://www.ana-slo.com https://2qt9wrwbj9-web.github.io"
+    file_server
+  }
+
+  handle {
+    reverse_proxy 127.0.0.1:8787
+  }
 }
