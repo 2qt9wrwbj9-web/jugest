@@ -40,7 +40,7 @@ function jdataMetrics(rows){rows=Array.isArray(rows)?rows:[];const n=rows.length
 
   src = once(src,
     '<div class="jdata-sub-kpis"><div class="jdata-kpi"><small>プラス台率</small><b>${jdataFmtPct(m.positiveRate)}</b></div><div class="jdata-kpi"><small>設定4以上 推定割合</small><b>${jdataFmtPct(m.p4)}</b></div></div><div class="jdata-note">推定平均設定と設定4以上割合は各台の設定分布を1台ずつ均等に平均。ハナハナは機種別のBIG/REG/差枚→推定ベル式を使用し、ニューキングVはV=5として平均設定を計算する。</div>',
-    '<div class="jdata-sub-kpis"><div class="jdata-kpi gold"><small>平均設定</small><b>${fmtSetting(m.mapAverage)}</b></div><div class="jdata-kpi"><small>プラス台率</small><b>${jdataFmtPct(m.positiveRate)}</b></div><div class="jdata-kpi"><small>設定4以上 推定割合</small><b>${jdataFmtPct(m.p4)}</b></div></div><div class="jdata-note"><b>推定設定配分</b><br>${jdataDistLabel(m.mapDist)}</div><div class="jdata-note">期待設定＝各台posteriorの平均。平均設定＝各台の最有力設定（MAP）を1台1票で平均。推定設定配分も1台1票で、最有力が同率なら候補設定へ等分する。ハナハナは既存のBIG/REG/差枚→推定ベル式をそのまま使用し、ニューキングVは設定6を候補にしない。</div>',
+    '<div class="jdata-sub-kpis"><div class="jdata-kpi gold"><small>平均設定</small><b>${fmtSetting(m.mapAverage)}</b></div><div class="jdata-kpi"><small>プラス台率</small><b>${jdataFmtPct(m.positiveRate)}</b></div><div class="jdata-kpi"><small>設定4以上 推定割合</small><b>${jdataFmtPct(m.p4)}</b></div></div><div class="jdata-note"><b>推定設定配分</b><br>${jdataDistLabel(m.mapDist)}</div><div class="jdata-note">期待設定と設定4以上割合は各台の設定分布を1台ずつ均等に平均。平均設定＝各台の最有力設定（MAP）を1台1票で平均。推定設定配分も1台1票で、最有力が同率なら候補設定へ等分する。ハナハナは既存のBIG/REG/差枚→推定ベル式をそのまま使用し、ニューキングVは設定6を候補にしない。</div>',
     'overview map summary');
 
   src = once(src,
