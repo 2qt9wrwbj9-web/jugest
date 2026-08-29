@@ -29,3 +29,4 @@ jobs:
           git rm scripts/apply-v480-jdata.mjs .github/workflows/apply-v480-jdata.yml
           git commit -m "Release v4.8.0 data-page setting summaries"
           git push
+# retry after preserving inherited data-page wording
