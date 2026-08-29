@@ -31,3 +31,4 @@ jobs:
           git rm scripts/apply-v480-jdata.mjs scripts/normalize-late-regression-versions.mjs .github/workflows/apply-v480-jdata.yml
           git commit -m "Release v4.8.0 data-page setting summaries"
           git push
+# final retry after v4.7.9 UI guard cleanup
