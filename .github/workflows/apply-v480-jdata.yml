@@ -25,8 +25,8 @@ jobs:
         run: |
           git config user.name "Hiro"
           git config user.email "2qt9wrwbj9@privaterelay.appleid.com"
-          git add index.html public/index.html package.json tests/v473-relay-init.mjs tests/v480-jdata-setting-summary.mjs
+          git add index.html public/index.html package.json tests/v473-relay-init.mjs tests/v460-ranking.mjs tests/v480-jdata-setting-summary.mjs
           git rm scripts/apply-v480-jdata.mjs .github/workflows/apply-v480-jdata.yml
           git commit -m "Release v4.8.0 data-page setting summaries"
           git push
-# retry after preserving inherited data-page wording
+# retry after release-version invariant cleanup
