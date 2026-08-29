@@ -18,8 +18,10 @@ assert.ok(html.indexOf(decl) > 0 && html.indexOf(decl) < html.indexOf(receive),
 assert.ok(html.indexOf('initExternalStorage().finally(()=>externalStorageReadyResolve());') > html.indexOf('let didRestore=restoreSavedState()'),
   'actual external storage initialization must remain in the late startup phase after restore setup');
 assert.equal(html, publicHtml, 'root/public index.html must stay byte-identical');
-assert.match(html, /ジャグラー設定判別 v4\.7\.9/);
-assert.match(html, /appVersion:"4\.7\.9"/);
+const visibleVersion = html.match(/ジャグラー設定判別 v(\d+\.\d+\.\d+)/)?.[1];
+const backupVersion = html.match(/appVersion:"(\d+\.\d+\.\d+)"/)?.[1];
+assert.ok(visibleVersion, 'visible app version must be present');
+assert.equal(backupVersion, visibleVersion, 'visible version and backup appVersion must stay synchronized');
 
 const launcher = fs.readFileSync(path.join(base, 'ana-launcher.js'));
 const launcherPublic = fs.readFileSync(path.join(base, 'public', 'ana-launcher.js'));
@@ -29,4 +31,4 @@ assert.equal(sha, '964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb1
   'Launcher changed unexpectedly; bookmarklet/parser bump would need explicit review');
 const bookmarklet = fs.readFileSync(path.join(base, 'BOOKMARKLET_v4500.txt'), 'utf8');
 assert.match(bookmarklet, /ana-launcher\.js\?v=4500/);
-console.log('PASS v4.7.8 relay storage-init ordering regression; Launcher/bookmarklet unchanged');
+console.log('PASS relay storage-init ordering regression; version sync + Launcher/bookmarklet unchanged');
