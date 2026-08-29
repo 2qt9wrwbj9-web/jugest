@@ -6,10 +6,14 @@ const root = new URL('..', import.meta.url);
 const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const launcher = fs.readFileSync(new URL('../public/ana-launcher.js', import.meta.url), 'utf8');
 
-// Static release / invariant checks.
-assert.match(html, /<title>ジャグラー設定判別 v4\.7\.9<\/title>/);
-assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.7\.9<\/span>/);
-assert.match(html, /appVersion:"4\.7\.9"/);
+// Static release / invariant checks. The exact app version is intentionally not pinned here;
+// this regression protects the v4.6 ranking contracts across later releases.
+const titleVersion = html.match(/<title>ジャグラー設定判別 v(\d+\.\d+\.\d+)<\/title>/)?.[1];
+const visibleVersion = html.match(/ジャグラー・ハナハナ設定判別 <span[^>]*>v(\d+\.\d+\.\d+)<\/span>/)?.[1];
+const backupVersion = html.match(/appVersion:"(\d+\.\d+\.\d+)"/)?.[1];
+assert.ok(titleVersion, 'release title version missing');
+assert.equal(visibleVersion, titleVersion, 'visible version must match title');
+assert.equal(backupVersion, titleVersion, 'backup appVersion must match title');
 assert.match(launcher, /const VERSION='4\.5\.0';/);
 assert.match(launcher, /const PARSER_VERSION=4500;/);
 assert.match(html, /function v4ModelEligibleScore\(x\)\{return!!x&&\(\(x\.score>=53\.5&&\(x\.adjP\?\?1\)<=\.05&&x\.winRate>=\.58&&x\.blockWinRate>=\.75&&x\.esLift>=\.07\)\|\|x\.rareValidated===true\)\}/);
@@ -70,11 +74,9 @@ function qFor(es){
 function row(table,day){
   const d=day%14;
   let es=3.0;
-  // Persistent exact-table signal.
   if(table===1001) es=3.55+(day%5===0?.35:0);
   else if(table===1002&&d<3) es=3.6;
   else if(table===1003&&day%7===2) es=3.7;
-  // Explicit two-day sequence: a low prior day after normal is followed by a rise.
   if(table===1004){const mod=day%4;es=mod===0?3.9:mod===3?2.35:3.0;}
   const q=qFor(es), p4=q[3]+q[4]+q[5], p5=q[4]+q[5];
   return {machine:'im',machineName:'アイムジャグラーEX',tableNo:String(table),games:6500,diff:Math.round((es-3)*900),
@@ -103,7 +105,6 @@ const defs=V.dimDefs;
 const get=k=>row1004.features[defs.findIndex(x=>x.key===k)];
 for(const k of ['prev2Band','prevES2Seq','prevDiff2Seq','diffTrend27']) assert.ok(get(k), `two-day feature ${k} should be populated`);
 
-// Null-control: perfectly flat history must not manufacture a practical edge.
 const flatDays=[];
 for(let i=0;i<100;i++){
   const d=new Date(start); d.setDate(d.getDate()+i); const date=d.toISOString().slice(0,10);
@@ -117,5 +118,5 @@ assert.ok(flat, 'flat control prediction missing');
 assert.equal(flat.ranking.confidence,0,'flat control should not create ranking confidence');
 assert.ok(new Set(flat.rows.map(r=>r.rankValue.toFixed(10))).size===1,'flat control should not create table differences');
 
-console.log('PASS v4.6.x practical ranking + 2-day history regression under v4.7.8');
+console.log('PASS v4.6.x practical ranking + 2-day history regression');
 console.log(`ranking confidence=${pred.ranking.confidence.toFixed(3)} tableProfileWeight=${pred.ranking.models.tableProfile.weight.toFixed(3)} top=${pred.rows[0].tableNo} flatConfidence=${flat.ranking.confidence.toFixed(3)}`);
