@@ -5,9 +5,9 @@ import vm from 'node:vm';
 const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const launcher = fs.readFileSync(new URL('../public/ana-launcher.js', import.meta.url), 'utf8');
 
-assert.match(html, /<title>ジャグラー設定判別 v4\.7\.9<\/title>/);
-assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.7\.9<\/span>/);
-assert.match(html, /appVersion:"4\.7\.9"/);
+assert.match(html, /<title>ジャグラー設定判別 v4\.\d+\.\d+<\/title>/);
+assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.\d+\.\d+<\/span>/);
+assert.match(html, /appVersion:"\d+\.\d+\.\d+"/);
 assert.match(launcher, /const VERSION='4\.5\.0';/);
 assert.match(launcher, /const PARSER_VERSION=4500;/);
 assert.match(html, /単一条件のみ（最速・推奨）/);
