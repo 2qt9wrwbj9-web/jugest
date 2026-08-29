@@ -2,4 +2,4 @@
 
 Juggler / HANA HANA setting-analysis tool.
 
-Static frontend: GitHub Pages. Relay migration target: VPS. See `vps/README.md` for the prepared Netlify-independent cutover path.
+Primary frontend + Relay: Netlify (`https://jugest.netlify.app`). GitHub remains the source repository and GitHub Pages may remain available as a backup/static mirror. The prepared VPS migration path is parked in `vps/README.md` for future use.
