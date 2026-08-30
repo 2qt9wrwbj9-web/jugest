@@ -2,5 +2,32 @@
   publish = "public"
   command = "npm run check"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# While Netlify is the temporary production origin, always serve the app shell,
+# Launcher and Safari relay bridge fresh. This avoids an older cached build
+# surviving after a GitHub-triggered Netlify deploy.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/ana-launcher.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/relay-bridge.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
