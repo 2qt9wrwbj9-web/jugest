@@ -42,4 +42,13 @@ function replaceUnique(text, from, to, label) {
   fs.writeFileSync(path, text);
 }
 
-console.log('legacy v4.7 regressions are alias-dedup aware while strict parity and lazy execution remain enforced');
+{
+  const path = 'tests/v480-jdata-setting-summary.mjs';
+  let text = fs.readFileSync(path, 'utf8');
+  text = replaceUnique(text, `assert.ok(root.includes('appVersion:"4.8.0"'));`, `assert.ok(root.includes('appVersion:"4.8.1"'));`, 'v4.8 appVersion assertion');
+  text = replaceUnique(text, `assert.ok(root.includes('>v4.8.0</span>'));`, `assert.ok(root.includes('>v4.8.1</span>'));`, 'v4.8 visible version assertion');
+  text = replaceUnique(text, `console.log('v4.8.0 jdata setting summary regression passed');`, `console.log('v4.8.1 jdata setting summary regression passed; v4.8.0 data-page semantics preserved');`, 'v4.8 regression log');
+  fs.writeFileSync(path, text);
+}
+
+console.log('legacy regressions are v4.8.1 alias-dedup aware while strict parity, lazy execution, and v4.8.0 data-page semantics remain enforced');
