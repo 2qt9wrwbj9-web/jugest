@@ -34,7 +34,25 @@ function patchHtml(source) {
   const rankStart = html.indexOf('function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){');
   const rankEnd = html.indexOf('function bruteSingleCandidateLabel(c){', rankStart);
   if (rankStart < 0 || rankEnd < 0) throw new Error('Could not locate bruteSingleRankForRow block');
-  const replacement = `function bruteSingleRankQuality(c){return Math.abs(c?.practicalEffect||0)*(.45+.55*(c?.confidence||0)/100)}\nfunction bruteSingleAliasNumber(v){return Number.isFinite(v)?String(Object.is(v,-0)?0:v):"—"}\nfunction bruteSingleAliasFingerprint(c){\n return [c?.scope||"",c?.machine||"",c?.days??"",c?.rows??"",c?.prevalence??"",c?.effect,c?.p4Delta,c?.discEffect,c?.valEffect,c?.oosEffect,c?.oosWinRate,c?.block6WinRate,c?.recent30,c?.recent60,c?.recent90].map((v,i)=>i<5?String(v):bruteSingleAliasNumber(v)).join("\\u001f")\n}\nfunction bruteSingleAliasGroups(cands){\n let aliases=new Map;for(let c of cands||[]){let k=bruteSingleAliasFingerprint(c),quality=bruteSingleRankQuality(c),old=aliases.get(k);if(!old){aliases.set(k,{c,quality,aliases:[c]});continue}old.aliases.push(c);if(quality>old.quality){old.c=c;old.quality=quality}}\n return [...aliases.values()].sort((a,b)=>(b.c?.rankScore||0)-(a.c?.rankScore||0)||b.quality-a.quality)\n}\nfunction bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){\n if(!engine||!row)return{effectES:0,p4Effect:0,confidence:0,reasons:[],matchedCount:0,familyCount:0};let ex=new Set(excludeFamilies),conds=conditions||engine.targetConditions?.get(\\`${'${row.machine}'}|${'${row.tableNo}'}|${'${row.date}'}\\`)||bruteSingleConditions(row,ctx||engine.ctx),matched=[];\n for(let m of conds){if(ex.has(m.family))continue;let a=engine.storeMap.get(m.id),b=engine.machineMap.get(\\`${'${row.machine}'}\\u001e${'${m.id}'}\\`);for(let c of [a,b])if(c&&c.directionStable&&c.confidence>=15&&Math.abs(c.practicalEffect)>=.003)matched.push(c)}\n let fam=new Map;for(let c of matched){let f=c.meta.family,quality=bruteSingleRankQuality(c),old=fam.get(f);if(!old||quality>old.quality)fam.set(f,{c,quality})}\n let roots=bruteSingleAliasGroups([...fam.values()].map(x=>x.c)).sort((a,b)=>Math.abs(b.c.practicalEffect)-Math.abs(a.c.practicalEffect)),weights=[1,.78,.62,.50,.40,.33,.27,.22,.18,.15],effectES=0,p4Effect=0,reasons=[],cw=0,cs=0;\n for(let i=0;i<Math.min(weights.length,roots.length);i++){let x=roots[i],c=x.c,w=weights[i];effectES+=c.practicalEffect*w;p4Effect+=(c.practicalP4Delta||0)*w;let mag=Math.abs(c.practicalEffect*w);cw+=mag;cs+=mag*c.confidence/100;let aliasLabels=[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==c.meta.label);reasons.push({label:c.meta.label,family:c.meta.family,scope:c.scope,machine:c.machine,confidence:c.confidence,days:c.days,rows:c.rows,effect:c.effect,p4Delta:c.p4Delta,practicalEffect:c.practicalEffect,practicalP4Delta:c.practicalP4Delta,contributionES:c.practicalEffect*w,contributionP4:(c.practicalP4Delta||0)*w,recent30:c.recent30,recent60:c.recent60,recent90:c.recent90,q:c.q,status:c.status,aliasCount:x.aliases.length,aliasLabels})}\n let baseConf=cw?cs/cw:0,confidence=bruteClamp(baseConf*(.55+.45*Math.min(1,roots.length/5)),0,1);\n return{effectES:bruteClamp(effectES,-.85,.85),p4Effect:bruteClamp(p4Effect,-.32,.32),confidence,reasons,matchedCount:matched.length,familyCount:roots.length}\n}\n`;
+  const replacement = `function bruteSingleRankQuality(c){return Math.abs(c?.practicalEffect||0)*(.45+.55*(c?.confidence||0)/100)}
+function bruteSingleAliasNumber(v){return Number.isFinite(v)?String(Object.is(v,-0)?0:v):"—"}
+function bruteSingleAliasFingerprint(c){
+ return [c?.scope||"",c?.machine||"",String(c?.days??""),String(c?.rows??""),bruteSingleAliasNumber(c?.prevalence),bruteSingleAliasNumber(c?.effect),bruteSingleAliasNumber(c?.p4Delta),bruteSingleAliasNumber(c?.discEffect),bruteSingleAliasNumber(c?.valEffect),bruteSingleAliasNumber(c?.oosEffect),bruteSingleAliasNumber(c?.oosWinRate),bruteSingleAliasNumber(c?.block6WinRate),bruteSingleAliasNumber(c?.recent30),bruteSingleAliasNumber(c?.recent60),bruteSingleAliasNumber(c?.recent90)].join("\\u001f")
+}
+function bruteSingleAliasGroups(cands){
+ let aliases=new Map;for(let c of cands||[]){let k=bruteSingleAliasFingerprint(c),quality=bruteSingleRankQuality(c),old=aliases.get(k);if(!old){aliases.set(k,{c,quality,aliases:[c]});continue}old.aliases.push(c);if(quality>old.quality){old.c=c;old.quality=quality}}
+ return [...aliases.values()].sort((a,b)=>(b.c?.rankScore||0)-(a.c?.rankScore||0)||b.quality-a.quality)
+}
+function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){
+ if(!engine||!row)return{effectES:0,p4Effect:0,confidence:0,reasons:[],matchedCount:0,familyCount:0};let ex=new Set(excludeFamilies),conds=conditions||engine.targetConditions?.get(row.machine+"|"+row.tableNo+"|"+row.date)||bruteSingleConditions(row,ctx||engine.ctx),matched=[];
+ for(let m of conds){if(ex.has(m.family))continue;let a=engine.storeMap.get(m.id),b=engine.machineMap.get(row.machine+"\\u001e"+m.id);for(let c of [a,b])if(c&&c.directionStable&&c.confidence>=15&&Math.abs(c.practicalEffect)>=.003)matched.push(c)}
+ let fam=new Map;for(let c of matched){let f=c.meta.family,quality=bruteSingleRankQuality(c),old=fam.get(f);if(!old||quality>old.quality)fam.set(f,{c,quality})}
+ let roots=bruteSingleAliasGroups([...fam.values()].map(x=>x.c)).sort((a,b)=>Math.abs(b.c.practicalEffect)-Math.abs(a.c.practicalEffect)),weights=[1,.78,.62,.50,.40,.33,.27,.22,.18,.15],effectES=0,p4Effect=0,reasons=[],cw=0,cs=0;
+ for(let i=0;i<Math.min(weights.length,roots.length);i++){let x=roots[i],c=x.c,w=weights[i];effectES+=c.practicalEffect*w;p4Effect+=(c.practicalP4Delta||0)*w;let mag=Math.abs(c.practicalEffect*w);cw+=mag;cs+=mag*c.confidence/100;let aliasLabels=[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==c.meta.label);reasons.push({label:c.meta.label,family:c.meta.family,scope:c.scope,machine:c.machine,confidence:c.confidence,days:c.days,rows:c.rows,effect:c.effect,p4Delta:c.p4Delta,practicalEffect:c.practicalEffect,practicalP4Delta:c.practicalP4Delta,contributionES:c.practicalEffect*w,contributionP4:(c.practicalP4Delta||0)*w,recent30:c.recent30,recent60:c.recent60,recent90:c.recent90,q:c.q,status:c.status,aliasCount:x.aliases.length,aliasLabels})}
+ let baseConf=cw?cs/cw:0,confidence=bruteClamp(baseConf*(.55+.45*Math.min(1,roots.length/5)),0,1);
+ return{effectES:bruteClamp(effectES,-.85,.85),p4Effect:bruteClamp(p4Effect,-.32,.32),confidence,reasons,matchedCount:matched.length,familyCount:roots.length}
+}
+`;
   html = html.slice(0, rankStart) + replacement + html.slice(rankEnd);
 
   html = mustReplace(
@@ -63,22 +81,24 @@ for (const key of ['test', 'check']) {
 }
 fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
 
-const test = String.raw`import fs from 'node:fs';
+const test = `import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 
 const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
-assert.match(html, /<title>ジャグラー設定判別 v4\.8\.1<\/title>/);
-assert.match(html, /function bruteSingleAliasFingerprint\(c\)/);
-assert.match(html, /function bruteSingleAliasGroups\(cands\)/);
-assert.match(html, /aliasCount:x\.aliases\.length/);
+const rootHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+assert.equal(html, rootHtml, 'root/public index.html must remain byte-identical');
+assert.match(html, /<title>ジャグラー設定判別 v4\\.8\\.1<\\/title>/);
+assert.match(html, /function bruteSingleAliasFingerprint\\(c\\)/);
+assert.match(html, /function bruteSingleAliasGroups\\(cands\\)/);
+assert.match(html, /aliasCount:x\\.aliases\\.length/);
 
-const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/i);
+const scriptMatch = html.match(/<script>([\\s\\S]*?)<\\/script>/i);
 assert.ok(scriptMatch, 'main script missing');
 let code = scriptMatch[1];
 const cut = code.indexOf('let didRestore=restoreSavedState();');
 assert.ok(cut > 0, 'bootstrap cut point missing');
-code = code.slice(0, cut) + 'globalThis.__V4=window.V4_TEST;\n})();';
+code = code.slice(0, cut) + 'globalThis.__V4=window.V4_TEST;\\n})();';
 function fakeElement(){const base={value:'',checked:false,innerHTML:'',textContent:'',className:'',style:{},dataset:{},files:[],disabled:false,classList:{add(){},remove(){},toggle(){},contains(){return false}},appendChild(){},append(){},remove(){},click(){},focus(){},scrollIntoView(){},setAttribute(){},removeAttribute(){},addEventListener(){},removeEventListener(){},querySelectorAll(){return[]},querySelector(){return fakeElement()},closest(){return fakeElement()}};return new Proxy(base,{get(t,p){if(p in t)return t[p];if(p==='length')return 0;return undefined},set(t,p,v){t[p]=v;return true}})}
 const elems=new Map();const document={getElementById(id){if(!elems.has(id))elems.set(id,fakeElement());return elems.get(id)},querySelectorAll(){return[]},querySelector(){return fakeElement()},createElement(){return fakeElement()},body:fakeElement(),addEventListener(){},removeEventListener(){}};
 const storage=new Map();const URLClass=URL;URLClass.createObjectURL=()=> 'blob:x';URLClass.revokeObjectURL=()=>{};
@@ -97,16 +117,16 @@ assert.ok(r, '1088 forecast row missing');
 const rootLabels=r.rootReasons.map(x=>x.label);
 const practicalLabels=r.practicalRootReasons.map(x=>x.label);
 const exact='台番＝1088', tail2='台番下2桁＝下2桁88';
-assert.ok(rootLabels.includes(exact)||rootLabels.includes(tail2), `expected one table alias reason: ${rootLabels.join(' | ')}`);
-assert.ok(!(rootLabels.includes(exact)&&rootLabels.includes(tail2)), `root ranking double-counted exact table and lower-two-digit aliases: ${rootLabels.join(' | ')}`);
-assert.ok(!(practicalLabels.includes(exact)&&practicalLabels.includes(tail2)), `practical ranking double-counted exact table and lower-two-digit aliases: ${practicalLabels.join(' | ')}`);
+assert.ok(rootLabels.includes(exact)||rootLabels.includes(tail2), 'expected one table alias reason: '+rootLabels.join(' | '));
+assert.ok(!(rootLabels.includes(exact)&&rootLabels.includes(tail2)), 'root ranking double-counted exact table and lower-two-digit aliases: '+rootLabels.join(' | '));
+assert.ok(!(practicalLabels.includes(exact)&&practicalLabels.includes(tail2)), 'practical ranking double-counted exact table and lower-two-digit aliases: '+practicalLabels.join(' | '));
 assert.ok(r.rootReasons.some(x=>x.aliasCount>=2&&(x.label===exact||x.label===tail2)), 'surviving root reason must report collapsed aliasCount');
 const topLabels=pred.ranking.rootEvidence.topPositive.map(x=>x.label);
-assert.ok(!(topLabels.includes(exact)&&topLabels.includes(tail2)), `rootEvidence topPositive still exposes duplicate aliases: ${topLabels.join(' | ')}`);
+assert.ok(!(topLabels.includes(exact)&&topLabels.includes(tail2)), 'rootEvidence topPositive still exposes duplicate aliases: '+topLabels.join(' | '));
 assert.ok(pred.ranking.rootEvidence.topPositive.some(x=>x.aliasCount>=2&&(x.label===exact||x.label===tail2)), 'rootEvidence topPositive must expose aliasCount for the collapsed table alias');
 
 console.log('PASS v4.8.1 single-evidence alias dedup regression');
-console.log(`1088 rootFamilies=${r.rootFamilyCount} aliases=${r.rootReasons.filter(x=>x.aliasCount>1).map(x=>`${x.label}:${x.aliasCount}`).join(',')}`);
+console.log('1088 rootFamilies='+r.rootFamilyCount+' aliases='+r.rootReasons.filter(x=>x.aliasCount>1).map(x=>x.label+':'+x.aliasCount).join(','));
 `;
 fs.writeFileSync(testPath, test);
 
