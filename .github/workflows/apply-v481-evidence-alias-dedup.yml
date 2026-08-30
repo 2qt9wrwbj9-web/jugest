@@ -47,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html public/index.html package.json tests/v470-single-evidence.mjs tests/v471-performance-regression.mjs tests/v481-evidence-alias-dedup.mjs
+          git add index.html public/index.html package.json tests/v470-single-evidence.mjs tests/v471-performance-regression.mjs tests/v474-lazy-execution.mjs tests/v481-evidence-alias-dedup.mjs
           if git diff --cached --quiet; then
             echo "No release changes to commit"
             exit 0
