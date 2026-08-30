@@ -45,7 +45,7 @@ assert.equal(pred.ranking.singleFirst,true);
 assert.ok(pred.ranking.rootEvidence.conditionCount>80,`expected broad single condition catalog, got ${pred.ranking.rootEvidence.conditionCount}`);
 assert.equal(pred.rows[0].tableNo,'3001','7-day slump->raise table should rank first');
 const top=pred.rows[0];assert.ok(top.rootEffectES>0,'root ES effect should be positive');assert.ok(top.rootFamilyCount>0,'root reason families missing');
-assert.ok(top.rootReasons.some(r=>/過去7日累計差枚/.test(r.label)),`7-day cumulative-diff slump reason missing: ${top.rootReasons.map(r=>r.label).join(' | ')}`);
+assert.ok(top.rootReasons.some(r=>/過去7日累計差枚/.test(r.label)||(r.aliasLabels||[]).some(x=>/過去7日累計差枚/.test(x))),`7-day cumulative-diff slump reason missing (including collapsed aliases): ${top.rootReasons.map(r=>[r.label,...(r.aliasLabels||[])].join(' / ')).join(' | ')}`);
 assert.match(html, /7:\[3000,5000,7000,10000,14000\]/, '7-day single-condition catalog must include the -5,000 threshold');
 
 

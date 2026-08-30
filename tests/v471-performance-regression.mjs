@@ -48,11 +48,12 @@ function makeDays(){
   const td=new Date(start); td.setDate(td.getDate()+100);
   return {days,target:td.toISOString().slice(0,10)};
 }
-function snap(p){
-  return {champion:p.champion,storeTargetP4:p.storeTargetP4,rootEvidence:p.ranking.rootEvidence,
-    rows:p.rows.map(r=>({machine:r.machine,tableNo:r.tableNo,predP4:r.predP4,rankValue:r.rankValue,rootRankES:r.rootRankES,
-      rootEffectES:r.rootEffectES,rootP4Effect:r.rootP4Effect,rootConfidence:r.rootConfidence,rootFamilyCount:r.rootFamilyCount,
-      rootReasons:r.rootReasons.map(x=>[x.label,x.scope,x.effect,x.p4Effect,x.confidence])})).sort((a,b)=>a.machine.localeCompare(b.machine)||a.tableNo.localeCompare(b.tableNo,undefined,{numeric:true}))};
+function strictSnap(p){
+  return {champion:p.champion,storeTargetP4:p.storeTargetP4,
+    rows:p.rows.map(r=>({machine:r.machine,tableNo:r.tableNo,predP4:r.predP4})).sort((a,b)=>a.machine.localeCompare(b.machine)||a.tableNo.localeCompare(b.tableNo,undefined,{numeric:true}))};
+}
+function evidenceShape(p){
+  const e=p.ranking.rootEvidence; return {conditionCount:e.conditionCount,usableCount:e.usableCount,confidence:e.confidence};
 }
 
 const currentHtml=fs.readFileSync('./index.html','utf8');
@@ -72,6 +73,12 @@ const oldV=load('./index.before_v471.html');
 const newV=load('./index.html');
 let t=performance.now(); const oldPred=oldV.predictStore('PERF',target,days,{noCache:true}); const oldMs=performance.now()-t;
 t=performance.now(); const newPred=newV.predictStore('PERF',target,days,{noCache:true}); const newMs=performance.now()-t;
-assert.deepEqual(JSON.parse(JSON.stringify(snap(newPred))),JSON.parse(JSON.stringify(snap(oldPred))),
-  'v4.7.8 must preserve v4.7.0 strict prediction fields; final ordering is intentionally hybridized');
-console.log(`PASS v4.7.8 performance semantic parity; old=${oldMs.toFixed(0)}ms new=${newMs.toFixed(0)}ms (timing informational only)`);
+assert.deepEqual(JSON.parse(JSON.stringify(strictSnap(newPred))),JSON.parse(JSON.stringify(strictSnap(oldPred))),
+  'strict Champion/store-target/per-table P4 fields must remain unchanged by practical evidence aggregation changes');
+assert.deepEqual(JSON.parse(JSON.stringify(evidenceShape(newPred))),JSON.parse(JSON.stringify(evidenceShape(oldPred))),
+  'single-evidence discovery/validation population must remain unchanged by alias dedup');
+for(const r of newPred.rows){
+  assert.ok(Number.isFinite(r.rankValue)&&Number.isFinite(r.rootRankES)&&Number.isFinite(r.rootEffectES)&&Number.isFinite(r.rootP4Effect)&&Number.isFinite(r.rootConfidence),'practical ranking fields must stay finite after alias dedup');
+  assert.ok(Number.isInteger(r.rootFamilyCount)&&r.rootFamilyCount>=0,'deduplicated independent-root count must stay valid');
+}
+console.log(`PASS v4.8.1 strict semantic parity + alias-aware practical ranking; old=${oldMs.toFixed(0)}ms new=${newMs.toFixed(0)}ms (timing informational only)`);

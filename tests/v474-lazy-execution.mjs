@@ -93,10 +93,9 @@ function makeRawDays(){
 function judgedCopy(raw,newV){
   return raw.map(d=>({...d,machines:d.machines.map(r=>{const j=newV.externalJudge(r.machine,r.games,r.bb,r.rb,r.diff),q=[...j.q];return{...r,q,expectedSetting:q.reduce((s,p,i)=>s+p*(i+1),0),p4:q[3]+q[4]+q[5],p5:q[4]+q[5],p6:q[5]}})}));
 }
-function snap(p){return{champion:p.champion,storeTargetP4:p.storeTargetP4,rootEvidence:p.ranking.rootEvidence,
-  rows:p.rows.map(r=>({machine:r.machine,tableNo:r.tableNo,predP4:r.predP4,rankValue:r.rankValue,rootRankES:r.rootRankES,rootEffectES:r.rootEffectES,
-    rootP4Effect:r.rootP4Effect,rootConfidence:r.rootConfidence,rootFamilyCount:r.rootFamilyCount,
-    rootReasons:r.rootReasons.map(x=>[x.label,x.scope,x.effect,x.p4Delta,x.practicalEffect,x.practicalP4Delta,x.contributionES,x.contributionP4,x.confidence])})).sort((a,b)=>a.machine.localeCompare(b.machine)||a.tableNo.localeCompare(b.tableNo,undefined,{numeric:true}))};}
+function strictSnap(p){return{champion:p.champion,storeTargetP4:p.storeTargetP4,
+  rows:p.rows.map(r=>({machine:r.machine,tableNo:r.tableNo,predP4:r.predP4})).sort((a,b)=>a.machine.localeCompare(b.machine)||a.tableNo.localeCompare(b.tableNo,undefined,{numeric:true}))};}
+function evidenceShape(p){const e=p.ranking.rootEvidence;return{conditionCount:e.conditionCount,usableCount:e.usableCount,confidence:e.confidence};}
 
 const oldV=load('./index.before_v474.html');
 const newV=load('./index.html');
@@ -107,7 +106,13 @@ const lazyRaw=structuredClone(raw);
 assert.ok(lazyRaw.some(d=>d.machines.some(newV.externalNeedsJudge)),'raw fixture should begin unjudged');
 const newPred=newV.predictStore('LAZY',target,lazyRaw,{noCache:true});
 assert.ok(lazyRaw.every(d=>d.machines.every(r=>!newV.externalNeedsJudge(r))),'prediction should lazily derive missing judge fields only when requested');
-assert.deepEqual(JSON.parse(JSON.stringify(snap(newPred))),JSON.parse(JSON.stringify(snap(oldPred))),
-  'lazy raw-data execution must preserve v4.7.3 strict prediction values; final ordering is intentionally hybridized');
+assert.deepEqual(JSON.parse(JSON.stringify(strictSnap(newPred))),JSON.parse(JSON.stringify(strictSnap(oldPred))),
+  'lazy raw-data execution must preserve strict Champion/store-target/per-table P4 values');
+assert.deepEqual(JSON.parse(JSON.stringify(evidenceShape(newPred))),JSON.parse(JSON.stringify(evidenceShape(oldPred))),
+  'lazy raw-data execution must preserve single-evidence discovery/validation population');
+for(const r of newPred.rows){
+  assert.ok(Number.isFinite(r.rankValue)&&Number.isFinite(r.rootRankES)&&Number.isFinite(r.rootEffectES)&&Number.isFinite(r.rootP4Effect)&&Number.isFinite(r.rootConfidence),'lazy practical ranking fields must stay finite after alias dedup');
+  assert.ok(Number.isInteger(r.rootFamilyCount)&&r.rootFamilyCount>=0,'lazy deduplicated independent-root count must stay valid');
+}
 
-console.log('PASS v4.7.8 lazy execution regression; boot/navigation work deferred, ranking semantics preserved');
+console.log('PASS v4.8.1 lazy execution regression; boot/navigation remains deferred, strict prediction semantics preserved, practical aliases deduplicated');
