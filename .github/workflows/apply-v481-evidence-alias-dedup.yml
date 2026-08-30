@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - scripts/apply-v481-evidence-alias-dedup.mjs
+      - scripts/patch-v481-legacy-regression.mjs
       - .github/workflows/apply-v481-evidence-alias-dedup.yml
 
 permissions:
@@ -30,6 +31,9 @@ jobs:
       - name: Apply v4.8.1 patch
         run: node scripts/apply-v481-evidence-alias-dedup.mjs
 
+      - name: Make legacy regression alias-aware
+        run: node scripts/patch-v481-legacy-regression.mjs
+
       - name: Full regression suite
         run: npm test
 
@@ -43,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html public/index.html package.json tests/v481-evidence-alias-dedup.mjs
+          git add index.html public/index.html package.json tests/v470-single-evidence.mjs tests/v481-evidence-alias-dedup.mjs
           if git diff --cached --quiet; then
             echo "No release changes to commit"
             exit 0
