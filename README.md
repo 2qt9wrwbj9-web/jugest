@@ -19,7 +19,7 @@ For the foreseeable future, **Netlify is the sole active production target**.
 
 `main` is the source branch. Netlify should deploy from `main`; `netlify.toml` runs `npm run check` before publish. GitHub Actions is CI-only and does not deploy GitHub Pages.
 
-Production wiring must stay on `jugest.netlify.app` unless a future migration is explicitly re-approved. The app, Launcher, Relay bridge, bookmarklet loader and Relay/API must move together if that policy ever changes.
+Production wiring must stay on `jugglerest.netlify.app` unless a future migration is explicitly re-approved. The app, Launcher, Relay bridge, bookmarklet loader and Relay/API must move together if that policy ever changes.
 
 ## Paused VPS work
 
