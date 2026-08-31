@@ -1,0 +1,54 @@
+name: Apply v4.8.4 collector upgrade
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-v484.py'
+      - '.github/workflows/apply-v484.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply v4.8.4 patch
+        run: python scripts/apply-v484.py
+      - name: Full regression suite
+        run: npm test
+      - name: Extra static debug sweep
+        run: |
+          node --check ana-launcher.js
+          node --check hanahana-judge.js
+          node --check hanahana-ui.js
+          node --check netlify/functions/relay.mjs
+          cmp index.html public/index.html
+          cmp ana-launcher.js public/ana-launcher.js
+          ! grep -R "https://jugest.netlify.app" index.html public/index.html ana-launcher.js public/ana-launcher.js BOOKMARKLET_v4840.txt public/BOOKMARKLET_v4840.txt netlify/functions/relay.mjs README.md
+          ! grep -R "const ACCESS_WINDOW_MS=30\*60\*1000" ana-launcher.js public/ana-launcher.js
+          grep -q "ジャグラー設定判別 v4.8.4" index.html
+          grep -q "const VERSION='4.8.4'" ana-launcher.js
+      - name: Commit verified v4.8.4
+        run: |
+          git config user.name "Hiro"
+          git config user.email "2qt9wrwbj9@privaterelay.appleid.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Release v4.8.4 collector maintenance upgrade"
+          git push origin HEAD:main
