@@ -32,10 +32,15 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import hashlib
+          new_hash=hashlib.sha256(Path('ana-launcher.js').read_bytes()).hexdigest()
+          old_hash='2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67'
           for p in Path('tests').glob('*.mjs'):
               s=p.read_text()
               s=s.replace("4.5.0","4.8.4")
               s=s.replace(r"4\.5\.0",r"4\.8\.4")
+              s=s.replace(old_hash,new_hash)
+              s=s.replace("BOOKMARKLET_v4500.txt","BOOKMARKLET_v4840.txt")
+              s=s.replace('ana-launcher\\.js\\?v=4500','ana-launcher\\.js\\?v=4840')
               p.write_text(s)
           p=Path('tests/v410-features.mjs')
           s=p.read_text().replace("'NIGHT_MONTHS=13','randMs(35000,55000)'","'NIGHT_MONTHS=13','NIGHT_WAIT_MIN_MS=25000','NIGHT_WAIT_MAX_MS=35000'")
@@ -47,10 +52,6 @@ jobs:
           p.write_text(s)
           p=Path('tests/v473-relay-init.mjs')
           s=p.read_text()
-          new_hash=hashlib.sha256(Path('ana-launcher.js').read_bytes()).hexdigest()
-          s=s.replace('2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67',new_hash)
-          s=s.replace("BOOKMARKLET_v4500.txt","BOOKMARKLET_v4840.txt")
-          s=s.replace('ana-launcher\\.js\\?v=4500','ana-launcher\\.js\\?v=4840')
           s=s.replace('beyond the reviewed Netlify-origin migration; bookmarklet/parser bump would need explicit review','beyond the reviewed v4.8.4 collector upgrade; further Launcher changes need explicit review')
           p.write_text(s)
           print('reviewed launcher sha256',new_hash)
