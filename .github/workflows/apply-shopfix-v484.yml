@@ -1,0 +1,32 @@
+name: Apply v4.8.4 shop registration hotfix
+on:
+  push:
+    branches: [shopfix-v484-impl]
+    paths:
+      - scripts/fix-v484-shop-registration.py
+      - .github/workflows/apply-shopfix-v484.yml
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: shopfix-v484-impl
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python3 scripts/fix-v484-shop-registration.py
+      - run: node --check ana-launcher.js && node --check public/ana-launcher.js
+      - run: npm ci && npm test
+      - name: Verify root/public parity
+        run: cmp -s ana-launcher.js public/ana-launcher.js
+      - name: Commit fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ana-launcher.js public/ana-launcher.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix v4.8.4 shop registration catalog and paste UI'
+          git push origin HEAD:shopfix-v484-impl
