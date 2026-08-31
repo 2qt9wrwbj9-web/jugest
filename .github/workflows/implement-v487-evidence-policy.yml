@@ -39,13 +39,13 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('tests/v460-ranking.mjs')
-          s=p.read_text()
-          old='assert.match(html, /ranking:\\{version:4,separatedFromStrict:true/);'
-          new='assert.match(html, /ranking:\\{version:5,separatedFromStrict:true/);'
-          if old not in s:
-              raise SystemExit('v460 ranking version assertion missing')
-          p.write_text(s.replace(old,new,1))
+          for name in ['tests/v460-ranking.mjs','tests/v470-single-evidence.mjs']:
+              p=Path(name); s=p.read_text()
+              old='/ranking:\\{version:4'
+              new='/ranking:\\{version:5'
+              if old not in s:
+                  raise SystemExit(f'{name}: ranking version assertion missing')
+              p.write_text(s.replace(old,new,1))
           PY
       - name: Refresh lockfile
         run: npm install --package-lock-only --ignore-scripts
@@ -68,9 +68,9 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html public/index.html sync-ui.js public/sync-ui.js README.md package.json package-lock.json tests/netlify-deploy-preflight.mjs tests/v486-device-sync.mjs tests/v487-evidence-policy.mjs tests/v460-ranking.mjs scripts/apply-v487.py
+          git add index.html public/index.html sync-ui.js public/sync-ui.js README.md package.json package-lock.json tests/netlify-deploy-preflight.mjs tests/v486-device-sync.mjs tests/v487-evidence-policy.mjs tests/v460-ranking.mjs tests/v470-single-evidence.mjs scripts/apply-v487.py
           git diff --cached --quiet && exit 0
           git commit -m 'Release v4.8.7 evidence policy'
           git push origin HEAD:v487-evidence-policy
 
-# trigger after v4.8.7 ranking contract update
+# trigger after single-evidence contract update
