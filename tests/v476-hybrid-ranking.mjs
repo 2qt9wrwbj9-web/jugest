@@ -5,7 +5,7 @@ const html=fs.readFileSync('./index.html','utf8');
 const pub=fs.readFileSync('./public/index.html','utf8');
 assert.equal(html,pub,'root/public index must be byte-identical');
 assert.match(html,/ジャグラー設定判別 v4\.\d+\.\d+/);
-assert.match(html,/ranking:\{version:4,separatedFromStrict:true,singleFirst:true,hybrid:true,hybridWeights:\{\.\.\.hybridWeights,validatedCalendarMax:\.05\},hybridOptimization/);
+assert.match(html,/ranking:\{version:5,separatedFromStrict:true,singleFirst:true,hybrid:true,hybridWeights:\{\.\.\.hybridWeights,validatedCalendarMax:\.05\},hybridOptimization/);
 assert.match(html,/function v4HybridApplyWeights\(rawRows,weights\)/);
 assert.match(html,/weights\.practical\*row\.practicalSignal\+weights\.model\*row\.modelSignal\+weights\.strict\*row\.strictSignal/);
 const fs0=html.indexOf('function bruteForecastRows(result,targetDate){'), fs1=html.indexOf('\nfunction bruteRenderForecast(){',fs0); assert.ok(fs0>0&&fs1>fs0); const forecastFn=html.slice(fs0,fs1);

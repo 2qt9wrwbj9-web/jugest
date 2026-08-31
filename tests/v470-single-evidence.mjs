@@ -16,7 +16,7 @@ assert.match(html, /const BRUTE_SINGLE_BASE_KEYS=/);
 assert.match(html, /7:\[3000,5000,7000,10000,14000\]/);
 assert.match(html, /過去\$\{n\}日累計差枚/);
 assert.match(html, /singleFirst:true/);
-assert.match(html, /ranking:\{version:4/);
+assert.match(html, /ranking:\{version:5/);
 assert.match(html, /schema:'juggler-v4-ai-analysis-payload',version:4/);
 assert.doesNotMatch(html.match(/const BRUTE_SINGLE_BASE_KEYS=\[[\s\S]*?\];/)?.[0] || '', /histES3|histDiff3|lossRatio3|highRatio3|zeroBonus3|avgGames3/);
 assert.match(html, /function v4ModelEligibleScore\(x\)\{return!!x&&\(\(x\.score>=53\.5&&\(x\.adjP\?\?1\)<=\.05&&x\.winRate>=\.58&&x\.blockWinRate>=\.75&&x\.esLift>=\.07\)\|\|x\.rareValidated===true\)\}/);

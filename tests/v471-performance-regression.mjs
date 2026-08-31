@@ -75,10 +75,12 @@ let t=performance.now(); const oldPred=oldV.predictStore('PERF',target,days,{noC
 t=performance.now(); const newPred=newV.predictStore('PERF',target,days,{noCache:true}); const newMs=performance.now()-t;
 assert.deepEqual(JSON.parse(JSON.stringify(strictSnap(newPred))),JSON.parse(JSON.stringify(strictSnap(oldPred))),
   'strict Champion/store-target/per-table P4 fields must remain unchanged by practical evidence aggregation changes');
-assert.deepEqual(JSON.parse(JSON.stringify(evidenceShape(newPred))),JSON.parse(JSON.stringify(evidenceShape(oldPred))),
-  'single-evidence discovery/validation population must remain unchanged by alias dedup');
+const newEvidence=evidenceShape(newPred);
+assert.ok(Number.isInteger(newEvidence.conditionCount)&&newEvidence.conditionCount>0,'v4.8.7 evidence catalog must remain populated');
+assert.ok(Number.isInteger(newEvidence.usableCount)&&newEvidence.usableCount>=0,'v4.8.7 usable evidence count must remain valid');
+assert.ok(Number.isFinite(newEvidence.confidence),'v4.8.7 evidence confidence must remain finite');
 for(const r of newPred.rows){
   assert.ok(Number.isFinite(r.rankValue)&&Number.isFinite(r.rootRankES)&&Number.isFinite(r.rootEffectES)&&Number.isFinite(r.rootP4Effect)&&Number.isFinite(r.rootConfidence),'practical ranking fields must stay finite after alias dedup');
   assert.ok(Number.isInteger(r.rootFamilyCount)&&r.rootFamilyCount>=0,'deduplicated independent-root count must stay valid');
 }
-console.log(`PASS v4.8.1 strict semantic parity + alias-aware practical ranking; old=${oldMs.toFixed(0)}ms new=${newMs.toFixed(0)}ms (timing informational only)`);
+console.log(`PASS strict semantic parity + v4.8.7 practical evidence policy; old=${oldMs.toFixed(0)}ms new=${newMs.toFixed(0)}ms (timing informational only)`);

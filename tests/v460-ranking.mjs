@@ -23,7 +23,7 @@ assert.match(html, /"prev2Band","histDiff2","prevES2Seq","prevDiff2Seq"/);
 assert.match(html, /"diffTrend27","esTrend27"/);
 assert.doesNotMatch(html.match(/recent:\{label:"直近2日履歴"[\s\S]*?\}\n\};/)?.[0] || '', /histES3|histDiff3|lossRatio3|highRatio3|diffTrend37|esTrend37/);
 assert.match(html, /softEffects/);
-assert.match(html, /ranking:\{version:4,separatedFromStrict:true/);
+assert.match(html, /ranking:\{version:5,separatedFromStrict:true/);
 assert.match(html, /schema:'juggler-v4-ai-analysis-payload',version:4/);
 assert.match(html, /rejectedBy:/);
 assert.match(html, /rankingEngine:/);

@@ -21,7 +21,7 @@ const [toml, root, pub, launcher, publicLauncher, bridge, relay, syncFn, syncUi,
 assert.equal(root, pub, 'root/public index must remain byte-identical');
 assert.equal(launcher, publicLauncher, 'root/public launcher must remain byte-identical');
 assert.equal(syncUi, publicSyncUi, 'root/public sync client must remain byte-identical');
-assert.match(pub, /ジャグラー設定判別 v4\.8\.6/);
+assert.match(pub, /ジャグラー設定判別 v4\.8\.7/);
 
 assert.match(toml, /publish\s*=\s*"public"/);
 assert.match(toml, /command\s*=\s*"npm run check"/);
@@ -70,7 +70,7 @@ assert.match(ci, /name:\s*Netlify production CI/);
 assert.ok(!ci.includes('actions/deploy-pages'), 'GitHub Actions must not deploy GitHub Pages while Netlify is production');
 assert.ok(!ci.includes('actions/upload-pages-artifact'), 'GitHub Actions must not publish a Pages artifact');
 assert.match(readme, /Netlify is the sole active production target/);
-assert.match(readme, /Current app release:\s*\*\*v4\.8\.6\*\*/);
+assert.match(readme, /Current app release:\s*\*\*v4\.8\.7\*\*/);
 assert.match(readme, /Current bookmarklet loader:\s*`BOOKMARKLET_v4860\.txt`/);
 
-console.log('Netlify production preflight passed: v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only');
+console.log('Netlify production preflight passed: v4.8.7 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only');

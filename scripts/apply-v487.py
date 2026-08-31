@@ -102,7 +102,7 @@ def patch_index(path):
     marker='function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){'
     s=one_replace(s,marker,NEW_HELPERS+marker,path+' helper insert')
     pat=r'function bruteSingleRankForRow\(engine,row,\{excludeFamilies=\[\],conditions=null,ctx=null\}=\{\}\)\{.*?\n\}\nfunction bruteSingleCandidateLabel'
-    s,n=re.subn(pat,NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)
+    s,n=re.subn(pat,lambda m: NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)
     if n!=1:
         raise SystemExit(path+' ranker replace failed')
     old='rootTop=bruteSingleAliasGroups(singleEvidence.all.filter(c=>c.practicalEffect>0)).slice(0,20).map(x=>({...bruteSinglePublic(x.c),aliasCount:x.aliases.length,aliasLabels:[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==x.c.meta.label)}))'

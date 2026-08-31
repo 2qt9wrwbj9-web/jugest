@@ -1,7 +1,7 @@
 (function(global){
 'use strict';
 
-const APP_VERSION='4.8.6';
+const APP_VERSION='4.8.7';
 const SYNC_SCHEMA='juggler-device-sync';
 const SYNC_VERSION=1;
 const STATE_KEY='juggler_tool_state_v33';

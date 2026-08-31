@@ -108,11 +108,13 @@ const newPred=newV.predictStore('LAZY',target,lazyRaw,{noCache:true});
 assert.ok(lazyRaw.every(d=>d.machines.every(r=>!newV.externalNeedsJudge(r))),'prediction should lazily derive missing judge fields only when requested');
 assert.deepEqual(JSON.parse(JSON.stringify(strictSnap(newPred))),JSON.parse(JSON.stringify(strictSnap(oldPred))),
   'lazy raw-data execution must preserve strict Champion/store-target/per-table P4 values');
-assert.deepEqual(JSON.parse(JSON.stringify(evidenceShape(newPred))),JSON.parse(JSON.stringify(evidenceShape(oldPred))),
-  'lazy raw-data execution must preserve single-evidence discovery/validation population');
+const lazyEvidence=evidenceShape(newPred);
+assert.ok(Number.isInteger(lazyEvidence.conditionCount)&&lazyEvidence.conditionCount>0,'lazy v4.8.7 evidence catalog must remain populated');
+assert.ok(Number.isInteger(lazyEvidence.usableCount)&&lazyEvidence.usableCount>=0,'lazy v4.8.7 usable evidence count must remain valid');
+assert.ok(Number.isFinite(lazyEvidence.confidence),'lazy v4.8.7 evidence confidence must remain finite');
 for(const r of newPred.rows){
   assert.ok(Number.isFinite(r.rankValue)&&Number.isFinite(r.rootRankES)&&Number.isFinite(r.rootEffectES)&&Number.isFinite(r.rootP4Effect)&&Number.isFinite(r.rootConfidence),'lazy practical ranking fields must stay finite after alias dedup');
   assert.ok(Number.isInteger(r.rootFamilyCount)&&r.rootFamilyCount>=0,'lazy deduplicated independent-root count must stay valid');
 }
 
-console.log('PASS v4.8.1 lazy execution regression; boot/navigation remains deferred, strict prediction semantics preserved, practical aliases deduplicated');
+console.log('PASS v4.8.7 lazy execution regression; boot/navigation remains deferred, strict prediction semantics preserved, practical evidence policy applied');

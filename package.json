@@ -1,13 +1,13 @@
 {
-  "name": "juggler-hanahana-tool-v4860",
+  "name": "juggler-hanahana-tool-v4870",
   "private": true,
-  "version": "4.8.6",
+  "version": "4.8.7",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --check ana-launcher.js && node --check hanahana-judge.js && node --check hanahana-ui.js && node --check sync-ui.js && node --check netlify/functions/relay.mjs && node --check netlify/functions/sync.mjs && node tests/launcher-parser.mjs && node tests/launcher-init.mjs && node tests/launcher-policy.mjs && node tests/launcher-export.mjs && node tests/launcher-relay.mjs && node tests/relay-bridge.mjs && node tests/relay-function.mjs && node tests/netlify-deploy-preflight.mjs && node tests/v473-relay-init.mjs && node tests/app-smoke.mjs && node tests/v410-features.mjs && node tests/v412-rate-limit.mjs && node tests/hana-judge.mjs && node tests/hana-integration.mjs && node tests/v450-hana-full.mjs && node tests/v452-ui-regression.mjs && node tests/v453-ui-parity.mjs && node tests/v460-ranking.mjs && node tests/v470-single-evidence.mjs && node tests/v471-performance-regression.mjs && node tests/v474-lazy-execution.mjs && node tests/v475-trend-roster.mjs && node tests/v476-hybrid-ranking.mjs && node tests/v477-hybrid-weight-optimizer.mjs && node tests/v478-runtime-hybrid.mjs && node tests/v479-evidence-contribution-ui.mjs && node tests/v480-jdata-setting-summary.mjs && node tests/v481-evidence-alias-dedup.mjs && node tests/v482-analysis-history.mjs && node tests/v483-storage-meter.mjs && node tests/v484-launcher-maintenance.mjs && node tests/v484-store-registration-hotfix.mjs && node tests/v486-device-sync.mjs",
+    "test": "node --check ana-launcher.js && node --check hanahana-judge.js && node --check hanahana-ui.js && node --check sync-ui.js && node --check netlify/functions/relay.mjs && node --check netlify/functions/sync.mjs && node tests/launcher-parser.mjs && node tests/launcher-init.mjs && node tests/launcher-policy.mjs && node tests/launcher-export.mjs && node tests/launcher-relay.mjs && node tests/relay-bridge.mjs && node tests/relay-function.mjs && node tests/netlify-deploy-preflight.mjs && node tests/v473-relay-init.mjs && node tests/app-smoke.mjs && node tests/v410-features.mjs && node tests/v412-rate-limit.mjs && node tests/hana-judge.mjs && node tests/hana-integration.mjs && node tests/v450-hana-full.mjs && node tests/v452-ui-regression.mjs && node tests/v453-ui-parity.mjs && node tests/v460-ranking.mjs && node tests/v470-single-evidence.mjs && node tests/v471-performance-regression.mjs && node tests/v474-lazy-execution.mjs && node tests/v475-trend-roster.mjs && node tests/v476-hybrid-ranking.mjs && node tests/v477-hybrid-weight-optimizer.mjs && node tests/v478-runtime-hybrid.mjs && node tests/v479-evidence-contribution-ui.mjs && node tests/v480-jdata-setting-summary.mjs && node tests/v481-evidence-alias-dedup.mjs && node tests/v482-analysis-history.mjs && node tests/v483-storage-meter.mjs && node tests/v484-launcher-maintenance.mjs && node tests/v484-store-registration-hotfix.mjs && node tests/v486-device-sync.mjs && node tests/v487-evidence-policy.mjs",
     "check": "npm test",
     "netlify:preflight": "node tests/netlify-deploy-preflight.mjs"
   },

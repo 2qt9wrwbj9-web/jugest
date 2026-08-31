@@ -2,7 +2,7 @@
 
 Juggler / HANA HANA setting-analysis tool.
 
-Current app release: **v4.8.6**.
+Current app release: **v4.8.7**.
 
 ## Current production
 
@@ -42,3 +42,11 @@ Project-wide v4.8.4 keeps the existing setting-judgment math unchanged and upgra
 - Sync payload is gzip-compressed when available and AES-GCM encrypted in the browser before Netlify Blobs storage; the encryption key is not sent to the sync API.
 - Sync covers saved play/store/analysis data and learned store profiles; UI state and Launcher/Relay credentials remain device-local.
 - Judgement/ranking mathematics and Launcher acquisition semantics are unchanged.
+
+
+## v4.8.7 evidence policy
+- Direct practical history is capped at the previous 7 days; 14-day aggregates and long recency are not direct ranking roots.
+- Long-run level is baseline/prior information, not an unconditional machine/table bonus.
+- Weekday/date-tail/exact-date × table-tail and × previous-day state are explicit practical roots for allocation and raise/hold behavior.
+- Correlated rules are collapsed into one underlying fact before practical aggregation.
+- Strict Champion/calibration, judge math, Launcher, Relay, and device sync semantics are unchanged.
