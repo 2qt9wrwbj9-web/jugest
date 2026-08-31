@@ -1,0 +1,49 @@
+name: Bump v4.8.5 numbering only
+on:
+  push:
+    paths:
+      - '.github/workflows/bump-v485.yml'
+permissions:
+  contents: write
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Change numbering only
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Replace current release identifiers only; no logic edits.
+          git grep -Il -e '4\.8\.4' -e '4840' | while IFS= read -r f; do
+            case "$f" in
+              README_V4*|VALIDATION_v4*) continue ;;
+            esac
+            sed -i 's/4\.8\.4/4.8.5/g; s/4840/4850/g' "$f"
+          done
+          if [ -f BOOKMARKLET_v4840.txt ]; then git mv BOOKMARKLET_v4840.txt BOOKMARKLET_v4850.txt; fi
+          if [ -f public/BOOKMARKLET_v4840.txt ]; then git mv public/BOOKMARKLET_v4840.txt public/BOOKMARKLET_v4850.txt; fi
+          # Keep historical regression-test filenames (v484-*) unchanged.
+          # Rename the packaging workflow so future artifacts are clearly v4.8.5.
+          if [ -f .github/workflows/build-v484-netlify-package.yml ]; then
+            git mv .github/workflows/build-v484-netlify-package.yml .github/workflows/build-v485-netlify-package.yml
+          fi
+          npm ci
+          npm test
+          git diff --check
+      - name: Commit v4.8.5 numbering
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/bump-v485.yml
+          git config user.name 'Hiro'
+          git config user.email '2qt9wrwbj9@privaterelay.appleid.com'
+          git add -A
+          git commit -m 'Bump release numbering to v4.8.5'
+          git push
