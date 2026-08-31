@@ -1,6 +1,6 @@
 (async()=>{
 'use strict';
-const VERSION='4.8.4';
+const VERSION='4.8.6';
 const TARGET_DAYS=180;
 const NIGHT_MONTHS=13;
 const PARSER_VERSION=4500;

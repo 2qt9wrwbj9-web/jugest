@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 const s=fs.readFileSync(new URL('../ana-launcher.js', import.meta.url),'utf8');
 const must=[
-  "const VERSION='4.8.4'",
+  "const VERSION='4.8.6'",
   "const PARSER_VERSION=4500",
   "const ACCESS_RATE_KEY='jugglerAnaAccessRate:v1'",
   "const ACCESS_RATE_COOKIE='jugglerAnaRateV1'",
@@ -26,4 +26,4 @@ if(st.count!==29||st.wait!==0) throw new Error('slot must reopen exactly at 15 m
 const retryHits=[...hits.slice(0,29),29500];
 st=state(retryHits,29500);
 if(st.count!==30||st.wait<=0) throw new Error('failed/retry request slot accounting model broken');
-console.log('v4.8.4 rolling 30 accesses / 15 minutes: ok');
+console.log('v4.8.6 rolling 30 accesses / 15 minutes: ok');

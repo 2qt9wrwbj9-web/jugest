@@ -14,7 +14,7 @@ const backupVersion = html.match(/appVersion:"(\d+\.\d+\.\d+)"/)?.[1];
 assert.ok(titleVersion, 'release title version missing');
 assert.equal(visibleVersion, titleVersion, 'visible version must match title');
 assert.equal(backupVersion, titleVersion, 'backup appVersion must match title');
-assert.match(launcher, /const VERSION='4\.8\.4';/);
+assert.match(launcher, /const VERSION='4\.8\.6';/);
 assert.match(launcher, /const PARSER_VERSION=4500;/);
 assert.match(html, /function v4ModelEligibleScore\(x\)\{return!!x&&\(\(x\.score>=53\.5&&\(x\.adjP\?\?1\)<=\.05&&x\.winRate>=\.58&&x\.blockWinRate>=\.75&&x\.esLift>=\.07\)\|\|x\.rareValidated===true\)\}/);
 assert.match(html, /const V4_RANK_MODEL_DEFS=/);

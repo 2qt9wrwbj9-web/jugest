@@ -27,8 +27,8 @@ const launcher = fs.readFileSync(path.join(base, 'ana-launcher.js'));
 const launcherPublic = fs.readFileSync(path.join(base, 'public', 'ana-launcher.js'));
 assert.deepEqual(launcher, launcherPublic, 'root/public ana-launcher.js must stay byte-identical');
 const sha = crypto.createHash('sha256').update(launcher).digest('hex');
-assert.equal(sha, 'bcc7db517014294b2cfd9339ef61c634d1402f87cd05a6d97b1f02261389b4d6',
-  'Launcher changed unexpectedly beyond the reviewed v4.8.4 collector + store-registration hotfix; further Launcher changes need explicit review');
-const bookmarklet = fs.readFileSync(path.join(base, 'BOOKMARKLET_v4840.txt'), 'utf8');
-assert.match(bookmarklet, /ana-launcher\.js\?v=4840/);
+assert.equal(sha, '6654a4406ff5b30dcf7e83e8253bfe76280224c7032ba79457dda90bc4fe0b7b',
+  'Launcher changed unexpectedly beyond the reviewed v4.8.6 collector + store-registration hotfix; further Launcher changes need explicit review');
+const bookmarklet = fs.readFileSync(path.join(base, 'BOOKMARKLET_v4860.txt'), 'utf8');
+assert.match(bookmarklet, /ana-launcher\.js\?v=4860/);
 console.log('PASS relay storage-init ordering regression; version sync + reviewed Launcher origin migration pinned');

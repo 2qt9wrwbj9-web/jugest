@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const s=fs.readFileSync(new URL('../ana-launcher.js',import.meta.url),'utf8');
 const must=[
-  "const VERSION='4.8.4'",
+  "const VERSION='4.8.6'",
   "const ACCESS_WINDOW_MS=15*60*1000",
   "const ACCESS_LIMIT=30",
   "const DB_VERSION=2",
@@ -24,7 +24,7 @@ const must=[
   'parseCatalogShops',
   'jacAllLatest','jacAllUnsent','jacAddShop','jacCatalogRegion','jacCatalogPref','jacCatalogShop'
 ];
-for(const x of must)assert.ok(s.includes(x),'missing v4.8.4 feature: '+x);
+for(const x of must)assert.ok(s.includes(x),'missing v4.8.6 feature: '+x);
 assert.ok(!s.includes('const ACCESS_WINDOW_MS=30*60*1000'),'old 30-minute limiter remains');
 assert.ok(!s.includes('return randMs(35000,55000)'),'old night wait remains');
 assert.ok(!s.includes('return randMs(8*60000,12*60000)'),'old 60-day night rest remains');
@@ -33,9 +33,9 @@ const nightRetry=s.slice(s.indexOf('async function nightFetchWithRetryForShop'),
 assert.ok(nightRetry.includes('{bypassRateLimit:true}'),'night fetch must bypass local rolling limiter');
 const normal=s.slice(s.indexOf('async function run(){'),s.indexOf("$('jacStart').onclick"));
 assert.ok(normal.includes('fetchDay(date)'),'normal acquisition must still use rate-limited fetch');
-const bookmark=fs.readFileSync(new URL('../BOOKMARKLET_v4840.txt',import.meta.url),'utf8');
-assert.ok(bookmark.includes('jugglerest.netlify.app/ana-launcher.js?v=4840'));
+const bookmark=fs.readFileSync(new URL('../BOOKMARKLET_v4860.txt',import.meta.url),'utf8');
+assert.ok(bookmark.includes('jugglerest.netlify.app/ana-launcher.js?v=4860'));
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 assert.equal(root,pub,'root/public index diverged');
 assert.equal(s,fs.readFileSync(new URL('../public/ana-launcher.js',import.meta.url),'utf8'),'root/public launcher diverged');
-console.log('v4.8.4 launcher maintenance regression: ok');
+console.log('v4.8.6 launcher maintenance regression: ok');

@@ -65,4 +65,4 @@ for(const token of [
 
 const pub=fs.readFileSync(new URL('../public/ana-launcher.js',import.meta.url),'utf8');
 assert.equal(src,pub,'root/public launcher must remain byte-identical');
-console.log('v4.8.4 store-registration hotfix regression: ok');
+console.log('v4.8.6 store-registration hotfix regression: ok');

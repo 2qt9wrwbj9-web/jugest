@@ -12,6 +12,7 @@ assert.ok(src.includes("const ANALYSIS_INDEX_KEY='storeAnalysisHistoryIndexV1'")
 assert.ok(src.includes("crypto.subtle.encrypt"),'client-side encryption missing');
 assert.ok(src.includes("CompressionStream('gzip')"),'gzip compression missing');
 assert.ok(!src.includes('jugglerRelayReceiver:v1'),'Relay auth must not be synchronized');
+assert.equal(src,fs.readFileSync(new URL('../public/sync-ui.js',import.meta.url),'utf8'),'root/public sync-ui must remain byte-identical');
 
 const sandbox={console,globalThis:null,window:undefined,document:undefined,crypto:globalThis.crypto,Date,Math,JSON,Map,Set,Promise,Number,String,Array,Object,Infinity,NaN,parseInt,isFinite,TextEncoder,TextDecoder,Blob,Response,CompressionStream,DecompressionStream,
   btoa:s=>Buffer.from(s,'binary').toString('base64'),atob:s=>Buffer.from(s,'base64').toString('binary')};

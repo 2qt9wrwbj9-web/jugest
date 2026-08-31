@@ -105,7 +105,7 @@ if(d96.machines.length!==96)throw new Error('96-machine regression failed '+d96.
 if((d96.quality.machineCounts.gg||0)!==11)throw new Error('girls 11-machine regression failed '+(d96.quality.machineCounts.gg||0));
 console.log('launcher parser 96-machine regression: ok',d96.machines.length,d96.quality.machineCounts.gg);
 
-// v4.8.4: 5 HANA HANA canonical IDs must absorb media/diameter naming differences.
+// v4.8.6: 5 HANA HANA canonical IDs must absorb media/diameter naming differences.
 const hanaHtml=`<html><body><table>
 <tr><th>機種名</th><th>台番号</th><th>G数</th><th>差枚</th><th>BB</th><th>RB</th></tr>
 <tr><td>Sハナハナホウオウ～天翔～-30</td><td>801</td><td>7000</td><td>+400</td><td>27</td><td>20</td></tr>
