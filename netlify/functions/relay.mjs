@@ -6,8 +6,7 @@ const PAIR_TTL_MS = 10 * 60 * 1000;
 const MESSAGE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_PAYLOAD_BYTES = 4_500_000;
 const ALLOWED_ORIGINS = new Set([
-  'https://jugest.netlify.app',
-  'https://2qt9wrwbj9-web.github.io',
+  'https://jugglerest.netlify.app',
   'https://ana-slo.com',
   'https://www.ana-slo.com',
 ]);
@@ -27,7 +26,7 @@ function secureMatch(raw, expectedHash) {
 
 function corsHeaders(req) {
   const origin = req.headers.get('origin') || '';
-  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'https://jugest.netlify.app';
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'https://jugglerest.netlify.app';
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'POST,OPTIONS',

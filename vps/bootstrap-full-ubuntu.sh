@@ -60,7 +60,7 @@ install -m 0644 "$SERVICE_SRC" /etc/systemd/system/jugest-relay.service
 install -d -m 0755 /etc/systemd/system/jugest-relay.service.d
 cat > /etc/systemd/system/jugest-relay.service.d/origins.conf <<EOF
 [Service]
-Environment="JUGEST_ALLOWED_ORIGINS=https://${APP_HOST},https://jugest.netlify.app,https://2qt9wrwbj9-web.github.io,https://ana-slo.com,https://www.ana-slo.com"
+Environment="JUGEST_ALLOWED_ORIGINS=https://${APP_HOST},https://jugglerest.netlify.app,https://2qt9wrwbj9-web.github.io,https://ana-slo.com,https://www.ana-slo.com"
 EOF
 
 cat > /etc/caddy/Caddyfile <<EOF
@@ -85,7 +85,7 @@ ${RELAY_HOST} {
     header Cache-Control "no-store"
     header X-Content-Type-Options "nosniff"
     header Referrer-Policy "no-referrer"
-    header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors https://ana-slo.com https://www.ana-slo.com https://${APP_HOST} https://jugest.netlify.app https://2qt9wrwbj9-web.github.io"
+    header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors https://ana-slo.com https://www.ana-slo.com https://${APP_HOST} https://jugglerest.netlify.app https://2qt9wrwbj9-web.github.io"
     file_server
   }
 

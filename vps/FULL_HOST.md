@@ -1,15 +1,15 @@
 # Paused full-VPS hosting plan
 
-This document is archived. **The current and approved production platform is Netlify at `https://jugest.netlify.app`.**
+This document is archived. **The current and approved production platform is Netlify at `https://jugglerest.netlify.app`.**
 
 The former full-VPS plan is intentionally not an active deployment path, and the repository's active CI/build no longer validates or deploys it. Do not point DNS, run the VPS bootstrap scripts, or change the Relay/bookmarklet origin based on this file while Netlify remains production.
 
 Current production topology:
 
-- `https://jugest.netlify.app` -> app from `public/`
-- `https://jugest.netlify.app/api/relay` -> Netlify Function Relay
-- `https://jugest.netlify.app/relay-bridge.html` -> same-origin Safari Relay bridge
-- `https://jugest.netlify.app/ana-launcher.js` -> acquisition Launcher
+- `https://jugglerest.netlify.app` -> app from `public/`
+- `https://jugglerest.netlify.app/api/relay` -> Netlify Function Relay
+- `https://jugglerest.netlify.app/relay-bridge.html` -> same-origin Safari Relay bridge
+- `https://jugglerest.netlify.app/ana-launcher.js` -> acquisition Launcher
 - GitHub `main` -> source branch; Netlify deploys the production build
 - GitHub Actions -> CI only
 

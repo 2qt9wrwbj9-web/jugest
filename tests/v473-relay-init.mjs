@@ -27,8 +27,8 @@ const launcher = fs.readFileSync(path.join(base, 'ana-launcher.js'));
 const launcherPublic = fs.readFileSync(path.join(base, 'public', 'ana-launcher.js'));
 assert.deepEqual(launcher, launcherPublic, 'root/public ana-launcher.js must stay byte-identical');
 const sha = crypto.createHash('sha256').update(launcher).digest('hex');
-assert.equal(sha, '964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4',
-  'Launcher changed unexpectedly; bookmarklet/parser bump would need explicit review');
+assert.equal(sha, '2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67',
+  'Launcher changed unexpectedly beyond the reviewed Netlify-origin migration; bookmarklet/parser bump would need explicit review');
 const bookmarklet = fs.readFileSync(path.join(base, 'BOOKMARKLET_v4500.txt'), 'utf8');
 assert.match(bookmarklet, /ana-launcher\.js\?v=4500/);
-console.log('PASS relay storage-init ordering regression; version sync + Launcher/bookmarklet unchanged');
+console.log('PASS relay storage-init ordering regression; version sync + reviewed Launcher origin migration pinned');

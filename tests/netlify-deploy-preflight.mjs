@@ -29,7 +29,7 @@ for (const path of ['/', '/index.html', '/ana-launcher.js', '/relay-bridge.html'
 }
 assert.ok((toml.match(/Cache-Control\s*=\s*"no-store, no-cache, must-revalidate"/g) || []).length >= 4);
 
-const origin = 'https://jugest.netlify.app';
+const origin = 'https://jugglerest.netlify.app';
 assert.ok(pub.includes(`const RELAY_API="${origin}/api/relay"`), 'main app must use Netlify Relay');
 assert.ok(launcher.includes(`const RELAY_API='${origin}/api/relay'`), 'Launcher Relay API must use Netlify');
 assert.ok(launcher.includes(`const RELAY_BRIDGE='${origin}/relay-bridge.html'`), 'Launcher bridge must use Netlify');
@@ -38,6 +38,10 @@ assert.ok(bridge.includes("const API='/api/relay'"), 'bridge must call the same 
 assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4500`), 'current bookmarklet must load Launcher from Netlify');
 for (const allowed of [origin, 'https://ana-slo.com', 'https://www.ana-slo.com']) {
   assert.ok(relay.includes(`'${allowed}'`), `relay origin allowlist missing ${allowed}`);
+}
+
+for (const active of [pub, launcher, publicLauncher, bookmarklet, bridge, relay, readme]) {
+  assert.ok(!active.includes('https://jugest.netlify.app'), 'old Netlify origin must not remain in active production wiring');
 }
 
 for (const active of [pub, launcher, publicLauncher, bookmarklet, bridge]) {

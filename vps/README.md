@@ -4,10 +4,10 @@
 
 Current production endpoints are:
 
-- App: `https://jugest.netlify.app`
-- Relay/API: `https://jugest.netlify.app/api/relay`
-- Safari bridge: `https://jugest.netlify.app/relay-bridge.html`
-- Launcher: `https://jugest.netlify.app/ana-launcher.js`
+- App: `https://jugglerest.netlify.app`
+- Relay/API: `https://jugglerest.netlify.app/api/relay`
+- Safari bridge: `https://jugglerest.netlify.app/relay-bridge.html`
+- Launcher: `https://jugglerest.netlify.app/ana-launcher.js`
 
 The files in `vps/` are retained only so the previously prepared migration work is not lost. Do not run the bootstrap/configure/update scripts and do not switch Relay origins while Netlify remains the approved production target.
 
