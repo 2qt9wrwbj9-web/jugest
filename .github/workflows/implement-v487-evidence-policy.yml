@@ -1,0 +1,199 @@
+name: Implement v4.8.7 evidence policy
+
+on:
+  push:
+    branches: [v487-evidence-policy]
+    paths:
+      - '.github/workflows/implement-v487-evidence-policy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply v4.8.7 evidence policy
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re, json
+
+          CHANGELOG = '''v4.8.7 evidence-timeframe and independent-fact ranking policy:\n- Practical morning evidence now uses a maximum seven-day historical lookback. 14-day aggregate conditions and long recency conditions are no longer emitted into the single-evidence ranking path. Long-run data remains available for baseline/prior estimation and long-run calendar-rule validation.\n- Unconditional machine identity and unconditional table-number/tail/block/parity effects are treated as baseline/diagnostic information rather than direct practical ranking evidence. Calendar-conditioned table allocation remains eligible.\n- Added pre-declared calendar allocation roots (weekday/date-tail/exact-date × table-tail) and event-transition roots (weekday/date-tail/exact-date × previous-day setting/difference state) so date/weekday and raise/hold behavior can be learned directly without generic combinatorial search.\n- Practical evidence is collapsed by underlying fact group after exact-alias dedup. Closely related representations such as 5/7-day setting/P4 strength, exact-table/tail-derived identity, or multiple bonus/activity summaries cannot stack as independent reasons.\n- Strict Champion/calibration, externalJudge, machine probability tables, store-share constraint, acquisition/Relay/sync behavior, and Launcher remain unchanged.\n\n'''
+
+          OLD_BASE_LOOP = ''' for(let k of BRUTE_SINGLE_BASE_KEYS){let v=bruteFeatureValue(r,k);if(v==null||v==="")continue;let d=BRUTE_DIM_MAP[k],proxy=k==="tableNoFeature"?.95:k==="tableTail2"?.72:k==="tableBlock"?.55:k==="dayOfMonth"?.35:k==="nthWeekday"?.30:0;bruteSingleEmit(out,seen,`base:${k}:${v}`,`${BRUTE_DIM_NAME[k]||k}＝${v}`,k,d?.family||"base",k,proxy)}\n let hs=bruteSingleHistSummaries(ctx,r),prev=hs.prev;if(prev){'''
+
+          NEW_BASE_LOOP = ''' for(let k of BRUTE_SINGLE_BASE_KEYS){let v=bruteFeatureValue(r,k);if(v==null||v==="")continue;let d=BRUTE_DIM_MAP[k],proxy=k==="tableNoFeature"?.95:k==="tableTail2"?.72:k==="tableBlock"?.55:k==="dayOfMonth"?.35:k==="nthWeekday"?.30:0;bruteSingleEmit(out,seen,`base:${k}:${v}`,`${BRUTE_DIM_NAME[k]||k}＝${v}`,k,d?.family||"base",k,proxy)}\n // v4.8.7: calendar allocation and event-transition roots are declared as one auditable rule each.\n const v487v=k=>bruteFeatureValue(r,k);\n let v487Wd=v487v("weekday"),v487Dt=v487v("dateTail"),v487Dom=v487v("dayOfMonth"),v487Tail=v487v("tableTail"),v487PrevBand=v487v("prevBand"),v487PrevDiff=v487v("prevDiff");\n function v487Pair(a,b,id,label,family,sourceKey,category="calendar"){if(a==null||a===""||b==null||b==="")return;bruteSingleEmit(out,seen,`${id}:${a}|${b}`,`${label}＝${a} × ${b}`,family,category,sourceKey,.15)}\n v487Pair(v487Wd,v487Tail,"cross:weekday-tableTail","曜日×台番末尾","calendarTableWeekday","weekday×tableTail");\n v487Pair(v487Dt,v487Tail,"cross:dateTail-tableTail","日付末尾×台番末尾","calendarTableDateTail","dateTail×tableTail");\n v487Pair(v487Dom,v487Tail,"cross:dayOfMonth-tableTail","毎月日付×台番末尾","calendarTableDayOfMonth","dayOfMonth×tableTail");\n v487Pair(v487Wd,v487PrevBand,"trans:weekday-prevBand","曜日×前日設定","eventTransitionWeekday","weekday×prevBand","history");\n v487Pair(v487Dt,v487PrevBand,"trans:dateTail-prevBand","日付末尾×前日設定","eventTransitionDateTail","dateTail×prevBand","history");\n v487Pair(v487Dom,v487PrevBand,"trans:dayOfMonth-prevBand","毎月日付×前日設定","eventTransitionDayOfMonth","dayOfMonth×prevBand","history");\n v487Pair(v487Wd,v487PrevDiff,"trans:weekday-prevDiff","曜日×前日差枚","eventTransitionWeekday","weekday×prevDiff","history");\n v487Pair(v487Dt,v487PrevDiff,"trans:dateTail-prevDiff","日付末尾×前日差枚","eventTransitionDateTail","dateTail×prevDiff","history");\n v487Pair(v487Dom,v487PrevDiff,"trans:dayOfMonth-prevDiff","毎月日付×前日差枚","eventTransitionDayOfMonth","dayOfMonth×prevDiff","history");\n let hs=bruteSingleHistSummaries(ctx,r),prev=hs.prev;if(prev){'''
+
+          NEW_HELPERS = r'''function bruteSingleLookbackDays(c){
+ let s=[c?.meta?.family,c?.meta?.sourceKey,c?.meta?.label].filter(Boolean).join("|");
+ if(/sameWeekday/i.test(s)||/7日前/.test(s))return 7;
+ let m=s.match(/(?:hist(?:ES|P4|Diff|BonusRate|BonusBias)?|lossCount|highCount|zeroBonus(?:Count)?|machineHist|storeHist|avgGames|lossRatio|highRatio)(\d+)/i);if(m)return +m[1]||0;
+ m=s.match(/過去(\d+)日/);return m?(+m[1]||0):0
+}
+function bruteSingleRankEligible(c){
+ if(!c?.meta)return false;let f=String(c.meta.family||""),k=String(c.meta.sourceKey||""),s=`${f}|${k}|${c.meta.label||""}`;
+ if(f==="machineIdentity")return false;
+ if(new Set(["tableNoFeature","tableTail","tableTail2","tableBlock","tableParity"]).has(f)||new Set(["tableNoFeature","tableTail","tableTail2","tableBlock","tableParity"]).has(k))return false;
+ if(/daysSince/i.test(s))return false;
+ return bruteSingleLookbackDays(c)<=7
+}
+function bruteSingleFactGroup(c){
+ let f=String(c?.meta?.family||""),k=String(c?.meta?.sourceKey||""),s=`${f}|${k}`;
+ if(f==="calendarTableWeekday")return"calendar-table:weekday";
+ if(f==="calendarTableDateTail"||f==="calendarTableDayOfMonth")return"calendar-table:date";
+ if(f==="eventTransitionWeekday")return"event-transition:weekday";
+ if(f==="eventTransitionDateTail"||f==="eventTransitionDayOfMonth")return"event-transition:date";
+ if(/sameWeekday/i.test(s))return"history:same-weekday";
+ if(/^(weekday|weekend|nthWeekday|lastWeekday)$/.test(f)||/^(weekday|weekend|nthWeekday|lastWeekday)$/.test(k))return"calendar:weekday";
+ if(/^(dateTail|dayOfMonth|monthPhase|weekOfMonth|doubleDay)$/.test(f)||/^(dateTail|dayOfMonth|monthPhase|weekOfMonth|doubleDay)$/.test(k))return"calendar:date";
+ if(/prevES2Seq|prevDiff2Seq/.test(s))return"history:two-day-transition";
+ if(/prevBand|prevESThreshold|prevP4Threshold/.test(s))return"history:previous-level";
+ if(/prevDiffThreshold|(^|\|)prevDiff(\||$)/.test(s))return"history:previous-diff";
+ if(/histES|histP4|highRatio|highCount|esTrend/.test(s))return"history:recent-level";
+ if(/histDiff|lossRatio|lossCount|diffTrend/.test(s))return"history:recent-diff";
+ if(/prevMachine|machineHist|prevMachineRank/.test(s))return"context:machine";
+ if(/prevStore|storeHist/.test(s))return"context:store";
+ if(/prevGames|prevBB|prevRB|prevNoBonus|prevBonus|prevExtreme|zeroBonus|avgGames|histBonus/.test(s))return"history:bonus-activity";
+ if(/Streak|streak/.test(s))return"history:streak";
+ return`family:${f||k}`
+}
+function bruteSingleFactGroups(cands){
+ let aliases=bruteSingleAliasGroups((cands||[]).filter(bruteSingleRankEligible)),facts=new Map;
+ for(let x of aliases){let g=bruteSingleFactGroup(x.c),quality=bruteSingleRankQuality(x.c),old=facts.get(g);if(!old||quality>old.quality)facts.set(g,{...x,factGroup:g,quality})}
+ return[...facts.values()].sort((a,b)=>(b.c?.rankScore||0)-(a.c?.rankScore||0)||b.quality-a.quality)
+}
+'''
+
+          NEW_RANKER = r'''function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){
+ if(!engine||!row)return{effectES:0,p4Effect:0,confidence:0,reasons:[],matchedCount:0,familyCount:0};let ex=new Set(excludeFamilies),conds=conditions||engine.targetConditions?.get(row.machine+"|"+row.tableNo+"|"+row.date)||bruteSingleConditions(row,ctx||engine.ctx),matched=[];
+ for(let m of conds){if(ex.has(m.family))continue;let a=engine.storeMap.get(m.id),b=engine.machineMap.get(row.machine+"\u001e"+m.id);for(let c of [a,b])if(c&&bruteSingleRankEligible(c)&&c.directionStable&&c.confidence>=15&&Math.abs(c.practicalEffect)>=.003)matched.push(c)}
+ let roots=bruteSingleFactGroups(matched).sort((a,b)=>Math.abs(b.c.practicalEffect)-Math.abs(a.c.practicalEffect)),weights=[1,.78,.62,.50,.40,.33,.27,.22,.18,.15],effectES=0,p4Effect=0,reasons=[],cw=0,cs=0;
+ for(let i=0;i<Math.min(weights.length,roots.length);i++){let x=roots[i],c=x.c,w=weights[i];effectES+=c.practicalEffect*w;p4Effect+=(c.practicalP4Delta||0)*w;let mag=Math.abs(c.practicalEffect*w);cw+=mag;cs+=mag*c.confidence/100;let aliasLabels=[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==c.meta.label);reasons.push({label:c.meta.label,family:c.meta.family,factGroup:x.factGroup,scope:c.scope,machine:c.machine,confidence:c.confidence,days:c.days,rows:c.rows,effect:c.effect,p4Delta:c.p4Delta,practicalEffect:c.practicalEffect,practicalP4Delta:c.practicalP4Delta,contributionES:c.practicalEffect*w,contributionP4:(c.practicalP4Delta||0)*w,recent30:c.recent30,recent60:c.recent60,recent90:c.recent90,q:c.q,status:c.status,aliasCount:x.aliases.length,aliasLabels})}
+ let baseConf=cw?cs/cw:0,confidence=bruteClamp(baseConf*(.55+.45*Math.min(1,roots.length/5)),0,1);
+ return{effectES:bruteClamp(effectES,-.85,.85),p4Effect:bruteClamp(p4Effect,-.32,.32),confidence,reasons,matchedCount:matched.length,familyCount:roots.length}
+}
+'''
+
+          def one_replace(s, old, new, label):
+              n=s.count(old)
+              if n!=1: raise SystemExit(f'{label}: expected 1 occurrence, got {n}')
+              return s.replace(old,new,1)
+
+          def patch_index(path):
+              p=Path(path); s=p.read_text()
+              if not s.startswith('<!doctype html>\n<!--\n'): raise SystemExit(f'{path}: header mismatch')
+              s=s.replace('<!doctype html>\n<!--\n','<!doctype html>\n<!--\n'+CHANGELOG,1)
+              s=one_replace(s,'<title>ジャグラー設定判別 v4.8.6</title>','<title>ジャグラー設定判別 v4.8.7</title>',path+' title')
+              s=one_replace(s,'<span style="font-size:11px;color:#b7ad9f">v4.8.6</span>','<span style="font-size:11px;color:#b7ad9f">v4.8.7</span>',path+' h1')
+              s=one_replace(s,'function bruteSingleHistory(ctx,r){return bruteHistoryWindow(ctx.byKeyDate,r,14)}','function bruteSingleHistory(ctx,r){return bruteHistoryWindow(ctx.byKeyDate,r,7)}',path+' history')
+              s=one_replace(s,'function bruteSingleHistSummaries(ctx,r){let win=bruteSingleHistory(ctx,r),out={};for(let n of [2,5,7,14]){','function bruteSingleHistSummaries(ctx,r){let win=bruteSingleHistory(ctx,r),out={};for(let n of [2,5,7]){',path+' summaries')
+              s=one_replace(s,' for(let n of [2,5,7,14]){let z=hs[n];if(!z)continue;',' for(let n of [2,5,7]){let z=hs[n];if(!z)continue;',path+' condition windows')
+              s=one_replace(s,'"lossStreak","winStreak","highStreak","lowStreak","daysSinceHigh","daysSinceWin","diffTrend27","esTrend27",','"lossStreak","winStreak","highStreak","lowStreak","diffTrend27","esTrend27",',path+' recency keys')
+              s=one_replace(s,OLD_BASE_LOOP,NEW_BASE_LOOP,path+' base/cross insertion')
+              marker='function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){'
+              if marker not in s: raise SystemExit(path+' ranker marker missing')
+              s=one_replace(s,'function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){',NEW_HELPERS+'function bruteSingleRankForRow(engine,row,{excludeFamilies=[],conditions=null,ctx=null}={}){',path+' helper insert')
+              pat=r'function bruteSingleRankForRow\(engine,row,\{excludeFamilies=\[\],conditions=null,ctx=null\}=\{\}\)\{.*?\n\}\nfunction bruteSingleCandidateLabel'
+              s,n=re.subn(pat,NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)
+              if n!=1: raise SystemExit(path+' ranker replace failed')
+              old='rootTop=bruteSingleAliasGroups(singleEvidence.all.filter(c=>c.practicalEffect>0)).slice(0,20).map(x=>({...bruteSinglePublic(x.c),aliasCount:x.aliases.length,aliasLabels:[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==x.c.meta.label)}))'
+              new='rootTop=bruteSingleFactGroups(singleEvidence.all.filter(c=>c.practicalEffect>0)).slice(0,20).map(x=>({...bruteSinglePublic(x.c),factGroup:x.factGroup,aliasCount:x.aliases.length,aliasLabels:[...new Set(x.aliases.map(a=>a.meta?.label).filter(Boolean))].filter(label=>label!==x.c.meta.label)}))'
+              s=one_replace(s,old,new,path+' root top')
+              s=one_replace(s,'rootEvidence:{version:1,conditionCount:singleEvidence.conditionCount','rootEvidence:{version:2,conditionCount:singleEvidence.conditionCount',path+' root evidence version')
+              s=one_replace(s,'ranking:{version:4,separatedFromStrict:true','ranking:{version:5,separatedFromStrict:true',path+' ranking version')
+              s=one_replace(s,"note:'v4.8.6 uses one hybrid ranking for screen and JSON. Practical single-evidence aliases with an identical raw validation/effect fingerprint are collapsed before weighted aggregation, preventing the same observed cohort from being counted twice under different labels. Expensive walk-forward mixture learning remains explicit and persisted per shop; strict validated probability/Champion remains mathematically separate and no AI API is called.'","note:'v4.8.7 keeps long-run level in baseline/prior, limits direct practical history to seven days, adds calendar/table and calendar/previous-state transition roots, and collapses correlated representations into one independent fact before aggregation. Strict validated probability/Champion remains mathematically separate and no AI API is called.'",path+' payload note')
+              s=s.replace('storeAnalysisSignature(r){let p=r?.prep||{},source=p.sourceFingerprint||"",params=[brutePeriod,bruteMinG,bruteMaxDims,bruteMinDays].join("/");return["4.8.6",','storeAnalysisSignature(r){let p=r?.prep||{},source=p.sourceFingerprint||"",params=[brutePeriod,bruteMinG,bruteMaxDims,bruteMinDays].join("/");return["4.8.7",',1)
+              s=s.replace('version:1,appVersion:"4.8.6",id:`sa-','version:1,appVersion:"4.8.7",id:`sa-',1)
+              s=s.replace('return{app:"juggler-tool",backupVersion:1,appVersion:"4.8.6",createdAt:','return{app:"juggler-tool",backupVersion:1,appVersion:"4.8.7",createdAt:',1)
+              s=s.replace('前日差枚・2/5/7/14日履歴・据え・特定日など','前日差枚・2/5/7日履歴・曜日・日付末尾・上げ/据えなど',1)
+              p.write_text(s)
+
+          for f in ['index.html','public/index.html']:
+              patch_index(f)
+          assert Path('index.html').read_bytes()==Path('public/index.html').read_bytes(), 'root/public index diverged'
+
+          for f in ['sync-ui.js','public/sync-ui.js']:
+              p=Path(f); s=p.read_text(); s=one_replace(s,"const APP_VERSION='4.8.6'","const APP_VERSION='4.8.7'",f+' sync version'); p.write_text(s)
+          assert Path('sync-ui.js').read_bytes()==Path('public/sync-ui.js').read_bytes(), 'root/public sync ui diverged'
+
+          p=Path('tests/netlify-deploy-preflight.mjs'); s=p.read_text(); s=s.replace(r'v4\.8\.6',r'v4\.8\.7').replace('v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only','v4.8.7 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only'); p.write_text(s)
+          p=Path('tests/v486-device-sync.mjs'); s=p.read_text().replace("const APP_VERSION='4.8.6'","const APP_VERSION='4.8.7'"); p.write_text(s)
+
+          pkgp=Path('package.json'); pkg=json.loads(pkgp.read_text()); pkg['name']='juggler-hanahana-tool-v4870'; pkg['version']='4.8.7';
+          test='node tests/v487-evidence-policy.mjs'
+          if test not in pkg['scripts']['test']: pkg['scripts']['test']+=' && '+test
+          pkgp.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n')
+
+          readme=Path('README.md').read_text(); readme=one_replace(readme,'Current app release: **v4.8.6**.','Current app release: **v4.8.7**.','README release')
+          readme += '''\n\n## v4.8.7 evidence policy\n- Direct practical history is capped at the previous 7 days; 14-day aggregates and long recency are not direct ranking roots.\n- Long-run level is baseline/prior information, not an unconditional machine/table bonus.\n- Weekday/date-tail/exact-date × table-tail and × previous-day state are explicit practical roots for allocation and raise/hold behavior.\n- Correlated rules are collapsed into one underlying fact before practical aggregation.\n- Strict Champion/calibration, judge math, Launcher, Relay, and device sync semantics are unchanged.\n'''
+          Path('README.md').write_text(readme)
+
+          Path('tests/v487-evidence-policy.mjs').write_text(r'''import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+          const pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+          assert.equal(root,pub,'root/public index must remain byte-identical');
+          assert.match(root,/ジャグラー設定判別 v4\.8\.7/);
+          assert.ok(root.includes('function bruteSingleHistory(ctx,r){return bruteHistoryWindow(ctx.byKeyDate,r,7)}'),'single evidence lookback must be capped at 7 days');
+          assert.ok(root.includes('for(let n of [2,5,7]){let h=bruteHistRowsFromWindow(win,n)'),'history summaries must stop at 7 days');
+          assert.ok(root.includes('for(let n of [2,5,7]){let z=hs[n]'),'single threshold generation must stop at 7 days');
+          assert.ok(!root.includes('for(let n of [2,5,7,14]){let z=hs[n]'),'14-day direct threshold generation must be absent');
+          assert.ok(!/BRUTE_SINGLE_BASE_KEYS=[\s\S]*?daysSinceHigh[\s\S]*?\];/.test(root),'long recency must not remain in single root catalog');
+          for(const x of ['calendarTableWeekday','calendarTableDateTail','calendarTableDayOfMonth','eventTransitionWeekday','eventTransitionDateTail','eventTransitionDayOfMonth']) assert.ok(root.includes(x),'missing practical rule '+x);
+          assert.ok(root.includes('function bruteSingleFactGroup(c)'),'independent fact grouping missing');
+          assert.ok(root.includes('function bruteSingleFactGroups(cands)'),'fact-level collapse missing');
+          assert.ok(root.includes('if(f==="machineIdentity")return false'),'machine long-run identity must not be a direct practical root');
+          for(const k of ['tableNoFeature','tableTail','tableTail2','tableBlock','tableParity']) assert.ok(root.includes(k),'table baseline key missing from eligibility audit');
+          assert.ok(root.includes('return"history:recent-level"'),'setting/P4 recent facts must collapse together');
+          assert.ok(root.includes('return"history:recent-diff"'),'recent difference facts must collapse together');
+          assert.ok(root.includes('return"history:bonus-activity"'),'bonus/activity facts must collapse together');
+          assert.ok(root.includes('rootTop=bruteSingleFactGroups('),'AI/root summary must use fact-level collapse');
+          assert.ok(root.includes('rootEvidence:{version:2'),'root evidence schema must advertise new semantics');
+          assert.ok(root.includes('ranking:{version:5'),'ranking engine version must advance');
+          assert.ok(root.includes('strict validated probability/Champion remains mathematically separate'),'AI note must preserve strict/practical separation');
+          console.log('v4.8.7 evidence policy regression: ok');
+          '''.replace(/^ {10}/gm,''))
+          PY
+          npm install --package-lock-only --ignore-scripts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test v4.8.7
+        run: npm test
+
+      - name: Build Netlify Drop ZIP
+        run: |
+          rm -f jugglerest_netlify_v4870_deploy.zip
+          zip -r jugglerest_netlify_v4870_deploy.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/implement-v487-evidence-policy.yml' \
+            -x 'node_modules/*' \
+            -x 'jugglerest_netlify_v4870_deploy.zip'
+          sha256sum jugglerest_netlify_v4870_deploy.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4870_deploy
+          path: jugglerest_netlify_v4870_deploy.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit tested v4.8.7 source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html public/index.html sync-ui.js public/sync-ui.js README.md package.json package-lock.json tests/netlify-deploy-preflight.mjs tests/v486-device-sync.mjs tests/v487-evidence-policy.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m 'Release v4.8.7 evidence policy'
+          git push origin HEAD:v487-evidence-policy
