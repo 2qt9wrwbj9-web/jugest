@@ -38,3 +38,4 @@ jobs:
           git diff --cached --check
           git commit -m "Fix v4.8.4 store registration"
           git push
+# retry after regression fixture was committed
