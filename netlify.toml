@@ -9,9 +9,9 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# While Netlify is the temporary production origin, always serve the app shell,
-# Launcher and Safari relay bridge fresh. This avoids an older cached build
-# surviving after a GitHub-triggered Netlify deploy.
+# Netlify is the active production origin. Always serve the app shell,
+# Launcher and Safari Relay bridge fresh so a previous cached build cannot
+# survive after a GitHub-triggered Netlify deploy.
 [[headers]]
   for = "/"
   [headers.values]
