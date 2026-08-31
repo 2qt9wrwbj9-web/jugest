@@ -2,7 +2,7 @@
 
 Juggler / HANA HANA setting-analysis tool.
 
-Current app release: **v4.8.3**.
+Current app release: **v4.8.4**.
 
 ## Current production
 
@@ -13,7 +13,7 @@ For the foreseeable future, **Netlify is the sole active production target**.
 - Relay/API: Netlify Function `netlify/functions/relay.mjs` exposed as `https://jugglerest.netlify.app/api/relay`
 - Safari Relay bridge: `https://jugglerest.netlify.app/relay-bridge.html`
 - Launcher: `https://jugglerest.netlify.app/ana-launcher.js`
-- Current bookmarklet loader: `BOOKMARKLET_v4500.txt` -> Netlify Launcher
+- Current bookmarklet loader: `BOOKMARKLET_v4840.txt` -> Netlify Launcher
 - Relay transient storage: Netlify Blobs
 - Durable shop history and analysis snapshots: browser IndexedDB + complete backup
 
