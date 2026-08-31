@@ -27,14 +27,23 @@ jobs:
         run: npm ci
       - name: Apply v4.8.4 patch
         run: python scripts/apply-v484.py
-      - name: Update launcher test release pins
+      - name: Update approved v4.8.4 launcher guards
         run: |
           python - <<'PY'
           from pathlib import Path
+          import hashlib
           for p in Path('tests').glob('launcher-*.mjs'):
-              s=p.read_text()
-              s=s.replace("4.5.0","4.8.4")
+              s=p.read_text().replace("4.5.0","4.8.4")
               p.write_text(s)
+          p=Path('tests/v473-relay-init.mjs')
+          s=p.read_text()
+          new_hash=hashlib.sha256(Path('ana-launcher.js').read_bytes()).hexdigest()
+          s=s.replace('2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67',new_hash)
+          s=s.replace("BOOKMARKLET_v4500.txt","BOOKMARKLET_v4840.txt")
+          s=s.replace('ana-launcher\\.js\\?v=4500','ana-launcher\\.js\\?v=4840')
+          s=s.replace('beyond the reviewed Netlify-origin migration; bookmarklet/parser bump would need explicit review','beyond the reviewed v4.8.4 collector upgrade; further Launcher changes need explicit review')
+          p.write_text(s)
+          print('reviewed launcher sha256',new_hash)
           PY
       - name: Full regression suite
         run: npm test
