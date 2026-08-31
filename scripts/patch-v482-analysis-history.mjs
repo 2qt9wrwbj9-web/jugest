@@ -46,13 +46,11 @@ pkg.name='juggler-hanahana-tool-v4820';pkg.version='4.8.2';
 for(const k of ['test','check']) if(!pkg.scripts[k].includes('tests/v482-analysis-history.mjs')) pkg.scripts[k]+=' && node tests/v482-analysis-history.mjs';
 write('package.json',JSON.stringify(pkg,null,2)+'\n');
 
-let t481=read('tests/v481-evidence-alias-dedup.mjs');
-t481=t481.replace(/<title>ジャグラー設定判別 v4\\\.8\\\.1<\\\/title>/g,'<title>ジャグラー設定判別 v4\\.8\\.2<\\/title>');
-write('tests/v481-evidence-alias-dedup.mjs',t481);
-
-let tNetlify=read('tests/netlify-deploy-preflight.mjs');
-tNetlify=tNetlify.replace(/v4\\\.8\\\.1/g,'v4\\.8\\.2').replace(/v4\.8\.1/g,'v4.8.2');
-write('tests/netlify-deploy-preflight.mjs',tNetlify);
+for(const p of ['tests/netlify-deploy-preflight.mjs','tests/v480-jdata-setting-summary.mjs','tests/v481-evidence-alias-dedup.mjs']){
+ let t=read(p);
+ t=t.replaceAll('4.8.1','4.8.2').replaceAll('4\\.8\\.1','4\\.8\\.2');
+ write(p,t);
+}
 
 const test=`import fs from 'node:fs';\nimport assert from 'node:assert/strict';\nconst html=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');\nconst root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');\nassert.equal(html,root,'root/public index.html must remain byte-identical');\nassert.match(html,/<title>ジャグラー設定判別 v4\\.8\\.2<\\/title>/);\nassert.match(html,/STORE_ANALYSIS_INDEX_KEY="storeAnalysisHistoryIndexV1"/);\nassert.match(html,/STORE_ANALYSIS_PAYLOAD_PREFIX="storeAnalysisSnapshotV1:"/);\nassert.match(html,/function storeAnalysisFingerprint\\(prep\\)/);\nassert.match(html,/async function storeAnalysisEncode\\(obj\\)/);\nassert.match(html,/CompressionStream/);\nassert.match(html,/async function storeAnalysisSaveCurrent\\(r\\)/);\nassert.match(html,/signature===signature/,'same input+params must deduplicate');\nassert.match(html,/sourceFingerprint:storeAnalysisFingerprint\\(prep\\)/);\nassert.match(html,/await storeAnalysisSaveCurrent\\(bruteResults\\)/);\nassert.match(html,/storeAnalysisAttachForecast\\(r,target,top\\)/);\nassert.match(html,/次回狙い台はまだこの履歴に付いてないよ/);\nassert.match(html,/async function storeAnalysisExportAll\\(\\)/);\nassert.match(html,/analysisHistory=await storeAnalysisExportAll\\(\\)/);\nassert.match(html,/if\\(u\\.analysisHistory\\)await storeAnalysisRestoreAll/);\nassert.match(html,/id="BRUTE_HISTORY"/);\nassert.match(html,/id="BRUTE_HISTORY_DETAIL"/);\nconst saveFn=html.slice(html.indexOf('async function storeAnalysisSaveCurrent'),html.indexOf('function storeAnalysisCompactForecastRow'));\nassert.ok(!/v4PredictStore\\(/.test(saveFn),'saving a completed law search must not trigger heavy v4 prediction');\nconsole.log('PASS v4.8.2 store-analysis snapshot history regression');\n`;
 write('tests/v482-analysis-history.mjs',test);
