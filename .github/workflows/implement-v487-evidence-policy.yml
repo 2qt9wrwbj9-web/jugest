@@ -63,4 +63,4 @@ jobs:
           git commit -m 'Release v4.8.7 evidence policy'
           git push origin HEAD:v487-evidence-policy
 
-# trigger after remaining evidence-regression updates
+# trigger after escaped-version regression fix
