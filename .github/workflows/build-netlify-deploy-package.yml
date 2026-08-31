@@ -1,0 +1,33 @@
+name: Build Netlify deploy package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-netlify-deploy-package.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build deploy ZIP
+        run: |
+          rm -f jugglerest_netlify_v4830_deploy.zip
+          zip -r jugglerest_netlify_v4830_deploy.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/build-netlify-deploy-package.yml' \
+            -x 'jugglerest_netlify_v4830_deploy.zip'
+
+      - name: Upload deploy ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4830_deploy
+          path: jugglerest_netlify_v4830_deploy.zip
+          if-no-files-found: error
+          retention-days: 7
