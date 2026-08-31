@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const html=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+assert.equal(html,root,'root/public index must remain byte-identical');
+assert.match(html,/<title>ジャグラー設定判別 v4\.8\.3<\/title>/);
+assert.match(html,/id="BRUTE_HISTORY_STORAGE"/);
+assert.match(html,/async function storeAnalysisRenderStorageStatus\(\)/);
+assert.match(html,/navigator\.storage&&typeof navigator\.storage\.estimate==="function"/);
+assert.match(html,/storeAnalysisHistoryIndex\.reduce\(\(a,x\)=>a\+\(\+x\.storedBytes\|\|0\),0\)/);
+assert.match(html,/ratio>=\.9/);
+assert.match(html,/ratio>=\.7/);
+assert.match(html,/storeAnalysisRenderStorageStatus\(\);/);
+assert.match(html,/1073741824/,'byte formatter should show GB');
+const meter=html.slice(html.indexOf('async function storeAnalysisRenderStorageStatus'),html.indexOf('function renderStoreAnalysisHistory'));
+assert.ok(!/storeAnalysisDbGet\(/.test(meter),'storage meter must not load snapshot payloads');
+assert.ok(!/storeAnalysisDecode\(/.test(meter),'storage meter must not expand snapshot payloads');
+console.log('PASS v4.8.3 analysis-history storage meter regression');
