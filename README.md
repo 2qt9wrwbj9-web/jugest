@@ -33,4 +33,6 @@ Moving from `jugest.netlify.app` to `jugglerest.netlify.app` creates a new brows
 
 ## v4.8.4
 
+Store-registration hotfix: the prefecture catalog now prefers the dedicated 「ホール一覧」 links instead of schedule/date links, filters date-like labels from fallback candidates, and adds an iPhone Safari-friendly URL paste button plus native-paste hardening. Judgment math, parserVersion, acquisition pacing, storage schema, and Relay semantics are unchanged.
+
 Project-wide v4.8.4 keeps the existing setting-judgment math unchanged and upgrades the Ana-Slo collector: normal rolling guard is 30 accesses / 15 minutes; night collection uses serial 25–35 second pacing without the local rolling guard; registered-shop latest-delta collection, shop registration, chained night maintenance, and all-shop unsent Relay delivery are included. Active production remains https://jugglerest.netlify.app.
