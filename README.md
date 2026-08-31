@@ -30,3 +30,7 @@ This hosting policy does not change setting judgment math, single-evidence logic
 ## Browser storage migration note
 
 Moving from `jugest.netlify.app` to `jugglerest.netlify.app` creates a new browser origin. IndexedDB/localStorage do not move automatically. Before retiring the old hostname, export a complete backup there, restore it on the new hostname, verify store-day/history counts, then re-pair Launcher Relay because receiver pairing is also origin-scoped.
+
+## v4.8.4
+
+Project-wide v4.8.4 keeps the existing setting-judgment math unchanged and upgrades the Ana-Slo collector: normal rolling guard is 30 accesses / 15 minutes; night collection uses serial 25–35 second pacing without the local rolling guard; registered-shop latest-delta collection, shop registration, chained night maintenance, and all-shop unsent Relay delivery are included. Active production remains https://jugglerest.netlify.app.

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 const src=fs.readFileSync(new URL('../ana-launcher.js',import.meta.url),'utf8');
-if(!src.includes("const VERSION='4.5.0'")) throw new Error('launcher version not 4.5.0');
+if(!src.includes("const VERSION='4.8.4'")) throw new Error('launcher version not 4.8.4');
 if(!src.includes("const RELAY_API='https://jugglerest.netlify.app/api/relay'")) throw new Error('relay API missing');
 if(!src.includes("const RELAY_BRIDGE='https://jugglerest.netlify.app/relay-bridge.html'")) throw new Error('relay bridge missing');
 if(!src.includes('relayCallBridge')||!src.includes('relayCallDirect')) throw new Error('bridge/direct fallback transport missing');

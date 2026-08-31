@@ -50,8 +50,8 @@ assert.match(html,/async function ensureExternalJudged\(/,'lazy external judging
 
 const launcher=fs.readFileSync('./ana-launcher.js');
 assert.deepEqual(launcher,fs.readFileSync('./public/ana-launcher.js'),'root/public launcher must stay byte-identical');
-assert.equal(crypto.createHash('sha256').update(launcher).digest('hex'),'2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67','Launcher changed unexpectedly');
-assert.match(fs.readFileSync('./BOOKMARKLET_v4500.txt','utf8'),/ana-launcher\.js\?v=4500/);
+assert.equal(crypto.createHash('sha256').update(launcher).digest('hex'),'d3995b71845555c94012ae0c7644660c4201e47e9f1e90c861331d84e20d8ac4','Launcher changed unexpectedly');
+assert.match(fs.readFileSync('./BOOKMARKLET_v4840.txt','utf8'),/ana-launcher\.js\?v=4840/);
 
 function fakeElement(){
   const base={value:'',checked:false,innerHTML:'',textContent:'',className:'',style:{},dataset:{},files:[],disabled:false,

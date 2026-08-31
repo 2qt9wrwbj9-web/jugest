@@ -8,7 +8,7 @@ const launcher = fs.readFileSync(new URL('../public/ana-launcher.js', import.met
 assert.match(html, /<title>ジャグラー設定判別 v4\.\d+\.\d+<\/title>/);
 assert.match(html, /ジャグラー・ハナハナ設定判別 <span[^>]*>v4\.\d+\.\d+<\/span>/);
 assert.match(html, /appVersion:"\d+\.\d+\.\d+"/);
-assert.match(launcher, /const VERSION='4\.5\.0';/);
+assert.match(launcher, /const VERSION='4\.8\.4';/);
 assert.match(launcher, /const PARSER_VERSION=4500;/);
 assert.match(html, /単一条件のみ（最速・推奨）/);
 assert.match(html, /id="BRUTE_TAB_SINGLE"/);

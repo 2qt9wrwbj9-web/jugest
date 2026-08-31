@@ -9,7 +9,7 @@ const [toml, root, pub, launcher, publicLauncher, bridge, relay, bookmarklet, pk
   readFile('public/ana-launcher.js', 'utf8'),
   readFile('public/relay-bridge.html', 'utf8'),
   readFile('netlify/functions/relay.mjs', 'utf8'),
-  readFile('BOOKMARKLET_v4500.txt', 'utf8'),
+  readFile('BOOKMARKLET_v4840.txt', 'utf8'),
   readFile('package.json', 'utf8'),
   readFile('.github/workflows/pages.yml', 'utf8'),
   readFile('README.md', 'utf8'),
@@ -17,7 +17,7 @@ const [toml, root, pub, launcher, publicLauncher, bridge, relay, bookmarklet, pk
 
 assert.equal(root, pub, 'root/public index must remain byte-identical');
 assert.equal(launcher, publicLauncher, 'root/public launcher must remain byte-identical');
-assert.match(pub, /ジャグラー設定判別 v4\.8\.3/);
+assert.match(pub, /ジャグラー設定判別 v4\.8\.4/);
 
 assert.match(toml, /publish\s*=\s*"public"/);
 assert.match(toml, /command\s*=\s*"npm run check"/);
@@ -35,7 +35,7 @@ assert.ok(launcher.includes(`const RELAY_API='${origin}/api/relay'`), 'Launcher 
 assert.ok(launcher.includes(`const RELAY_BRIDGE='${origin}/relay-bridge.html'`), 'Launcher bridge must use Netlify');
 assert.ok(launcher.includes(`const RELAY_BRIDGE_ORIGIN='${origin}'`), 'Launcher bridge origin must use Netlify');
 assert.ok(bridge.includes("const API='/api/relay'"), 'bridge must call the same Netlify origin');
-assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4500`), 'current bookmarklet must load Launcher from Netlify');
+assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4840`), 'current bookmarklet must load Launcher from Netlify');
 for (const allowed of [origin, 'https://ana-slo.com', 'https://www.ana-slo.com']) {
   assert.ok(relay.includes(`'${allowed}'`), `relay origin allowlist missing ${allowed}`);
 }

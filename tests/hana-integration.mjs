@@ -9,6 +9,6 @@ for(const s of [root]){
  assert.match(s,/window\.HanaAppBridge/);assert.match(s,/getMoveCandidates/);
  assert.match(s,/v4MachineSupportQ/);
 }
-assert.match(launcher,/const VERSION='4\.5\.0'/);assert.match(launcher,/const PARSER_VERSION=4500/);
+assert.match(launcher,/const VERSION='4\.8\.4'/);assert.match(launcher,/const PARSER_VERSION=4500/);
 for(const k of ['newkingv','houou','dragon','star','king']) assert.ok(launcher.includes(`['${k}'`),'launcher missing '+k);
 console.log('hana integration: ok; full v4.5.3 wiring present');

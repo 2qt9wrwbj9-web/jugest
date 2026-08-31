@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 const code=fs.readFileSync(new URL('../ana-launcher.js',import.meta.url),'utf8');
-if(!code.includes("const VERSION='4.5.0'")) throw new Error('launcher version not 4.5.0');
+if(!code.includes("const VERSION='4.8.4'")) throw new Error('launcher version not 4.8.4');
 if(!code.includes('jacExportMask')||!code.includes('jacExportText')||!code.includes('jacExportCopy')) throw new Error('dedicated export panel missing');
 if(!code.includes("document.execCommand('copy')===true")) throw new Error('legacy copy result is not checked');
 if(code.includes("alert(`${label}をコピーしたよ`)")) throw new Error('old unconditional copy-success alert remains');

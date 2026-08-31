@@ -15,6 +15,9 @@ if(typeof elems.get('jacExport180')?.onclick!=='function')throw new Error('180-d
 if(typeof elems.get('jacExport13')?.onclick!=='function')throw new Error('13-month JSON export handler missing');
 if(typeof elems.get('jacNightStart')?.onclick!=='function')throw new Error('night acquisition handler missing');
 if(typeof elems.get('jacRelaySend13')?.onclick!=='function')throw new Error('13-month relay handler missing');
+if(typeof elems.get('jacAllLatest')?.onclick!=='function')throw new Error('all-shop latest handler missing');
+if(typeof elems.get('jacAllUnsent')?.onclick!=='function')throw new Error('all-shop unsent handler missing');
+if(typeof elems.get('jacAddShop')?.onclick!=='function')throw new Error('shop registration handler missing');
 if(elems.has('jacReturnTool'))throw new Error('legacy return-to-tool button still present');
 if(!String(elems.get('jac180')?.textContent||'').includes('/180'))throw new Error('180 progress missing');
 if(!String(elems.get('jacMap')?.innerHTML||'').includes('jac-dot'))throw new Error('180 map missing');

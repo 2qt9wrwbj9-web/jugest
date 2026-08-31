@@ -65,7 +65,7 @@ assert.match(currentHtml,/V4_FIT_BASE_CACHE/);
 assert.match(currentHtml,/singleEvidence\.ctx=null/);
 
 const launcher=fs.readFileSync('./ana-launcher.js','utf8');
-assert.match(launcher,/const VERSION=['"]4\.5\.0['"]/);
+assert.match(launcher,/const VERSION=['"]4\.8\.4['"]/);
 assert.match(launcher,/const PARSER_VERSION=4500/);
 
 const {days,target}=makeDays();
