@@ -20,7 +20,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Replace current release identifiers only; no logic edits.
           git grep -Il -e '4\.8\.4' -e '4840' | while IFS= read -r f; do
             case "$f" in
               README_V4*|VALIDATION_v4*) continue ;;
@@ -29,8 +28,6 @@ jobs:
           done
           if [ -f BOOKMARKLET_v4840.txt ]; then git mv BOOKMARKLET_v4840.txt BOOKMARKLET_v4850.txt; fi
           if [ -f public/BOOKMARKLET_v4840.txt ]; then git mv public/BOOKMARKLET_v4840.txt public/BOOKMARKLET_v4850.txt; fi
-          # Keep historical regression-test filenames (v484-*) unchanged.
-          # Rename the packaging workflow so future artifacts are clearly v4.8.5.
           if [ -f .github/workflows/build-v484-netlify-package.yml ]; then
             git mv .github/workflows/build-v484-netlify-package.yml .github/workflows/build-v485-netlify-package.yml
           fi
@@ -47,3 +44,4 @@ jobs:
           git add -A
           git commit -m 'Bump release numbering to v4.8.5'
           git push
+# trigger
