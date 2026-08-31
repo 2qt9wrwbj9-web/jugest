@@ -44,12 +44,19 @@ if old not in s:
 s=s.replace(old,new,1).replace('v4.7.9 evidence contribution UI contract: ok','v4.8.7 evidence contribution UI + independent-fact aggregation contract: ok')
 p.write_text(s)
 
-for name in ['tests/v480-jdata-setting-summary.mjs','tests/v482-analysis-history.mjs','tests/v483-storage-meter.mjs']:
+p=Path('tests/v480-jdata-setting-summary.mjs')
+s=p.read_text()
+if '4.8.6' not in s:
+    raise SystemExit('v480 app-version pin missing')
+p.write_text(s.replace('4.8.6','4.8.7'))
+
+for name in ['tests/v482-analysis-history.mjs','tests/v483-storage-meter.mjs']:
     p=Path(name)
     s=p.read_text()
-    if '4.8.6' not in s:
+    if r'4\.8\.6' not in s and '4.8.6' not in s:
         raise SystemExit(f'{name}: expected app-version pin missing')
-    p.write_text(s.replace('4.8.6','4.8.7'))
+    s=s.replace(r'4\.8\.6',r'4\.8\.7').replace('4.8.6','4.8.7')
+    p.write_text(s)
 
 p=Path('tests/v481-evidence-alias-dedup.mjs')
 s=p.read_text()
