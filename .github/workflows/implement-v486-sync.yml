@@ -1,0 +1,172 @@
+name: Implement v4.8.6 device sync
+
+on:
+  push:
+    branches: [v486-device-sync]
+    paths:
+      - '.github/workflows/implement-v486-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v486-device-sync
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply v4.8.6 release wiring
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          # App shell: preserve historical changelog; update only active release markers.
+          p=Path('index.html')
+          s=p.read_text()
+          marker='<!--\n'
+          block='''v4.8.6 two-device saved-data sync:\n- Added manual encrypted device sync for saved JUGEST data. Two devices sharing one code merge play records, shop/tag masters, store history, prediction records, layout overrides, move history, learned hybrid profiles, current judge/HANA state, and saved analysis snapshots.\n- Cloud transport stores only an authenticated AES-GCM encrypted payload. The encryption key stays inside the share code and is never sent to the sync API. Payloads are gzip-compressed before encryption when supported.\n- Store-day conflicts merge by shop+date using the newer saved copy; play records use persistent per-record sync IDs so records created independently on both devices survive ID collisions. Shop/tag IDs are remapped locally to preserve references.\n- UI/filter/page state, unsaved editor state, Launcher acquisition/rate-limit state, and Launcher/Relay credentials are intentionally device-local and are not synchronized. Sync is explicit via 「今すぐ同期」; no background sync is added in this release.\n- Judgement math, probability tables, single-evidence, strict Champion, Calibration, hybrid ranking semantics, parserVersion, acquisition pacing, and existing Relay behavior are unchanged.\n\n'''
+          if 'v4.8.6 two-device saved-data sync:' not in s:
+              s=s.replace(marker,marker+block,1)
+          s=s.replace('<title>ジャグラー設定判別 v4.8.4</title>','<title>ジャグラー設定判別 v4.8.6</title>',1)
+          s=s.replace('ジャグラー・ハナハナ設定判別 <span style="font-size:11px;color:#b7ad9f">v4.8.4</span>','ジャグラー・ハナハナ設定判別 <span style="font-size:11px;color:#b7ad9f">v4.8.6</span>',1)
+          s=s.replace('return["4.8.4",p.shop,p.from,p.latest','return["4.8.6",p.shop,p.from,p.latest',1)
+          s=s.replace('appVersion:"4.8.4"','appVersion:"4.8.6"')
+          s=s.replace("note:'v4.8.4 uses one hybrid ranking", "note:'v4.8.6 uses one hybrid ranking",1)
+          loader='<script src="./hanahana-ui.js"></script><script src="./sync-ui.js"></script>'
+          s=s.replace('<script src="./hanahana-ui.js"></script>',loader,1)
+          p.write_text(s)
+          Path('public/index.html').write_text(s)
+
+          # Sync client is a normal fresh production asset.
+          Path('public/sync-ui.js').write_text(Path('sync-ui.js').read_text())
+
+          # Launcher: numbering only. Parser/acquisition logic stays untouched.
+          lp=Path('ana-launcher.js'); ls=lp.read_text()
+          old="const VERSION='4.8.4';"; new="const VERSION='4.8.6';"
+          if old not in ls: raise SystemExit('active Launcher version marker missing')
+          ls=ls.replace(old,new,1)
+          lp.write_text(ls); Path('public/ana-launcher.js').write_text(ls)
+          old_b=Path('BOOKMARKLET_v4840.txt').read_text()
+          new_b=old_b.replace('v=4840','v=4860')
+          Path('BOOKMARKLET_v4860.txt').write_text(new_b)
+          Path('public/BOOKMARKLET_v4860.txt').write_text(new_b)
+
+          # Ensure sync client cannot stay stale after a manual Netlify Drop.
+          tp=Path('netlify.toml'); t=tp.read_text()
+          if 'for = "/sync-ui.js"' not in t:
+              t += '''\n[[headers]]\n  for = "/sync-ui.js"\n  [headers.values]\n    Cache-Control = "no-store, no-cache, must-revalidate"\n'''
+          tp.write_text(t)
+
+          # README current-release pointers only.
+          rp=Path('README.md'); r=rp.read_text()
+          r=r.replace('Current app release: **v4.8.4**','Current app release: **v4.8.6**')
+          r=r.replace('Current bookmarklet loader: `BOOKMARKLET_v4840.txt`','Current bookmarklet loader: `BOOKMARKLET_v4860.txt`')
+          if 'v4.8.6 device sync' not in r:
+              r += '''\n\n## v4.8.6 device sync\n- Manual two-device saved-data sync via a shared code.\n- Sync payload is gzip-compressed when available and AES-GCM encrypted in the browser before Netlify Blobs storage; the encryption key is not sent to the sync API.\n- Sync covers saved play/store/analysis data and learned store profiles; UI state and Launcher/Relay credentials remain device-local.\n- Judgement/ranking mathematics and Launcher acquisition semantics are unchanged.\n'''
+          rp.write_text(r)
+
+          # Package metadata + tests.
+          pp=Path('package.json'); pkg=json.loads(pp.read_text())
+          pkg['name']='juggler-hanahana-tool-v4860'; pkg['version']='4.8.6'
+          test=pkg['scripts']['test']
+          if 'node --check sync-ui.js' not in test:
+              test=test.replace('node --check hanahana-ui.js', 'node --check hanahana-ui.js && node --check sync-ui.js')
+          if 'node --check netlify/functions/sync.mjs' not in test:
+              test=test.replace('node --check netlify/functions/relay.mjs', 'node --check netlify/functions/relay.mjs && node --check netlify/functions/sync.mjs')
+          if 'node tests/v486-device-sync.mjs' not in test:
+              test += ' && node tests/v486-device-sync.mjs'
+          pkg['scripts']['test']=test
+          pp.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n')
+
+          # Active-version expectations. Historical file names/messages can remain.
+          for name in ['tests/v482-analysis-history.mjs','tests/v483-storage-meter.mjs','tests/v484-launcher-maintenance.mjs','tests/netlify-deploy-preflight.mjs','tests/v473-relay-init.mjs']:
+              q=Path(name); z=q.read_text()
+              z=z.replace('v4\\.8\\.4','v4\\.8\\.6')
+              z=z.replace("const VERSION='4.8.4'","const VERSION='4.8.6'")
+              z=z.replace('BOOKMARKLET_v4840.txt','BOOKMARKLET_v4860.txt')
+              z=z.replace('v=4840','v=4860')
+              z=z.replace('v4.8.4 app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only','v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only')
+              z=z.replace('Current app release:\\s*\\*\\*v4\\.8\\.4\\*\\*','Current app release:\\s*\\*\\*v4\\.8\\.6\\*\\*')
+              z=z.replace('Current bookmarklet loader:\\s*`BOOKMARKLET_v4840\\.txt`','Current bookmarklet loader:\\s*`BOOKMARKLET_v4860\\.txt`')
+              q.write_text(z)
+
+          # Add explicit production sync assertions to preflight.
+          q=Path('tests/netlify-deploy-preflight.mjs'); z=q.read_text()
+          z=z.replace("const [toml, root, pub, launcher, publicLauncher, bridge, relay, bookmarklet, pkgText, ci, readme] = await Promise.all([",
+                      "const [toml, root, pub, launcher, publicLauncher, bridge, relay, syncFn, syncUi, publicSyncUi, bookmarklet, pkgText, ci, readme] = await Promise.all([")
+          z=z.replace("  readFile('netlify/functions/relay.mjs', 'utf8'),\n  readFile('BOOKMARKLET_v4860.txt', 'utf8'),",
+                      "  readFile('netlify/functions/relay.mjs', 'utf8'),\n  readFile('netlify/functions/sync.mjs', 'utf8'),\n  readFile('sync-ui.js', 'utf8'),\n  readFile('public/sync-ui.js', 'utf8'),\n  readFile('BOOKMARKLET_v4860.txt', 'utf8'),")
+          z=z.replace("assert.equal(launcher, publicLauncher, 'root/public launcher must remain byte-identical');",
+                      "assert.equal(launcher, publicLauncher, 'root/public launcher must remain byte-identical');\nassert.equal(syncUi, publicSyncUi, 'root/public sync client must remain byte-identical');")
+          z=z.replace("for (const path of ['/', '/index.html', '/ana-launcher.js', '/relay-bridge.html']) {",
+                      "for (const path of ['/', '/index.html', '/ana-launcher.js', '/relay-bridge.html', '/sync-ui.js']) {")
+          z=z.replace("assert.ok((toml.match(/Cache-Control\\s*=\\s*\"no-store, no-cache, must-revalidate\"/g) || []).length >= 4);",
+                      "assert.ok((toml.match(/Cache-Control\\s*=\\s*\"no-store, no-cache, must-revalidate\"/g) || []).length >= 5);")
+          z=z.replace("assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4860`), 'current bookmarklet must load Launcher from Netlify');",
+                      "assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4860`), 'current bookmarklet must load Launcher from Netlify');\nassert.ok(pub.includes('<script src=\"./sync-ui.js\"></script>'), 'app must load device sync client');\nassert.ok(syncUi.includes(\"const API='/api/sync'\"), 'sync client must use same-origin Netlify sync API');\nassert.ok(syncFn.includes(\"path: '/api/sync'\"), 'sync function route missing');\nassert.ok(syncFn.includes(\"'https://jugglerest.netlify.app'\"), 'sync origin allowlist missing production origin');")
+          q.write_text(z)
+
+          # Sync regression also verifies deploy copy.
+          q=Path('tests/v486-device-sync.mjs'); z=q.read_text()
+          needle="assert.ok(!src.includes('jugglerRelayReceiver:v1'),'Relay auth must not be synchronized');"
+          z=z.replace(needle,needle+"\nassert.equal(src,fs.readFileSync(new URL('../public/sync-ui.js',import.meta.url),'utf8'),'root/public sync-ui must remain byte-identical');")
+          q.write_text(z)
+          PY
+
+          npm install --package-lock-only --ignore-scripts
+
+          NEW_LAUNCHER_SHA="$(sha256sum ana-launcher.js | awk '{print $1}')"
+          python - "$NEW_LAUNCHER_SHA" <<'PY'
+          from pathlib import Path
+          import sys
+          p=Path('tests/v473-relay-init.mjs'); s=p.read_text()
+          old='bcc7db517014294b2cfd9339ef61c634d1402f87cd05a6d97b1f02261389b4d6'
+          if old not in s: raise SystemExit('old launcher SHA pin missing')
+          p.write_text(s.replace(old,sys.argv[1],1))
+          PY
+
+          git diff --check
+
+      - name: Test v4.8.6
+        run: |
+          npm ci
+          npm test
+
+      - name: Build Netlify Drop ZIP
+        run: |
+          rm -f jugglerest_netlify_v4860_deploy.zip
+          zip -r jugglerest_netlify_v4860_deploy.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/*' \
+            -x 'node_modules/*' \
+            -x 'jugglerest_netlify_v4860_deploy.zip'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4860_deploy
+          path: jugglerest_netlify_v4860_deploy.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit tested v4.8.6 source
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html public/index.html sync-ui.js public/sync-ui.js \
+            ana-launcher.js public/ana-launcher.js BOOKMARKLET_v4860.txt public/BOOKMARKLET_v4860.txt \
+            netlify.toml README.md package.json package-lock.json tests
+          if git diff --cached --quiet; then
+            echo 'No release changes to commit'
+          else
+            git commit -m 'Release v4.8.6 device data sync'
+            git push origin HEAD:v486-device-sync
+          fi
