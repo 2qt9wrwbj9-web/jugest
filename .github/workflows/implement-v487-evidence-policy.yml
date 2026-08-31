@@ -21,6 +21,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Fix patcher literal replacement
+        run: sed -i "s/s,n=re.subn(pat,NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)/s,n=re.subn(pat,lambda m: NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)/" scripts/apply-v487.py
       - name: Apply evidence policy
         run: python3 scripts/apply-v487.py
       - name: Refresh lockfile
@@ -44,7 +46,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html public/index.html sync-ui.js public/sync-ui.js README.md package.json package-lock.json tests/netlify-deploy-preflight.mjs tests/v486-device-sync.mjs tests/v487-evidence-policy.mjs
+          git add index.html public/index.html sync-ui.js public/sync-ui.js README.md package.json package-lock.json tests/netlify-deploy-preflight.mjs tests/v486-device-sync.mjs tests/v487-evidence-policy.mjs scripts/apply-v487.py
           git diff --cached --quiet && exit 0
           git commit -m 'Release v4.8.7 evidence policy'
           git push origin HEAD:v487-evidence-policy
