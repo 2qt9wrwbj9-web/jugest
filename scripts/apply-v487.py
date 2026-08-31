@@ -165,7 +165,8 @@ assert.ok(root.includes('function bruteSingleHistory(ctx,r){return bruteHistoryW
 assert.ok(root.includes('for(let n of [2,5,7]){let h=bruteHistRowsFromWindow(win,n)'),'history summaries must stop at 7 days');
 assert.ok(root.includes('for(let n of [2,5,7]){let z=hs[n]'),'single threshold generation must stop at 7 days');
 assert.ok(!root.includes('for(let n of [2,5,7,14]){let z=hs[n]'),'14-day direct threshold generation must be absent');
-assert.ok(!/BRUTE_SINGLE_BASE_KEYS=[\s\S]*?daysSinceHigh[\s\S]*?\];/.test(root),'long recency must not remain in single root catalog');
+const baseCatalog=root.match(/const BRUTE_SINGLE_BASE_KEYS=\[([\s\S]*?)\];/)?.[1]||'';
+assert.ok(baseCatalog&&!baseCatalog.includes('daysSinceHigh')&&!baseCatalog.includes('daysSinceWin'),'long recency must not remain in single root catalog');
 for(const x of ['calendarTableWeekday','calendarTableDateTail','calendarTableDayOfMonth','eventTransitionWeekday','eventTransitionDateTail','eventTransitionDayOfMonth']) assert.ok(root.includes(x),'missing practical rule '+x);
 assert.ok(root.includes('function bruteSingleFactGroup(c)'),'independent fact grouping missing');
 assert.ok(root.includes('function bruteSingleFactGroups(cands)'),'fact-level collapse missing');
