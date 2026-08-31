@@ -29,7 +29,6 @@ jobs:
           from pathlib import Path
           import json
 
-          # App shell: preserve historical changelog; update only active release markers.
           p=Path('index.html')
           s=p.read_text()
           marker='<!--\n'
@@ -46,10 +45,8 @@ jobs:
           p.write_text(s)
           Path('public/index.html').write_text(s)
 
-          # Sync client is a normal fresh production asset.
           Path('public/sync-ui.js').write_text(Path('sync-ui.js').read_text())
 
-          # Launcher: numbering only. Parser/acquisition logic stays untouched.
           lp=Path('ana-launcher.js'); ls=lp.read_text()
           old="const VERSION='4.8.4';"; new="const VERSION='4.8.6';"
           if old not in ls: raise SystemExit('active Launcher version marker missing')
@@ -60,13 +57,11 @@ jobs:
           Path('BOOKMARKLET_v4860.txt').write_text(new_b)
           Path('public/BOOKMARKLET_v4860.txt').write_text(new_b)
 
-          # Ensure sync client cannot stay stale after a manual Netlify Drop.
           tp=Path('netlify.toml'); t=tp.read_text()
           if 'for = "/sync-ui.js"' not in t:
               t += '''\n[[headers]]\n  for = "/sync-ui.js"\n  [headers.values]\n    Cache-Control = "no-store, no-cache, must-revalidate"\n'''
           tp.write_text(t)
 
-          # README current-release pointers only.
           rp=Path('README.md'); r=rp.read_text()
           r=r.replace('Current app release: **v4.8.4**','Current app release: **v4.8.6**')
           r=r.replace('Current bookmarklet loader: `BOOKMARKLET_v4840.txt`','Current bookmarklet loader: `BOOKMARKLET_v4860.txt`')
@@ -74,7 +69,6 @@ jobs:
               r += '''\n\n## v4.8.6 device sync\n- Manual two-device saved-data sync via a shared code.\n- Sync payload is gzip-compressed when available and AES-GCM encrypted in the browser before Netlify Blobs storage; the encryption key is not sent to the sync API.\n- Sync covers saved play/store/analysis data and learned store profiles; UI state and Launcher/Relay credentials remain device-local.\n- Judgement/ranking mathematics and Launcher acquisition semantics are unchanged.\n'''
           rp.write_text(r)
 
-          # Package metadata + tests.
           pp=Path('package.json'); pkg=json.loads(pp.read_text())
           pkg['name']='juggler-hanahana-tool-v4860'; pkg['version']='4.8.6'
           test=pkg['scripts']['test']
@@ -87,7 +81,6 @@ jobs:
           pkg['scripts']['test']=test
           pp.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n')
 
-          # Every active-version test follows the release number; historical source/changelog files are untouched.
           for q in Path('tests').glob('*.mjs'):
               z=q.read_text()
               z=z.replace('4.8.4','4.8.6')
@@ -95,7 +88,6 @@ jobs:
               z=z.replace('4840','4860')
               q.write_text(z)
 
-          # Add explicit production sync assertions to preflight.
           q=Path('tests/netlify-deploy-preflight.mjs'); z=q.read_text()
           z=z.replace("const [toml, root, pub, launcher, publicLauncher, bridge, relay, bookmarklet, pkgText, ci, readme] = await Promise.all([",
                       "const [toml, root, pub, launcher, publicLauncher, bridge, relay, syncFn, syncUi, publicSyncUi, bookmarklet, pkgText, ci, readme] = await Promise.all([")
@@ -112,7 +104,6 @@ jobs:
           z=z.replace('v4.8.6 app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only','v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only')
           q.write_text(z)
 
-          # Sync regression also verifies deploy copy.
           q=Path('tests/v486-device-sync.mjs'); z=q.read_text()
           needle="assert.ok(!src.includes('jugglerRelayReceiver:v1'),'Relay auth must not be synchronized');"
           if 'root/public sync-ui must remain byte-identical' not in z:
@@ -126,10 +117,11 @@ jobs:
           python - "$NEW_LAUNCHER_SHA" <<'PY'
           from pathlib import Path
           import sys
-          p=Path('tests/v473-relay-init.mjs'); s=p.read_text()
           old='bcc7db517014294b2cfd9339ef61c634d1402f87cd05a6d97b1f02261389b4d6'
-          if old not in s: raise SystemExit('old launcher SHA pin missing')
-          p.write_text(s.replace(old,sys.argv[1],1))
+          for p in Path('tests').glob('*.mjs'):
+              s=p.read_text()
+              if old in s:
+                  p.write_text(s.replace(old,sys.argv[1]))
           PY
 
           git diff --check
