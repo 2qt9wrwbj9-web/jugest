@@ -33,7 +33,9 @@ jobs:
           from pathlib import Path
           import hashlib
           for p in Path('tests').glob('*.mjs'):
-              s=p.read_text().replace("4.5.0","4.8.4")
+              s=p.read_text()
+              s=s.replace("4.5.0","4.8.4")
+              s=s.replace(r"4\.5\.0",r"4\.8\.4")
               p.write_text(s)
           p=Path('tests/v410-features.mjs')
           s=p.read_text().replace("'NIGHT_MONTHS=13','randMs(35000,55000)'","'NIGHT_MONTHS=13','NIGHT_WAIT_MIN_MS=25000','NIGHT_WAIT_MAX_MS=35000'")
