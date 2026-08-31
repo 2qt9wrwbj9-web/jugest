@@ -20,20 +20,61 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git grep -Il -e '4\.8\.4' -e '4840' | while IFS= read -r f; do
-            case "$f" in
-              README_V4*|VALIDATION_v4*) continue ;;
-            esac
-            sed -i 's/4\.8\.4/4.8.5/g; s/4840/4850/g' "$f"
-          done
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          for name in files:
+              if not name:
+                  continue
+              if name.startswith('README_V4') or name.startswith('VALIDATION_v4'):
+                  continue
+              p = Path(name)
+              try:
+                  s = p.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              n = s.replace('4.8.4', '4.8.5').replace('4840', '4850').replace(r'4\.8\.4', r'4\.8\.5')
+              if n != s:
+                  p.write_text(n, encoding='utf-8')
+          PY
+
           if [ -f BOOKMARKLET_v4840.txt ]; then git mv BOOKMARKLET_v4840.txt BOOKMARKLET_v4850.txt; fi
           if [ -f public/BOOKMARKLET_v4840.txt ]; then git mv public/BOOKMARKLET_v4840.txt public/BOOKMARKLET_v4850.txt; fi
           if [ -f .github/workflows/build-v484-netlify-package.yml ]; then
             git mv .github/workflows/build-v484-netlify-package.yml .github/workflows/build-v485-netlify-package.yml
+            python - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/build-v485-netlify-package.yml')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('build-v484-netlify-package.yml', 'build-v485-netlify-package.yml')
+          p.write_text(s, encoding='utf-8')
+          PY
           fi
+
           npm ci
           npm test
           git diff --check
+
+      - name: Build Netlify Drop ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f jugglerest_netlify_v4850_deploy.zip
+          zip -r jugglerest_netlify_v4850_deploy.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/bump-v485.yml' \
+            -x 'node_modules/*' \
+            -x 'jugglerest_netlify_v4850_deploy.zip'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4850_deploy
+          path: jugglerest_netlify_v4850_deploy.zip
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Commit v4.8.5 numbering
         shell: bash
         run: |
@@ -44,4 +85,3 @@ jobs:
           git add -A
           git commit -m 'Bump release numbering to v4.8.5'
           git push
-# trigger
