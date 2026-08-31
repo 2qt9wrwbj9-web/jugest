@@ -53,6 +53,25 @@ jobs:
           PY
           fi
 
+          NEW_LAUNCHER_SHA="$(sha256sum ana-launcher.js | awk '{print $1}')"
+          python - "$NEW_LAUNCHER_SHA" <<'PY'
+          from pathlib import Path
+          import subprocess, sys
+          new_sha = sys.argv[1]
+          old_sha = 'bcc7db517014294b2cfd9339ef61c634d1402f87cd05a6d97b1f02261389b4d6'
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          for name in files:
+              if not name:
+                  continue
+              p = Path(name)
+              try:
+                  s = p.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              if old_sha in s:
+                  p.write_text(s.replace(old_sha, new_sha), encoding='utf-8')
+          PY
+
           npm ci
           npm test
           git diff --check
