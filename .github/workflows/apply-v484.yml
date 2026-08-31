@@ -38,6 +38,8 @@ jobs:
               s=p.read_text()
               s=s.replace("4.5.0","4.8.4")
               s=s.replace(r"4\.5\.0",r"4\.8\.4")
+              s=s.replace("4.8.3","4.8.4")
+              s=s.replace(r"4\.8\.3",r"4\.8\.4")
               s=s.replace(old_hash,new_hash)
               s=s.replace("BOOKMARKLET_v4500.txt","BOOKMARKLET_v4840.txt")
               s=s.replace('ana-launcher\\.js\\?v=4500','ana-launcher\\.js\\?v=4840')
