@@ -11,7 +11,7 @@ const [toml, root, pub, launcher, bridge, relay] = await Promise.all([
 ]);
 
 assert.equal(root, pub, 'root/public index must remain byte-identical');
-assert.match(pub, /ジャグラー設定判別 v4\.8\.1/);
+assert.match(pub, /ジャグラー設定判別 v4\.8\.2/);
 
 assert.match(toml, /publish\s*=\s*"public"/);
 assert.match(toml, /command\s*=\s*"npm run check"/);
@@ -33,4 +33,4 @@ for (const allowed of [origin, 'https://ana-slo.com', 'https://www.ana-slo.com']
   assert.ok(relay.includes(`'${allowed}'`), `relay origin allowlist missing ${allowed}`);
 }
 
-console.log('Netlify production preflight passed: v4.8.1 app + Relay + Safari bridge are wired to jugest.netlify.app');
+console.log('Netlify production preflight passed: v4.8.2 app + Relay + Safari bridge are wired to jugest.netlify.app');

@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const rootHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 assert.equal(html, rootHtml, 'root/public index.html must remain byte-identical');
-assert.match(html, /<title>ジャグラー設定判別 v4\.8\.1<\/title>/);
+assert.match(html, /<title>ジャグラー設定判別 v4\.8\.2<\/title>/);
 assert.match(html, /function bruteSingleAliasFingerprint\(c\)/);
 assert.match(html, /function bruteSingleAliasGroups\(cands\)/);
 assert.match(html, /aliasCount:x\.aliases\.length/);
@@ -42,5 +42,5 @@ const topLabels=pred.ranking.rootEvidence.topPositive.map(x=>x.label);
 assert.ok(!(topLabels.includes(exact)&&topLabels.includes(tail2)), 'rootEvidence topPositive still exposes duplicate aliases: '+topLabels.join(' | '));
 assert.ok(pred.ranking.rootEvidence.topPositive.some(x=>x.aliasCount>=2&&(x.label===exact||x.label===tail2)), 'rootEvidence topPositive must expose aliasCount for the collapsed table alias');
 
-console.log('PASS v4.8.1 single-evidence alias dedup regression');
+console.log('PASS v4.8.2 single-evidence alias dedup regression');
 console.log('1088 rootFamilies='+r.rootFamilyCount+' aliases='+r.rootReasons.filter(x=>x.aliasCount>1).map(x=>x.label+':'+x.aliasCount).join(','));
