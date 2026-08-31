@@ -1,6 +1,6 @@
 from pathlib import Path
 
-for name in ['tests/v460-ranking.mjs','tests/v470-single-evidence.mjs']:
+for name in ['tests/v460-ranking.mjs','tests/v470-single-evidence.mjs','tests/v476-hybrid-ranking.mjs']:
     p=Path(name)
     s=p.read_text()
     old='/ranking:\\{version:4'
@@ -34,6 +34,22 @@ if old not in s:
     raise SystemExit('v474 evidence-population assertion missing')
 s=s.replace(old,new,1).replace('PASS v4.8.1 lazy execution regression; boot/navigation remains deferred, strict prediction semantics preserved, practical aliases deduplicated','PASS v4.8.7 lazy execution regression; boot/navigation remains deferred, strict prediction semantics preserved, practical evidence policy applied')
 p.write_text(s)
+
+p=Path('tests/v479-evidence-contribution-ui.mjs')
+s=p.read_text()
+old="'if(!old||quality>old.quality)fam.set(f,{c,quality})'"
+new="'if(!old||quality>old.quality)facts.set(g,{...x,factGroup:g,quality})'"
+if old not in s:
+    raise SystemExit('v479 old family-collapse guard missing')
+s=s.replace(old,new,1).replace('v4.7.9 evidence contribution UI contract: ok','v4.8.7 evidence contribution UI + independent-fact aggregation contract: ok')
+p.write_text(s)
+
+for name in ['tests/v480-jdata-setting-summary.mjs','tests/v482-analysis-history.mjs','tests/v483-storage-meter.mjs']:
+    p=Path(name)
+    s=p.read_text()
+    if '4.8.6' not in s:
+        raise SystemExit(f'{name}: expected app-version pin missing')
+    p.write_text(s.replace('4.8.6','4.8.7'))
 
 p=Path('tests/v481-evidence-alias-dedup.mjs')
 s=p.read_text()
