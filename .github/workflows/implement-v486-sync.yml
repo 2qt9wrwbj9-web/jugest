@@ -27,7 +27,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import json, re
+          import json
 
           # App shell: preserve historical changelog; update only active release markers.
           p=Path('index.html')
@@ -87,16 +87,12 @@ jobs:
           pkg['scripts']['test']=test
           pp.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n')
 
-          # Active-version expectations. Historical file names/messages can remain.
-          for name in ['tests/v482-analysis-history.mjs','tests/v483-storage-meter.mjs','tests/v484-launcher-maintenance.mjs','tests/netlify-deploy-preflight.mjs','tests/v473-relay-init.mjs']:
-              q=Path(name); z=q.read_text()
-              z=z.replace('v4\\.8\\.4','v4\\.8\\.6')
-              z=z.replace("const VERSION='4.8.4'","const VERSION='4.8.6'")
-              z=z.replace('BOOKMARKLET_v4840.txt','BOOKMARKLET_v4860.txt')
-              z=z.replace('v=4840','v=4860')
-              z=z.replace('v4.8.4 app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only','v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only')
-              z=z.replace('Current app release:\\s*\\*\\*v4\\.8\\.4\\*\\*','Current app release:\\s*\\*\\*v4\\.8\\.6\\*\\*')
-              z=z.replace('Current bookmarklet loader:\\s*`BOOKMARKLET_v4840\\.txt`','Current bookmarklet loader:\\s*`BOOKMARKLET_v4860\\.txt`')
+          # Every active-version test follows the release number; historical source/changelog files are untouched.
+          for q in Path('tests').glob('*.mjs'):
+              z=q.read_text()
+              z=z.replace('4.8.4','4.8.6')
+              z=z.replace('4\\.8\\.4','4\\.8\\.6')
+              z=z.replace('4840','4860')
               q.write_text(z)
 
           # Add explicit production sync assertions to preflight.
@@ -113,12 +109,14 @@ jobs:
                       "assert.ok((toml.match(/Cache-Control\\s*=\\s*\"no-store, no-cache, must-revalidate\"/g) || []).length >= 5);")
           z=z.replace("assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4860`), 'current bookmarklet must load Launcher from Netlify');",
                       "assert.ok(bookmarklet.includes(`${origin}/ana-launcher.js?v=4860`), 'current bookmarklet must load Launcher from Netlify');\nassert.ok(pub.includes('<script src=\"./sync-ui.js\"></script>'), 'app must load device sync client');\nassert.ok(syncUi.includes(\"const API='/api/sync'\"), 'sync client must use same-origin Netlify sync API');\nassert.ok(syncFn.includes(\"path: '/api/sync'\"), 'sync function route missing');\nassert.ok(syncFn.includes(\"'https://jugglerest.netlify.app'\"), 'sync origin allowlist missing production origin');")
+          z=z.replace('v4.8.6 app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only','v4.8.6 app + Relay + sync + bridge + Launcher + bookmarklet + CI are Netlify-only')
           q.write_text(z)
 
           # Sync regression also verifies deploy copy.
           q=Path('tests/v486-device-sync.mjs'); z=q.read_text()
           needle="assert.ok(!src.includes('jugglerRelayReceiver:v1'),'Relay auth must not be synchronized');"
-          z=z.replace(needle,needle+"\nassert.equal(src,fs.readFileSync(new URL('../public/sync-ui.js',import.meta.url),'utf8'),'root/public sync-ui must remain byte-identical');")
+          if 'root/public sync-ui must remain byte-identical' not in z:
+              z=z.replace(needle,needle+"\nassert.equal(src,fs.readFileSync(new URL('../public/sync-ui.js',import.meta.url),'utf8'),'root/public sync-ui must remain byte-identical');")
           q.write_text(z)
           PY
 
