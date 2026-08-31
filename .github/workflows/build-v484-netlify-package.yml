@@ -1,0 +1,36 @@
+name: Build v4.8.4 Netlify deploy package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-v484-netlify-package.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Build Netlify deploy ZIP
+        run: |
+          rm -f jugglerest_netlify_v4840_deploy.zip
+          zip -r jugglerest_netlify_v4840_deploy.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/build-v484-netlify-package.yml' \
+            -x 'node_modules/*' \
+            -x 'jugglerest_netlify_v4840_deploy.zip'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4840_deploy
+          path: jugglerest_netlify_v4840_deploy.zip
+          if-no-files-found: error
+          retention-days: 7
