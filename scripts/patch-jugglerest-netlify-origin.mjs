@@ -32,14 +32,18 @@ for(const dir of ['tests','vps']){
     if(!fs.statSync(p).isFile())continue;
     if(!/\.(mjs|js|md|txt|sh|example)$/.test(name))continue;
     replaceAll(p);
+    // Several performance/ordering regressions intentionally pin exact Launcher bytes.
+    // This reviewed hosting migration changes only the three Netlify origin constants, so pin all such guards
+    // to the exact post-migration bytes while VERSION/PARSER_VERSION and acquisition behavior stay unchanged.
+    let s=read(p);
+    if(s.includes(OLD_LAUNCHER_SHA))write(p,s.split(OLD_LAUNCHER_SHA).join(NEW_LAUNCHER_SHA));
   }
 }
 
-// v4.7.3 deliberately pins Launcher bytes. This migration changes only the reviewed Netlify origin constants,
-// so update that guard to the exact post-migration Launcher hash while keeping VERSION/PARSER_VERSION unchanged.
+// Make the primary Launcher-byte guard explain why this exact hash changed.
 let relayInit=read('tests/v473-relay-init.mjs');
-if(!relayInit.includes(OLD_LAUNCHER_SHA))throw new Error('v473 Launcher SHA guard is not the expected pre-migration value');
-relayInit=relayInit.replace(OLD_LAUNCHER_SHA,NEW_LAUNCHER_SHA)
+if(!relayInit.includes(NEW_LAUNCHER_SHA))throw new Error('v473 Launcher SHA guard was not migrated to the reviewed hash');
+relayInit=relayInit
   .replace('Launcher changed unexpectedly; bookmarklet/parser bump would need explicit review','Launcher changed unexpectedly beyond the reviewed Netlify-origin migration; bookmarklet/parser bump would need explicit review')
   .replace('version sync + Launcher/bookmarklet unchanged','version sync + reviewed Launcher origin migration pinned');
 write('tests/v473-relay-init.mjs',relayInit);
