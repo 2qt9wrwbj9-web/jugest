@@ -22,7 +22,17 @@ jobs:
           node-version: 22
           cache: npm
       - name: Fix patcher literal replacement
-        run: sed -i "s/s,n=re.subn(pat,NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)/s,n=re.subn(pat,lambda m: NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)/" scripts/apply-v487.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/apply-v487.py')
+          s=p.read_text()
+          old="s,n=re.subn(pat,NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)"
+          new="s,n=re.subn(pat,lambda m: NEW_RANKER+'function bruteSingleCandidateLabel',s,count=1,flags=re.S)"
+          if old not in s:
+              raise SystemExit('patcher replacement target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Apply evidence policy
         run: python3 scripts/apply-v487.py
       - name: Refresh lockfile
