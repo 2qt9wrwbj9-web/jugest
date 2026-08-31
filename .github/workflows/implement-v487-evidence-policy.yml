@@ -60,3 +60,5 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m 'Release v4.8.7 evidence policy'
           git push origin HEAD:v487-evidence-policy
+
+# trigger after YAML validation fix
