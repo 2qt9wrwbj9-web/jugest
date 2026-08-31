@@ -27,6 +27,15 @@ jobs:
         run: npm ci
       - name: Apply v4.8.4 patch
         run: python scripts/apply-v484.py
+      - name: Update launcher test release pins
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for p in Path('tests').glob('launcher-*.mjs'):
+              s=p.read_text()
+              s=s.replace("4.5.0","4.8.4")
+              p.write_text(s)
+          PY
       - name: Full regression suite
         run: npm test
       - name: Extra static debug sweep
