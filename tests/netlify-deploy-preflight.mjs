@@ -62,5 +62,7 @@ assert.match(ci, /name:\s*Netlify production CI/);
 assert.ok(!ci.includes('actions/deploy-pages'), 'GitHub Actions must not deploy GitHub Pages while Netlify is production');
 assert.ok(!ci.includes('actions/upload-pages-artifact'), 'GitHub Actions must not publish a Pages artifact');
 assert.match(readme, /Netlify is the sole active production target/);
+assert.match(readme, /Current app release:\s*\*\*v4\.8\.4\*\*/);
+assert.match(readme, /Current bookmarklet loader:\s*`BOOKMARKLET_v4840\.txt`/);
 
-console.log('Netlify production preflight passed: app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only');
+console.log('Netlify production preflight passed: v4.8.4 app + Relay + bridge + Launcher + bookmarklet + CI are Netlify-only');
