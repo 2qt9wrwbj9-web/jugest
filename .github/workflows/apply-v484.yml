@@ -32,7 +32,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import hashlib
-          for p in Path('tests').glob('launcher-*.mjs'):
+          for p in Path('tests').glob('*.mjs'):
               s=p.read_text().replace("4.5.0","4.8.4")
               p.write_text(s)
           p=Path('tests/v473-relay-init.mjs')
