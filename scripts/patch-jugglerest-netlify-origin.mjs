@@ -3,6 +3,8 @@ import path from 'node:path';
 
 const OLD='https://jugest.netlify.app';
 const NEW='https://jugglerest.netlify.app';
+const OLD_LAUNCHER_SHA='964891a40f829bc73e12dfd4da2c486b775e2650535a97e702ca296f12cb13a4';
+const NEW_LAUNCHER_SHA='2481cbc8707e4a8803ce0da597331adfb80f37797b2b1d7a030b023f5fa74e67';
 const read=p=>fs.readFileSync(p,'utf8');
 const write=(p,s)=>fs.writeFileSync(p,s);
 const replaceAll=(p)=>{const s=read(p),n=s.split(OLD).join(NEW);if(n!==s)write(p,n);};
@@ -33,6 +35,15 @@ for(const dir of ['tests','vps']){
   }
 }
 
+// v4.7.3 deliberately pins Launcher bytes. This migration changes only the reviewed Netlify origin constants,
+// so update that guard to the exact post-migration Launcher hash while keeping VERSION/PARSER_VERSION unchanged.
+let relayInit=read('tests/v473-relay-init.mjs');
+if(!relayInit.includes(OLD_LAUNCHER_SHA))throw new Error('v473 Launcher SHA guard is not the expected pre-migration value');
+relayInit=relayInit.replace(OLD_LAUNCHER_SHA,NEW_LAUNCHER_SHA)
+  .replace('Launcher changed unexpectedly; bookmarklet/parser bump would need explicit review','Launcher changed unexpectedly beyond the reviewed Netlify-origin migration; bookmarklet/parser bump would need explicit review')
+  .replace('version sync + Launcher/bookmarklet unchanged','version sync + reviewed Launcher origin migration pinned');
+write('tests/v473-relay-init.mjs',relayInit);
+
 // Strengthen the production guard: old host must not reappear in active assets.
 let pre=read('tests/netlify-deploy-preflight.mjs');
 if(!pre.includes('old Netlify origin must not remain')){
@@ -59,6 +70,7 @@ for(const [p,needle] of [
   ['ana-launcher.js',`${NEW}/relay-bridge.html`],
   ['BOOKMARKLET_v4500.txt',`${NEW}/ana-launcher.js?v=4500`],
   ['netlify/functions/relay.mjs',`'${NEW}'`],
+  ['tests/v473-relay-init.mjs',NEW_LAUNCHER_SHA],
 ]) if(!read(p).includes(needle))throw new Error(`${p} missing ${needle}`);
 
 console.log('Applied jugglerest.netlify.app production-origin migration patch');
