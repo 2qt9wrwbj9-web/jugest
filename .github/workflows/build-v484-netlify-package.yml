@@ -34,3 +34,5 @@ jobs:
           path: jugglerest_netlify_v4840_deploy.zip
           if-no-files-found: error
           retention-days: 7
+
+# rebuild after v4.8.4 store-registration hotfix
