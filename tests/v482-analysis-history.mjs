@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.equal(html,root,'root/public index.html must remain byte-identical');
-assert.match(html,/<title>ジャグラー設定判別 v4\.8\.7<\/title>/);
+assert.match(html,/<title>ジャグラー設定判別 v4\.8\.8<\/title>/);
 assert.match(html,/STORE_ANALYSIS_INDEX_KEY="storeAnalysisHistoryIndexV1"/);
 assert.match(html,/STORE_ANALYSIS_PAYLOAD_PREFIX="storeAnalysisSnapshotV1:"/);
 assert.match(html,/function storeAnalysisFingerprint\(prep\)/);

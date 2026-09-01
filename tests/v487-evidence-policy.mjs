@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 assert.equal(root,pub,'root/public index must remain byte-identical');
-assert.match(root,/ジャグラー設定判別 v4\.8\.7/);
+assert.match(root,/ジャグラー設定判別 v4\.8\.8/);
 assert.ok(root.includes('function bruteSingleHistory(ctx,r){return bruteHistoryWindow(ctx.byKeyDate,r,7)}'),'single evidence lookback must be capped at 7 days');
 assert.ok(root.includes('for(let n of [2,5,7]){let h=bruteHistRowsFromWindow(win,n)'),'history summaries must stop at 7 days');
 assert.ok(root.includes('for(let n of [2,5,7]){let z=hs[n]'),'single threshold generation must stop at 7 days');
@@ -21,4 +21,4 @@ assert.ok(root.includes('rootTop=bruteSingleFactGroups('),'AI/root summary must 
 assert.ok(root.includes('rootEvidence:{version:2'),'root evidence schema must advertise new semantics');
 assert.ok(root.includes('ranking:{version:5'),'ranking engine version must advance');
 assert.ok(root.includes('Strict validated probability/Champion remains mathematically separate'),'AI note must preserve strict/practical separation');
-console.log('v4.8.7 evidence policy regression: ok');
+console.log('v4.8.8 evidence policy regression: ok');

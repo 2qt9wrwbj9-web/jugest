@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const src=fs.readFileSync(new URL('../sync-ui.js',import.meta.url),'utf8');
-assert.ok(src.includes("const APP_VERSION='4.8.7'"));
+assert.ok(src.includes("const APP_VERSION='4.8.8'"));
 assert.ok(src.includes("const STATE_KEY='juggler_tool_state_v33'"));
 assert.ok(src.includes("const HANA_KEY='hanaJudgeStateV3'"));
 assert.ok(src.includes("const API='/api/sync'"));

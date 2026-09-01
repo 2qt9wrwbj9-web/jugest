@@ -2,7 +2,7 @@
 
 Juggler / HANA HANA setting-analysis tool.
 
-Current app release: **v4.8.7**.
+Current app release: **v4.8.8**.
 
 ## Current production
 
@@ -50,3 +50,10 @@ Project-wide v4.8.4 keeps the existing setting-judgment math unchanged and upgra
 - Weekday/date-tail/exact-date × table-tail and × previous-day state are explicit practical roots for allocation and raise/hold behavior.
 - Correlated rules are collapsed into one underlying fact before practical aggregation.
 - Strict Champion/calibration, judge math, Launcher, Relay, and device sync semantics are unchanged.
+
+
+## v4.8.8 run finance + edit hotfix
+- Run records use shop rate snapshots, saved-medal investment, cash investment, collected medals and exchanged yen. Actual coin difference, cash P/L and saved-medal delta are calculated automatically.
+- The shop rate is remembered for later runs; optional exchanged-medal override handles rounding/prize differences. Legacy records remain compatible.
+- Saved-medal balance continues to be base balance + recorded run deltas, now derived from the finance inputs.
+- Fixed the run-record Edit button under lazy page rendering. Judgment/ranking and Launcher acquisition logic are unchanged.

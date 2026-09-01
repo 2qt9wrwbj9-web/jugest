@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const rootHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 assert.equal(html, rootHtml, 'root/public index.html must remain byte-identical');
-assert.match(html, /<title>ジャグラー設定判別 v4\.8\.7<\/title>/);
+assert.match(html, /<title>ジャグラー設定判別 v4\.8\.8<\/title>/);
 assert.match(html, /function bruteSingleAliasFingerprint\(c\)/);
 assert.match(html, /function bruteSingleAliasGroups\(cands\)/);
 assert.match(html, /aliasCount:x\.aliases\.length/);

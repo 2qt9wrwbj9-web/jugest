@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.equal(html,root,'root/public index must remain byte-identical');
-assert.match(html,/<title>ジャグラー設定判別 v4\.8\.7<\/title>/);
+assert.match(html,/<title>ジャグラー設定判別 v4\.8\.8<\/title>/);
 assert.match(html,/id="BRUTE_HISTORY_STORAGE"/);
 assert.match(html,/async function storeAnalysisRenderStorageStatus\(\)/);
 assert.match(html,/navigator\.storage&&typeof navigator\.storage\.estimate==="function"/);

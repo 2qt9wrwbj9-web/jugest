@@ -1,7 +1,7 @@
 (function(global){
 'use strict';
 
-const APP_VERSION='4.8.7';
+const APP_VERSION='4.8.8';
 const SYNC_SCHEMA='juggler-device-sync';
 const SYNC_VERSION=1;
 const STATE_KEY='juggler_tool_state_v33';
@@ -75,10 +75,10 @@ function mergeShops(local,remote){
     if(!cur){
       cur=clone(x);cur.name=name;byName.set(k,cur);out.push(cur);
     }else{
-      const a=+cur.savedCoinBaseUpdatedAt||0,b=+x.savedCoinBaseUpdatedAt||0;
-      const preferred=b>a?clone(x):cur;
+      const baseCur=+cur.savedCoinBaseUpdatedAt||0,baseNew=+x.savedCoinBaseUpdatedAt||0,rateCur=+cur.financeRateUpdatedAt||0,rateNew=+x.financeRateUpdatedAt||0;
+      const preferred=chooseNewer(cur,x),basePick=baseNew>baseCur?x:cur,ratePick=rateNew>rateCur?x:cur;
       const id=cur.id||x.id;
-      Object.assign(cur,preferred,{id,name,createdAt:Math.min(+cur.createdAt||Infinity,+x.createdAt||Infinity)});
+      Object.assign(cur,preferred,{id,name,createdAt:Math.min(+cur.createdAt||Infinity,+x.createdAt||Infinity),savedCoinBase:basePick.savedCoinBase,savedCoinBaseUpdatedAt:+basePick.savedCoinBaseUpdatedAt||0,loanCoinsPer1000:ratePick.loanCoinsPer1000??null,exchangeCoinsPer1000:ratePick.exchangeCoinsPer1000??null,financeRateUpdatedAt:+ratePick.financeRateUpdatedAt||0});
       if(!Number.isFinite(cur.createdAt))cur.createdAt=+preferred.createdAt||0;
     }
     (side==='local'?localMap:remoteMap).set(String(x.id??''),String(cur.id??''));

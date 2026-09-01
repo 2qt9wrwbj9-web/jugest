@@ -16,8 +16,8 @@ for(const s of [
   '<th>期待設定</th><th>推定設定</th>',
   "jdataMapLabel(r.q)"
 ]) assert.ok(root.includes(s), 'missing '+s);
-assert.ok(root.includes('appVersion:"4.8.7"'));
-assert.ok(root.includes('>v4.8.7</span>'));
+assert.ok(root.includes('appVersion:"4.8.8"'));
+assert.ok(root.includes('>v4.8.8</span>'));
 assert.ok(root.includes('ニューキングVは設定6を候補にしない'));
 assert.ok(root.includes('let eps=1e-12'));
 assert.ok(!root.includes('<small>推定平均設定</small>'));
