@@ -18,9 +18,18 @@ if 'tests/v488-run-finance.mjs' not in j['scripts']['test']:j['scripts']['test']
 p.write_text(json.dumps(j,ensure_ascii=False,indent=2)+'\n')
 # Keep lock metadata consistent with package.json without touching dependency locks.
 p=R/'package-lock.json';lock=json.loads(p.read_text());lock['name']='juggler-hanahana-tool-v4880';lock['version']='4.8.8';lock.setdefault('packages',{}).setdefault('',{})['name']='juggler-hanahana-tool-v4880';lock['packages']['']['version']='4.8.8';p.write_text(json.dumps(lock,ensure_ascii=False,indent=2)+'\n')
-# Active release tests use regex literals, so update both plain and escaped version spellings.
+# Three release-policy regressions intentionally pin the whole current version string.
 for p in [R/'tests/netlify-deploy-preflight.mjs',R/'tests/v486-device-sync.mjs',R/'tests/v487-evidence-policy.mjs']:
  x=p.read_text().replace('4.8.7','4.8.8').replace(r'4\.8\.7',r'4\.8\.8');p.write_text(x)
+# Other historical regressions should keep their historical feature labels, but any assertion
+# that explicitly refers to the *current app metadata/header* must advance with the release.
+for p in R.glob('tests/*.mjs'):
+ x=p.read_text()
+ x=x.replace('appVersion:"4.8.7"','appVersion:"4.8.8"')
+ x=x.replace('>v4.8.7</span>','>v4.8.8</span>')
+ x=x.replace('ジャグラー設定判別 v4.8.7','ジャグラー設定判別 v4.8.8')
+ x=x.replace("const APP_VERSION='4.8.7'","const APP_VERSION='4.8.8'")
+ p.write_text(x)
 # dedicated regression
 (R/'tests/v488-run-finance.mjs').write_text(r'''import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');assert.equal(root,pub);assert.match(root,/ジャグラー設定判別 v4\.8\.8/);
