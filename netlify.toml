@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "npm run check"
+  command = "node --check ana-launcher.js && node --check hanahana-judge.js && node --check hanahana-ui.js && node --check sync-ui.js && node --check netlify/functions/relay.mjs && node --check netlify/functions/sync.mjs"
 
 [build.environment]
   NODE_VERSION = "22"
