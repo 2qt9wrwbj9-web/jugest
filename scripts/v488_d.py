@@ -16,8 +16,11 @@ x+='''\n\n## v4.8.8 run finance + edit hotfix\n- Run records use shop rate snaps
 p=R/'package.json';j=json.loads(p.read_text());j['name']='juggler-hanahana-tool-v4880';j['version']='4.8.8';
 if 'tests/v488-run-finance.mjs' not in j['scripts']['test']:j['scripts']['test']+=' && node tests/v488-run-finance.mjs'
 p.write_text(json.dumps(j,ensure_ascii=False,indent=2)+'\n')
+# Keep lock metadata consistent with package.json without touching dependency locks.
+p=R/'package-lock.json';lock=json.loads(p.read_text());lock['name']='juggler-hanahana-tool-v4880';lock['version']='4.8.8';lock.setdefault('packages',{}).setdefault('',{})['name']='juggler-hanahana-tool-v4880';lock['packages']['']['version']='4.8.8';p.write_text(json.dumps(lock,ensure_ascii=False,indent=2)+'\n')
+# Active release tests use regex literals, so update both plain and escaped version spellings.
 for p in [R/'tests/netlify-deploy-preflight.mjs',R/'tests/v486-device-sync.mjs',R/'tests/v487-evidence-policy.mjs']:
- x=p.read_text().replace('4.8.7','4.8.8').replace(r'4\\.8\\.7',r'4\\.8\\.8');p.write_text(x)
+ x=p.read_text().replace('4.8.7','4.8.8').replace(r'4\.8\.7',r'4\.8\.8');p.write_text(x)
 # dedicated regression
 (R/'tests/v488-run-finance.mjs').write_text(r'''import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const root=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),pub=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');assert.equal(root,pub);assert.match(root,/ジャグラー設定判別 v4\.8\.8/);
