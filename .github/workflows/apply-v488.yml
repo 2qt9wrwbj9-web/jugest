@@ -1,0 +1,61 @@
+name: Apply v4.8.8 run finance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-v488.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply v4.8.8 patch
+        run: python scripts/apply-v488.py
+      - name: Full regression suite
+        run: npm test
+      - name: Static release checks
+        run: |
+          cmp index.html public/index.html
+          cmp sync-ui.js public/sync-ui.js
+          grep -q 'ジャグラー設定判別 v4.8.8' index.html
+          grep -q 'const APP_VERSION='"'"'4.8.8'"'"'' sync-ui.js
+          grep -q 'markLazyPageDirty("runlog");setPage("runlog")' index.html
+          grep -q 'function runFinance(p)' index.html
+      - name: Build Netlify Drop ZIP
+        run: |
+          rm -f jugglerest_netlify_v4880_deploy.zip
+          zip -qr jugglerest_netlify_v4880_deploy.zip . \
+            -x '.git/*' '.github/*' 'node_modules/*' 'tests/*' 'scripts/*' 'vps/*' '*.zip'
+          sha256sum jugglerest_netlify_v4880_deploy.zip
+      - name: Upload Netlify Drop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jugglerest_netlify_v4880_deploy
+          path: jugglerest_netlify_v4880_deploy.zip
+          if-no-files-found: error
+      - name: Commit verified v4.8.8
+        run: |
+          git config user.name "Hiro"
+          git config user.email "2qt9wrwbj9@privaterelay.appleid.com"
+          git add -A ':!jugglerest_netlify_v4880_deploy.zip'
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Release v4.8.8 run finance and edit hotfix"
+          git push origin HEAD:main
