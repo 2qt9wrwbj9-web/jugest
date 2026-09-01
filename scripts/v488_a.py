@@ -6,6 +6,7 @@ def one(a,b,n):
 s=one(s,'','noop') if False else s
 s=s.replace('<!--\nv4.8.7 evidence-timeframe and independent-fact ranking policy:','<!--\nv4.8.8 run-finance and edit hotfix:\n- Run records capture shop rate, saved-medal investment, cash investment, collected medals and exchanged yen; actual coin difference, cash P/L and saved-medal delta are derived automatically.\n- Shop rate is remembered and copied into each run; an optional exchanged-medal override handles rounding/prize differences. Legacy records remain compatible.\n- Fixed the run-list Edit button under lazy rendering. Judgment/ranking and Launcher behavior are unchanged.\n\nv4.8.7 evidence-timeframe and independent-fact ranking policy:',1)
 s=s.replace('ジャグラー設定判別 v4.8.7','ジャグラー設定判別 v4.8.8',1)
+s=s.replace('ジャグラー・ハナハナ設定判別 <span style="font-size:11px;color:#b7ad9f">v4.8.7</span>','ジャグラー・ハナハナ設定判別 <span style="font-size:11px;color:#b7ad9f">v4.8.8</span>',1)
 # Keep release-bearing backup/snapshot metadata in lockstep with the visible app version.
 s=s.replace('appVersion:"4.8.7"','appVersion:"4.8.8"')
 s=s.replace('return["4.8.7",p.shop','return["4.8.8",p.shop',1)
