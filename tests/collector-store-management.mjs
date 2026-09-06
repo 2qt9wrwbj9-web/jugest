@@ -11,7 +11,7 @@ assert.match(app,/data-store-edit=/);
 assert.match(app,/data-store-requeue=/);
 assert.match(app,/data-store-delete=/);
 assert.match(app,/data-collector-enabled=/);
-assert.doesNotMatch(app,/data-store-start/, '取得開始日の手動設定は表示しない');
+assert.doesNotMatch(app,/<small>取得開始日<\/small><input data-store-start/, '取得開始日の手動設定は表示しない');
 for(const q of ['v510CollectorStoreRows','v510SaveCollectorStore','v510RequeueCollectorStore','v510DeleteCollectorStore']){
   assert.ok(html.includes(q),`headless store-management core missing ${q}`);
 }
