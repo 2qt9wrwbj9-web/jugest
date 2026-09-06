@@ -38,7 +38,9 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
   }
 
   async function get(key,options={}){
-    const result=await client.get(full(key),{access:'private'});
+    const getOptions={access:'private'};
+    if(options.useCache===false)getOptions.useCache=false;
+    const result=await client.get(full(key),getOptions);
     if(!result||result.statusCode===404)return null;
     const text=await streamText(result.stream);
     if(options.type==='json'){
