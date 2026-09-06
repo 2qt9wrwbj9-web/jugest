@@ -14,6 +14,14 @@ function replaceRequired(source,from,to,label){
 export function patchRelaySource(input){
   let source=String(input||'');
   source=replaceRequired(source,
+    "async function iosCollectorWaitSeconds(s, channelId) {\n  let rec = await s.get(iosCollectorWindowKey(channelId), { type:'json' });\n  const t = now();\n  if (!rec || !Array.isArray(rec.offsets) || +rec.startedAt + 900000 <= t) rec = { startedAt:t, offsets:iosCollectorMakeOffsets(), used:0 };\n  if((+rec.used||0)>=5)return null;\n  const i = Math.max(0, Math.min(4, +rec.used || 0)), target = +rec.startedAt + (+rec.offsets[i] || 0) * 1000;\n  rec.used = i + 1; rec.lastTouchAt = t; await s.setJSON(iosCollectorWindowKey(channelId), rec);\n  return Math.max(0, Math.min(800, Math.ceil((target - t) / 1000)));\n}",
+    "async function iosCollectorWaitSeconds() {\n  return randomInt(0, 31);\n}",
+    'single-fetch short jitter');
+  source=replaceRequired(source,
+    "  if(!(await iosCollectorWindowCapacity(s,auth.channelId)))return json(req,{ok:true,state:'WAIT',reason:'rate_limit',waitSeconds:await iosCollectorWindowRetrySeconds(s,auth.channelId),message:'15分5件の取得間隔を調整中'});\n",
+    "",
+    'remove 15-minute collector window limit');
+  source=replaceRequired(source,
     "  return isoDateUTC(d);\n}\nfunction iosPriority(v) {",
     "  return isoDateUTC(d);\n}\nfunction iosCollectorYearFloor(date) {\n  const p=String(date||'').split('-').map(Number),y=p[0]-1,m=p[1],day=p[2];\n  if(!Number.isFinite(y)||!Number.isFinite(m)||!Number.isFinite(day))return '';\n  const maxDay=new Date(Date.UTC(y,m,0)).getUTCDate(),d=Math.min(day,maxDay);\n  return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;\n}\nfunction iosPriority(v) {",
     'calendar-year helper');
