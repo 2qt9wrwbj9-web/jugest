@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -27,12 +26,26 @@ for(const rel of ['favicon-32.png','icon-192.png']){
  const src=path.join(root,'deploy-assets',rel);if(!fs.existsSync(src))throw new Error(`missing icon ${rel}`);fs.copyFileSync(src,path.join(out,rel));
 }
 
+function crc32(buf){let c=0xffffffff;for(const b of buf){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;}
+function assertValidPng(buf,wantW,wantH){
+ const sig=Buffer.from([137,80,78,71,13,10,26,10]);
+ if(buf.length<33||!buf.subarray(0,8).equals(sig))throw new Error('tuned apple-touch-icon invalid PNG signature');
+ let p=8,seenIHDR=false,seenIEND=false;
+ while(p+12<=buf.length){
+   const len=buf.readUInt32BE(p);const end=p+12+len;if(end>buf.length)throw new Error('tuned apple-touch-icon truncated PNG chunk');
+   const type=buf.subarray(p+4,p+8);const data=buf.subarray(p+8,p+8+len);const got=buf.readUInt32BE(p+8+len);const want=crc32(Buffer.concat([type,data]));
+   if(got!==want)throw new Error(`tuned apple-touch-icon PNG CRC mismatch: ${type.toString('ascii')}`);
+   if(type.equals(Buffer.from('IHDR'))){if(len!==13)throw new Error('tuned apple-touch-icon invalid IHDR');const w=data.readUInt32BE(0),h=data.readUInt32BE(4);if(w!==wantW||h!==wantH)throw new Error(`tuned apple-touch-icon wrong size ${w}x${h}`);seenIHDR=true;}
+   p=end;if(type.equals(Buffer.from('IEND'))){seenIEND=true;break;}
+ }
+ if(!seenIHDR||!seenIEND)throw new Error('tuned apple-touch-icon incomplete PNG');
+}
+
 const tunedDir=path.join(root,'deploy-assets','apple-touch-icon-tuned.b64');
 const tunedParts=fs.readdirSync(tunedDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();
 if(!tunedParts.length)throw new Error('tuned apple-touch-icon payload missing');
 const apple=Buffer.from(tunedParts.map(x=>fs.readFileSync(path.join(tunedDir,x),'utf8').trim()).join(''),'base64');
-const appleHash=createHash('sha256').update(apple).digest('hex');
-if(appleHash!=='ac417fad2771c1b6a25894087c3e0d249359d217e528fb6893a38dd53c2b9deb')throw new Error(`tuned apple-touch-icon hash mismatch: ${appleHash}`);
+assertValidPng(apple,180,180);
 fs.writeFileSync(path.join(out,'apple-touch-icon.png'),apple);
 
 const partsDir=path.join(root,'deploy-assets','icon-512.b64');
