@@ -1,0 +1,34 @@
+✖ Sync failure before apply releases the save gate; partial apply requires reload (21.239654ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 95.130442
+
+✖ failing tests:
+
+test at tests/user-flow-regressions.mjs:96:1
+✖ Sync failure before apply releases the save gate; partial apply requires reload (21.239654ms)
+  AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+  
+  Caught error:
+  
+  TypeError: Cannot read properties of undefined (reading 'beforeApply')
+      at async TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:99:16)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: TypeError: Cannot read properties of undefined (reading 'beforeApply')
+        at Object.syncNow (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:97:163)
+        at v510RunDeviceSync (index-inline.js:2236:85)
+        at Object.runDeviceSync (index-inline.js:2403:30)
+        at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:99:46)
+        at async Test.run (node:internal/test_runner/test:1389:7)
+        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3),
+    operator: 'rejects',
+    diff: 'simple'
+  }

@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=fs.readFileSync('ana-launcher.js','utf8');
+const pub=fs.readFileSync('public/ana-launcher.js','utf8');
+assert.equal(root,pub,'root/public launcher mirrors must match');
+assert.match(root,/document\.currentScript/,'launcher must derive its backend from the script URL');
+assert.match(root,/const RELAY_API=`\$\{LAUNCHER_ORIGIN\}\/api\/relay`/);
+assert.match(root,/const RELAY_BRIDGE=`\$\{LAUNCHER_ORIGIN\}\/relay-bridge\.html`/);
+assert.match(root,/const RELAY_BRIDGE_ORIGIN=LAUNCHER_ORIGIN/);
+assert.doesNotMatch(root,/const RELAY_API='https:\/\/jugglerest\.netlify\.app\/api\/relay'/);
+console.log('Vercel launcher origin migration PASS');

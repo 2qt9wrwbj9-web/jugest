@@ -1,0 +1,14 @@
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+import base64
+root=Path(__file__).resolve().parents[1];js=(root/'public/app-v510.js').read_text();css=(root/'public/app-v510.css').read_text();js=js.replace("link.href='./app-v510.css'","link.href='data:text/css;base64,"+base64.b64encode(css.encode()).decode()+"'");js=js.replace('./assets/jugest-mark.png','data:image/png;base64,'+base64.b64encode((root/'public/assets/jugest-mark.png').read_bytes()).decode())
+bridge="""<script>let listeners=new Set(),active='',createCalls=0,joinCalls=0,syncCalls=0,unlinkCalls=0,linked=false,code='';window.JUGEST_CORE_BRIDGE={getSummary(){return{storeCount:0,runCount:0,externalDayCount:0,linked:false,pending:0,enabledTargets:0,errorTargets:0,missingDays:0,unregistered:0,syncLabel:'未同期'}},getStores(){return[]},getActiveStore(){return active},setActiveStore(){},subscribe(f){listeners.add(f);return()=>listeners.delete(f)},getSyncStatus(){return linked?{link:{id:'x'},lastSyncAt:Date.now(),lastSummary:{sessions:8,externalDays:30,analysis:2}}:{}},async createSyncShare(){createCalls++;linked=true;code='SYNC-CODE-123';return{code,status:{link:{id:'x'}}}},async joinSyncShare(c){joinCalls++;linked=true;code=c;return{code:c,status:{link:{id:'x'}}}},async runDeviceSync(cb){syncCalls++;cb?.('確認中…');return{sessions:8,externalDays:30,analysis:2,reloadRequired:false}},unlinkDeviceSync(){unlinkCalls++;linked=false;code='';return{}},getSyncCode(){return code}};</script>"""
+html='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}</style>'+bridge+'<jugest-app></jugest-app><script>'+js+'</script>'
+with sync_playwright() as p:
+ b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=b.new_page(viewport={'width':390,'height':844});page.on('dialog',lambda d:d.accept());errs=[];page.on('pageerror',lambda e:errs.append(str(e)));page.set_content(html);page.wait_for_timeout(80);host=page.locator('jugest-app')
+ def click(sel):host.evaluate(f"e=>e.shadowRoot.querySelector('{sel}').click()");page.wait_for_timeout(50)
+ def text(sel):return host.evaluate(f"e=>e.shadowRoot.querySelector('{sel}')?.innerText||''")
+ click('[data-workspace=data]');click('[data-action=data-sync]');assert '未連携' in text('.sync-status');click('[data-sync-create]');assert page.evaluate('createCalls')==1;assert '連携中' in text('.sync-status');click('[data-sync-now]');assert page.evaluate('syncCalls')==1;click('[data-sync-unlink]');assert page.evaluate('unlinkCalls')==1
+ host.evaluate("e=>{let x=e.shadowRoot.querySelector('[data-sync-code]');x.value='JOIN';x.dispatchEvent(new Event('input',{bubbles:true}))}");click('[data-sync-join]');assert page.evaluate('joinCalls')==1
+ d=host.evaluate("e=>{let x=e.shadowRoot.querySelector('.app-shell');return[x.scrollWidth,x.clientWidth]}");assert d[0]<=d[1],d;assert not errs,errs;b.close()
+print('v5.1.0 native device sync browser PASS')

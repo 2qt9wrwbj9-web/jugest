@@ -1,0 +1,52 @@
+{
+  "productionCommit": "de2460d6c3a965e18d07d90fe404ff17980eab00",
+  "deployment": "dpl_7We6HJY7A742C72zUXwBQ9d2eKYT",
+  "public": {
+    "core-v510.js": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+    "hanahana-judge.js": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+    "missing-inference.js": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+    "ana-launcher.js": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4",
+    "ana-single-day.js": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d",
+    "app-v510.css": "5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9",
+    "relay-bridge.html": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
+    "site.webmanifest": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
+    "assets/jugest-mark.png": "fd68df977a62e6b306c799bac1355ac6a5ab17d771f7ee9b456761cdba649625",
+    "apple-touch-icon.png": "b33349ab4a9b9f1f843d94cb73de9bb842b6ec9194643da251f50a44cb7d7ddc",
+    "icon-192.png": "ecbfc9bade7af2d9879fbdf0bc3f7ca71cf261c7c2411a24bc73b13d4068d487",
+    "icon-512.png": "01b8d6a96064f6412a1a06c9f461fc79e89eaed404515d93334ce2401661cb76",
+    "favicon-32.png": "9321b5f4fd8ccbf713eb9052ee116f223b727fc412447297eb037a84456cf62a"
+  },
+  "api": {
+    "api/_blob-store.js": "bc0ab57cf68e302ec90bcffb4885e8573ab56e566f7cf634f3a6910729c56882",
+    "api/_node-web.js": "b72eb41eebc7d9443a4b9f976fa361f77cf55b04029c5c38e26bc83a1c5ba99c",
+    "api/_relay-web.js": "1175ddfff3c65886fa2d8edf1e58abafb954bc0c3178498abe5cab614972c583",
+    "api/_relay-payload-0.js": "1a7a9008fea4db0ecfa39e7ff393e59094730c5b16ada78912290c86d0f0ef81",
+    "api/_relay-payload-1.js": "711e17926190a15f58118e3571e89a24a6633a0278465d2d91f515f38c10ef98",
+    "api/_sync-web.js": "e4aaed5874cc4d0d19a4ef1254784647b79b7d03302039be101c45ce2e0e3268",
+    "api/_relay-payload-2.js": "6ae97f899400263d0c88d60dc8e3a56e1ca302ebfe1c8aa7a68df1a971c16f5a",
+    "api/sync.js": "781440783911eef7d0863d27d83151ac1e616f3ae2db004f30c70f19f87a02ea",
+    "api/relay.js": "e77c18660ccb7b94b1a3eaa60881ed208e3de5e49d797271c0eeb2a11bee80ae"
+  },
+  "indexSegments": [
+    {
+      "start": "<!DOCTYPE html>",
+      "end": "function v510CoreSummary()",
+      "sha256": "9392bfebed2ff7b44944d64eeb55473d4d991348497f939fe16de46e65d54b44"
+    },
+    {
+      "start": "function v510EnsureJudgeRuntime(",
+      "end": "function v510RecordRow(",
+      "sha256": "ef1e4e1e9eb1659f1fee6fd0a96cf3b7866c7608f27b70a193036519c9b18320"
+    },
+    {
+      "start": "function v510ReverseStyles(",
+      "end": "async function v510RunDeviceSync(",
+      "sha256": "91197114801412d621264e108059e01479dafa172425a659978e984957875ca9"
+    },
+    {
+      "start": "function v510UnlinkDeviceSync()",
+      "end": "window.JUGEST_CORE_BRIDGE=",
+      "sha256": "9e9c9de4a97239a0a96ad3e8bae3bf26632990b02702e5247c6f79634b7f19d8"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (45.467426ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (9.313468ms)
+✔ Automatic Collector refresh clears a recovered transient error (20.657202ms)
+✔ Backup undo explains its partial scope before the user presses it (5.860415ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (19.486891ms)
+✖ Partial backup restore exposes reload recovery and blocks stale in-memory edits (9.038382ms)
+✖ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (12.901839ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 231.098841
+
+✖ failing tests:
+
+test at tests/resume-flow-regressions.mjs:40:1
+✖ Partial backup restore exposes reload recovery and blocks stale in-memory edits (9.038382ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:44:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/resume-flow-regressions.mjs:47:1
+✖ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (12.901839ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:55:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /退避/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

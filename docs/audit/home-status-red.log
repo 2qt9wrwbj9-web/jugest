@@ -1,0 +1,28 @@
+✖ Unchecked or failed Collector status never claims normal operation (20.118459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.905623
+
+✖ failing tests:
+
+test at tests/home-collector-status.mjs:2:1
+✖ Unchecked or failed Collector status never claims normal operation (20.118459ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /取得エラーなし|稼働中|正常/. Input:
+  
+  '{"statusLabel":"ローカル","statusTone":"warning","notices":[{"tone":"warning","icon":"!","title":"自動取得は未連携","meta":"データからiPhone Collectorを設定できます。","target":"data"},{"tone":"success","icon":"✓","title":"取得エラーなし","meta":"直近のCollector状態に問題はありません。","target":"data"},{"tone":"success","icon":"✓","title":"解析データ 0日分","meta":"必要な画面を開いた時だけ遅延解析します。","target":"data"}],"notifications":[{"tone":"warning","icon":"!","title":"自動取得は未連携","meta":"データからiPhone Collectorを設定できます。","target":"data"}],"notificationCount":1}'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/home-collector-status.mjs:5:48)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '{"statusLabel":"ローカル","statusTone":"warning","notices":[{"tone":"warning","icon":"!","title":"自動取得は未連携","meta":"データからiPhone Collectorを設定できます。","target":"data"},{"tone":"success","icon":"✓","title":"取得エラーなし","meta":"直近のCollector状態に問題はありません。","target":"data"},{"tone":"success","icon":"✓","title":"解析データ 0日分","meta":"必要な画面を開いた時だけ遅延解析します。","target":"data"}],"notifications":[{"tone":"warning","icon":"!","title":"自動取得は未連携","meta":"データからiPhone Collectorを設定できます。","target":"data"}],"notificationCount":1}',
+    expected: /取得エラーなし|稼働中|正常/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

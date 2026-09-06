@@ -1,0 +1,201 @@
+✖ Unlinked UI exposes pairing through the actual bridge and existing createPair API (34.286361ms)
+✖ Pending pair survives reload, polls to linked, and resumes on pageshow (6.859914ms)
+✖ Pair expiry and network failure keep retry available; linked channel is never replaced (4.875821ms)
+✖ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (5.88008ms)
+✖ iPhone Shortcut creation/key rotation has its own existing API and survives reload (4.610633ms)
+✖ Launcher queue is counted and imported through receive -> durable save -> ack (13.68808ms)
+✖ CollectorPull still imports days; a failed local save must never ACK Launcher data (13.909524ms)
+✖ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (4.823182ms)
+✖ Backup undo reaches the bridge and reloads; failure unlocks retry (6.313803ms)
+✖ Store save and backup restore errors clear busy state before final render (5.060779ms)
+✖ Missing clipboard API never reports a successful Device Sync copy (4.886978ms)
+✖ First Collector store can be added from an empty store-management screen (4.78204ms)
+✖ Global operation errors keep the current screen and retry controls visible (6.379682ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 0
+ℹ fail 13
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 197.034155
+
+✖ failing tests:
+
+test at tests/user-flow-regressions.mjs:7:1
+✖ Unlinked UI exposes pairing through the actual bridge and existing createPair API (34.286361ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-collector-pair/. Input:
+  
+  '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1><div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>新着</small><b>0日</b></div><div><small>欠損</small><b>0日</b></div></div><div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh >状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着なし</button></div><div class="collector-list"><div class="empty-card">取得対象店舗がないよ。</div></div></section>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:9:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1><div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>新着</small><b>0日</b></div><div><small>欠損</small><b>0日</b></div></div><div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh >状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着なし</button></div><div class="collector-list"><div class="empty-card">取得対象店舗がないよ。</div></div></section>',
+    expected: /data-collector-pair/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:21:1
+✖ Pending pair survives reload, polls to linked, and resumes on pageshow (6.859914ms)
+  TypeError: r.bridge.createCollectorPair is not a function
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:22:80)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at tests/user-flow-regressions.mjs:30:1
+✖ Pair expiry and network failure keep retry available; linked channel is never replaced (4.875821ms)
+  TypeError: r.bridge.createCollectorPair is not a function
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:31:80)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at tests/user-flow-regressions.mjs:37:1
+✖ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (5.88008ms)
+  TypeError: r.bridge.createCollectorPair is not a function
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:38:80)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at tests/user-flow-regressions.mjs:44:1
+✖ iPhone Shortcut creation/key rotation has its own existing API and survives reload (4.610633ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-collector-ios/. Input:
+  
+  '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1><div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>新着</small><b>0日</b></div><div><small>欠損</small><b>0日</b></div></div><div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh >状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着なし</button></div><div class="collector-list"><div class="empty-card">取得対象店舗がないよ。</div></div></section>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:45:72)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1><div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>新着</small><b>0日</b></div><div><small>欠損</small><b>0日</b></div></div><div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh >状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着なし</button></div><div class="collector-list"><div class="empty-card">取得対象店舗がないよ。</div></div></section>',
+    expected: /data-collector-ios/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:49:1
+✖ Launcher queue is counted and imported through receive -> durable save -> ack (13.68808ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:52:142)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:56:1
+✖ CollectorPull still imports days; a failed local save must never ACK Launcher data (13.909524ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:61:56)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:63:1
+✖ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (4.823182ms)
+  TypeError: Cannot read properties of null (reading 'data')
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:66:109)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at tests/user-flow-regressions.mjs:69:1
+✖ Backup undo reaches the bridge and reloads; failure unlocks retry (6.313803ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:74:39)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:76:1
+✖ Store save and backup restore errors clear busy state before final render (5.060779ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-store-save/. Input:
+  
+  '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><span class="bell">🔔</span><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace"><div class="error-panel">先にiPhone Collectorを連携してね</div></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class=""><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class="on"><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:77:188)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><span class="bell">🔔</span><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace"><div class="error-panel">先にiPhone Collectorを連携してね</div></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class=""><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class="on"><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>',
+    expected: /data-store-save/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:80:1
+✖ Missing clipboard API never reports a successful Device Sync copy (4.886978ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /コピーした/. Input:
+  
+  '共有コードをコピーしたよ'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:81:97)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '共有コードをコピーしたよ',
+    expected: /コピーした/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:83:1
+✖ First Collector store can be added from an empty store-management screen (4.78204ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-store-add/. Input:
+  
+  '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>店舗管理</h1><p class="lead">自動取得URLと状態を、店舗ごとに管理。</p><div class="store-manage-tools"><input data-store-manage-search type="search" value="" placeholder="店舗名で検索"><select data-store-filter><option value="all" selected>すべて</option><option value="on" >自動取得ON</option><option value="off" >自動取得OFF</option><option value="unregistered" >URL未登録</option><option value="error" >エラーあり</option></select><select data-store-sort><option value="name" selected>店舗名</option><option value="unregistered" >URL未登録優先</option><option value="on" >自動取得ON優先</option><option value="latest" >最終取得日</option><option value="missing" >欠損日数</option></select></div><div class="collector-list"><div class="empty-card">該当する店舗がないよ。</div></div></section>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:85:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>店舗管理</h1><p class="lead">自動取得URLと状態を、店舗ごとに管理。</p><div class="store-manage-tools"><input data-store-manage-search type="search" value="" placeholder="店舗名で検索"><select data-store-filter><option value="all" selected>すべて</option><option value="on" >自動取得ON</option><option value="off" >自動取得OFF</option><option value="unregistered" >URL未登録</option><option value="error" >エラーあり</option></select><select data-store-sort><option value="name" selected>店舗名</option><option value="unregistered" >URL未登録優先</option><option value="on" >自動取得ON優先</option><option value="latest" >最終取得日</option><option value="missing" >欠損日数</option></select></div><div class="collector-list"><div class="empty-card">該当する店舗がないよ。</div></div></section>',
+    expected: /data-store-add/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/user-flow-regressions.mjs:91:1
+✖ Global operation errors keep the current screen and retry controls visible (6.379682ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-collector-pair/. Input:
+  
+  '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><span class="bell">🔔</span><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace"><div class="error-panel">iPhone Collectorが未連携です</div></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class=""><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class="on"><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/user-flow-regressions.mjs:93:51)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><span class="bell">🔔</span><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace"><div class="error-panel">iPhone Collectorが未連携です</div></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class=""><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class="on"><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>',
+    expected: /data-collector-pair/,
+    operator: 'match',
+    diff: 'simple'
+  }

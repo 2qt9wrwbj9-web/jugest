@@ -6,20 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
-const BASE='https://jugest.vercel.app/';
 const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
 fs.rmSync(out,{recursive:true,force:true});
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
 for(const rel of FILES){
- const r=await fetch(BASE+rel+'?startup-style-hotfix-source=1',{redirect:'follow',cache:'no-store'});
- if(!r.ok)throw new Error(`source fetch failed ${rel}: ${r.status}`);
- let buf=Buffer.from(await r.arrayBuffer());
- if(rel==='app-v510.js'){
-   const text=buf.toString('utf8');
-   const old="    this.mount=document.createElement('div');this.mount.id='mount';this.shadowRoot.append(this.mount);";
-   const hotfix=`    const link=document.createElement('link');link.rel='stylesheet';link.href='./app-v510.css';\n    this.mount=document.createElement('div');this.mount.id='mount';this.mount.style.visibility='hidden';\n    const showMount=()=>{this.mount.style.visibility=''};\n    const revealMount=()=>{global.clearTimeout(this._styleGateTimer);if(global.requestAnimationFrame)global.requestAnimationFrame(showMount);else showMount()};\n    this._styleGateTimer=global.setTimeout(showMount,2000);\n    link.addEventListener('load',revealMount,{once:true});link.addEventListener('error',revealMount,{once:true});\n    this.shadowRoot.append(link,this.mount);`;
-   if(text.includes(old))buf=Buffer.from(text.replace(old,hotfix));
- }
+ const buf=fs.readFileSync(path.join(root,rel));
  const p=path.join(out,rel);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,buf);
 }
 
