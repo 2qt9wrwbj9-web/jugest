@@ -54,7 +54,7 @@ for(let i=0;i<6;i++){
   assert.ok(!seen.has(match[1]),`each invocation should advance to a new missing day: ${match[1]}`);
   seen.add(match[1]);
   const pushed=await call({action:'iosCollectorPushV2',collectorKey:c.j.collectorKey,jobToken:next.j.jobToken,text:sampleText(match[1],shop),fetchUrl:next.j.url});
-  assert.equal(pushed.status,200);
+  assert.equal(pushed.status,200,`push failed: ${JSON.stringify(pushed.j)}`);
   assert.equal(pushed.j.state,'SAVED');
 }
 
