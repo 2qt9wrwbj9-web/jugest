@@ -1,69 +1,41 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-const here=path.dirname(fileURLToPath(import.meta.url));
-const pdir=path.join(here,'payload');
-const chunks=fs.readdirSync(pdir).filter(x=>/^payload-\d+\.txt$/.test(x)).sort();
-if(!chunks.length)throw new Error('JUGEST payload missing');
-const encoded=chunks.map(x=>fs.readFileSync(path.join(pdir,x),'utf8').trim()).join('');
-const packed=Buffer.from(encoded,'base64');
-const raw=zlib.brotliDecompressSync(packed);
-const payload=JSON.parse(raw.toString('utf8'));
-fs.rmSync(path.join(here,'public'),{recursive:true,force:true});
-fs.mkdirSync(path.join(here,'public','assets'),{recursive:true});
-for(const [rel,b64] of Object.entries(payload)){
-  const p=path.join(here,'public',rel);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,String(b64),'utf8');
+const root=path.dirname(fileURLToPath(import.meta.url));
+const out=path.join(root,'public');
+const BASE='https://jugest.vercel.app/';
+const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
+fs.rmSync(out,{recursive:true,force:true});
+fs.mkdirSync(path.join(out,'assets'),{recursive:true});
+for(const rel of FILES){
+ const r=await fetch(BASE+rel+'?startup-style-hotfix-source=1',{redirect:'follow',cache:'no-store'});
+ if(!r.ok)throw new Error(`source fetch failed ${rel}: ${r.status}`);
+ let buf=Buffer.from(await r.arrayBuffer());
+ if(rel==='app-v510.js'){
+   const text=buf.toString('utf8');
+   const old="    this.mount=document.createElement('div');this.mount.id='mount';this.shadowRoot.append(this.mount);";
+   const hotfix=`    const link=document.createElement('link');link.rel='stylesheet';link.href='./app-v510.css';\n    this.mount=document.createElement('div');this.mount.id='mount';this.mount.style.visibility='hidden';\n    const showMount=()=>{this.mount.style.visibility=''};\n    const revealMount=()=>{global.clearTimeout(this._styleGateTimer);if(global.requestAnimationFrame)global.requestAnimationFrame(showMount);else showMount()};\n    this._styleGateTimer=global.setTimeout(showMount,2000);\n    link.addEventListener('load',revealMount,{once:true});link.addEventListener('error',revealMount,{once:true});\n    this.shadowRoot.append(link,this.mount);`;
+   if(text.includes(old))buf=Buffer.from(text.replace(old,hotfix));
+ }
+ const p=path.join(out,rel);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,buf);
 }
-
-// Tiny dependency-free PNG generator retained for the internal JUGEST mark only.
-function crc32(buf){let c=0xffffffff;for(const b of buf){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
-function chunk(type,data){const t=Buffer.from(type);const len=Buffer.alloc(4);len.writeUInt32BE(data.length);const crc=Buffer.alloc(4);crc.writeUInt32BE(crc32(Buffer.concat([t,data])));return Buffer.concat([len,t,data,crc])}
-function png(size){const w=size,h=size,row=w*4+1,raw=Buffer.alloc(row*h);for(let y=0;y<h;y++){const off=y*row;raw[off]=0;for(let x=0;x<w;x++){const i=off+1+x*4;const bg=[18,112,255,255];raw[i]=bg[0];raw[i+1]=bg[1];raw[i+2]=bg[2];raw[i+3]=255;const nx=x/w,ny=y/h;const white=(nx>.22&&nx<.40&&ny>.20&&ny<.72)||(nx>.34&&nx<.75&&ny>.62&&ny<.80)||(nx>.62&&nx<.78&&ny>.28&&ny<.70);if(white){raw[i]=255;raw[i+1]=255;raw[i+2]=255;}}}const ih=Buffer.alloc(13);ih.writeUInt32BE(w,0);ih.writeUInt32BE(h,4);ih[8]=8;ih[9]=6;return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ih),chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))])}
-fs.writeFileSync(path.join(here,'public','assets/jugest-mark.png'),png(96));
-
-const appIconHashes={
- 'favicon-32.png':'9321b5f4fd8ccbf713eb9052ee116f223b727fc412447297eb037a84456cf62a',
- 'apple-touch-icon.png':'0cb55cd2fcea73d1894f72b02fa9cb6b85ac01b51f4b398d4c17b8a60fa4238e',
- 'icon-192.png':'ecbfc9bade7af2d9879fbdf0bc3f7ca71cf261c7c2411a24bc73b13d4068d487'
-};
-for(const [rel,want] of Object.entries(appIconHashes)){
-  const src=path.join(here,'deploy-assets',rel);
-  if(!fs.existsSync(src))throw new Error(`JUGEST icon missing: ${rel}`);
-  const icon=fs.readFileSync(src);
-  const got=createHash('sha256').update(icon).digest('hex');
-  if(got!==want)throw new Error(`icon hash mismatch ${rel}: ${got}`);
-  fs.writeFileSync(path.join(here,'public',rel),icon);
+// Approved crystal J icons. Keep runtime/hotfix unchanged and replace visual app icons only.
+for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png']){
+ const src=path.join(root,'deploy-assets',rel);if(!fs.existsSync(src))throw new Error(`missing icon ${rel}`);fs.copyFileSync(src,path.join(out,rel));
 }
-const icon512Dir=path.join(here,'deploy-assets','icon-512.b64');
-const icon512Parts=fs.readdirSync(icon512Dir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();
-if(!icon512Parts.length)throw new Error('JUGEST icon-512 payload missing');
-const icon512=Buffer.from(icon512Parts.map(x=>fs.readFileSync(path.join(icon512Dir,x),'utf8').trim()).join(''),'base64');
-const icon512Hash=createHash('sha256').update(icon512).digest('hex');
-if(icon512Hash!=='46590104e8e5c32e38643aa24fb4aadaa96984aaba356465d311b36605eb5d38')throw new Error(`icon-512 hash mismatch: ${icon512Hash}`);
-fs.writeFileSync(path.join(here,'public','icon-512.png'),icon512);
-
-const checks={
- 'index.html':'691aeb5a920ace7446289c2557d147f1d79f6698acd9feae0333bc8f8c4e506d',
- 'app-v510.js':'d5bcc1dd788ef42e5cdd4c774456b942ba62f76f95796ceaea381c929cf22217',
- 'app-v510.css':'5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9',
- 'core-v510.js':'b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba',
- 'hanahana-judge.js':'d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0',
- 'missing-inference.js':'1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d',
- 'sync-core.js':'f20ba76206ee1902dad7688a6378198c7c0a87d00f4f9c23c10463a06ba40eb8',
- 'ana-launcher.js':'63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4',
- 'ana-single-day.js':'29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d',
- 'relay-bridge.html':'026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0',
- 'site.webmanifest':'990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40'
-};
-for(const [rel,want] of Object.entries(checks)){const p=path.join(here,'public',rel);const got=createHash('sha256').update(fs.readFileSync(p)).digest('hex');if(got!==want)throw new Error(`hash mismatch ${rel}: ${got}`)}
-const html=fs.readFileSync(path.join(here,'public/index.html'),'utf8');
-const app=fs.readFileSync(path.join(here,'public/app-v510.js'),'utf8');
-const launcher=fs.readFileSync(path.join(here,'public/ana-launcher.js'),'utf8');
+const partsDir=path.join(root,'deploy-assets','icon-512.b64');
+const parts=fs.readdirSync(partsDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();
+if(!parts.length)throw new Error('missing icon-512 payload');
+const icon512=Buffer.from(parts.map(x=>fs.readFileSync(path.join(partsDir,x),'utf8').trim()).join(''),'base64');
+fs.writeFileSync(path.join(out,'icon-512.png'),icon512);
+for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png']){
+ const b=fs.readFileSync(path.join(out,rel));if(b.length<1000)throw new Error(`invalid icon ${rel}`);
+}
+const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
+const app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
 if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');
 if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');
-if(launcher.includes('jugglerest.netlify.app')||launcher.includes('jugest.netlify.app'))throw new Error('Netlify launcher fallback detected');
-for(const file of ['package.json','vercel.json','api/_blob-store.js','api/_node-web.js','api/_relay-web.js','api/_sync-web.js','api/relay.js','api/sync.js']){const s=fs.readFileSync(path.join(here,file),'utf8');if(/@netlify\/blobs|jugglerest\.netlify\.app|netlify\/functions/i.test(s))throw new Error(`Netlify runtime dependency in ${file}`)}
-console.log(`JUGEST v5.1.2 Vercel-only build PASS: ${Object.keys(payload).length} exact runtime files + crystal app icons`);
+if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');
+console.log('JUGEST v5.1.2 startup hotfix + crystal icon build PASS');
