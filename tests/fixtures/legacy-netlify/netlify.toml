@@ -1,0 +1,38 @@
+[build]
+  publish = "public"
+  command = "node --check ana-launcher.js && node --check hanahana-judge.js && node --check sync-core.js && node --check missing-inference.js && node --check core-v510.js && node --check app-v510.js && node --check netlify/functions/relay.mjs && node --check netlify/functions/sync.mjs"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Netlify is the active production origin. Always serve the app shell,
+# Launcher and Safari Relay bridge fresh so a previous cached build cannot
+# survive after a GitHub-triggered Netlify deploy.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/ana-launcher.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/relay-bridge.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/sync-core.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"

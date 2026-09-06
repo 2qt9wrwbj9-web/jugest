@@ -1,0 +1,6 @@
+
+> jugest-v512-vercel-only@5.1.2 build
+> node build.mjs
+
+JUGEST v5.1.2 startup hotfix + iOS icon extra-up tune PASS
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.

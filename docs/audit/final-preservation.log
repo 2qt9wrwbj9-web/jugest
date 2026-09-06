@@ -1,0 +1,11 @@
+✔ Production icons, parser, math libraries, CSS and current Vercel APIs remain byte-exact (2.505308ms)
+✔ Protected inline math and research sections remain identical to the captured Production (4.606185ms)
+✔ Fresh public build uses checked-in runtime source and has no Netlify deployment path (5.423147ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 128.566574

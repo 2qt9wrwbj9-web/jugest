@@ -1,0 +1,182 @@
+[
+  {
+    "file": "index.html",
+    "production": {
+      "sha256": "02bceabc957a45e15c5aa3df77f6dec86dfc2f899c70ef32b11efe0097676e16",
+      "bytes": 462152
+    },
+    "artifact": {
+      "sha256": "691aeb5a920ace7446289c2557d147f1d79f6698acd9feae0333bc8f8c4e506d",
+      "bytes": 462134
+    },
+    "current": {
+      "sha256": "1bce341f3039ab1d5d7700ac40651ddbe3b3473986bc6697ac23b193da2d30df",
+      "bytes": 469617
+    }
+  },
+  {
+    "file": "app-v510.js",
+    "production": {
+      "sha256": "ae69949df22cbe1c0ff6718024763afabf98266b87dec14fd94128343fe19cb3",
+      "bytes": 131801
+    },
+    "artifact": {
+      "sha256": "d5bcc1dd788ef42e5cdd4c774456b942ba62f76f95796ceaea381c929cf22217",
+      "bytes": 131367
+    },
+    "current": {
+      "sha256": "2864841121cca81f70a08c8d1ba574c533ee936fd20c3290575d67255a8a461a",
+      "bytes": 142363
+    }
+  },
+  {
+    "file": "app-v510.css",
+    "production": {
+      "sha256": "5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9",
+      "bytes": 52745
+    },
+    "artifact": {
+      "sha256": "5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9",
+      "bytes": 52745
+    },
+    "current": {
+      "sha256": "5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9",
+      "bytes": 52745
+    }
+  },
+  {
+    "file": "core-v510.js",
+    "production": {
+      "sha256": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+      "bytes": 634
+    },
+    "artifact": {
+      "sha256": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+      "bytes": 634
+    },
+    "current": {
+      "sha256": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+      "bytes": 634
+    }
+  },
+  {
+    "file": "sync-core.js",
+    "production": {
+      "sha256": "f20ba76206ee1902dad7688a6378198c7c0a87d00f4f9c23c10463a06ba40eb8",
+      "bytes": 21951
+    },
+    "artifact": {
+      "sha256": "f20ba76206ee1902dad7688a6378198c7c0a87d00f4f9c23c10463a06ba40eb8",
+      "bytes": 21951
+    },
+    "current": {
+      "sha256": "abc391f2e7ca79a37cdba1f99e8fbfea54429df7a6d45be7feb6d89cda3c540d",
+      "bytes": 22004
+    }
+  },
+  {
+    "file": "hanahana-judge.js",
+    "production": {
+      "sha256": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+      "bytes": 20750
+    },
+    "artifact": {
+      "sha256": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+      "bytes": 20750
+    },
+    "current": {
+      "sha256": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+      "bytes": 20750
+    }
+  },
+  {
+    "file": "missing-inference.js",
+    "production": {
+      "sha256": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+      "bytes": 6135
+    },
+    "artifact": {
+      "sha256": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+      "bytes": 6135
+    },
+    "current": {
+      "sha256": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+      "bytes": 6135
+    }
+  },
+  {
+    "file": "ana-launcher.js",
+    "production": {
+      "sha256": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4",
+      "bytes": 93833
+    },
+    "artifact": {
+      "sha256": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4",
+      "bytes": 93833
+    },
+    "current": {
+      "sha256": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4",
+      "bytes": 93833
+    }
+  },
+  {
+    "file": "ana-single-day.js",
+    "production": {
+      "sha256": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d",
+      "bytes": 15890
+    },
+    "artifact": {
+      "sha256": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d",
+      "bytes": 15890
+    },
+    "current": {
+      "sha256": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d",
+      "bytes": 15890
+    }
+  },
+  {
+    "file": "relay-bridge.html",
+    "production": {
+      "sha256": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
+      "bytes": 1678
+    },
+    "artifact": {
+      "sha256": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
+      "bytes": 1678
+    },
+    "current": {
+      "sha256": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
+      "bytes": 1678
+    }
+  },
+  {
+    "file": "site.webmanifest",
+    "production": {
+      "sha256": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
+      "bytes": 309
+    },
+    "artifact": {
+      "sha256": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
+      "bytes": 309
+    },
+    "current": {
+      "sha256": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
+      "bytes": 309
+    }
+  },
+  {
+    "file": "assets/jugest-mark.png",
+    "production": {
+      "sha256": "fd68df977a62e6b306c799bac1355ac6a5ab17d771f7ee9b456761cdba649625",
+      "bytes": 253
+    },
+    "artifact": {
+      "sha256": "32fc89afec7201833b41c98cfeee7d5d5eb8d2dd164229a03683f3eb11767020",
+      "bytes": 196001
+    },
+    "current": {
+      "sha256": "fd68df977a62e6b306c799bac1355ac6a5ab17d771f7ee9b456761cdba649625",
+      "bytes": 253
+    }
+  }
+]

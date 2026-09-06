@@ -1,0 +1,74 @@
+{
+  "node": "v24.19.0",
+  "productionCommit": "de2460d6c3a965e18d07d90fe404ff17980eab00",
+  "productionDeployment": "dpl_7We6HJY7A742C72zUXwBQ9d2eKYT",
+  "runs": [
+    {
+      "command": [
+        "npm",
+        "test"
+      ],
+      "startedAt": "2026-09-06T16:04:21.829951+00:00",
+      "finishedAt": "2026-09-06T16:04:29.716485+00:00",
+      "exitCode": 0,
+      "log": "final-tests.log"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "startedAt": "2026-09-06T16:04:29.716518+00:00",
+      "finishedAt": "2026-09-06T16:04:30.063645+00:00",
+      "exitCode": 0,
+      "log": "final-build.log"
+    },
+    {
+      "command": [
+        "node",
+        "--import",
+        "../evidence/forbid-network.mjs",
+        "build.mjs"
+      ],
+      "startedAt": "2026-09-06T16:04:30.063666+00:00",
+      "finishedAt": "2026-09-06T16:04:30.178760+00:00",
+      "exitCode": 0,
+      "log": "final-offline-build.log"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "tests/production-preservation.mjs"
+      ],
+      "startedAt": "2026-09-06T16:04:30.178780+00:00",
+      "finishedAt": "2026-09-06T16:04:30.443886+00:00",
+      "exitCode": 0,
+      "log": "final-preservation.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "startedAt": "2026-09-06T16:04:30.443905+00:00",
+      "finishedAt": "2026-09-06T16:04:30.471138+00:00",
+      "exitCode": 0,
+      "log": "diff-check.log"
+    }
+  ],
+  "runtimeSHA256": {
+    "app-v510.js": "2864841121cca81f70a08c8d1ba574c533ee936fd20c3290575d67255a8a461a",
+    "index.html": "1bce341f3039ab1d5d7700ac40651ddbe3b3473986bc6697ac23b193da2d30df",
+    "sync-core.js": "abc391f2e7ca79a37cdba1f99e8fbfea54429df7a6d45be7feb6d89cda3c540d",
+    "build.mjs": "a6559250503fa6a7e67f8736ef1525499e8bfa6ad0fc5c25acf109c59e47cd91",
+    "package.json": "4ac6be325cb1d7c1344430ca1155a98a4a0f679787872396e825d19e96cecde2"
+  },
+  "regressionCommands": 53,
+  "newBehaviorTests": 26,
+  "knownUnfixedRisk": "P0 concurrent Device Sync pushes",
+  "productionDeployed": false,
+  "browserVerification": "blocked: localhost ERR_BLOCKED_BY_CLIENT"
+}

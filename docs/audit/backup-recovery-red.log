@@ -1,0 +1,33 @@
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (52.636387ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (9.914834ms)
+✔ Automatic Collector refresh clears a recovered transient error (22.405585ms)
+✔ Backup undo explains its partial scope before the user presses it (6.384278ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (20.398624ms)
+✖ Partial backup restore exposes reload recovery and blocks stale in-memory edits (8.017306ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 240.289654
+
+✖ failing tests:
+
+test at tests/resume-flow-regressions.mjs:40:1
+✖ Partial backup restore exposes reload recovery and blocks stale in-memory edits (8.017306ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:44:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

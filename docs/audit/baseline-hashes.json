@@ -1,0 +1,82 @@
+{
+  "ana-single-day.js": {
+    "sha256": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d",
+    "md5": "37f9ca636a2604d8fc1ea0963acbc457",
+    "bytes": 15890
+  },
+  "icon-192.png": {
+    "sha256": "ecbfc9bade7af2d9879fbdf0bc3f7ca71cf261c7c2411a24bc73b13d4068d487",
+    "md5": "14020640dd8bf413d4dac8338cd5edda",
+    "bytes": 8799
+  },
+  "icon-512.png": {
+    "sha256": "01b8d6a96064f6412a1a06c9f461fc79e89eaed404515d93334ce2401661cb76",
+    "md5": "e45498bdc483a40b691d03f5ff8d469b",
+    "bytes": 45779
+  },
+  "apple-touch-icon.png": {
+    "sha256": "b33349ab4a9b9f1f843d94cb73de9bb842b6ec9194643da251f50a44cb7d7ddc",
+    "md5": "f46d2c68771b6296ab8d52362f8f3a90",
+    "bytes": 36154
+  },
+  "index.html": {
+    "sha256": "02bceabc957a45e15c5aa3df77f6dec86dfc2f899c70ef32b11efe0097676e16",
+    "md5": "97c8888f35613754a87e060ecb7b025f",
+    "bytes": 462152
+  },
+  "relay-bridge.html": {
+    "sha256": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
+    "md5": "10a38b2b1ed9e237054845862ad036ae",
+    "bytes": 1678
+  },
+  "app-v510.js": {
+    "sha256": "ae69949df22cbe1c0ff6718024763afabf98266b87dec14fd94128343fe19cb3",
+    "md5": "0ebe71a20af1d3b2738d402789ea9af8",
+    "bytes": 131801
+  },
+  "app-v510.css": {
+    "sha256": "5118705d8e483ea19ae110d3e31e431b0a13209a7916f7f702d1acf5626f8fe9",
+    "md5": "20950f083cac2e10e70f542c5fff9023",
+    "bytes": 52745
+  },
+  "site.webmanifest": {
+    "sha256": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
+    "md5": "411e978633e2ccb22949594e3ac67628",
+    "bytes": 309
+  },
+  "missing-inference.js": {
+    "sha256": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+    "md5": "08a9b12a6426a909bcfe6d839ca86e72",
+    "bytes": 6135
+  },
+  "core-v510.js": {
+    "sha256": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+    "md5": "741067a28f0a3b21a33734569375303a",
+    "bytes": 634
+  },
+  "favicon-32.png": {
+    "sha256": "9321b5f4fd8ccbf713eb9052ee116f223b727fc412447297eb037a84456cf62a",
+    "md5": "c3336f56ad70155b4cf5c16e77c6dbd9",
+    "bytes": 2187
+  },
+  "sync-core.js": {
+    "sha256": "f20ba76206ee1902dad7688a6378198c7c0a87d00f4f9c23c10463a06ba40eb8",
+    "md5": "8d2f4495e611046f0baf4f5c58a66198",
+    "bytes": 21951
+  },
+  "hanahana-judge.js": {
+    "sha256": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+    "md5": "fae095cda18f849356e7faa1c1232590",
+    "bytes": 20750
+  },
+  "ana-launcher.js": {
+    "sha256": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4",
+    "md5": "335d44046eeabdbbd537234b2c9e06b5",
+    "bytes": 93833
+  },
+  "assets/jugest-mark.png": {
+    "sha256": "fd68df977a62e6b306c799bac1355ac6a5ab17d771f7ee9b456761cdba649625",
+    "md5": "20d6de86822854eedb42ab0bc03de31e",
+    "bytes": 253
+  }
+}

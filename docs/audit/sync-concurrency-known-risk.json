@@ -1,0 +1,16 @@
+{
+  "finding": "P0-UNFIXED concurrent sync pushes both succeed at revision 1; only one payload remains",
+  "responses": [
+    {
+      "status": 200,
+      "revision": 1
+    },
+    {
+      "status": 200,
+      "revision": 1
+    }
+  ],
+  "finalRevision": 1,
+  "survivingPayload": "BBBB",
+  "cloudAccess": false
+}

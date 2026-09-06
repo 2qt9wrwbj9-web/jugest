@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+await import(`../sync-core.js?chunk-test=${Date.now()}`);
+const t=globalThis.__JUGEST_SYNC_TEST__||{};
+assert.equal(typeof t.splitJsonChunks,'function','sync transport must expose splitJsonChunks');
+assert.equal(typeof t.joinJsonChunks,'function','sync transport must expose joinJsonChunks');
+const source=JSON.stringify({v:1,zip:'gzip',iv:'abc',ct:'x'.repeat(2_250_000)});
+const chunks=t.splitJsonChunks(source,700_000);
+assert.ok(chunks.length>=4);
+assert.ok(chunks.every(x=>Buffer.byteLength(x,'utf8')<=700_000));
+assert.equal(t.joinJsonChunks(chunks),source);
+const src=fs.readFileSync('sync-core.js','utf8');
+for(const action of ['pushStart','pushChunk','pushCommit','pullChunk'])assert.ok(src.includes(action),`sync client must support ${action}`);
+console.log('Vercel sync chunk transport PASS');

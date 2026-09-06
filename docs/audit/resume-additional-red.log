@@ -1,0 +1,111 @@
+✖ Fresh Launcher setup exposes the existing loader using this JUGEST origin (51.576228ms)
+✖ History navigation cannot hide recovery after a partial Device Sync apply (12.361379ms)
+✖ Automatic Collector refresh clears a recovered transient error (24.101499ms)
+✖ Backup undo explains its partial scope before the user presses it (7.425451ms)
+✖ Production FOUC gate waits for CSS load/error and has a 2-second fallback (7.671717ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 208.426447
+
+✖ failing tests:
+
+test at tests/resume-flow-regressions.mjs:7:1
+✖ Fresh Launcher setup exposes the existing loader using this JUGEST origin (51.576228ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Launcherの初回設定/. Input:
+  
+  '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1>\n' +
+    '    <section class="panel sync-setup"><h2>Collector未連携</h2>\n' +
+    '    <p>端末同期とは別の、取得データをJUGESTへ送るための連携です。</p>\n' +
+    '    <button type="button" class="primary-btn" data-collector-pair >Collector / Launcherと連携する</button><p>6桁コードを発行し、アナスロで開いたLauncherの「設定判別ツール連携」に入力してね。</p><button type="button" class="secondary-btn" data-collector-ios >iPhone Shortcut用キーを発行</button>\n' +
+    '    \n' +
+    '    \n' +
+    '    \n' +
+    '    \n' +
+    '    </section>\n' +
+    '    <div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>Collector新着</small><b>0日</b></div><div><small>Launcher新着</small><b>0件</b></div></div>\n' +
+    '    <div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh disabled>状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着データを取り込む</button></div><button type="button" class="secondary-btn" data-action="data-stores">取得店舗を追加・管理</button>\n' +
+    '    <div class="collector-list"><div class="empty-card">「取得店舗を追加・管理」から店舗を登録してね。</div></div></section>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:10:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>自動取得</h1>\n    <section class="panel sync-setup"><h2>Collector未連携</h2>\n    <p>端末同期とは別の、取得データをJUGESTへ送るための連携です。</p>\n    <button type="button" class="primary-btn" data-collector-pair >Collector / Launcherと連携する</button><p>6桁コードを発行し、アナスロで開いたLauncherの「設定判別ツール連携」に入力してね。</p><button type="button" class="secondary-btn" data-collector-ios >iPhone Shortcut用キーを発行</button>\n    \n    \n    \n    \n    </section>\n    <div class="data-kpis"><div><small>自動取得ON</small><b>0店舗</b></div><div><small>Collector新着</small><b>0日</b></div><div><small>Launcher新着</small><b>0件</b></div></div>\n    <div class="collector-toolbar"><button type="button" class="secondary-btn" data-collector-refresh disabled>状態を更新</button><button type="button" class="primary-btn" data-collector-receive disabled>新着データを取り込む</button></div><button type="button" class="secondary-btn" data-action="data-stores">取得店舗を追加・管理</button>\n    <div class="collector-list"><div class="empty-card">「取得店舗を追加・管理」から店舗を登録してね。</div></div></section>',
+    expected: /Launcherの初回設定/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/resume-flow-regressions.mjs:18:1
+✖ History navigation cannot hide recovery after a partial Device Sync apply (12.361379ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'hub' !== 'sync'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:21:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'hub',
+    expected: 'sync',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/resume-flow-regressions.mjs:24:1
+✖ Automatic Collector refresh clears a recovered transient error (24.101499ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /temporary offline/. Input:
+  
+  'temporary offline'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:28:57)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'temporary offline',
+    expected: /temporary offline/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at tests/resume-flow-regressions.mjs:30:1
+✖ Backup undo explains its partial scope before the user presses it (7.425451ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /店舗データと解析履歴は戻りません/. Input:
+  
+  '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>バックアップ</h1><div class="backup-card"><b>JUGEST完全バックアップ</b><span>判別データ、稼働記録、店舗データ、予測履歴などをまとめて保存。</span><button type="button" data-backup-save >バックアップを保存</button><button type="button" class="secondary" data-backup-restore >バックアップから復元</button><button type="button" class="secondary" data-backup-undo disabled>直前の復元前に戻す</button><input data-backup-file type="file" accept="application/json,.json" hidden></div><div class="info-card"><b>復元の安全策</b><span>復元直前の状態を端末内に1世代だけ退避する。間違えて復元した場合は上のボタンで戻せる。</span></div></section>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:31:30)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<section class="workspace data-screen"><button class="back-row" type="button" data-workspace="data">‹ データ</button><div class="kicker">DATA</div><h1>バックアップ</h1><div class="backup-card"><b>JUGEST完全バックアップ</b><span>判別データ、稼働記録、店舗データ、予測履歴などをまとめて保存。</span><button type="button" data-backup-save >バックアップを保存</button><button type="button" class="secondary" data-backup-restore >バックアップから復元</button><button type="button" class="secondary" data-backup-undo disabled>直前の復元前に戻す</button><input data-backup-file type="file" accept="application/json,.json" hidden></div><div class="info-card"><b>復元の安全策</b><span>復元直前の状態を端末内に1世代だけ退避する。間違えて復元した場合は上のボタンで戻せる。</span></div></section>',
+    expected: /店舗データと解析履歴は戻りません/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/resume-flow-regressions.mjs:33:1
+✖ Production FOUC gate waits for CSS load/error and has a 2-second fallback (7.671717ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  '' !== 'visible'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/b75c9ade4b6a/jugest/tests/resume-flow-regressions.mjs:37:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: 'visible',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

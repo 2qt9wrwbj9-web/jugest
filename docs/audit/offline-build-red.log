@@ -1,0 +1,12 @@
+file:///workspace/scratch/b75c9ade4b6a/evidence/forbid-network.mjs:1
+globalThis.fetch=async()=>{throw new Error('OFFLINE_BUILD: build must use checked-in source, not Production')};
+                                 ^
+
+Error: OFFLINE_BUILD: build must use checked-in source, not Production
+    at globalThis.fetch (file:///workspace/scratch/b75c9ade4b6a/evidence/forbid-network.mjs:1:34)
+    at file:///workspace/scratch/b75c9ade4b6a/jugest/build.mjs:14:16
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.19.0
