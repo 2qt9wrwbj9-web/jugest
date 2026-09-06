@@ -44,4 +44,9 @@ const apple=shiftRgbPngUp(appleBase,5);assertValidPng(apple,180,180);fs.writeFil
 const partsDir=path.join(root,'deploy-assets','icon-512.b64');const parts=fs.readdirSync(partsDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();if(!parts.length)throw new Error('JUGEST icon-512 payload missing');fs.writeFileSync(path.join(out,'icon-512.png'),Buffer.from(parts.map(x=>fs.readFileSync(path.join(partsDir,x),'utf8').trim()).join(''),'base64'));
 for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png']){if(fs.readFileSync(path.join(out,rel)).length<1000)throw new Error(`invalid icon ${rel}`);}
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8');html=html.replace(/apple-touch-icon\.png(?:\?[^"']*)?/g,'apple-touch-icon.png?v=512-icon-tune-3');fs.writeFileSync(path.join(out,'index.html'),html);
-const app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 startup hotfix + iOS icon extra-up tune PASS');
+let app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
+const manualCollectorStartDate='<label><small>取得開始日</small><input data-store-start type="date" value="${esc(e.startDate)}"></label>';
+if(!app.includes(manualCollectorStartDate))throw new Error('Collector start-date control anchor missing');
+app=app.replace(manualCollectorStartDate,'');
+fs.writeFileSync(path.join(out,'app-v510.js'),app);
+if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 startup hotfix + iOS icon extra-up tune PASS');
