@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
@@ -41,10 +42,21 @@ function assertValidPng(buf,wantW,wantH){
  if(!seenIHDR||!seenIEND)throw new Error('tuned apple-touch-icon incomplete PNG');
 }
 
-const tunedDir=path.join(root,'deploy-assets','apple-touch-icon-tuned.b64');
-const tunedParts=fs.readdirSync(tunedDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();
-if(!tunedParts.length)throw new Error('tuned apple-touch-icon payload missing');
-const apple=Buffer.from(tunedParts.map(x=>fs.readFileSync(path.join(tunedDir,x),'utf8').trim()).join(''),'base64');
+const originalDir=path.join(root,'deploy-assets','apple-touch-icon-tuned.b64');
+const repairDir=path.join(root,'deploy-assets','apple-touch-icon-tuned-repair');
+const tunedOrder=[
+ path.join(originalDir,'part-00.txt'),
+ path.join(originalDir,'part-01.txt'),
+ path.join(repairDir,'part-00.txt'),
+ path.join(repairDir,'part-01.txt'),
+ path.join(repairDir,'part-02.txt'),
+ path.join(repairDir,'part-03.txt'),
+ path.join(originalDir,'part-03.txt')
+];
+for(const p of tunedOrder)if(!fs.existsSync(p))throw new Error(`tuned apple-touch-icon payload missing: ${path.basename(p)}`);
+const apple=Buffer.from(tunedOrder.map(p=>fs.readFileSync(p,'utf8').trim()).join(''),'base64');
+const appleHash=createHash('sha256').update(apple).digest('hex');
+if(appleHash!=='ac417fad2771c1b6a25894087c3e0d249359d217e528fb6893a38dd53c2b9deb')throw new Error(`tuned apple-touch-icon hash mismatch: ${appleHash}`);
 assertValidPng(apple,180,180);
 fs.writeFileSync(path.join(out,'apple-touch-icon.png'),apple);
 
