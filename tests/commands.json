@@ -13,6 +13,7 @@
   "node tests/collector-calendar-year.mjs",
   "node tests/collector-single-fetch-cadence.mjs",
   "node tests/collector-local-coverage.mjs",
+  "node tests/collector-local-coverage-client.mjs",
   "node tests/collector-ui-static.mjs",
   "node tests/collector-store-management.mjs",
   "node tests/ui-v510-foundation.mjs",
