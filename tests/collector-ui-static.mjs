@@ -7,6 +7,10 @@ const relay=fs.readFileSync('tests/fixtures/legacy-netlify/functions/relay.mjs',
 for(const q of ['renderCollectorScreen','renderStoreManagementScreen','data-collector-refresh','data-collector-receive','data-store-edit','data-store-requeue','data-store-delete','data-store-manage-search','data-store-filter','data-store-sort']){
   assert.ok(app.includes(q),`new collector UI missing ${q}`);
 }
+for(const q of ['collector-link-card','collector-link-summary','設定を表示']){
+  assert.ok(app.includes(q),`connected Collector settings must be collapsible: missing ${q}`);
+}
+assert.ok(app.includes("${d.linked?'':'open'}"),'connected Collector settings must default closed while setup states remain expanded');
 for(const q of ['refreshCollector','receiveCollector','requeueCollectorStore','deleteCollectorStore','saveCollectorStore','setCollectorEnabled']){
   assert.match(html,new RegExp(`${q}\\s*:`),`core bridge missing ${q}`);
 }
