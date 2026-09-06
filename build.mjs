@@ -43,7 +43,27 @@ const apple=shiftRgbPngUp(appleBase,5);assertValidPng(apple,180,180);fs.writeFil
 
 const partsDir=path.join(root,'deploy-assets','icon-512.b64');const parts=fs.readdirSync(partsDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();if(!parts.length)throw new Error('JUGEST icon-512 payload missing');fs.writeFileSync(path.join(out,'icon-512.png'),Buffer.from(parts.map(x=>fs.readFileSync(path.join(partsDir,x),'utf8').trim()).join(''),'base64'));
 for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png']){if(fs.readFileSync(path.join(out,rel)).length<1000)throw new Error(`invalid icon ${rel}`);}
-let html=fs.readFileSync(path.join(out,'index.html'),'utf8');html=html.replace(/apple-touch-icon\.png(?:\?[^"']*)?/g,'apple-touch-icon.png?v=512-icon-tune-3');fs.writeFileSync(path.join(out,'index.html'),html);
+
+let html=fs.readFileSync(path.join(out,'index.html'),'utf8');
+html=html.replace(/apple-touch-icon\.png(?:\?[^"']*)?/g,'apple-touch-icon.png?v=512-icon-tune-3');
+const coverageHelperAnchor='async function v510RefreshCollector(){';
+const coverageHelper=`function v510CollectorCoveragePayload(){\n const grouped=new Map();\n for(const d of externalDays||[]){\n  const shop=canonicalExternalShopName(d?.shop||'').trim(),date=String(d?.date||'');if(!shop||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(date))continue;\n  let row=grouped.get(shop);if(!row){row={shop,dates:new Set()};grouped.set(shop,row)}row.dates.add(date);\n }\n return [...grouped.values()].slice(0,100).map(r=>({shop:r.shop,dates:[...r.dates].sort().slice(-370)}));\n}\n\n`;
+if((html.split(coverageHelperAnchor).length-1)!==1)throw new Error('Collector coverage helper anchor missing');
+html=html.replace(coverageHelperAnchor,coverageHelper+coverageHelperAnchor);
+const sinceRevisionAnchor='sinceRevision:Math.max(0,+collectorSyncState.revision||0)}';
+const coverageStatusReplacement='sinceRevision:Math.max(0,+collectorSyncState.revision||0),localCoverage:v510CollectorCoveragePayload()}';
+const coverageStatusHits=html.split(sinceRevisionAnchor).length-1;if(coverageStatusHits<5)throw new Error(`Collector status coverage anchor count ${coverageStatusHits}`);
+html=html.replaceAll(sinceRevisionAnchor,coverageStatusReplacement);
+fs.writeFileSync(path.join(out,'index.html'),html);
+
+let css=fs.readFileSync(path.join(out,'app-v510.css'),'utf8');
+const chromeTransforms=[
+ ['.topbar{position:fixed;z-index:50;top:0;left:50%;transform:translateX(-50%);width:min(100%,560px);','.topbar{position:fixed;z-index:50;top:0;left:0;right:0;margin:0 auto;width:min(100%,560px);','topbar fixed centering'],
+ ['.bottom-nav{position:fixed;z-index:50;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,560px);','.bottom-nav{position:fixed;z-index:50;bottom:0;left:0;right:0;margin:0 auto;width:min(100%,560px);','bottom navigation fixed centering'],
+];
+for(const [from,to,label] of chromeTransforms){const hits=css.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);css=css.replace(from,to)}
+fs.writeFileSync(path.join(out,'app-v510.css'),css);
+
 let app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
 const manualCollectorStartDate='<label><small>取得開始日</small><input data-store-start type="date" value="${esc(e.startDate)}"></label>';
 if(!app.includes(manualCollectorStartDate))throw new Error('Collector start-date control anchor missing');
@@ -58,4 +78,4 @@ for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'Col
  const hits=app.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);app=app.replace(from,to);
 }
 fs.writeFileSync(path.join(out,'app-v510.js'),app);
-if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 startup hotfix + iOS icon extra-up tune PASS');
+if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + startup/icon hotfix PASS');
