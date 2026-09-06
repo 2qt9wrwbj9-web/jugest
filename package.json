@@ -1,14 +1,7 @@
 {
-  "name": "jugest-v5100",
+  "name": "jugest-vercel-bootstrap",
   "private": true,
   "version": "5.1.2",
   "type": "module",
-  "engines": {"node": ">=20"},
-  "scripts": {
-    "vercel:build": "node deployment/bootstrap-v512.mjs && node deployment/verify-v512.mjs"
-  },
-  "dependencies": {
-    "@netlify/blobs": "^11.0.1",
-    "@vercel/blob": "2.8.0"
-  }
+  "engines": {"node": ">=20"}
 }

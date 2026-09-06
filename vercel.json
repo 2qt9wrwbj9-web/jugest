@@ -1,17 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run vercel:build",
-  "outputDirectory": "public",
-  "functions": {
-    "api/relay.js": {"maxDuration": 60},
-    "api/sync.js": {"maxDuration": 60}
-  },
-  "headers": [
-    {"source":"/","headers":[{"key":"Cache-Control","value":"no-store, no-cache, must-revalidate"}]},
-    {"source":"/index.html","headers":[{"key":"Cache-Control","value":"no-store, no-cache, must-revalidate"}]},
-    {"source":"/app-v510.js","headers":[{"key":"Cache-Control","value":"no-store, no-cache, must-revalidate"}]},
-    {"source":"/sync-core.js","headers":[{"key":"Cache-Control","value":"no-store, no-cache, must-revalidate"}]},
-    {"source":"/api/:path*","headers":[{"key":"Cache-Control","value":"no-store"}]}
-  ],
-  "installCommand": "npm install"
+  "cleanUrls": true
 }
