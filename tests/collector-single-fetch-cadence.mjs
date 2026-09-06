@@ -32,7 +32,8 @@ async function call(body){
 
 function sampleText(date,shop){
   const [y,m,d]=date.split('-').map(Number);
-  return `${y}/${m}/${d}\n${shop}\n全データ一覧\n機種名\n台番号\nG数\n差枚\nBB\nRB\nART\n合成確率\nBB確率\nRB確率\nART確率\nマイジャグラーV\n601\n2,727\n-94\n11\n7\n0\n1/151.5\n1/247.9\n1/389.6\n1/0.0\n機種別データピックアップ\n`;
+  const rows=Array.from({length:10},(_,i)=>`マイジャグラーV\n${601+i}\n2,727\n-94\n11\n7\n0\n1/151.5\n1/247.9\n1/389.6\n1/0.0`).join('\n');
+  return `${y}/${m}/${d}\n${shop}\n全データ一覧\n機種名\n台番号\nG数\n差枚\nBB\nRB\nART\n合成確率\nBB確率\nRB確率\nART確率\n${rows}\n機種別データピックアップ\n`;
 }
 
 const d=new Date(Date.now()+9*60*60*1000);d.setUTCDate(d.getUTCDate()-1);const yesterday=d.toISOString().slice(0,10);
