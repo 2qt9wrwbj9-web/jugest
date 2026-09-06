@@ -18,11 +18,32 @@ for(const [rel,b64] of Object.entries(payload)){
   const p=path.join(here,'public',rel);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,String(b64),'utf8');
 }
 
-// Tiny dependency-free PNG generator for deploy-only cosmetic assets.
+// Tiny dependency-free PNG generator retained for the internal JUGEST mark only.
 function crc32(buf){let c=0xffffffff;for(const b of buf){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
 function chunk(type,data){const t=Buffer.from(type);const len=Buffer.alloc(4);len.writeUInt32BE(data.length);const crc=Buffer.alloc(4);crc.writeUInt32BE(crc32(Buffer.concat([t,data])));return Buffer.concat([len,t,data,crc])}
 function png(size){const w=size,h=size,row=w*4+1,raw=Buffer.alloc(row*h);for(let y=0;y<h;y++){const off=y*row;raw[off]=0;for(let x=0;x<w;x++){const i=off+1+x*4;const bg=[18,112,255,255];raw[i]=bg[0];raw[i+1]=bg[1];raw[i+2]=bg[2];raw[i+3]=255;const nx=x/w,ny=y/h;const white=(nx>.22&&nx<.40&&ny>.20&&ny<.72)||(nx>.34&&nx<.75&&ny>.62&&ny<.80)||(nx>.62&&nx<.78&&ny>.28&&ny<.70);if(white){raw[i]=255;raw[i+1]=255;raw[i+2]=255;}}}const ih=Buffer.alloc(13);ih.writeUInt32BE(w,0);ih.writeUInt32BE(h,4);ih[8]=8;ih[9]=6;return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ih),chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))])}
-for(const [rel,size] of [['favicon-32.png',32],['apple-touch-icon.png',180],['icon-192.png',192],['icon-512.png',512],['assets/jugest-mark.png',96]])fs.writeFileSync(path.join(here,'public',rel),png(size));
+fs.writeFileSync(path.join(here,'public','assets/jugest-mark.png'),png(96));
+
+const appIconHashes={
+ 'favicon-32.png':'9321b5f4fd8ccbf713eb9052ee116f223b727fc412447297eb037a84456cf62a',
+ 'apple-touch-icon.png':'0cb55cd2fcea73d1894f72b02fa9cb6b85ac01b51f4b398d4c17b8a60fa4238e',
+ 'icon-192.png':'ecbfc9bade7af2d9879fbdf0bc3f7ca71cf261c7c2411a24bc73b13d4068d487'
+};
+for(const [rel,want] of Object.entries(appIconHashes)){
+  const src=path.join(here,'deploy-assets',rel);
+  if(!fs.existsSync(src))throw new Error(`JUGEST icon missing: ${rel}`);
+  const icon=fs.readFileSync(src);
+  const got=createHash('sha256').update(icon).digest('hex');
+  if(got!==want)throw new Error(`icon hash mismatch ${rel}: ${got}`);
+  fs.writeFileSync(path.join(here,'public',rel),icon);
+}
+const icon512Dir=path.join(here,'deploy-assets','icon-512.b64');
+const icon512Parts=fs.readdirSync(icon512Dir).filter(x=>/^part-\d+\.txt$/.test(x)).sort();
+if(!icon512Parts.length)throw new Error('JUGEST icon-512 payload missing');
+const icon512=Buffer.from(icon512Parts.map(x=>fs.readFileSync(path.join(icon512Dir,x),'utf8').trim()).join(''),'base64');
+const icon512Hash=createHash('sha256').update(icon512).digest('hex');
+if(icon512Hash!=='46590104e8e5c32e38643aa24fb4aadaa96984aaba356465d311b36605eb5d38')throw new Error(`icon-512 hash mismatch: ${icon512Hash}`);
+fs.writeFileSync(path.join(here,'public','icon-512.png'),icon512);
 
 const checks={
  'index.html':'691aeb5a920ace7446289c2557d147f1d79f6698acd9feae0333bc8f8c4e506d',
@@ -45,4 +66,4 @@ if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2
 if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');
 if(launcher.includes('jugglerest.netlify.app')||launcher.includes('jugest.netlify.app'))throw new Error('Netlify launcher fallback detected');
 for(const file of ['package.json','vercel.json','api/_blob-store.js','api/_node-web.js','api/_relay-web.js','api/_sync-web.js','api/relay.js','api/sync.js']){const s=fs.readFileSync(path.join(here,file),'utf8');if(/@netlify\/blobs|jugglerest\.netlify\.app|netlify\/functions/i.test(s))throw new Error(`Netlify runtime dependency in ${file}`)}
-console.log(`JUGEST v5.1.2 Vercel-only build PASS: ${Object.keys(payload).length} exact runtime files + generated icons`);
+console.log(`JUGEST v5.1.2 Vercel-only build PASS: ${Object.keys(payload).length} exact runtime files + crystal app icons`);
