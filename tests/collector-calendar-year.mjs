@@ -4,6 +4,7 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import p0 from '../api/_relay-payload-0.js';
 import p1 from '../api/_relay-payload-1.js';
 import p2 from '../api/_relay-payload-2.js';
+import { patchRelaySource } from '../api/_relay-web.js';
 
 const kv = new Map();
 const store = {
@@ -13,7 +14,8 @@ const store = {
   async delete(key){kv.delete(key)},
   async list({prefix=''}){ return {blobs:[...kv.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key}))}; }
 };
-const source=zlib.gunzipSync(Buffer.from(p0+p1+p2,'base64')).toString('utf8');
+const packed=zlib.gunzipSync(Buffer.from(p0+p1+p2,'base64')).toString('utf8');
+const source=patchRelaySource(packed);
 const mod=new Function('createBlobStore','createHash','randomBytes','randomInt','timingSafeEqual',source)(()=>store,createHash,randomBytes,randomInt,timingSafeEqual);
 const handler=mod.default;
 
