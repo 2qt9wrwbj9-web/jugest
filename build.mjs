@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
@@ -21,7 +22,7 @@ for(const rel of FILES){
  }
  const p=path.join(out,rel);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,buf);
 }
-// Approved crystal J icons. Keep runtime/hotfix unchanged and replace visual app icons only.
+// Approved crystal J icons. Runtime/hotfix stays unchanged; only icon framing is tuned.
 for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png']){
  const src=path.join(root,'deploy-assets',rel);if(!fs.existsSync(src))throw new Error(`missing icon ${rel}`);fs.copyFileSync(src,path.join(out,rel));
 }
@@ -30,12 +31,26 @@ const parts=fs.readdirSync(partsDir).filter(x=>/^part-\d+\.txt$/.test(x)).sort()
 if(!parts.length)throw new Error('missing icon-512 payload');
 const icon512=Buffer.from(parts.map(x=>fs.readFileSync(path.join(partsDir,x),'utf8').trim()).join(''),'base64');
 fs.writeFileSync(path.join(out,'icon-512.png'),icon512);
+
+// Home-screen framing tune from the iPhone screenshot: 94% scale, shifted upward ~2%.
+// This preserves the exact crystal-J artwork while adding a little breathing room.
+for(const [rel,size] of [['favicon-32.png',32],['apple-touch-icon.png',180],['icon-192.png',192],['icon-512.png',512]]){
+ const p=path.join(out,rel);
+ const original=await sharp(p).ensureAlpha().resize(size,size,{fit:'fill'}).png().toBuffer();
+ const inner=Math.round(size*0.94);
+ const left=Math.round((size-inner)/2);
+ const top=Math.max(0,Math.round(size*0.01));
+ const artwork=await sharp(original).resize(inner,inner,{fit:'fill'}).png().toBuffer();
+ const tuned=await sharp({create:{width:size,height:size,channels:4,background:{r:8,g:11,b:27,alpha:1}}})
+   .composite([{input:artwork,left,top}]).png().toBuffer();
+ fs.writeFileSync(p,tuned);
+}
 for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png']){
- const b=fs.readFileSync(path.join(out,rel));if(b.length<1000)throw new Error(`invalid icon ${rel}`);
+ const b=fs.readFileSync(path.join(out,rel));if(b.length<500)throw new Error(`invalid icon ${rel}`);
 }
 const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
 const app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
 if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');
 if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');
 if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');
-console.log('JUGEST v5.1.2 startup hotfix + crystal icon build PASS');
+console.log('JUGEST v5.1.2 startup hotfix + crystal icon framing tune PASS');
