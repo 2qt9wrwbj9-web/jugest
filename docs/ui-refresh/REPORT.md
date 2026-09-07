@@ -3,6 +3,19 @@
 Production baseline: `9e8b8c30fe0c40fb70cb76863c6c40e2564c91ac`。
 作業ブランチ: `preview/v512-home-jobs`。Production・mainは変更しない。
 
+Preview: https://jugest-k06x805d3-cwwvc45jk6-2652.vercel.app/
+
+Runtime commit: `9d5144d56eee765627f0bf5cb394d93843955986`。
+Vercel deployment `dpl_4nZgxVagoUvcKYsSNiKUhzw3gkQL`: READY、target=null（Preview）、専用ブランチのみ。
+Preview実画面で新ホーム、通知バッジ消去、実戦→移動比較への遷移を確認。ログにブラウザ拡張由来のエラーはあるが、確認した操作でJUGEST由来のエラーは見つからなかった。実データ同期・Collectorへの外部書込みはしていない。
+
+## 変更ファイル
+
+- Runtime: `app-v510.js`, `app-v510.css`, `index.html`（UI metadata bridge・解析orchestrationの進捗のみ）
+- Tests: `tests/ui-home-jobs.mjs`, `tests/ui-responsive.mjs`, `tests/store-optimization-research.mjs`, `tests/commands.json`, `tests/ui-v511-notification-popover.mjs`, `tests/production-preservation.mjs`, `tests/fixtures/v512-analysis-orchestration.txt`
+- Research: `research/store-optimization.mjs`
+- Plan/report/checkpoint/evidence: `docs/superpowers/plans/2026-09-06-home-jobs.md`, `docs/ui-refresh/`
+
 ## 実装
 
 - ホーム: 次の行動を1件、最近の解析2件、実戦2件、小さなデータ状況。実戦入力はホームへ戻る際に再取得し、保存済みと同一のジャグラー入力は再開対象にしない。

@@ -1,0 +1,24 @@
+{
+  "runtimeCommit": "9d5144d56eee765627f0bf5cb394d93843955986",
+  "productionAliasVerified": "jugest.vercel.app",
+  "productionDeployment": "dpl_4suxgxHEhREjX2DBiWtPj3Jcyhmx",
+  "productionCommit": "9e8b8c30fe0c40fb70cb76863c6c40e2564c91ac",
+  "mainCommit": "9e8b8c30fe0c40fb70cb76863c6c40e2564c91ac",
+  "previewDeployment": "dpl_4nZgxVagoUvcKYsSNiKUhzw3gkQL",
+  "previewReady": true,
+  "previewSmoke": ["action-led home rendered", "opening notifications removes badge", "workspace navigation preserves read state", "move comparison rendered"],
+  "rootSourceSha256": {
+    "app-v510.js": "c34bea1bea39007bd5371d0860b01d6afec106f281ec95c839fe2b5f5636fc1f",
+    "app-v510.css": "c205afac72c86b412b0f6c7cd8b3d1caa0f20d7685e98fcf49deecfe7e42cd9f",
+    "index.html": "28db2539819133fd63ab870e44a08836366c3bf1b44bd1d64563aa17c2e3b274",
+    "core-v510.js": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+    "hanahana-judge.js": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+    "ana-launcher.js": "63de2aca8c359da5f4b36e132054156e9853495e50c04c7d355415a5b4464cf4"
+  },
+  "protectedInlineMath": "PASS existing hash guards; exact allowlist for progress-only wrapper additions",
+  "untouchedSourceDiff": "0: api, Collector, core-v510, hanahana-judge, missing-inference, sync-core, build, vercel.json, icons",
+  "regressionCommands": "60/60 PASS",
+  "responsive": "42/42 PASS; Japanese font; fixed chrome after scroll",
+  "iosDevice": "not tested",
+  "optimizationAdopted": false
+}
