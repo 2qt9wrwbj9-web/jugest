@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {patchStoreAnalysisHtml,patchStoreAnalysisApp} from '../build-store-analysis-view.mjs';
+import {patchAnalysisJitterApp} from '../build-analysis-jitter-fix.mjs';
 const baseline=JSON.parse(fs.readFileSync(new URL('./fixtures/production-preservation.json',import.meta.url)));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const intentionalBackendChanges=new Set(['api/_blob-store.js','api/_sync-web.js','api/_relay-web.js']);
@@ -22,7 +23,7 @@ function expectedCollectorUi(){
  for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'compact setup open'],[collectorSetupHeadingClose,compactCollectorSetupHeadingClose,'compact setup heading'],[collectorSetupClose,compactCollectorSetupClose,'compact setup close']]){
   const hits=rootApp.split(from).length-1;assert.equal(hits,1,`Collector ${label} anchor count`);rootApp=rootApp.replace(from,to);
  }
- return patchStoreAnalysisApp(rootApp);
+ return patchAnalysisJitterApp(patchStoreAnalysisApp(rootApp));
 }
 function expectedFixedChromeCss(){
  let css=fs.readFileSync('app-v510.css','utf8');
@@ -66,7 +67,7 @@ test('Fresh public build uses checked-in runtime source plus only approved bound
  assert.equal(fs.readFileSync('public/index.html','utf8'),expectedBuiltIndex(),'public index differs only by approved coverage + store-analysis view transforms');
  assert.equal(fs.readFileSync('public/app-v510.css','utf8'),expectedFixedChromeCss(),'public CSS differs only by approved fixed-chrome transform');
  for(const file of ['sync-core.js',...Object.keys(baseline.public).filter(f=>!f.endsWith('.png')&&f!=='app-v510.css')])assert.deepEqual(fs.readFileSync(`public/${file}`),fs.readFileSync(file),file);
- assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app applies only the approved Collector + store-analysis view transforms');
+ assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app applies only the approved Collector + store-analysis + progress-stability view transforms');
  assert.ok(!fs.existsSync('netlify.toml'));assert.ok(!fs.existsSync('netlify/functions'));
  assert.doesNotMatch(fs.readFileSync('build.mjs','utf8'),/await fetch|https:\/\/jugest\.vercel\.app/);
  assert.match(fs.readFileSync('index.html','utf8'),/const RELAY_API="\/api\/relay"/);
