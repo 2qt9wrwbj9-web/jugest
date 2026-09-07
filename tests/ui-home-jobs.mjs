@@ -77,7 +77,7 @@ test('failed analysis remains reachable without presenting completion',async()=>
  app.handleAction('analysis-return');assert.match(app.mount.innerHTML,/offline/);
 });
 test('analysis progress updates do not rebuild the whole app on every tick',async()=>{
- const {app,bridge,ctx}=await boot();const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let progress,finish;
+ const {app,bridge,ctx}=await boot({appFile:'public/app-v510.js'});const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let progress,finish;
  b.runStoreAnalysis=(shop,opts,onProgress)=>{progress=onProgress;return new Promise(r=>finish=r)};
  b.getStoreAnalysisHistory=async()=>[];
  app.state.activeStore='A';app.navigate('home');
