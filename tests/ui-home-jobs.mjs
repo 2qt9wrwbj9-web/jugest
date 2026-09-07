@@ -76,3 +76,16 @@ test('failed analysis remains reachable without presenting completion',async()=>
  await app.runStoreAnalysis();app.navigate('home');assert.match(app.mount.innerHTML,/解析を完了できませんでした/);
  app.handleAction('analysis-return');assert.match(app.mount.innerHTML,/offline/);
 });
+test('analysis progress updates do not rebuild the whole app on every tick',async()=>{
+ const {app,bridge,ctx}=await boot();const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let progress,finish;
+ b.runStoreAnalysis=(shop,opts,onProgress)=>{progress=onProgress;return new Promise(r=>finish=r)};
+ b.getStoreAnalysisHistory=async()=>[];
+ app.state.activeStore='A';app.navigate('home');
+ const original=app.render.bind(app);let renders=0;app.render=(...args)=>{renders++;return original(...args)};
+ const pending=app.runStoreAnalysis();await Promise.resolve();
+ const afterStart=renders;
+ progress(.11,'候補を抽出中');progress(.22,'候補を採点中');progress(.33,'根拠を整理中');
+ assert.equal(renders,afterStart,'progress-only ticks must patch the visible progress UI without full mount.innerHTML replacement');
+ finish({shop:'A',days:30,positive:[],negative:[]});await pending;
+ assert.ok(renders>afterStart,'completion still needs a full render to publish the result state');
+});
