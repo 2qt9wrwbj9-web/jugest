@@ -7,6 +7,19 @@ function isExistsError(error){
   return status===409||code.includes('already')||code.includes('exist')||message.includes('already exists')||message.includes('already exist');
 }
 
+function configuredReadWriteToken(){
+  try{
+    const token=process?.env?.BLOB_READ_WRITE_TOKEN;
+    return typeof token==='string'&&token.trim()?token.trim():'';
+  }catch{return''}
+}
+
+function withBlobAuth(options={}){
+  if(options?.token)return options;
+  const token=configuredReadWriteToken();
+  return token?{...options,token}:options;
+}
+
 async function streamText(stream){
   if(!stream)return'';
   if(typeof stream.text==='function')return await stream.text();
@@ -22,10 +35,10 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
   async function set(key,value,options={}){
     const onlyIfNew=options.onlyIfNew===true;
     try{
-      const blob=await client.put(full(key),String(value??''),{
+      const blob=await client.put(full(key),String(value??''),withBlobAuth({
         access:'private',addRandomSuffix:false,allowOverwrite:!onlyIfNew,
         contentType:options.contentType||'text/plain; charset=utf-8',
-      });
+      }));
       return{modified:true,etag:blob?.etag||'',blob};
     }catch(error){
       if(onlyIfNew&&isExistsError(error))return{modified:false};
@@ -40,7 +53,7 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
   async function get(key,options={}){
     const getOptions={access:'private'};
     if(options.useCache===false)getOptions.useCache=false;
-    const result=await client.get(full(key),getOptions);
+    const result=await client.get(full(key),withBlobAuth(getOptions));
     if(!result||result.statusCode===404)return null;
     const text=await streamText(result.stream);
     if(options.type==='json'){
@@ -54,7 +67,7 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
     const wanted=full(requestedPrefix),blobs=[];
     let cursor=undefined,guard=0;
     do{
-      const page=await client.list({prefix:wanted,cursor,limit:1000});
+      const page=await client.list(withBlobAuth({prefix:wanted,cursor,limit:1000}));
       for(const item of page?.blobs||[])blobs.push({...item,key:relative(item.pathname||item.key)});
       cursor=page?.cursor||undefined;
       guard++;
@@ -62,7 +75,7 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
     return{blobs};
   }
 
-  async function del(key){await client.del(full(key));}
+  async function del(key){await client.del(full(key),withBlobAuth({}));}
 
   return{set,setJSON,get,list,delete:del,_prefix:prefix};
 }
