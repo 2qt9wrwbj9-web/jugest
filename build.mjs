@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { inflateSync, deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { patchStoreAnalysisHtml, patchStoreAnalysisApp } from './build-store-analysis-view.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
@@ -54,6 +55,7 @@ const sinceRevisionAnchor='sinceRevision:Math.max(0,+collectorSyncState.revision
 const coverageStatusReplacement='sinceRevision:Math.max(0,+collectorSyncState.revision||0),localCoverage:v510CollectorCoveragePayload()}';
 const coverageStatusHits=html.split(sinceRevisionAnchor).length-1;if(coverageStatusHits<5)throw new Error(`Collector status coverage anchor count ${coverageStatusHits}`);
 html=html.replaceAll(sinceRevisionAnchor,coverageStatusReplacement);
+html=patchStoreAnalysisHtml(html);
 fs.writeFileSync(path.join(out,'index.html'),html);
 
 let css=fs.readFileSync(path.join(out,'app-v510.css'),'utf8');
@@ -77,5 +79,6 @@ const compactCollectorSetupClose='</details>\n    <div class="data-kpis">';
 for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'Collector compact setup open'],[collectorSetupHeadingClose,compactCollectorSetupHeadingClose,'Collector compact setup heading'],[collectorSetupClose,compactCollectorSetupClose,'Collector compact setup close']]){
  const hits=app.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);app=app.replace(from,to);
 }
+app=patchStoreAnalysisApp(app);
 fs.writeFileSync(path.join(out,'app-v510.js'),app);
-if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + startup/icon hotfix PASS');
+if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + startup/icon hotfix PASS');
