@@ -1,0 +1,39 @@
+[juggler-relay] BlobPreconditionFailedError: Vercel Blob: Precondition failed: ETag mismatch.
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:283:99)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:284:11)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✖ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (30.367615ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 176.963645
+
+✖ failing tests:
+
+test at tests/collector-batch-v3.mjs:279:1
+✖ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (30.367615ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 'RUN'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:284:33)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'RUN',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

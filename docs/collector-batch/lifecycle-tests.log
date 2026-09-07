@@ -1,0 +1,2 @@
+✔ conditional Blob writes reject a stale ETag without losing newer data (188.12541ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}

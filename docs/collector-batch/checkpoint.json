@@ -1,0 +1,37 @@
+{
+  "status": "implementation_verified_preview_pending",
+  "resumeBranch": "preview/v512-collector-batch",
+  "resumeHead": "2ca6df37d4b71b4a37095c0b031692c874088597",
+  "base": "2ca6df37d4b71b4a37095c0b031692c874088597",
+  "cleanJitterSource": "ebfd684f5aaf697df52c2a9cc0967e901c850b4f",
+  "cleanJitter": "five_files_already_integrated_uncommitted",
+  "collector": "batch_v3_implemented",
+  "tests": {
+    "commandsPassed": 64,
+    "commandsTotal": 64,
+    "collectorPassed": 33,
+    "mainBehaviorPassed": 26,
+    "homeJobsPassed": 10,
+    "protectedHashes": 20,
+    "jitterExactFiles": 5
+  },
+  "preview": null,
+  "productionDeployment": "dpl_5tUiJP4qm5h5NoHpDSw4UKR32mLH",
+  "productionChanged": false,
+  "realBlobVerified": false,
+  "operations": {
+    "get": 2,
+    "put": 3,
+    "list": 0,
+    "delete": 0,
+    "advanced": 3,
+    "reductionPercent": 94
+  },
+  "remaining": [
+    "Preview deployment and browser smoke",
+    "Real Blob verification after suspension recovery",
+    "iPhone native network-exception continuation remains unresolved",
+    "No Production action"
+  ],
+  "updatedAt": "2026-09-07T09:34:50.516Z"
+}

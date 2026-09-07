@@ -1,6 +1,7 @@
 // packed JUGEST relay runtime; semantic source contains juggler-relay-v1
 import zlib from 'node:zlib';
 import { createBlobStore } from './_blob-store.js';
+import { createCollectorBatchDispatcher } from './_collector-batch-v3.js';
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import p0 from './_relay-payload-0.js';
 import p1 from './_relay-payload-1.js';
@@ -78,13 +79,29 @@ export function patchRelaySource(input){
 }
 
 function createConsistentBlobStore(name,options){
-  const base=createBlobStore(name,options);
+  // Preview may share a suspended Blob credential with Production. A separate
+  // namespace prevents a Preview migration from shadowing live Collector data.
+  const root=process.env.VERCEL_ENV==='preview'?'jugest-preview-collector-v3':'jugest';
+  const base=createBlobStore(name,{...options,root});
   return {...base,get:(key,getOptions={})=>base.get(key,{...getOptions,useCache:false})};
 }
 
 const packed=zlib.gunzipSync(Buffer.from(p0+p1+p2,'base64')).toString('utf8');
-const source=patchRelaySource(packed);
-const mod=new Function('createBlobStore','createHash','randomBytes','randomInt','timingSafeEqual',source)(createConsistentBlobStore,createHash,randomBytes,randomInt,timingSafeEqual);
+export function createRelayRuntime({createStore=createConsistentBlobStore,batch=true}={}){
+  let source=patchRelaySource(packed);
+  let dispatchCollector=async()=>null;
+  if(batch){
+    const names=['json','fail','token','digest','byteLength','secureMatch','parseCollectorKey','iosCollectorJobKey','iosCollectorLeaseKey','collectorStoreHash','collectorIndexKey','getCollectorIndex','getIosCollectorConfig','iosCollectorIssueJob','iosCollectorTransportForJob','iosCollectorFinishFailure','iosCollectorPushV2'];
+    const actions={rotateIosCollectorKey:'rotateIosCollectorKey',claimPair:'claimPair',pairStatus:'pairStatus',send:'sendMessage',collectorPush:'collectorPush',iosCollectorConfigure:'iosCollectorConfigure',iosCollectorTargets:'iosCollectorTargets',iosCollectorTargetUpsert:'iosCollectorTargetUpsert',iosCollectorTargetDelete:'iosCollectorTargetDelete',iosCollectorRequeueDate:'iosCollectorRequeueDate',iosCollectorNext:'iosCollectorNext',iosCollectorNextV2:'iosCollectorNextV2',iosCollectorHtmlPush:'iosCollectorHtmlPush',iosCollectorPushV2:'iosCollectorPushV2',collectorPull:'collectorPull',collectorStatus:'collectorStatus',peek:'peekInbox',receive:'receiveMessage',ack:'ackMessage',unlink:'unlink'};
+    source=replaceRequired(source,'    const s = store();','    const s = store();\n    const intercepted = await dispatchCollector(req,s,body);\n    if(intercepted)return intercepted;','transaction dispatch');
+    source=replaceRequired(source,'if (!rec || +rec.expiresAt < t) stale.push(b.key);','if (!rec || +rec.expiresAt + (rec.batchId ? 86400000 : 0) < t) stale.push(b.key);','batch receipt retention');
+    source=replaceRequired(source,'return {default:defaultHandler,config,__test};',`return {default:defaultHandler,config,__test,collectorApi:{${names.join(',')},actions:{${Object.entries(actions).map(([k,v])=>`${k}:${v}`).join(',')}}}};`,'legacy collector helpers');
+  }
+  const runtime=new Function('createBlobStore','createHash','randomBytes','randomInt','timingSafeEqual','dispatchCollector',source)(createStore,createHash,randomBytes,randomInt,timingSafeEqual,(...args)=>dispatchCollector(...args));
+  if(batch)dispatchCollector=createCollectorBatchDispatcher(runtime.collectorApi);
+  return runtime;
+}
+const mod=createRelayRuntime();
 export default mod.default;
 export const config=mod.config;
 export const __test=mod.__test;

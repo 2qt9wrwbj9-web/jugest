@@ -1,0 +1,97 @@
+{
+  "unit": "SDK operations; Advanced equivalent = put + list; no multipart, conflicts or SDK network retries in steady state",
+  "fixture": "One channel, one store, five missing dates, ten machine rows per date. Same unmodified parser and sample content.",
+  "legacy": {
+    "counts": {
+      "get": 95,
+      "put": 45,
+      "list": 5,
+      "delete": 10,
+      "advanced": 50
+    },
+    "bytes": {
+      "snapshot": 0,
+      "payloadPacks": 0
+    },
+    "requestBytes": null
+  },
+  "batch": {
+    "counts": {
+      "get": 2,
+      "put": 3,
+      "list": 0,
+      "delete": 0,
+      "advanced": 3
+    },
+    "bytes": {
+      "snapshot": 7335,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5776
+  },
+  "coldMigration": {
+    "counts": {
+      "get": 6,
+      "put": 3,
+      "list": 4,
+      "delete": 0,
+      "advanced": 7
+    },
+    "bytes": {
+      "snapshot": 7382,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5776
+  },
+  "reductionPercent": 94,
+  "averagePerFetchedDay": 0.6,
+  "backfill365Days": [
+    {
+      "stores": 1,
+      "days": 365,
+      "batches": 73,
+      "advanced": 219
+    },
+    {
+      "stores": 2,
+      "days": 730,
+      "batches": 146,
+      "advanced": 438
+    },
+    {
+      "stores": 3,
+      "days": 1095,
+      "batches": 219,
+      "advanced": 657
+    }
+  ],
+  "dailyOnlyAfterBackfill": [
+    {
+      "stores": 1,
+      "daysPerDailyBatch": 1,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 2,
+      "daysPerDailyBatch": 2,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 3,
+      "daysPerDailyBatch": 3,
+      "annualAdvanced": 1095
+    }
+  ],
+  "exclusions": [
+    "initial configuration",
+    "initial migration lists/reads",
+    "contention and failed writes",
+    "failed/retried pages",
+    "manual force and cleanup",
+    "new local coverage sync",
+    "dashboard activity",
+    "real SDK internal retries"
+  ],
+  "calendar": "The actual inclusive calendar-year window contains 366 or 367 dates. Above estimates deliberately use the requested 365 days.",
+  "realBlobVerified": false
+}

@@ -1,0 +1,141 @@
+✔ conditional Blob writes reject a stale ETag without losing newer data (11.256921ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (50.480118ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (47.631146ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (17.448195ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (9.951694ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (23.439118ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (22.993681ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (14.227071ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (39.400082ms)
+[juggler-relay] Error: lost acknowledgement
+    at f.blob.hooks.afterPut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:92:96)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:16:29)
+    at async set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:18)
+    at async Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:12)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:121:19)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:134:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:93:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ lost Push acknowledgement is recovered by resend without re-saving (14.926992ms)
+[juggler-relay] Error: state unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:99:79)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:121:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:134:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:100:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ unpublished payload is never visible if state commit fails (18.631735ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (24.752651ms)
+✔ multiple stores retain priority and do not cross identities (19.553508ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (31.397599ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (26.185393ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (30.042556ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Object.getWithMetadata (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:60:23)
+    at async readCollectorState (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:12:13)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:126:20)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:155:63)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ corrupt snapshot and absent ETag fail closed (7.298992ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (18.09317ms)
+✖ Launcher messages still save, receive and acknowledge after snapshot migration (13.133955ms)
+✔ key rotation revokes the old key and preserves existing jobs for the new key (43.382321ms)
+✔ cold concurrent migration retains every original day and creates a single claim (16.752442ms)
+[juggler-relay] Error: Collector payload pack is missing or invalid
+    at fail (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:8:28)
+    at Object.get (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:50:59)
+    at async Object.collectorPull (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:845:17)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:133:24)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:194:14)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (15.422904ms)
+✖ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (8.016791ms)
+✔ identical local coverage polling and WAIT polling do not write (12.493636ms)
+[juggler-relay] Error: delete unavailable
+    at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:219:97)
+    at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:90:64)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:135:5)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:134:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:220:11)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✖ a failed cleanup remains journaled and a later authorized request safely finishes it (14.632082ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 22
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 697.879633
+
+✖ failing tests:
+
+test at tests/collector-batch-v3.mjs:169:1
+✖ Launcher messages still save, receive and acknowledge after snapshot migration (13.133955ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - '1788739200000-jy-4X4sEGEc'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:173:67)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: '1788739200000-jy-4X4sEGEc',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/collector-batch-v3.mjs:197:1
+✖ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (8.016791ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  200 !== 500
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:202:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 200,
+    expected: 500,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/collector-batch-v3.mjs:216:1
+✖ a failed cleanup remains journaled and a later authorized request safely finishes it (14.632082ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'WAIT' !== 'DONE'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:221:35)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'WAIT',
+    expected: 'DONE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

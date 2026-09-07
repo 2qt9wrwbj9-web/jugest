@@ -1,0 +1,59 @@
+✔ conditional Blob writes reject a stale ETag without losing newer data (71.683448ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (96.919047ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (48.807495ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (18.31942ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (12.721406ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (42.623403ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (33.257153ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (30.118835ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (50.571264ms)
+[juggler-relay] Error: lost acknowledgement
+    at f.blob.hooks.afterPut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:92:96)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:16:29)
+    at async set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:18)
+    at async Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:12)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:121:19)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:134:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:93:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ lost Push acknowledgement is recovered by resend without re-saving (32.096975ms)
+[juggler-relay] Error: state unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:99:79)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:121:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:134:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:100:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ unpublished payload is never visible if state commit fails (21.625806ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (35.430504ms)
+✔ multiple stores retain priority and do not cross identities (33.468323ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (62.888083ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (39.957876ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (199.915259ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Object.getWithMetadata (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:60:23)
+    at async readCollectorState (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:12:13)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:126:20)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:155:63)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ corrupt snapshot and absent ETag fail closed (101.85633ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (99.650576ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1486.237367

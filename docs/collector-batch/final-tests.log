@@ -1,0 +1,392 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> jugest-v512-vercel-only@5.1.2 test
+> node build.mjs && node tests/run-regressions.mjs
+
+JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + analysis progress stability + startup/icon hotfix PASS
+PASS node --check ana-launcher.js
+PASS node --check hanahana-judge.js
+PASS node --check sync-core.js
+PASS node --check missing-inference.js
+PASS node --check core-v510.js
+PASS node --check app-v510.js
+PASS node --check tests/fixtures/legacy-netlify/functions/relay.mjs
+PASS node --check tests/fixtures/legacy-netlify/functions/sync.mjs
+PASS node tests/index-inline-syntax.mjs
+index inline syntax PASS
+PASS node tests/missing-inference.mjs
+missing value inference PASS
+PASS node tests/collector-relay.mjs
+relay collector integration PASS
+PASS node tests/collector-calendar-year.mjs
+PASS Collector calendar-year scheduling ignores manual startDate and walks backward
+PASS node tests/collector-single-fetch-cadence.mjs
+PASS Collector single-fetch cadence uses 0..30s jitter and no 15-minute window limit
+PASS node --test tests/collector-batch-v3.mjs
+✔ conditional Blob writes reject a stale ETag without losing newer data (39.639203ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (77.196158ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (35.643644ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (28.972926ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (15.360643ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (27.399004ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (27.131462ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (22.726412ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (39.634667ms)
+[juggler-relay] Error: lost acknowledgement
+    at f.blob.hooks.afterPut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:92:96)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:16:29)
+    at async set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:18)
+    at async Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:12)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:19)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:93:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ lost Push acknowledgement is recovered by resend without re-saving (18.437523ms)
+[juggler-relay] Error: state unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:99:79)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:100:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ unpublished payload is never visible if state commit fails (29.159474ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (32.250775ms)
+✔ multiple stores retain priority and do not cross identities (56.622421ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (56.950879ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (44.153302ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (18.447832ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Object.getWithMetadata (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:60:23)
+    at async readCollectorState (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:12:13)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:140:20)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:155:63)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ corrupt snapshot and absent ETag fail closed (8.089288ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (15.113521ms)
+✔ Launcher messages still save, receive and acknowledge after snapshot migration (11.845228ms)
+✔ key rotation revokes the old key and preserves existing jobs for the new key (15.917694ms)
+✔ cold concurrent migration retains every original day and creates a single claim (23.852121ms)
+[juggler-relay] Error: Collector payload pack is missing or invalid
+    at fail (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:8:28)
+    at Object.get (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:54:59)
+    at async Object.collectorPull (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:845:17)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:147:24)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:194:14)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (15.756901ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at readLegacy (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:23:32)
+    at async migrate (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:26:13)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:107:48)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:202:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (14.378355ms)
+✔ identical local coverage polling and WAIT polling do not write (36.231386ms)
+[juggler-relay] Error: delete unavailable
+    at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:219:97)
+    at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:139:11)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:220:11)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ a failed cleanup remains journaled and a later authorized request safely finishes it (14.734558ms)
+[juggler-relay] Error: unlink deletion failed
+    at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:228:97)
+    at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:139:5)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:229:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ unlink interrupted during deletion can be retried with the original receiver credential (28.939674ms)
+✔ iosCollectorRequeueDate wins against a stale parallel Push (10.547357ms)
+✔ iosCollectorTargetDelete wins against a stale parallel Push (11.064783ms)
+✔ unlink wins against a stale parallel Push (14.645595ms)
+✔ real parser accepts HTML/text layouts and rejects identity, missing headers and partial pages independently (22.06512ms)
+[juggler-relay] Error: network unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:264:79)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:265:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ target deletion reclaims unpublished payloads left by an ambiguous failed write (20.370524ms)
+✔ invalid/cross-channel credentials cannot issue or modify jobs (14.766542ms)
+✔ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (6.51064ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1030.460204
+PASS node tests/collector-operations.mjs
+{
+  "unit": "SDK operations; Advanced equivalent = put + list; no multipart, conflicts or SDK network retries in steady state",
+  "fixture": "One channel, one store, five missing dates, ten machine rows per date. Same unmodified parser and sample content.",
+  "legacy": {
+    "counts": {
+      "get": 95,
+      "put": 45,
+      "list": 5,
+      "delete": 10,
+      "advanced": 50
+    },
+    "bytes": {
+      "snapshot": 0,
+      "payloadPacks": 0
+    },
+    "requestBytes": null
+  },
+  "batch": {
+    "counts": {
+      "get": 2,
+      "put": 3,
+      "list": 0,
+      "delete": 0,
+      "advanced": 3
+    },
+    "bytes": {
+      "snapshot": 7335,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5776
+  },
+  "coldMigration": {
+    "counts": {
+      "get": 6,
+      "put": 3,
+      "list": 4,
+      "delete": 0,
+      "advanced": 7
+    },
+    "bytes": {
+      "snapshot": 7382,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5776
+  },
+  "reductionPercent": 94,
+  "averagePerFetchedDay": 0.6,
+  "backfill365Days": [
+    {
+      "stores": 1,
+      "days": 365,
+      "batches": 73,
+      "advanced": 219
+    },
+    {
+      "stores": 2,
+      "days": 730,
+      "batches": 146,
+      "advanced": 438
+    },
+    {
+      "stores": 3,
+      "days": 1095,
+      "batches": 219,
+      "advanced": 657
+    }
+  ],
+  "dailyOnlyAfterBackfill": [
+    {
+      "stores": 1,
+      "daysPerDailyBatch": 1,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 2,
+      "daysPerDailyBatch": 2,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 3,
+      "daysPerDailyBatch": 3,
+      "annualAdvanced": 1095
+    }
+  ],
+  "exclusions": [
+    "initial configuration",
+    "initial migration lists/reads",
+    "contention and failed writes",
+    "failed/retried pages",
+    "manual force and cleanup",
+    "new local coverage sync",
+    "dashboard activity",
+    "real SDK internal retries"
+  ],
+  "calendar": "The actual inclusive calendar-year window contains 366 or 367 dates. Above estimates deliberately use the requested 365 days.",
+  "realBlobVerified": false
+}
+PASS node tests/collector-preservation.mjs
+PASS 20 Production hashes, five byte-exact clean jitter files, Preview namespace and diagnostic exclusion
+PASS node tests/collector-local-coverage.mjs
+PASS Collector skips local JUGEST dates while preserving manual requeue
+PASS node tests/collector-local-coverage-client.mjs
+PASS JUGEST sends bounded local-day coverage during Collector status refresh
+PASS node tests/collector-ui-static.mjs
+collector new-UI static PASS
+PASS node tests/collector-store-management.mjs
+collector store management new-UI PASS
+PASS node tests/ui-v510-foundation.mjs
+v5.1.0 UI foundation static PASS
+PASS node tests/ui-v510-runtime-isolation.mjs
+v5.1.0 no-legacy runtime isolation PASS
+PASS node tests/ui-v510-live-store.mjs
+v5.1.0 live/store native UI static PASS
+PASS node tests/pwa-viewport-background.mjs
+PWA viewport background no-legacy regression PASS
+PASS node tests/ui-v510-records-data.mjs
+v5.1.0 records/data native UI static PASS
+PASS node tests/ui-v510-live-tools.mjs
+v5.1.0 live tools native UI static PASS
+PASS node tests/ui-v510-store-intelligence.mjs
+v5.1.0 store intelligence native UI static PASS
+PASS node tests/ui-v510-strategy-data-management.mjs
+v5.1.0 strategy/data-management native UI static PASS
+PASS node tests/ui-v510-bridge-headless.mjs
+v5.1.0 headless bridge regression PASS (113 core functions)
+PASS node tests/ui-v510-no-legacy-runtime.mjs
+v5.1.0 no-legacy-runtime architecture PASS
+PASS node tests/ui-v510-hana-native.mjs
+v5.1.0 native HANA UI static PASS
+PASS node tests/ui-v510-sync-native.mjs
+v5.1.0 native device sync static PASS
+PASS node tests/ui-v510-record-editor.mjs
+v5.1.0 native record editor static PASS
+PASS node tests/ui-v510-store-finance.mjs
+v5.1.0 native store finance static PASS
+PASS node tests/ui-v510-records-parity.mjs
+v5.1.0 records parity static PASS
+PASS node tests/ui-v510-tag-admin.mjs
+v5.1.0 native tag admin static PASS
+PASS node tests/ui-v510-dead-ui-removed.mjs
+v5.1.0 dead legacy UI removal PASS
+PASS node tests/ui-v510-analysis-history-native.mjs
+v5.1.0 native analysis history static PASS
+PASS node tests/ui-v510-final-shell.mjs
+v5.1.0 FINAL shell completion gate PASS
+PASS node tests/ui-v511-notification-popover.mjs
+v5.1.1 notification popover + silent restore static PASS
+PASS node tests/netlify-config-current-files.mjs
+Historical Netlify fixture config PASS (not deployed)
+PASS node tests/ui-v512-fixed-chrome.mjs
+v5.1.2 fixed mobile chrome static PASS
+PASS node tests/ui-v512-store-delete.mjs
+v5.1.2 safe store deletion static PASS
+PASS node tests/vercel-migration.mjs
+Vercel migration static PASS
+PASS node --check api/_blob-store.js
+PASS node --check api/_node-web.js
+PASS node --check api/_relay-web.js
+PASS node --check api/_sync-web.js
+PASS node --check api/relay.js
+PASS node --check api/sync.js
+PASS node tests/vercel-blob-store.mjs
+Vercel Blob compatibility store PASS
+PASS node tests/vercel-native-backend.mjs
+Vercel native backend static PASS
+PASS node tests/vercel-node-web-adapter.mjs
+Vercel Node/Web adapter PASS
+PASS node tests/vercel-relay-native-behavior.mjs
+Vercel native relay behavior PASS
+PASS node tests/vercel-sync-chunk-transport.mjs
+Vercel sync chunk transport PASS
+PASS node tests/vercel-sync-chunk-server.mjs
+Vercel sync chunk server PASS
+PASS node tests/vercel-sync-concurrency.mjs
+PASS concurrent Device Sync: one writer wins, loser conflicts, and committed revision repairs stale head
+PASS node tests/vercel-server-parity.mjs
+Actual decoded Relay: 20 core functions exact; Device Sync intentional backend changes are behavior-tested separately
+PASS node tests/vercel-launcher-origin.mjs
+Vercel launcher origin migration PASS
+PASS node tests/vercel-launcher-no-netlify-runtime.mjs
+Vercel launcher has no Netlify runtime fallback PASS
+PASS node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs tests/resume-flow-regressions.mjs tests/sync-roundtrip.mjs tests/production-preservation.mjs
+✔ Unchecked or failed Collector status never claims normal operation (42.06171ms)
+✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (11.940616ms)
+✔ Protected inline math and research sections remain identical to the captured Production (7.29568ms)
+✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (17.260357ms)
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (81.19169ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (190.52493ms)
+✔ Automatic Collector refresh clears a recovered transient error (172.872898ms)
+✔ Backup undo explains its partial scope before the user presses it (15.319516ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (37.932589ms)
+✔ Partial backup restore exposes reload recovery and blocks stale in-memory edits (21.311681ms)
+✔ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (14.362124ms)
+✔ Two real sync-core clients encrypt, merge, persist, and reload without losing either device records (476.33607ms)
+✔ Unlinked UI exposes pairing through the actual bridge and existing createPair API (246.783653ms)
+✔ Pending pair survives reload, polls to linked, and resumes on pageshow (198.819721ms)
+✔ Pair expiry and network failure keep retry available; linked channel is never replaced (56.959994ms)
+✔ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (11.776186ms)
+✔ iPhone Shortcut creation/key rotation has its own existing API and survives reload (21.487466ms)
+✔ Launcher queue is counted and imported through receive -> durable save -> ack (45.624188ms)
+✔ CollectorPull still imports days; a failed local save must never ACK Launcher data (37.07185ms)
+✔ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (12.324114ms)
+✔ Backup undo reaches the bridge and reloads; failure unlocks retry (16.641613ms)
+✔ Store save and backup restore errors clear busy state before final render (9.477223ms)
+✔ Missing clipboard API never reports a successful Device Sync copy (10.686967ms)
+✔ First Collector store can be added from an empty store-management screen (15.429012ms)
+✔ Global operation errors keep the current screen and retry controls visible (7.509078ms)
+✔ Sync failure before apply releases the save gate; partial apply requires reload (25.319536ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 854.790576
+PASS node --test tests/ui-home-jobs.mjs
+✔ home summary reports unsaved play and stops resuming unchanged saved input (37.303453ms)
+✔ returning Home reads fresh play input, not a stale summary (29.709679ms)
+✔ malformed persisted unread ledger cannot break rendering (7.467154ms)
+✔ core orchestration reports progress without replacing the analysis engine (9.163332ms)
+✔ next action uses actual state in priority order, including empty stores (7.967998ms)
+✔ missing URL never creates warning/count; success is not unread (8.00075ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (12.897353ms)
+✔ analysis captures store/options, survives every workspace and returns to its completed result (11.927787ms)
+✔ failed analysis remains reachable without presenting completion (7.492286ms)
+✔ analysis progress updates do not rebuild the whole app on every tick (11.826719ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 256.154881
+PASS node tests/store-analysis-evidence-view.mjs
+store-analysis evidence view regression PASS
+PASS node tests/store-optimization-research.mjs
+PASS research chronology, immutable input, future/target poisoning, baseline tie, receipt hashes, invalid data guards
+PASS paired candidate selection and no-data abstention
+64/64 commands passed

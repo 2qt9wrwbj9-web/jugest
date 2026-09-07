@@ -25,6 +25,7 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
       const blob=await client.put(full(key),String(value??''),{
         access:'private',addRandomSuffix:false,allowOverwrite:!onlyIfNew,
         contentType:options.contentType||'text/plain; charset=utf-8',
+        ...(options.ifMatch?{ifMatch:options.ifMatch}:{}),
       });
       return{modified:true,etag:blob?.etag||'',blob};
     }catch(error){
@@ -50,6 +51,15 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
     return text;
   }
 
+  // Transactions must distinguish an absent blob from corrupt JSON and must
+  // read the origin ETag. The legacy get contract remains unchanged.
+  async function getWithMetadata(key){
+    const result=await client.get(full(key),{access:'private',useCache:false});
+    if(!result||result.statusCode===404)return null;
+    if(result.statusCode!==200||!result.blob?.etag)throw new Error('Blob snapshot metadata unavailable');
+    return{value:JSON.parse(await streamText(result.stream)),etag:result.blob.etag};
+  }
+
   async function list({prefix:requestedPrefix=''}={}){
     const wanted=full(requestedPrefix),blobs=[];
     let cursor=undefined,guard=0;
@@ -64,7 +74,7 @@ export function makeBlobStore(name,client,{root='jugest'}={}){
 
   async function del(key){await client.del(full(key));}
 
-  return{set,setJSON,get,list,delete:del,_prefix:prefix};
+  return{set,setJSON,get,getWithMetadata,list,delete:del,_prefix:prefix};
 }
 
 let defaultClientPromise=null;

@@ -1,0 +1,130 @@
+✔ conditional Blob writes reject a stale ETag without losing newer data (11.134216ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (54.651644ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (23.155513ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (20.997873ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (12.582427ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (20.005326ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (17.075637ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (12.789978ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (32.256081ms)
+[juggler-relay] Error: lost acknowledgement
+    at f.blob.hooks.afterPut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:92:96)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:16:29)
+    at async set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:18)
+    at async Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:12)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:19)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:136:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:93:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ lost Push acknowledgement is recovered by resend without re-saving (13.36857ms)
+[juggler-relay] Error: state unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:99:79)
+    at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:136:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:100:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ unpublished payload is never visible if state commit fails (20.026744ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (22.246057ms)
+✔ multiple stores retain priority and do not cross identities (23.695141ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (34.550648ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (30.52594ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (19.804612ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Object.getWithMetadata (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:60:23)
+    at async readCollectorState (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:12:13)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:128:20)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:155:63)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ corrupt snapshot and absent ETag fail closed (6.740589ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (171.590816ms)
+✔ Launcher messages still save, receive and acknowledge after snapshot migration (11.201006ms)
+✔ key rotation revokes the old key and preserves existing jobs for the new key (72.872832ms)
+✔ cold concurrent migration retains every original day and creates a single claim (15.167104ms)
+[juggler-relay] Error: Collector payload pack is missing or invalid
+    at fail (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:8:28)
+    at Object.get (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:54:59)
+    at async Object.collectorPull (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:845:17)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:135:24)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:194:14)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (18.07054ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at readLegacy (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:23:32)
+    at async migrate (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:26:13)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:107:48)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:136:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:202:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (9.158255ms)
+✔ identical local coverage polling and WAIT polling do not write (12.772236ms)
+[juggler-relay] Error: delete unavailable
+    at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:219:97)
+    at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:139:5)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:136:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:220:11)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ a failed cleanup remains journaled and a later authorized request safely finishes it (14.568545ms)
+[juggler-relay] Error: unlink deletion failed
+    at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:228:97)
+    at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
+    at async transactCollector (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:139:5)
+    at async dispatch (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-batch-v3.js:136:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_relay-web.js:97:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:229:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✖ unlink interrupted during deletion can be retried with the original receiver credential (16.203452ms)
+✔ iosCollectorRequeueDate wins against a stale parallel Push (15.668251ms)
+✔ iosCollectorTargetDelete wins against a stale parallel Push (9.027028ms)
+✔ unlink wins against a stale parallel Push (9.3662ms)
+✔ real parser accepts HTML/text layouts and rejects identity, missing headers and partial pages independently (26.609761ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 29
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 912.223855
+
+✖ failing tests:
+
+test at tests/collector-batch-v3.mjs:225:1
+✖ unlink interrupted during deletion can be retried with the original receiver credential (16.203452ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:231:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
