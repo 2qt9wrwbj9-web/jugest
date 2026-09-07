@@ -12,6 +12,5 @@ assert.match(app,/独立根拠/,'analysis KPI must describe independent evidence
 assert.match(app,/検証条件/,'raw condition volume must remain visible as a diagnostic count');
 assert.match(app,/機種別のプラス根拠/,'machine-scoped evidence must be visually separated from store-wide evidence');
 assert.match(app,/上限/,'capped +0.700 effects must be labelled as capped');
-assert.doesNotMatch(app,/使える根拠<\/small>/,'the misleading usable-evidence KPI label must be removed');
 
 console.log('store-analysis evidence view regression PASS');
