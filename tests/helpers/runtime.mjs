@@ -5,7 +5,7 @@ export function memoryStorage(seed={}){
  const map=new Map(Object.entries(seed));return {map,getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)};
 }
 export function makeElement(){return {style:{},dataset:{},children:[],innerHTML:'',listeners:new Map(),append(...x){this.children.push(...x)},addEventListener(k,f){this.listeners.set(k,f)},removeEventListener(k){this.listeners.delete(k)},querySelector(){return null},querySelectorAll(){return []},setAttribute(){},getBoundingClientRect(){return {width:390}}};}
-export async function boot({storage=memoryStorage(),fetch=async()=>{throw Error('Unexpected network')},sync=null,loadApp=true}={}){
+export async function boot({storage=memoryStorage(),fetch=async()=>{throw Error('Unexpected network')},sync=null,loadApp=true,appFile='app-v510.js'}={}){
  const listeners=new Map(),timers=new Map(),classes=new Map();let timerId=0;
  storage.idb ||= new Map();
  const indexedDB={open(){const q={};setImmediate(()=>{q.result={objectStoreNames:{contains:()=>true},close(){},transaction(){const tx={};tx.objectStore=()=>({get(key){const req={};setImmediate(()=>{req.result=storage.idb.get(key);req.onsuccess?.();tx.oncomplete?.()});return req},put(value,key){setImmediate(()=>{if(storage.failIdbWrite){tx.error=Error("IDB write failed");tx.onerror?.();return}storage.idb.set(key,structuredClone(value));tx.oncomplete?.()})},delete(key){setImmediate(()=>{storage.idb.delete(key);tx.oncomplete?.()})}});return tx}};q.onsuccess?.()});return q}};
@@ -21,7 +21,7 @@ export async function boot({storage=memoryStorage(),fetch=async()=>{throw Error(
  const html=fs.readFileSync('index.html','utf8');for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].trim())vm.runInContext(m[1],ctx,{filename:'index-inline.js'});
  if(sync)ctx.JUGESTDeviceSync=sync;else vm.runInContext(fs.readFileSync('sync-core.js','utf8'),ctx,{filename:'sync-core.js'});
  for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
- let app=null;if(loadApp){vm.runInContext(fs.readFileSync('app-v510.js','utf8'),ctx,{filename:'app-v510.js'});app=new (classes.get('jugest-app'))();}
+ let app=null;if(loadApp){vm.runInContext(fs.readFileSync(appFile,'utf8'),ctx,{filename:appFile});app=new (classes.get('jugest-app'))();}
  return {ctx,app,bridge:ctx.JUGEST_CORE_BRIDGE,storage,listeners,timers,emit(type){for(const f of listeners.get(type)||[])f({type})},async tick(ms){for(const [id,t] of [...timers])if(t.ms===ms){if(!t.interval)timers.delete(id);await t.fn()}await new Promise(r=>setImmediate(r))}};
 }
 export const plain=x=>JSON.parse(JSON.stringify(x));
