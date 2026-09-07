@@ -1,5 +1,5 @@
 {
-  "status": "implementation_verified_preview_pending",
+  "status": "preview_build_format_guard_corrected",
   "resumeBranch": "preview/v512-collector-batch",
   "resumeHead": "2ca6df37d4b71b4a37095c0b031692c874088597",
   "base": "2ca6df37d4b71b4a37095c0b031692c874088597",
@@ -33,5 +33,11 @@
     "iPhone native network-exception continuation remains unresolved",
     "No Production action"
   ],
-  "updatedAt": "2026-09-07T09:34:50.516Z"
+  "updatedAt": "2026-09-07T09:37:50.296Z",
+  "runtimeCommit": "4086d6a4c508cef4b1dc1cb78ebe77241c64db95",
+  "firstPreview": {
+    "deployment": "dpl_8Xcdfrs5jVMvr8xGKhjkw4RBc4Gs",
+    "status": "ERROR",
+    "reason": "Vercel minifies vercel.json; exact baseline-equivalent minified hash now accepted"
+  }
 }

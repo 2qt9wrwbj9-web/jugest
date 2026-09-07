@@ -23,16 +23,16 @@ PASS Collector calendar-year scheduling ignores manual startDate and walks backw
 PASS node tests/collector-single-fetch-cadence.mjs
 PASS Collector single-fetch cadence uses 0..30s jitter and no 15-minute window limit
 PASS node --test tests/collector-batch-v3.mjs
-✔ conditional Blob writes reject a stale ETag without losing newer data (39.639203ms)
+✔ conditional Blob writes reject a stale ETag without losing newer data (12.477031ms)
 BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
-✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (77.196158ms)
-✔ partial/all failure (1/5) persists successes and only retries failed days (35.643644ms)
-✔ partial/all failure (2/5) persists successes and only retries failed days (28.972926ms)
-✔ partial/all failure (5/5) persists successes and only retries failed days (15.360643ms)
-✔ same batch and same job replay cannot increment revisions or retry counters (27.399004ms)
-✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (27.131462ms)
-✔ parallel Next claims at most one batch; V2 cannot claim its dates (22.726412ms)
-✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (39.634667ms)
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (49.210785ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (21.901082ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (19.264871ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (10.010789ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (19.237761ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (17.38685ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (12.442226ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (30.790592ms)
 [juggler-relay] Error: lost acknowledgement
     at f.blob.hooks.afterPut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:92:96)
     at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:16:29)
@@ -44,7 +44,7 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:93:17)
     at async Test.run (node:internal/test_runner/test:1389:7)
-✔ lost Push acknowledgement is recovered by resend without re-saving (18.437523ms)
+✔ lost Push acknowledgement is recovered by resend without re-saving (13.417254ms)
 [juggler-relay] Error: state unavailable
     at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:99:79)
     at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
@@ -56,12 +56,12 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:100:17)
     at async Test.run (node:internal/test_runner/test:1389:7)
-✔ unpublished payload is never visible if state commit fails (29.159474ms)
-✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (32.250775ms)
-✔ multiple stores retain priority and do not cross identities (56.622421ms)
-✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (56.950879ms)
-✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (44.153302ms)
-✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (18.447832ms)
+✔ unpublished payload is never visible if state commit fails (16.181105ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (21.190752ms)
+✔ multiple stores retain priority and do not cross identities (20.031877ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (33.117084ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (24.179636ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (19.573608ms)
 [juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
     at JSON.parse (<anonymous>)
     at Object.getWithMetadata (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_blob-store.js:60:23)
@@ -72,11 +72,11 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:155:63)
     at async Test.run (node:internal/test_runner/test:1389:7)
     at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
-✔ corrupt snapshot and absent ETag fail closed (8.089288ms)
-✔ V2 lease ownership and explicit failed result receipts prevent stale retries (15.113521ms)
-✔ Launcher messages still save, receive and acknowledge after snapshot migration (11.845228ms)
-✔ key rotation revokes the old key and preserves existing jobs for the new key (15.917694ms)
-✔ cold concurrent migration retains every original day and creates a single claim (23.852121ms)
+✔ corrupt snapshot and absent ETag fail closed (5.20586ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (23.318306ms)
+✔ Launcher messages still save, receive and acknowledge after snapshot migration (12.201329ms)
+✔ key rotation revokes the old key and preserves existing jobs for the new key (17.764321ms)
+✔ cold concurrent migration retains every original day and creates a single claim (14.031836ms)
 [juggler-relay] Error: Collector payload pack is missing or invalid
     at fail (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:8:28)
     at Object.get (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:54:59)
@@ -87,7 +87,7 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:194:14)
     at async Test.run (node:internal/test_runner/test:1389:7)
     at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
-✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (15.756901ms)
+✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (23.229454ms)
 [juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
     at JSON.parse (<anonymous>)
     at readLegacy (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:23:32)
@@ -98,8 +98,8 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:202:17)
     at async Test.run (node:internal/test_runner/test:1389:7)
     at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
-✔ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (14.378355ms)
-✔ identical local coverage polling and WAIT polling do not write (36.231386ms)
+✔ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (7.363639ms)
+✔ identical local coverage polling and WAIT polling do not write (11.31809ms)
 [juggler-relay] Error: delete unavailable
     at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:219:97)
     at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
@@ -110,7 +110,7 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:220:11)
     at async Test.run (node:internal/test_runner/test:1389:7)
     at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
-✔ a failed cleanup remains journaled and a later authorized request safely finishes it (14.734558ms)
+✔ a failed cleanup remains journaled and a later authorized request safely finishes it (11.721635ms)
 [juggler-relay] Error: unlink deletion failed
     at f.blob.s.delete (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:228:97)
     at drainGarbage (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/api/_collector-state-v3.js:94:64)
@@ -121,11 +121,11 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:229:17)
     at async Test.run (node:internal/test_runner/test:1389:7)
     at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
-✔ unlink interrupted during deletion can be retried with the original receiver credential (28.939674ms)
-✔ iosCollectorRequeueDate wins against a stale parallel Push (10.547357ms)
-✔ iosCollectorTargetDelete wins against a stale parallel Push (11.064783ms)
-✔ unlink wins against a stale parallel Push (14.645595ms)
-✔ real parser accepts HTML/text layouts and rejects identity, missing headers and partial pages independently (22.06512ms)
+✔ unlink interrupted during deletion can be retried with the original receiver credential (15.040017ms)
+✔ iosCollectorRequeueDate wins against a stale parallel Push (9.725646ms)
+✔ iosCollectorTargetDelete wins against a stale parallel Push (9.167892ms)
+✔ unlink wins against a stale parallel Push (10.459055ms)
+✔ real parser accepts HTML/text layouts and rejects identity, missing headers and partial pages independently (40.167736ms)
 [juggler-relay] Error: network unavailable
     at f.blob.hooks.beforePut (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:264:79)
     at Object.put (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/helpers/collector-blob.mjs:12:66)
@@ -137,9 +137,9 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
     at async call (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:14:35)
     at async TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/collector-batch-v3.mjs:265:17)
     at async Test.run (node:internal/test_runner/test:1389:7)
-✔ target deletion reclaims unpublished payloads left by an ambiguous failed write (20.370524ms)
-✔ invalid/cross-channel credentials cannot issue or modify jobs (14.766542ms)
-✔ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (6.51064ms)
+✔ target deletion reclaims unpublished payloads left by an ambiguous failed write (10.415673ms)
+✔ invalid/cross-channel credentials cannot issue or modify jobs (19.006621ms)
+✔ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (7.402018ms)
 ℹ tests 33
 ℹ suites 0
 ℹ pass 33
@@ -147,7 +147,7 @@ BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 1030.460204
+ℹ duration_ms 711.433129
 PASS node tests/collector-operations.mjs
 {
   "unit": "SDK operations; Advanced equivalent = put + list; no multipart, conflicts or SDK network retries in steady state",
@@ -331,32 +331,32 @@ Vercel launcher origin migration PASS
 PASS node tests/vercel-launcher-no-netlify-runtime.mjs
 Vercel launcher has no Netlify runtime fallback PASS
 PASS node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs tests/resume-flow-regressions.mjs tests/sync-roundtrip.mjs tests/production-preservation.mjs
-✔ Unchecked or failed Collector status never claims normal operation (42.06171ms)
-✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (11.940616ms)
-✔ Protected inline math and research sections remain identical to the captured Production (7.29568ms)
-✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (17.260357ms)
-✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (81.19169ms)
-✔ History navigation cannot hide recovery after a partial Device Sync apply (190.52493ms)
-✔ Automatic Collector refresh clears a recovered transient error (172.872898ms)
-✔ Backup undo explains its partial scope before the user presses it (15.319516ms)
-✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (37.932589ms)
-✔ Partial backup restore exposes reload recovery and blocks stale in-memory edits (21.311681ms)
-✔ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (14.362124ms)
-✔ Two real sync-core clients encrypt, merge, persist, and reload without losing either device records (476.33607ms)
-✔ Unlinked UI exposes pairing through the actual bridge and existing createPair API (246.783653ms)
-✔ Pending pair survives reload, polls to linked, and resumes on pageshow (198.819721ms)
-✔ Pair expiry and network failure keep retry available; linked channel is never replaced (56.959994ms)
-✔ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (11.776186ms)
-✔ iPhone Shortcut creation/key rotation has its own existing API and survives reload (21.487466ms)
-✔ Launcher queue is counted and imported through receive -> durable save -> ack (45.624188ms)
-✔ CollectorPull still imports days; a failed local save must never ACK Launcher data (37.07185ms)
-✔ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (12.324114ms)
-✔ Backup undo reaches the bridge and reloads; failure unlocks retry (16.641613ms)
-✔ Store save and backup restore errors clear busy state before final render (9.477223ms)
-✔ Missing clipboard API never reports a successful Device Sync copy (10.686967ms)
-✔ First Collector store can be added from an empty store-management screen (15.429012ms)
-✔ Global operation errors keep the current screen and retry controls visible (7.509078ms)
-✔ Sync failure before apply releases the save gate; partial apply requires reload (25.319536ms)
+✔ Unchecked or failed Collector status never claims normal operation (38.694842ms)
+✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (12.775146ms)
+✔ Protected inline math and research sections remain identical to the captured Production (8.195159ms)
+✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (57.18202ms)
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (88.891944ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (21.794718ms)
+✔ Automatic Collector refresh clears a recovered transient error (28.094963ms)
+✔ Backup undo explains its partial scope before the user presses it (11.289307ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (19.340875ms)
+✔ Partial backup restore exposes reload recovery and blocks stale in-memory edits (8.836805ms)
+✔ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (14.058964ms)
+✔ Two real sync-core clients encrypt, merge, persist, and reload without losing either device records (134.141418ms)
+✔ Unlinked UI exposes pairing through the actual bridge and existing createPair API (114.320409ms)
+✔ Pending pair survives reload, polls to linked, and resumes on pageshow (48.055363ms)
+✔ Pair expiry and network failure keep retry available; linked channel is never replaced (32.902264ms)
+✔ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (13.345101ms)
+✔ iPhone Shortcut creation/key rotation has its own existing API and survives reload (28.778394ms)
+✔ Launcher queue is counted and imported through receive -> durable save -> ack (52.438656ms)
+✔ CollectorPull still imports days; a failed local save must never ACK Launcher data (48.963796ms)
+✔ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (8.210859ms)
+✔ Backup undo reaches the bridge and reloads; failure unlocks retry (9.733482ms)
+✔ Store save and backup restore errors clear busy state before final render (7.332776ms)
+✔ Missing clipboard API never reports a successful Device Sync copy (8.780506ms)
+✔ First Collector store can be added from an empty store-management screen (12.564096ms)
+✔ Global operation errors keep the current screen and retry controls visible (6.440397ms)
+✔ Sync failure before apply releases the save gate; partial apply requires reload (10.112185ms)
 ℹ tests 26
 ℹ suites 0
 ℹ pass 26
@@ -364,18 +364,18 @@ PASS node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 854.790576
+ℹ duration_ms 546.278493
 PASS node --test tests/ui-home-jobs.mjs
-✔ home summary reports unsaved play and stops resuming unchanged saved input (37.303453ms)
-✔ returning Home reads fresh play input, not a stale summary (29.709679ms)
-✔ malformed persisted unread ledger cannot break rendering (7.467154ms)
-✔ core orchestration reports progress without replacing the analysis engine (9.163332ms)
-✔ next action uses actual state in priority order, including empty stores (7.967998ms)
-✔ missing URL never creates warning/count; success is not unread (8.00075ms)
-✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (12.897353ms)
-✔ analysis captures store/options, survives every workspace and returns to its completed result (11.927787ms)
-✔ failed analysis remains reachable without presenting completion (7.492286ms)
-✔ analysis progress updates do not rebuild the whole app on every tick (11.826719ms)
+✔ home summary reports unsaved play and stops resuming unchanged saved input (32.946721ms)
+✔ returning Home reads fresh play input, not a stale summary (23.736051ms)
+✔ malformed persisted unread ledger cannot break rendering (6.904006ms)
+✔ core orchestration reports progress without replacing the analysis engine (7.783576ms)
+✔ next action uses actual state in priority order, including empty stores (6.141696ms)
+✔ missing URL never creates warning/count; success is not unread (6.802155ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (13.545377ms)
+✔ analysis captures store/options, survives every workspace and returns to its completed result (11.499759ms)
+✔ failed analysis remains reachable without presenting completion (7.57313ms)
+✔ analysis progress updates do not rebuild the whole app on every tick (9.961651ms)
 ℹ tests 10
 ℹ suites 0
 ℹ pass 10
@@ -383,7 +383,7 @@ PASS node --test tests/ui-home-jobs.mjs
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 256.154881
+ℹ duration_ms 241.283103
 PASS node tests/store-analysis-evidence-view.mjs
 store-analysis evidence view regression PASS
 PASS node tests/store-optimization-research.mjs

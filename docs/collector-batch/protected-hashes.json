@@ -29,5 +29,6 @@
     "tests/helpers/runtime.mjs": "81396d600e0b7f9fc8620a235376eab6e328e60ff6a27ff153df9a4bad0b174c",
     "tests/production-preservation.mjs": "076bbdf7a5703851a4b62200c7c09f1495be4fcc003f91b4b282703006f3cc17",
     "tests/ui-home-jobs.mjs": "886c54a2367133dc03e8886746de61493041676ec7cce11067aead11f951bb72"
-  }
+  },
+  "vercelMinifiedSha256": "252af1b2ab140b2f4eee435327180767e199b1cfcc08dffc3b5b9a744092171d"
 }
