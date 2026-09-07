@@ -31,8 +31,11 @@ export default async function handler(req,res){
   }catch(error){direct.presignedGet={ok:false,...errInfo(error)}}
 
   try{
-    const page=await blobList({prefix:'jugest/',limit:1});
-    const first=page?.blobs?.[0];
+    const page=await blobList({prefix:'jugest/juggler-relay-v1/collector-day/',limit:1000});
+    const rows=Array.isArray(page?.blobs)?page.blobs:[],cut24=Date.now()-24*60*60*1000;
+    const stamps=rows.map(x=>new Date(x?.uploadedAt||0).getTime()).filter(Number.isFinite).filter(x=>x>0);
+    const first=rows[0];
+    direct.collectorInventory={listed:rows.length,truncated:!!page?.cursor,last24h:stamps.filter(x=>x>=cut24).length,oldest:stamps.length?new Date(Math.min(...stamps)).toISOString():null,newest:stamps.length?new Date(Math.max(...stamps)).toISOString():null};
     direct.existing={hasBlob:!!first};
     if(first?.pathname){
       try{
