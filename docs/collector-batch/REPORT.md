@@ -1,6 +1,6 @@
 # JUGEST v5.1.2 Collector batch / clean jitter Preview
 
-再開時：`preview/v512-collector-batch` / `2ca6df37d4b71b4a37095c0b031692c874088597`。
+最初の再開時：`preview/v512-collector-batch` / `2ca6df37d4b71b4a37095c0b031692c874088597`。
 baseは同じProduction commit。clean jitterの出典は
 `ebfd684f5aaf697df52c2a9cc0967e901c850b4f`。
 
@@ -120,3 +120,30 @@ node tests/collector-operations.mjs docs/collector-batch/operations.json
 SDK依存は既存の `@vercel/blob@2.8.0` のままです。fixture時刻は
 `2026-09-07T00:00:00Z`、閏年テストは `2024-03-01T00:00:00Z`。
 Production baseline、commit/Preview情報はcheckpointと最終回答を参照してください。
+
+## Preview検証の完了記録
+
+直近の再開時HEAD：`fe719e8efbd91dc9c30080f98568434bd6363ac4`、未コミット差分なし。
+最終branch：`preview/v512-collector-batch`。最終HEADはこの確認記録を保存する
+文書commitです。実装commitは`4086d6a4c508cef4b1dc1cb78ebe77241c64db95`、
+監査の整形対応commitは`fe719e8efbd91dc9c30080f98568434bd6363ac4`です。
+
+Preview：https://jugest-git-preview-v512-collector-batch-cwwvc45jk6-2652.vercel.app/
+
+検証済みimmutable Preview：https://jugest-otbeimydl-cwwvc45jk6-2652.vercel.app/
+
+- Vercel上でも64/64コマンドPASS、READY、targetはPreview。
+- 公開ホームで5.1.2／次アクション／最近の解析・実戦／小型データ状況を確認。
+- app-v510.js / CSSはローカルのfresh buildとSHA-256一致。HTMLはその完全な内容の
+  末尾にVercel公式Previewツールバーが1つ追加されるだけと確認。
+- 無効キーによるV3 Nextの401 unauthorizedを確認。Blobにアクセスする前の経路です。
+- 機密キーや実データを送信しておらず、実Blobの保存経路は未検証のままです。
+- 初回Previewは63/64で停止。Vercel CLIによるvercel.jsonのcompact整形をhashで
+  特定しました。設定が同じ既知の整形だけを許容し、maxDuration変更がFAILになることも
+  別の一時ディレクトリで確認。リポジトリのvercel.jsonは一切変更していません。
+- 最終確認時のProductionは`dpl_5tUiJP4qm5h5NoHpDSw4UKR32mLH`／指定baseline。
+  main、Production alias、環境設定、Blob設定は未変更です。
+
+変更ファイルの全一覧：`changed-files.txt`。差分はCollector、clean jitter、テスト、
+この作業の文書・証跡だけです。一時展開したrelayソースは削除し、診断コードは
+配信対象に含めていません。

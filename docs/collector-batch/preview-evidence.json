@@ -1,0 +1,44 @@
+{
+  "url": "https://jugest-otbeimydl-cwwvc45jk6-2652.vercel.app/",
+  "commit": "fe719e8efbd91dc9c30080f98568434bd6363ac4",
+  "deployment": "dpl_EvFeXmrut65u6kjJ6y14XAwfqXXY",
+  "artifacts": [
+    {
+      "file": "index.html",
+      "status": 200,
+      "sourceSha256": "8806f0ae5a6a151f9f5afae7709781bdab7598c199497a32a8bde38949d462e8",
+      "exact": false,
+      "onlyExpectedVercelToolbar": true
+    },
+    {
+      "file": "app-v510.js",
+      "status": 200,
+      "sourceSha256": "67a9e7f487a0b62a665f35f08fb284135f632827bb6fabfa5c932cdbb2637ea8",
+      "exact": true,
+      "onlyExpectedVercelToolbar": false
+    },
+    {
+      "file": "app-v510.css",
+      "status": 200,
+      "sourceSha256": "d7b2c360a3e2d7728ca59d1f973419037515827b07721df92f95b1cd65901c5a",
+      "exact": true,
+      "onlyExpectedVercelToolbar": false
+    }
+  ],
+  "api": {
+    "action": "iosCollectorNextBatchV3",
+    "credential": "intentionally invalid; no Blob access",
+    "status": 401,
+    "code": "unauthorized"
+  },
+  "browser": {
+    "homeRendered": true,
+    "version": "5.1.2",
+    "nextAction": "店舗を登録する",
+    "recentAnalysisAndPlay": true,
+    "dataStatus": true,
+    "appErrors": [],
+    "excludedExtensionError": true
+  },
+  "realBlobVerified": false
+}

@@ -1,10 +1,10 @@
 {
-  "status": "preview_build_format_guard_corrected",
+  "status": "preview_verified_stop_before_production",
   "resumeBranch": "preview/v512-collector-batch",
   "resumeHead": "2ca6df37d4b71b4a37095c0b031692c874088597",
   "base": "2ca6df37d4b71b4a37095c0b031692c874088597",
   "cleanJitterSource": "ebfd684f5aaf697df52c2a9cc0967e901c850b4f",
-  "cleanJitter": "five_files_already_integrated_uncommitted",
+  "cleanJitter": "committed_five_files_byte_exact",
   "collector": "batch_v3_implemented",
   "tests": {
     "commandsPassed": 64,
@@ -15,7 +15,14 @@
     "protectedHashes": 20,
     "jitterExactFiles": 5
   },
-  "preview": null,
+  "preview": {
+    "url": "https://jugest-git-preview-v512-collector-batch-cwwvc45jk6-2652.vercel.app/",
+    "verifiedDeployment": "dpl_EvFeXmrut65u6kjJ6y14XAwfqXXY",
+    "verifiedCommit": "fe719e8efbd91dc9c30080f98568434bd6363ac4",
+    "state": "READY",
+    "target": "preview",
+    "realBlobVerified": false
+  },
   "productionDeployment": "dpl_5tUiJP4qm5h5NoHpDSw4UKR32mLH",
   "productionChanged": false,
   "realBlobVerified": false,
@@ -28,16 +35,24 @@
     "reductionPercent": 94
   },
   "remaining": [
-    "Preview deployment and browser smoke",
-    "Real Blob verification after suspension recovery",
-    "iPhone native network-exception continuation remains unresolved",
-    "No Production action"
+    "Real Blob: conditional writes, migration, cleanup, operation counts after suspension recovery",
+    "Actual iPhone automation and interrupted file recovery",
+    "Native Shortcuts network-exception continuation within the same invocation remains unresolved",
+    "Production NO-GO; do not merge/promote without separate authorization"
   ],
-  "updatedAt": "2026-09-07T09:37:50.296Z",
+  "updatedAt": "2026-09-07T14:43:15.771Z",
   "runtimeCommit": "4086d6a4c508cef4b1dc1cb78ebe77241c64db95",
   "firstPreview": {
     "deployment": "dpl_8Xcdfrs5jVMvr8xGKhjkw4RBc4Gs",
     "status": "ERROR",
     "reason": "Vercel minifies vercel.json; exact baseline-equivalent minified hash now accepted"
-  }
+  },
+  "latestResume": {
+    "branch": "preview/v512-collector-batch",
+    "head": "fe719e8efbd91dc9c30080f98568434bd6363ac4",
+    "uncommittedChanges": []
+  },
+  "finalBranch": "preview/v512-collector-batch",
+  "finalCommitResolution": "git rev-parse preview/v512-collector-batch; the following commit only records verification documents",
+  "productionVerifiedAt": "2026-09-07T14:43:15.770Z"
 }

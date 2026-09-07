@@ -24,7 +24,7 @@ Blob復旧後にPreviewで発行するキーを使用してください。
 
 | 変数 | 値 |
 | --- | --- |
-| 送信先 | 最終レポートのPreview URLの末尾に `/api/relay` を付けたURL |
+| 送信先 | https://jugest-git-preview-v512-collector-batch-cwwvc45jk6-2652.vercel.app/api/relay |
 | Collectorキー | 同じPreviewのJUGESTで発行したキー |
 
 キーはJSONの値として渡します。URLのクエリやページ取得URLには付けません。

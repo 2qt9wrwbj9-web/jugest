@@ -18,6 +18,7 @@ docs/collector-batch/lifecycle-red.log
 docs/collector-batch/lifecycle-tests.log
 docs/collector-batch/operations.json
 docs/collector-batch/orphan-red.log
+docs/collector-batch/preview-evidence.json
 docs/collector-batch/protected-hashes.json
 docs/collector-batch/regression-initial.log
 docs/collector-batch/sdk-error-red.log
