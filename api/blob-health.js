@@ -1,5 +1,5 @@
 import { createBlobStore } from './_blob-store.js';
-import { issueSignedToken, presignUrl } from '@vercel/blob';
+import { get as blobGet, list as blobList, issueSignedToken, presignUrl } from '@vercel/blob';
 
 function errInfo(error){
   return{status:Number(error?.status||error?.statusCode||error?.response?.status||0)||500,name:String(error?.name||''),code:String(error?.code||''),error:String(error?.message||'blob_error').slice(0,180)};
@@ -29,6 +29,27 @@ export default async function handler(req,res){
     const r=await fetch(presignedUrl);
     direct.presignedGet={ok:r.status===404,status:r.status};
   }catch(error){direct.presignedGet={ok:false,...errInfo(error)}}
+
+  try{
+    const page=await blobList({prefix:'jugest/',limit:1});
+    const first=page?.blobs?.[0];
+    direct.existing={hasBlob:!!first};
+    if(first?.pathname){
+      try{
+        const result=await blobGet(first.pathname,{access:'private',useCache:false});
+        direct.existing.normalRead={ok:!!result,status:result?.statusCode||404};
+        try{await result?.stream?.cancel?.()}catch{}
+      }catch(error){direct.existing.normalRead={ok:false,...errInfo(error)}}
+      try{
+        const signed=await issueSignedToken({pathname:first.pathname,operations:['get'],validUntil:Date.now()+5*60*1000});
+        const {presignedUrl}=await presignUrl(signed,{operation:'get',pathname:first.pathname,access:'private',validUntil:Date.now()+60*1000,useCache:false});
+        const r=await fetch(presignedUrl);
+        direct.existing.presignedRead={ok:r.ok,status:r.status};
+        try{await r.body?.cancel?.()}catch{}
+      }catch(error){direct.existing.presignedRead={ok:false,...errInfo(error)}}
+    }
+  }catch(error){direct.existing={hasBlob:false,listError:errInfo(error)}}
+
   const [oldDeployment,currentProduction]=await Promise.all([
     relayProbe('https://jugest-81d94cu0g-cwwvc45jk6-2652.vercel.app/api/relay'),
     relayProbe('https://jugest.vercel.app/api/relay'),
