@@ -1,0 +1,33 @@
+✔ home summary reports unsaved play and stops resuming unchanged saved input (22.225915ms)
+✔ returning Home reads fresh play input, not a stale summary (18.56243ms)
+✔ malformed persisted unread ledger cannot break rendering (4.947964ms)
+✔ core orchestration reports progress without replacing the analysis engine (4.950047ms)
+✔ next action uses actual state in priority order, including empty stores (4.437956ms)
+✔ missing URL never creates warning/count; success is not unread (4.422173ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (8.345093ms)
+✖ analysis captures store/options, survives every workspace and returns to its completed result (5.986978ms)
+✔ failed analysis remains reachable without presenting completion (5.201271ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 152.082314
+
+✖ failing tests:
+
+test at tests/ui-home-jobs.mjs:60:1
+✖ analysis captures store/options, survives every workspace and returns to its completed result (5.986978ms)
+  AssertionError [ERR_ASSERTION]: inline progress must not be duplicated even after selecting another store
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/ui-home-jobs.mjs:68:68)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><svg class="bell" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace intelligence-screen"><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / ANALYSIS</div><button class="store-title compact" type="button" data-open-store-selector><span>B</span><span class="store-down">⌄</span></button><div class="intel-controls analysis-controls"><label><small>期間</small><select data-analysis-period><option value="30" >30日</option><option value="60" >60日</option><option value="90" >90日</option><option value="180" selected>180日</option><option value="all" >全期間</option></select></label><label><small>最低G</small><select data-analysis-ming><option value="0" >指定なし</option><option value="1000" >1000G</option><option value="2000" selected>2000G</option><option value="3000" >3000G</option></select></label><label><small>条件数</small><select data-analysis-dims><option value="1" selected>単一</option><option value="2" >最大2</option><option value="3" >最大3</option></select></label><label><small>最低日数</small><select data-analysis-mindays><option value="3" >3日</option><option value="4" selected>4日</option><option value="5" >5日</option><option value="8" >8日</option></select></label><button type="button" data-analysis-run disabled>解析中…</button></div><div class="loading-card"><b>A · 42%</b><progress max="100" value="42" aria-label="店舗解析の進捗"></progress><small>条件を検証中。他のタブへ移動できます。</small></div><div class="section-label analysis-history-title">解析履歴</div><div class="analysis-history-list"><div class="empty-card">この店舗の解析履歴はまだないよ。</div></div></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class=""><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class="on"><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class=""><span class="nav-icon">⇅</span><span>データ</span></button></nav><button type="button" class="analysis-chip" data-action="analysis-return" aria-label="Aの解析へ戻る"><span>店舗解析中 42%</span><progress max="100" value="42" aria-label="店舗解析の進捗"></progress></button></div>',
+    expected: /class="analysis-chip/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

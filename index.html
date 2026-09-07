@@ -2319,7 +2319,18 @@ function v510CoreSummary(){
  let syncAt=Math.max(+collectorSyncState?.lastSyncAt||0,+iosTargetState?.updatedAt||0),syncLabel=syncAt?new Date(syncAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"未同期";
  let targets=Array.isArray(iosTargetState?.stores)?iosTargetState.stores:[],enabledTargets=targets.filter(x=>x?.enabled!==false).length,errorTargets=targets.filter(x=>x?.runtime?.lastErrorCode).length,missingDays=targets.filter(x=>x?.enabled!==false).reduce((a,x)=>a+Math.max(0,+x?.missingDays||0),0),unregistered=known.filter(x=>!x.registered).length;
  let externalDayCount=new Set((externalDays||[]).map(d=>d?.date).filter(Boolean)).size,pending=Math.max(0,+iosTargetState?.pending||0);
- return{storeCount:known.length,runCount:(sessions||[]).length,externalDayCount,syncLabel,currentStore,currentStoreMeta:latest?`最終データ ${latest}`:"店舗データから分析へ",linked:v510CollectorPairState()==="linked",pending,launcherPending:v510LauncherPending,collectorCheckedAt:v510CollectorCheckedAt,collectorError:v510CollectorError,enabledTargets,errorTargets,missingDays,unregistered}
+ return{activePlay:v512ActivePlaySummary(),storeCount:known.length,runCount:(sessions||[]).length,externalDayCount,syncLabel,currentStore,currentStoreMeta:latest?`最終データ ${latest}`:"店舗データから分析へ",linked:v510CollectorPairState()==="linked",pending,launcherPending:v510LauncherPending,collectorCheckedAt:v510CollectorCheckedAt,collectorError:v510CollectorError,enabledTargets,errorTargets,missingDays,unregistered}
+}
+
+// UI metadata only: do not run posterior math while rendering Home.
+function v512ActivePlaySummary(){
+ const saved=(source,key,G,judgeData)=>(sessions||[]).some(r=>r.source===source&&r.machine===key&&+r.endG===+G&&JSON.stringify(r.judgeData)===JSON.stringify(judgeData));
+ const keys=[cur,...JUGGLER_MACHINE_KEYS.filter(k=>k!==cur)];
+ for(const k of keys){const p=liveSessions[k];if(p&&!saved("live",k,p.currentG,{before:{G:+p.startG||0,B:+p.B||0,R:+p.R||0,D:+p.D||0,style:p.style},after:{v:clone(p.v),on:clone(p.on)}}))return{action:"live-rev",machine:k,label:`${M[k]?.name||k} · 後ヅモ実戦`}}
+ for(const k of keys){const d=data[k];if(+d?.G>0&&!saved("judge",k,d.G,d))return{action:"live-judge",machine:k,label:`${M[k]?.name||k} · ${d.G}G`}}
+ const h=v510HanaStateData,s=h?.sessions?.[h?.machine];
+ if(s?.active)return{action:"live-hana",machine:h.machine,label:"ハナハナの実戦"};
+ return null;
 }
 
 function v510EnsureJudgeRuntime(machine=cur){
@@ -2579,18 +2590,21 @@ function v510GetTodayPlan(shop,date,opts={}){shop=shop||v510GetActiveStore();dat
 function v510AnalysisEvidence(c){return{label:c?.label||c?.name||c?.meta?.label||"",practicalEffect:Number.isFinite(+c?.practicalEffect)?+c.practicalEffect:0,confidence:Number.isFinite(+c?.confidence)?+c.confidence:0,days:+c?.days||0,rows:+c?.rows||0,recent30:Number.isFinite(+c?.recent30)?+c.recent30:null,q:Number.isFinite(+c?.q)?+c.q:null,rankScore:Number.isFinite(+c?.rankScore)?+c.rankScore:null,status:c?.status||""}}
 function v510ComplexPattern(c){return{label:c?.label||"",grade:c?.grade||"",candidateAvg:Number.isFinite(+c?.candidateAvg)?+c.candidateAvg:null,forecastEffect:Number.isFinite(+c?.forecastEffect)?+c.forecastEffect:null,strength:Number.isFinite(+c?.strength)?+c.strength:null,confidence:Number.isFinite(+c?.confidence)?+c.confidence:null,overfitRisk:Number.isFinite(+c?.overfitRisk)?+c.overfitRisk:null,days:+c?.days||0,rows:+c?.rows||0,q:Number.isFinite(+c?.q)?+c.q:null,comparisonType:c?.comparisonType||""}}
 function v510StoreAnalysisResult(r=bruteResults){if(!r)return null;let all=r.singleEvidence?.all||[],positive=all.filter(c=>c.practicalEffect>0).slice(0,20),negative=all.filter(c=>c.practicalEffect<0).slice(0,10);return{shop:r.prep?.shop||"",from:r.prep?.from||"",latest:r.prep?.latest||"",days:r.prep?.days?.length||0,rowCount:+r.prep?.rowCount||0,meanES:Number.isFinite(+r.prep?.overall?.meanES)?+r.prep.overall.meanES:null,usableCount:+r.singleEvidence?.usableCount||0,conditionCount:+r.singleEvidence?.conditionCount||0,evidenceConfidence:Number.isFinite(+r.singleEvidence?.confidence)?+r.singleEvidence.confidence:null,complexTested:+r.complexTested||0,fdrSignificant:+r.fdrSignificant||0,confirmSignificant:+r.confirmSignificant||0,rawS:+r.rawS||0,rawA:+r.rawA||0,maxDims:+r.maxDims||1,machines:(r.machineSummaries||[]).map(x=>({machine:x.machine,machineName:analysisMachineName(x.machine),n:+x.n||0,meanES:Number.isFinite(+x.meanES)?+x.meanES:null,delta:Number.isFinite(+x.delta)?+x.delta:null,meanP5:Number.isFinite(+x.meanP5)?+x.meanP5:null})),positive:positive.map(v510AnalysisEvidence),negative:negative.map(v510AnalysisEvidence),patterns:bruteTop(r.patterns||[],20).map(v510ComplexPattern),machinePatterns:bruteTop(r.machinePatterns||[],20).map(v510ComplexPattern)}}
-async function v510RunStoreAnalysis(shop,opts={}){
+async function v510RunStoreAnalysis(shop,opts={},onProgress){
  shop=shop||v510GetActiveStore();if(!shop)throw new Error("分析する店舗を選んでね");
  let period=["30","60","90","180","all"].includes(String(opts.period))?String(opts.period):"180",minG=["0","1000","2000","3000"].includes(String(opts.minG))?String(opts.minG):"2000",maxDims=["1","2","3"].includes(String(opts.maxDims))?String(opts.maxDims):"1",minDays=["3","4","5","8"].includes(String(opts.minDays))?String(opts.minDays):"4";
  v4PredictionCache.clear();v4TwinCache.clear();v4PlanResultCache.clear();bruteResults=null;
+ onProgress?.(0,"データを準備中");await nextFrame();
  await ensureExternalJudged(externalDays,{shop});
+ onProgress?.(.15,"単一条件を検証中");await nextFrame();
  let prep=brutePrepare(shop,period,+minG||0);if(!prep||prep.days.length<3)throw new Error("分析できる日数が足りないよ。最低3日くらい必要。");
  let singleEvidence=bruteSingleGenerate(prep,+minDays||4),all=[];
- if((+maxDims||1)>=2)all=await bruteGenerate(prep,+maxDims,+minDays||4);
+ if((+maxDims||1)>=2)all=await bruteGenerate(prep,+maxDims,+minDays||4,(p)=>onProgress?.(.25+p*.65,"複合条件を検証中"));
  let patterns=all.filter(c=>c.kind==="pattern"),machinePatterns=all.filter(c=>c.kind==="machine"),meta=all._summary||{},sig=meta.fdrSignificant??all.filter(c=>c.q<=.05&&c.effect>0).length,strictSig=meta.strictSignificant??all.filter(c=>c.confirmSelected&&c.qConfirmStrict<=.05&&c.effect>0).length,confirmSig=meta.confirmSignificant??all.filter(c=>c.confirmSelected&&c.qConfirm<=.05&&c.effect>0).length;
  let rowCount=prep.rows.length,forecastBase=bruteForecastBaseFromPrep(prep),machineSummaries=bruteMachineSummaries(prep),prepLite={shop:prep.shop,latest:prep.latest,from:prep.from,days:[...prep.days],overall:{...prep.overall},rowCount,sourceFingerprint:storeAnalysisFingerprint(prep)};singleEvidence.ctx=null;if(singleEvidence.targetConditions?.clear)singleEvidence.targetConditions.clear();
  bruteResults={prep:prepLite,forecastBase,all,patterns,machinePatterns,singleEvidence,machineSummaries,tested:singleEvidence.all.length+(meta.tested??all.length),complexTested:meta.tested??all.length,fdrSignificant:sig,confirmSignificant:confirmSig,strictSignificant:strictSig,confirmSelected:meta.confirmSelected??all.filter(c=>c.confirmSelected).length,rawS:meta.gradeS??all.filter(c=>c.grade==="S").length,rawA:meta.gradeA??all.filter(c=>c.grade==="A").length,evidenceClusters:meta.evidenceClusters??new Set(all.filter(c=>c.grade==="S"||c.grade==="A").map(c=>c.evidenceCluster||bruteCandidateFamilySig(c))).size,maxDims:+maxDims||1,featureCount:BRUTE_DIM_DEFS.length,singleConditionCount:singleEvidence.conditionCount};
  bruteShopFilter=shop;brutePeriod=period;bruteMinG=minG;bruteMaxDims=maxDims;bruteMinDays=minDays;queueAutoSave();
+ onProgress?.(.95,"結果を保存中");await nextFrame();
  try{await storeAnalysisSaveCurrent(bruteResults)}catch(e){console.warn("analysis snapshot save",e)}
  v510NotifyUI();return v510StoreAnalysisResult(bruteResults)
 }
@@ -2921,7 +2935,8 @@ window.JUGEST_CORE_BRIDGE=window.JUGESTCoreV510.createBridge({
  getStoreTrendRoster:(name,opts)=>v510StoreTrendRoster(name||v510GetActiveStore(),opts||{}),
  computeStoreTrend:(name,opts)=>v510ComputeStoreTrend(name||v510GetActiveStore(),opts||{}),
  getTodayPlan:(name,date,opts)=>v510GetTodayPlan(name||v510GetActiveStore(),date,opts||{}),
- runStoreAnalysis:(name,opts)=>v510RunStoreAnalysis(name||v510GetActiveStore(),opts||{}),
+ runStoreAnalysis:(name,opts,onProgress)=>v510RunStoreAnalysis(name||v510GetActiveStore(),opts||{},onProgress),
+ getAllStoreAnalysisHistory:()=>v510GetStoreAnalysisHistory(""),
  getStoreAnalysisHistory:(shop)=>v510GetStoreAnalysisHistory(shop||v510GetActiveStore()),
  getStoreAnalysisSnapshot:(id)=>v510GetStoreAnalysisSnapshot(id),
  deleteStoreAnalysisSnapshot:(id)=>v510DeleteStoreAnalysisSnapshot(id),

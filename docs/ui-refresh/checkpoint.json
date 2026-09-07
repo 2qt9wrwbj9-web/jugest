@@ -1,0 +1,11 @@
+{
+  "date": "2026-09-07",
+  "baseline": "9e8b8c30fe0c40fb70cb76863c6c40e2564c91ac",
+  "branch": "preview/v512-home-jobs",
+  "status": "implementation_verified_preview_pending",
+  "tests": {"commandsPassed": 60, "commandsTotal": 60, "homeJobTests": 9, "responsiveCombinations": 42},
+  "optimization": "research_only_not_adopted_no_real_store_dataset",
+  "production": "unchanged_do_not_deploy",
+  "remaining": ["Create Preview from this branch only", "Verify Preview target and deployed assets", "Report URL and risks"],
+  "notes": ["Previous temporary logs were lost; final regression log is now in docs/ui-refresh/final-tests.log", "Browser test dependencies are outside the repository in browser-test-runtime", "Real iOS device/OS suspension is not covered", "Optional new-data reanalysis suggestion is deferred"]
+}

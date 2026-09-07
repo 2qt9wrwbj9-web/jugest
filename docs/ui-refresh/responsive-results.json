@@ -1,0 +1,16 @@
+{
+  "url": "http://127.0.0.1:39703",
+  "japaneseFont": true,
+  "widths": [
+    320,
+    360,
+    375,
+    390,
+    414,
+    430
+  ],
+  "combinations": 42,
+  "fixedChrome": true,
+  "failures": [],
+  "errors": []
+}
