@@ -27,11 +27,15 @@ const d=new Date(Date.now()+9*60*60*1000);d.setUTCDate(d.getUTCDate()-1);const y
 const c=await call({action:'createIosCollector'});
 const shop='blob op diagnosis';
 const url=`https://ana-slo.com/${yesterday}-blob-op-diagnosis/`;
-await call({action:'iosCollectorTargetUpsert',channelId:c.j.channelId,receiverToken:c.j.receiverToken,url,startDate:yesterday,shop,priority:2,enabled:true});
+const add=await call({action:'iosCollectorTargetUpsert',channelId:c.j.channelId,receiverToken:c.j.receiverToken,url,startDate:yesterday,shop,priority:2,enabled:true});
 reset();
 const next=await call({action:'iosCollectorNextV2',collectorKey:c.j.collectorKey});
 const nextOps=snap();
 const date=String(next.j.url||'').match(/\/(20\d{2}-\d{2}-\d{2})-/)?.[1];
+if(!date){
+ console.log('COLLECTOR_BLOB_OPS_DIAG',JSON.stringify({createStatus:c.status,addStatus:add.status,add:add.j,nextStatus:next.status,next:next.j,nextOps}));
+ process.exit(0);
+}
 reset();
 const pushed=await call({action:'iosCollectorPushV2',collectorKey:c.j.collectorKey,jobToken:next.j.jobToken,text:sampleText(date,shop),fetchUrl:next.j.url});
 const pushOps=snap();
