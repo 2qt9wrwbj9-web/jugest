@@ -1,5 +1,8 @@
 import { createBlobStore } from './_blob-store.js';
 
+function errInfo(error){
+  return{status:Number(error?.status||error?.statusCode||error?.response?.status||0)||500,name:String(error?.name||''),code:String(error?.code||''),error:String(error?.message||'blob_error').slice(0,180)};
+}
 async function relayProbe(url){
   try{
     const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'pairStatus',channelId:'00000000000000000000000000000000',receiverToken:'0000000000000000000000000000000000000000000000000000000000000000'})});
@@ -15,14 +18,9 @@ export default async function handler(req,res){
     hasOidcToken:!!String(process.env.VERCEL_OIDC_TOKEN||'').trim(),
     hasStoreId:!!String(process.env.BLOB_STORE_ID||'').trim(),
   };
-  let direct;
-  try{
-    const store=createBlobStore('health');
-    await store.get(`probe/nonexistent-${Date.now()}`,{useCache:false});
-    direct={ok:true};
-  }catch(error){
-    direct={ok:false,status:Number(error?.status||error?.statusCode||error?.response?.status||0)||500,error:String(error?.message||error?.name||'blob_error').slice(0,160)};
-  }
+  const store=createBlobStore('health'),direct={};
+  try{await store.get(`probe/nonexistent-${Date.now()}`,{useCache:false});direct.get={ok:true}}catch(error){direct.get={ok:false,...errInfo(error)}}
+  try{await store.list({prefix:'probe/nonexistent/'});direct.list={ok:true}}catch(error){direct.list={ok:false,...errInfo(error)}}
   const [oldDeployment,currentProduction]=await Promise.all([
     relayProbe('https://jugest-81d94cu0g-cwwvc45jk6-2652.vercel.app/api/relay'),
     relayProbe('https://jugest.vercel.app/api/relay'),
