@@ -32,4 +32,31 @@ assert.equal(await s.get('message/a/1'),'hello');
 await s.delete('message/a/1');
 assert.equal(await s.get('message/a/1'),null);
 assert.ok([...db.keys()].every(k=>k.startsWith('jugest/relay/')),'all keys must be namespaced');
+
+// Fresh Vercel deployments can expose an OIDC credential that the Blob SDK prefers
+// over the still-valid project read/write token. JUGEST must pin the existing static
+// Blob token explicitly when it is configured, so a bad OIDC/store binding cannot
+// turn all private-Blob reads into 403s.
+const oldToken=process.env.BLOB_READ_WRITE_TOKEN;
+process.env.BLOB_READ_WRITE_TOKEN='vercel_blob_rw_store_test_secret';
+const seen=[];
+const authClient={
+ async put(path,body,opts={}){seen.push(['put',opts.token]);return{pathname:path,etag:'e1'}},
+ async get(path,opts={}){seen.push(['get',opts.token]);return null},
+ async list(opts={}){seen.push(['list',opts.token]);return{blobs:[]}},
+ async del(path,opts={}){seen.push(['del',opts.token])},
+};
+const authStore=makeBlobStore('relay',authClient,{root:'jugest'});
+await authStore.set('health','ok');
+await authStore.get('health');
+await authStore.list();
+await authStore.delete('health');
+assert.deepEqual(seen,[
+ ['put','vercel_blob_rw_store_test_secret'],
+ ['get','vercel_blob_rw_store_test_secret'],
+ ['list','vercel_blob_rw_store_test_secret'],
+ ['del','vercel_blob_rw_store_test_secret'],
+]);
+if(oldToken===undefined)delete process.env.BLOB_READ_WRITE_TOKEN;else process.env.BLOB_READ_WRITE_TOKEN=oldToken;
+
 console.log('Vercel Blob compatibility store PASS');
