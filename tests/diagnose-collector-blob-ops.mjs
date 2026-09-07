@@ -7,14 +7,16 @@ import { patchRelaySource } from '../api/_relay-web.js';
 
 const kv=new Map();
 const counts={get:0,setJSON:0,set:0,delete:0,list:0};
-const reset=()=>Object.keys(counts).forEach(k=>counts[k]=0);
-const snap=()=>({...counts});
+const traces={get:[],setJSON:[],set:[],delete:[],list:[]};
+const family=key=>String(key||'').split('/').slice(0,2).join('/');
+const reset=()=>{Object.keys(counts).forEach(k=>counts[k]=0);Object.keys(traces).forEach(k=>traces[k]=[])};
+const snap=()=>({counts:{...counts},families:Object.fromEntries(Object.entries(traces).map(([k,a])=>[k,a.map(family)]))});
 const store={
- async get(key,{type}={}){counts.get++;const v=kv.get(key);if(v==null)return null;return type==='json'?JSON.parse(JSON.stringify(v)):v},
- async setJSON(key,val,{onlyIfNew}={}){counts.setJSON++;if(onlyIfNew&&kv.has(key))return{modified:false};kv.set(key,JSON.parse(JSON.stringify(val)));return{modified:true}},
- async set(key,val,{onlyIfNew}={}){counts.set++;if(onlyIfNew&&kv.has(key))return{modified:false};kv.set(key,String(val));return{modified:true}},
- async delete(key){counts.delete++;kv.delete(key)},
- async list({prefix=''}){counts.list++;return{blobs:[...kv.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key}))}},
+ async get(key,{type}={}){counts.get++;traces.get.push(key);const v=kv.get(key);if(v==null)return null;return type==='json'?JSON.parse(JSON.stringify(v)):v},
+ async setJSON(key,val,{onlyIfNew}={}){counts.setJSON++;traces.setJSON.push(key);if(onlyIfNew&&kv.has(key))return{modified:false};kv.set(key,JSON.parse(JSON.stringify(val)));return{modified:true}},
+ async set(key,val,{onlyIfNew}={}){counts.set++;traces.set.push(key);if(onlyIfNew&&kv.has(key))return{modified:false};kv.set(key,String(val));return{modified:true}},
+ async delete(key){counts.delete++;traces.delete.push(key);kv.delete(key)},
+ async list({prefix=''}){counts.list++;traces.list.push(prefix);return{blobs:[...kv.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key}))}},
 };
 function deterministicRandomInt(min,max){if(max===undefined){max=min;min=0}return max-1}
 const packed=zlib.gunzipSync(Buffer.from(p0+p1+p2,'base64')).toString('utf8');
@@ -32,11 +34,9 @@ reset();
 const next=await call({action:'iosCollectorNextV2',collectorKey:c.j.collectorKey});
 const nextOps=snap();
 const date=String(next.j.url||'').match(/\/(20\d{2}-\d{2}-\d{2})-/)?.[1];
-if(!date){
- console.log('COLLECTOR_BLOB_OPS_DIAG',JSON.stringify({createStatus:c.status,addStatus:add.status,add:add.j,nextStatus:next.status,next:next.j,nextOps}));
- process.exit(0);
-}
+if(!date){console.log('COLLECTOR_BLOB_OPS_DIAG',JSON.stringify({createStatus:c.status,addStatus:add.status,add:add.j,nextStatus:next.status,next:next.j,nextOps}));process.exit(0)}
 reset();
 const pushed=await call({action:'iosCollectorPushV2',collectorKey:c.j.collectorKey,jobToken:next.j.jobToken,text:sampleText(date,shop),fetchUrl:next.j.url});
 const pushOps=snap();
-console.log('COLLECTOR_BLOB_OPS',JSON.stringify({nextState:next.j.state,pushState:pushed.j.state,nextOps,pushOps,total:{get:nextOps.get+pushOps.get,setJSON:nextOps.setJSON+pushOps.setJSON,set:nextOps.set+pushOps.set,delete:nextOps.delete+pushOps.delete,list:nextOps.list+pushOps.list}}));
+const total={get:nextOps.counts.get+pushOps.counts.get,setJSON:nextOps.counts.setJSON+pushOps.counts.setJSON,set:nextOps.counts.set+pushOps.counts.set,delete:nextOps.counts.delete+pushOps.counts.delete,list:nextOps.counts.list+pushOps.counts.list};
+console.log('COLLECTOR_BLOB_OPS',JSON.stringify({nextState:next.j.state,pushState:pushed.j.state,nextOps,pushOps,total}));
