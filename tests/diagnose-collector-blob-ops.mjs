@@ -26,7 +26,7 @@ function sampleText(date,shop){const [y,m,d]=date.split('-').map(Number);const r
 const d=new Date(Date.now()+9*60*60*1000);d.setUTCDate(d.getUTCDate()-1);const yesterday=d.toISOString().slice(0,10);
 const c=await call({action:'createIosCollector'});
 const shop='blob op diagnosis';
-const url=`https://ana-slo.com/${yesterday}-blob-op-diagnosis/`;
+const url=`https://ana-slo.com/${yesterday}-blob-op-diagnosis-data/`;
 const add=await call({action:'iosCollectorTargetUpsert',channelId:c.j.channelId,receiverToken:c.j.receiverToken,url,startDate:yesterday,shop,priority:2,enabled:true});
 reset();
 const next=await call({action:'iosCollectorNextV2',collectorKey:c.j.collectorKey});
