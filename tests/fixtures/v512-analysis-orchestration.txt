@@ -1,0 +1,15 @@
+async function v510RunStoreAnalysis(shop,opts={}){
+ shop=shop||v510GetActiveStore();if(!shop)throw new Error("分析する店舗を選んでね");
+ let period=["30","60","90","180","all"].includes(String(opts.period))?String(opts.period):"180",minG=["0","1000","2000","3000"].includes(String(opts.minG))?String(opts.minG):"2000",maxDims=["1","2","3"].includes(String(opts.maxDims))?String(opts.maxDims):"1",minDays=["3","4","5","8"].includes(String(opts.minDays))?String(opts.minDays):"4";
+ v4PredictionCache.clear();v4TwinCache.clear();v4PlanResultCache.clear();bruteResults=null;
+ await ensureExternalJudged(externalDays,{shop});
+ let prep=brutePrepare(shop,period,+minG||0);if(!prep||prep.days.length<3)throw new Error("分析できる日数が足りないよ。最低3日くらい必要。");
+ let singleEvidence=bruteSingleGenerate(prep,+minDays||4),all=[];
+ if((+maxDims||1)>=2)all=await bruteGenerate(prep,+maxDims,+minDays||4);
+ let patterns=all.filter(c=>c.kind==="pattern"),machinePatterns=all.filter(c=>c.kind==="machine"),meta=all._summary||{},sig=meta.fdrSignificant??all.filter(c=>c.q<=.05&&c.effect>0).length,strictSig=meta.strictSignificant??all.filter(c=>c.confirmSelected&&c.qConfirmStrict<=.05&&c.effect>0).length,confirmSig=meta.confirmSignificant??all.filter(c=>c.confirmSelected&&c.qConfirm<=.05&&c.effect>0).length;
+ let rowCount=prep.rows.length,forecastBase=bruteForecastBaseFromPrep(prep),machineSummaries=bruteMachineSummaries(prep),prepLite={shop:prep.shop,latest:prep.latest,from:prep.from,days:[...prep.days],overall:{...prep.overall},rowCount,sourceFingerprint:storeAnalysisFingerprint(prep)};singleEvidence.ctx=null;if(singleEvidence.targetConditions?.clear)singleEvidence.targetConditions.clear();
+ bruteResults={prep:prepLite,forecastBase,all,patterns,machinePatterns,singleEvidence,machineSummaries,tested:singleEvidence.all.length+(meta.tested??all.length),complexTested:meta.tested??all.length,fdrSignificant:sig,confirmSignificant:confirmSig,strictSignificant:strictSig,confirmSelected:meta.confirmSelected??all.filter(c=>c.confirmSelected).length,rawS:meta.gradeS??all.filter(c=>c.grade==="S").length,rawA:meta.gradeA??all.filter(c=>c.grade==="A").length,evidenceClusters:meta.evidenceClusters??new Set(all.filter(c=>c.grade==="S"||c.grade==="A").map(c=>c.evidenceCluster||bruteCandidateFamilySig(c))).size,maxDims:+maxDims||1,featureCount:BRUTE_DIM_DEFS.length,singleConditionCount:singleEvidence.conditionCount};
+ bruteShopFilter=shop;brutePeriod=period;bruteMinG=minG;bruteMaxDims=maxDims;bruteMinDays=minDays;queueAutoSave();
+ try{await storeAnalysisSaveCurrent(bruteResults)}catch(e){console.warn("analysis snapshot save",e)}
+ v510NotifyUI();return v510StoreAnalysisResult(bruteResults)
+}

@@ -5,7 +5,8 @@ const app=fs.readFileSync('public/app-v510.js','utf8');
 const html=fs.readFileSync('public/index.html','utf8');
 
 assert.match(app,/data-notification-toggle/,'top-right notification bell control is missing');
-assert.match(app,/>🔔</,'notification control must use a bell icon');
+assert.match(app,/<svg class="bell"/,'notification control must use an SVG bell');
+assert.doesNotMatch(app,/>🔔</,'emoji bell must be removed');
 assert.match(app,/renderNotificationPanel\s*\(/,'notification popover renderer is missing');
 assert.match(app,/notification-popover/,'notification popover markup is missing');
 assert.match(app,/notificationOpen/,'notification open\/closed state is missing');

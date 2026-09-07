@@ -1,0 +1,163 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> jugest-v512-vercel-only@5.1.2 test
+> node build.mjs && node tests/run-regressions.mjs
+
+JUGEST v5.1.2 Collector coverage + fixed chrome + startup/icon hotfix PASS
+PASS node --check ana-launcher.js
+PASS node --check hanahana-judge.js
+PASS node --check sync-core.js
+PASS node --check missing-inference.js
+PASS node --check core-v510.js
+PASS node --check app-v510.js
+PASS node --check tests/fixtures/legacy-netlify/functions/relay.mjs
+PASS node --check tests/fixtures/legacy-netlify/functions/sync.mjs
+PASS node tests/index-inline-syntax.mjs
+index inline syntax PASS
+PASS node tests/missing-inference.mjs
+missing value inference PASS
+PASS node tests/collector-relay.mjs
+relay collector integration PASS
+PASS node tests/collector-calendar-year.mjs
+PASS Collector calendar-year scheduling ignores manual startDate and walks backward
+PASS node tests/collector-single-fetch-cadence.mjs
+PASS Collector single-fetch cadence uses 0..30s jitter and no 15-minute window limit
+PASS node tests/collector-local-coverage.mjs
+PASS Collector skips local JUGEST dates while preserving manual requeue
+PASS node tests/collector-local-coverage-client.mjs
+PASS JUGEST sends bounded local-day coverage during Collector status refresh
+PASS node tests/collector-ui-static.mjs
+collector new-UI static PASS
+PASS node tests/collector-store-management.mjs
+collector store management new-UI PASS
+PASS node tests/ui-v510-foundation.mjs
+v5.1.0 UI foundation static PASS
+PASS node tests/ui-v510-runtime-isolation.mjs
+v5.1.0 no-legacy runtime isolation PASS
+PASS node tests/ui-v510-live-store.mjs
+v5.1.0 live/store native UI static PASS
+PASS node tests/pwa-viewport-background.mjs
+PWA viewport background no-legacy regression PASS
+PASS node tests/ui-v510-records-data.mjs
+v5.1.0 records/data native UI static PASS
+PASS node tests/ui-v510-live-tools.mjs
+v5.1.0 live tools native UI static PASS
+PASS node tests/ui-v510-store-intelligence.mjs
+v5.1.0 store intelligence native UI static PASS
+PASS node tests/ui-v510-strategy-data-management.mjs
+v5.1.0 strategy/data-management native UI static PASS
+PASS node tests/ui-v510-bridge-headless.mjs
+v5.1.0 headless bridge regression PASS (113 core functions)
+PASS node tests/ui-v510-no-legacy-runtime.mjs
+v5.1.0 no-legacy-runtime architecture PASS
+PASS node tests/ui-v510-hana-native.mjs
+v5.1.0 native HANA UI static PASS
+PASS node tests/ui-v510-sync-native.mjs
+v5.1.0 native device sync static PASS
+PASS node tests/ui-v510-record-editor.mjs
+v5.1.0 native record editor static PASS
+PASS node tests/ui-v510-store-finance.mjs
+v5.1.0 native store finance static PASS
+PASS node tests/ui-v510-records-parity.mjs
+v5.1.0 records parity static PASS
+PASS node tests/ui-v510-tag-admin.mjs
+v5.1.0 native tag admin static PASS
+PASS node tests/ui-v510-dead-ui-removed.mjs
+v5.1.0 dead legacy UI removal PASS
+PASS node tests/ui-v510-analysis-history-native.mjs
+v5.1.0 native analysis history static PASS
+PASS node tests/ui-v510-final-shell.mjs
+v5.1.0 FINAL shell completion gate PASS
+PASS node tests/ui-v511-notification-popover.mjs
+v5.1.1 notification popover + silent restore static PASS
+PASS node tests/netlify-config-current-files.mjs
+Historical Netlify fixture config PASS (not deployed)
+PASS node tests/ui-v512-fixed-chrome.mjs
+v5.1.2 fixed mobile chrome static PASS
+PASS node tests/ui-v512-store-delete.mjs
+v5.1.2 safe store deletion static PASS
+PASS node tests/vercel-migration.mjs
+Vercel migration static PASS
+PASS node --check api/_blob-store.js
+PASS node --check api/_node-web.js
+PASS node --check api/_relay-web.js
+PASS node --check api/_sync-web.js
+PASS node --check api/relay.js
+PASS node --check api/sync.js
+PASS node tests/vercel-blob-store.mjs
+Vercel Blob compatibility store PASS
+PASS node tests/vercel-native-backend.mjs
+Vercel native backend static PASS
+PASS node tests/vercel-node-web-adapter.mjs
+Vercel Node/Web adapter PASS
+PASS node tests/vercel-relay-native-behavior.mjs
+Vercel native relay behavior PASS
+PASS node tests/vercel-sync-chunk-transport.mjs
+Vercel sync chunk transport PASS
+PASS node tests/vercel-sync-chunk-server.mjs
+Vercel sync chunk server PASS
+PASS node tests/vercel-sync-concurrency.mjs
+PASS concurrent Device Sync: one writer wins, loser conflicts, and committed revision repairs stale head
+PASS node tests/vercel-server-parity.mjs
+Actual decoded Relay: 20 core functions exact; Device Sync intentional backend changes are behavior-tested separately
+PASS node tests/vercel-launcher-origin.mjs
+Vercel launcher origin migration PASS
+PASS node tests/vercel-launcher-no-netlify-runtime.mjs
+Vercel launcher has no Netlify runtime fallback PASS
+PASS node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs tests/resume-flow-regressions.mjs tests/sync-roundtrip.mjs tests/production-preservation.mjs
+✔ Unchecked or failed Collector status never claims normal operation (35.346423ms)
+✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (11.690529ms)
+✔ Protected inline math and research sections remain identical to the captured Production (6.13506ms)
+✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (28.618211ms)
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (40.962346ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (9.210572ms)
+✔ Automatic Collector refresh clears a recovered transient error (20.984253ms)
+✔ Backup undo explains its partial scope before the user presses it (8.091008ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (27.166935ms)
+✔ Partial backup restore exposes reload recovery and blocks stale in-memory edits (13.990327ms)
+✔ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (13.903758ms)
+✔ Two real sync-core clients encrypt, merge, persist, and reload without losing either device records (87.989428ms)
+✔ Unlinked UI exposes pairing through the actual bridge and existing createPair API (99.62506ms)
+✔ Pending pair survives reload, polls to linked, and resumes on pageshow (40.114481ms)
+✔ Pair expiry and network failure keep retry available; linked channel is never replaced (21.098103ms)
+✔ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (7.663893ms)
+✔ iPhone Shortcut creation/key rotation has its own existing API and survives reload (10.015999ms)
+✔ Launcher queue is counted and imported through receive -> durable save -> ack (37.30216ms)
+✔ CollectorPull still imports days; a failed local save must never ACK Launcher data (31.144352ms)
+✔ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (6.650296ms)
+✔ Backup undo reaches the bridge and reloads; failure unlocks retry (8.232198ms)
+✔ Store save and backup restore errors clear busy state before final render (5.709738ms)
+✔ Missing clipboard API never reports a successful Device Sync copy (5.986608ms)
+✔ First Collector store can be added from an empty store-management screen (8.864738ms)
+✔ Global operation errors keep the current screen and retry controls visible (4.029861ms)
+✔ Sync failure before apply releases the save gate; partial apply requires reload (5.837518ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 396.453761
+PASS node --test tests/ui-home-jobs.mjs
+✔ home summary reports unsaved play and stops resuming unchanged saved input (27.37611ms)
+✔ returning Home reads fresh play input, not a stale summary (21.746797ms)
+✔ malformed persisted unread ledger cannot break rendering (6.475607ms)
+✔ core orchestration reports progress without replacing the analysis engine (9.88873ms)
+✔ next action uses actual state in priority order, including empty stores (8.680413ms)
+✔ missing URL never creates warning/count; success is not unread (5.703959ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (13.709349ms)
+✔ analysis captures store/options, survives every workspace and returns to its completed result (8.206438ms)
+✔ failed analysis remains reachable without presenting completion (4.927535ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 189.952839
+PASS node tests/store-optimization-research.mjs
+PASS research chronology, immutable input, future/target poisoning, baseline tie, receipt hashes, invalid data guards
+PASS paired candidate selection and no-data abstention
+60/60 commands passed

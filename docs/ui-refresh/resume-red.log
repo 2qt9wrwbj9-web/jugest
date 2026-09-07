@@ -1,0 +1,59 @@
+✔ home summary reports unsaved play and stops resuming unchanged saved input (27.605875ms)
+✖ returning Home reads fresh play input, not a stale summary (22.636001ms)
+✖ malformed persisted unread ledger cannot break rendering (7.08014ms)
+✔ core orchestration reports progress without replacing the analysis engine (7.37032ms)
+✔ next action uses actual state in priority order, including empty stores (6.218539ms)
+✔ missing URL never creates warning/count; success is not unread (5.692749ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (10.740006ms)
+✔ analysis captures store/options, survives every workspace and returns to its completed result (7.112257ms)
+✔ failed analysis remains reachable without presenting completion (5.530537ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 7
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 194.533911
+
+✖ failing tests:
+
+test at tests/ui-home-jobs.mjs:13:1
+✖ returning Home reads fresh play input, not a stale summary (22.636001ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /実戦判別を続ける/. Input:
+  
+  '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><svg class="bell" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace home-workspace"><div class="kicker">TODAY</div><h1>今日のJUGEST</h1><section class="panel next-card"><div class="section-label">次にやること</div><h2>店舗を登録する</h2><p>実戦する店舗から始めよう。取得URLは任意です</p><button type="button" class="primary-cta" data-action="register-store">店舗を登録 <span aria-hidden="true">→</span></button></section><div class="section-label">最近の解析</div><div class="home-recent"><div class="empty-card">解析結果はここから振り返れます。</div></div><div class="section-label">最近の実戦</div><div class="home-recent"><div class="empty-card">保存した実戦記録がここに並びます。</div></div><section class="home-data"><b>データ状況</b><span>自動取得 OFF</span><span>最終同期 未同期</span><span>蓄積 0日</span><button type="button" data-workspace="data">詳細を見る</button></section></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class="on"><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class=""><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/ui-home-jobs.mjs:15:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<div class="app-shell"><header class="topbar"><div class="topbar-inner"><div class="topbar-side"></div><button class="brand" type="button" data-workspace="home" aria-label="ホームへ"><img src="./assets/jugest-mark.png" alt=""><span>JUGEST</span><small>5.1.2</small></button><button class="icon-btn notification-bell-btn" type="button" data-notification-toggle aria-label="通知" aria-expanded="false"><svg class="bell" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-badge">1</span></button></div></header><main class="view" id="view"><section class="workspace home-workspace"><div class="kicker">TODAY</div><h1>今日のJUGEST</h1><section class="panel next-card"><div class="section-label">次にやること</div><h2>店舗を登録する</h2><p>実戦する店舗から始めよう。取得URLは任意です</p><button type="button" class="primary-cta" data-action="register-store">店舗を登録 <span aria-hidden="true">→</span></button></section><div class="section-label">最近の解析</div><div class="home-recent"><div class="empty-card">解析結果はここから振り返れます。</div></div><div class="section-label">最近の実戦</div><div class="home-recent"><div class="empty-card">保存した実戦記録がここに並びます。</div></div><section class="home-data"><b>データ状況</b><span>自動取得 OFF</span><span>最終同期 未同期</span><span>蓄積 0日</span><button type="button" data-workspace="data">詳細を見る</button></section></section></main><nav class="bottom-nav" aria-label="メインナビゲーション"><button type="button" data-workspace="home" class="on"><span class="nav-icon">⌂</span><span>ホーム</span></button><button type="button" data-workspace="live" class=""><span class="nav-icon">◎</span><span>実戦</span></button><button type="button" data-workspace="store" class=""><span class="nav-icon">▦</span><span>店舗</span></button><button type="button" data-workspace="records" class=""><span class="nav-icon">▤</span><span>記録</span></button><button type="button" data-workspace="data" class=""><span class="nav-icon">⇅</span><span>データ</span></button></nav></div>',
+    expected: /実戦判別を続ける/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/ui-home-jobs.mjs:17:1
+✖ malformed persisted unread ledger cannot break rendering (7.08014ms)
+  AssertionError [ERR_ASSERTION]: Got unwanted exception.
+  Actual message: "(old.read || []).filter is not a function"
+      at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/ui-home-jobs.mjs:19:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: TypeError: (old.read || []).filter is not a function
+        at JugestApp.notificationStatus (app-v510.js:263:241)
+        at JugestApp.render (app-v510.js:297:30)
+        at file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/ui-home-jobs.mjs:19:30
+        at getActual (node:assert:611:5)
+        at strict.doesNotThrow (node:assert:779:32)
+        at TestContext.<anonymous> (file:///workspace/scratch/2c63ff8b496f/work/jugest-v512-ui/tests/ui-home-jobs.mjs:19:9)
+        at async Test.run (node:internal/test_runner/test:1389:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:960:7),
+    expected: undefined,
+    operator: 'doesNotThrow',
+    diff: 'simple'
+  }
