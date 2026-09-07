@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {patchStoreAnalysisHtml,patchStoreAnalysisApp} from '../build-store-analysis-view.mjs';
 const baseline=JSON.parse(fs.readFileSync(new URL('./fixtures/production-preservation.json',import.meta.url)));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const intentionalBackendChanges=new Set(['api/_blob-store.js','api/_sync-web.js','api/_relay-web.js']);
@@ -21,7 +22,7 @@ function expectedCollectorUi(){
  for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'compact setup open'],[collectorSetupHeadingClose,compactCollectorSetupHeadingClose,'compact setup heading'],[collectorSetupClose,compactCollectorSetupClose,'compact setup close']]){
   const hits=rootApp.split(from).length-1;assert.equal(hits,1,`Collector ${label} anchor count`);rootApp=rootApp.replace(from,to);
  }
- return rootApp;
+ return patchStoreAnalysisApp(rootApp);
 }
 function expectedFixedChromeCss(){
  let css=fs.readFileSync('app-v510.css','utf8');
@@ -41,12 +42,12 @@ function expectedBuiltIndex(){
  assert.equal(html.split(anchor).length-1,1,'Collector coverage helper source anchor');html=html.replace(anchor,helper+anchor);
  const from='sinceRevision:Math.max(0,+collectorSyncState.revision||0)}',to='sinceRevision:Math.max(0,+collectorSyncState.revision||0),localCoverage:v510CollectorCoveragePayload()}';
  assert.ok(html.split(from).length-1>=5,'Collector status coverage source anchors');html=html.replaceAll(from,to);
- return html;
+ return patchStoreAnalysisHtml(html);
 }
 test('Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact',()=>{
  for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css')assert.equal(hash(fs.readFileSync(`public/${file}`)),sha,file);
  assert.equal(fs.readFileSync('public/app-v510.css','utf8'),expectedFixedChromeCss(),'public CSS differs only by approved fixed-chrome centering');
- assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app differs only by approved Collector UI transforms');
+ assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app differs only by approved Collector/UI view transforms');
  for(const [file,sha] of Object.entries(baseline.api))if(!intentionalBackendChanges.has(file))assert.equal(hash(fs.readFileSync(file)),sha,file);
 });
 test('Protected inline math and research sections remain identical to the captured Production',()=>{
@@ -62,10 +63,10 @@ test('Protected inline math and research sections remain identical to the captur
  for(const part of baseline.indexSegments){const a=html.indexOf(part.start),b=html.indexOf(part.end,a);assert.ok(a>=0&&b>a,'protected boundary missing');assert.equal(hash(html.slice(a,b)),part.sha256,part.start)}
 });
 test('Fresh public build uses checked-in runtime source plus only approved bounded transforms',()=>{
- assert.equal(fs.readFileSync('public/index.html','utf8'),expectedBuiltIndex(),'public index differs only by approved local-coverage transport transform');
+ assert.equal(fs.readFileSync('public/index.html','utf8'),expectedBuiltIndex(),'public index differs only by approved coverage + store-analysis view transforms');
  assert.equal(fs.readFileSync('public/app-v510.css','utf8'),expectedFixedChromeCss(),'public CSS differs only by approved fixed-chrome transform');
  for(const file of ['sync-core.js',...Object.keys(baseline.public).filter(f=>!f.endsWith('.png')&&f!=='app-v510.css')])assert.deepEqual(fs.readFileSync(`public/${file}`),fs.readFileSync(file),file);
- assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app applies only the approved Collector UI transforms');
+ assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app applies only the approved Collector + store-analysis view transforms');
  assert.ok(!fs.existsSync('netlify.toml'));assert.ok(!fs.existsSync('netlify/functions'));
  assert.doesNotMatch(fs.readFileSync('build.mjs','utf8'),/await fetch|https:\/\/jugest\.vercel\.app/);
  assert.match(fs.readFileSync('index.html','utf8'),/const RELAY_API="\/api\/relay"/);
