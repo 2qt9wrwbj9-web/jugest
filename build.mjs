@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { inflateSync, deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { patchStoreAnalysisHtml, patchStoreAnalysisApp } from './build-store-analysis-view.mjs';
+import { patchAnalysisJitterApp } from './build-analysis-jitter-fix.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
@@ -80,5 +81,6 @@ for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'Col
  const hits=app.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);app=app.replace(from,to);
 }
 app=patchStoreAnalysisApp(app);
+app=patchAnalysisJitterApp(app);
 fs.writeFileSync(path.join(out,'app-v510.js'),app);
-if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + startup/icon hotfix PASS');
+if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + analysis progress stability + startup/icon hotfix PASS');
