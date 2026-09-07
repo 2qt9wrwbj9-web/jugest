@@ -59,5 +59,6 @@
   "node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs tests/resume-flow-regressions.mjs tests/sync-roundtrip.mjs tests/production-preservation.mjs",
   "node --test tests/ui-home-jobs.mjs",
   "node tests/store-analysis-evidence-view.mjs",
-  "node tests/store-optimization-research.mjs"
+  "node tests/store-optimization-research.mjs",
+  "node tests/diagnose-collector-blob-ops.mjs"
 ]
