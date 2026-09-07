@@ -1,8 +1,10 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 const html=fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../public/app-v510.js',import.meta.url),'utf8');
+new vm.Script(app,{filename:'public-app-v510.js'});
 
 assert.match(html,/positiveStore=bruteSingleFactGroups\(storeCandidates\.filter\(c=>c\.practicalEffect>0\)\)/,'store-wide positives must be collapsed by existing fact groups');
 assert.match(html,/machinePositive/,'machine-scoped evidence must be exported separately');
