@@ -49,3 +49,11 @@ test('historical bundle CLI accepts a real JUGEST backup package with packed ext
  assert.equal(bundle.samples[0].targetDate,target);
  assert.match(stdout,/samples=1/);
 });
+
+test('one-shot CLI with bundle-output reaches input handling instead of path.resolve callback failure',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'jugest-phase2a-')),input=join(dir,'missing.json'),output=join(dir,'report.json'),bundle=join(dir,'bundle.json');
+ await assert.rejects(
+  ()=>execFileAsync(process.execPath,['scripts/axis-phase2a.mjs','--input',input,'--store','A','--output',output,'--bundle-output',bundle,'--shadow'],{cwd:process.cwd()}),
+  /input JSON could not be read/i
+ );
+});
