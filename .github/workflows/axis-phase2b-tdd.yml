@@ -8,14 +8,25 @@ on:
 jobs:
   focused:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Gate and walk-forward
-        run: node --test tests/axis-phase2b-oos-gate.mjs tests/axis-phase2b-walk-forward.mjs
-      - name: Report
-        run: node --test tests/axis-phase2b-report.mjs
+      - name: Phase2B focused
+        run: node --test tests/axis-phase2b-oos-gate.mjs tests/axis-phase2b-walk-forward.mjs tests/axis-phase2b-report.mjs
+      - name: Phase2A and Fast Runner preservation
+        run: |
+          node --test tests/axis-phase2a-builder.mjs tests/axis-phase2a-builder-fast.mjs tests/axis-phase2a-cli.mjs tests/axis-phase2a-cli-fast.mjs tests/axis-phase2a-fast-runner.mjs tests/axis-phase2a-input.mjs tests/axis-phase2a-jugest-runtime.mjs tests/axis-phase2a-walk-forward.mjs
+      - name: Full regression suite
+        run: npm test
+      - name: Mandatory preservation regressions
+        run: |
+          node --test tests/production-preservation.mjs
+          node --test tests/collector-batch-v3.mjs
+          node tests/collector-preservation.mjs
+          node tests/store-analysis-evidence-view.mjs
+          node tests/store-optimization-research.mjs
+          node --test tests/ui-home-jobs.mjs
