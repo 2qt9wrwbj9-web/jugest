@@ -73,9 +73,8 @@ export function buildHistoricalSampleBundle({store,days,runtime,startDate=null,e
   const targetBase=normalized[targetIndex],targetDate=targetBase.date;
   if(startDate&&targetDate<startDate)continue;
   if(endDate&&targetDate>endDate)continue;
-  const priorBase=normalized.slice(0,targetIndex);
-  if(priorBase.length<minPriorDays){skipped.push({targetDate,reason:'insufficient_prior_days',priorDays:priorBase.length});continue}
-  const sourceDays=structuredClone(priorBase);
+  const sourceDays=normalized.slice(0,targetIndex);
+  if(sourceDays.length<minPriorDays){skipped.push({targetDate,reason:'insufficient_prior_days',priorDays:sourceDays.length});continue}
   const trainingCutoff=sourceDays.at(-1)?.date;
   if(!trainingCutoff||trainingCutoff>=targetDate)throw new RangeError(`invalid training cutoff for ${targetDate}`);
   const prediction=runtime.predictStore(store,targetDate,sourceDays,{noCache:true});
