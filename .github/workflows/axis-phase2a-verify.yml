@@ -20,4 +20,5 @@ jobs:
         run: |
           node --test \
             tests/axis-phase2a-builder.mjs \
+            tests/axis-phase2a-input.mjs \
             tests/axis-phase2a-walk-forward.mjs
