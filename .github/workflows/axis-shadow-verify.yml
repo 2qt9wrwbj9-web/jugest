@@ -1,0 +1,39 @@
+name: Axis Shadow Verify
+
+on:
+  push:
+    branches:
+      - astra/axis-auto-selector-shadow
+  workflow_dispatch:
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Focused Axis Auto-Selector tests
+        run: |
+          node --test \
+            tests/axis-auto-selector-parity.mjs \
+            tests/axis-auto-selector-registry.mjs \
+            tests/axis-auto-selector-evaluator.mjs \
+            tests/axis-auto-selector-selector.mjs \
+            tests/axis-auto-selector-profile.mjs \
+            tests/axis-auto-selector-cli.mjs \
+            tests/axis-auto-selector-runtime-parity.mjs
+      - name: Manual CLI sample
+        run: |
+          d="$(mktemp -d)"
+          node scripts/axis-auto-selector.mjs \
+            --input tests/fixtures/axis-auto-selector-sample.json \
+            --store A \
+            --through 2026-09-01 \
+            --profile "$d/profiles.json" \
+            --output "$d/audit.json" \
+            --shadow
+          node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync('$d/audit.json','utf8'));if(a.shadowOnly!==true)process.exit(1);console.log(JSON.stringify({decision:a.profile.decision,rows:a.rows.length,candidates:a.selection.candidateCount}))"
