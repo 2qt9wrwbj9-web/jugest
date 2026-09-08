@@ -16,6 +16,16 @@ test('input adapter also accepts direct externalDays/day arrays without mutating
  assert.equal(extractExternalDays([packedDay]).length,1);
 });
 
+test('store-filtered input expands only the requested store before packed-row validation',()=>{
+ const malformedOther={id:2,source:'ana-slo',date:'2026-01-01',shop:'B',machines:[[1,2,3]]};
+ const input={state:{externalDays:[packedDay,malformedOther]}};
+ const days=extractExternalDays(input,{store:'A'});
+ assert.equal(days.length,1);
+ assert.equal(days[0].shop,'A');
+ assert.equal(days[0].machines[0].tableNo,'101');
+ assert.throws(()=>extractExternalDays(input,{store:'C'}),/store C|history/i);
+});
+
 test('input adapter rejects malformed or missing external history',()=>{
  assert.throws(()=>extractExternalDays({}),/externalDays|history/i);
  assert.throws(()=>extractExternalDays({state:{externalDays:[{...packedDay,machines:[[1,2,3]]}]}}),/packed machine/i);
