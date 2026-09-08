@@ -33,7 +33,7 @@ export async function main(argv=process.argv.slice(2)){
   store,days,startDate:args.start??null,endDate:args.end??null,
   minPriorDays:positiveInteger(args['min-prior'],'--min-prior',1),
   workers:workerSetting(args.workers),memoryBudgetMB:positiveNumber(args['memory-budget-mb'],'--memory-budget-mb',undefined),
-  maxWorkers:positiveInteger(args['max-workers'],'--max-workers',4)
+  maxWorkers:positiveInteger(args['max-workers'],'--max-workers',3)
  });
  await writeFile(output,`${JSON.stringify(bundle,null,2)}\n`,'utf8');
  const execution=bundle.buildAudit.execution;
