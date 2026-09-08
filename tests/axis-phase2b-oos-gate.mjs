@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {DEFAULT_OOS_GATE_CONFIG,evaluateOperationalGate} from '../research/axis-auto-selector/oos-gate.mjs';
 
 function shift(date,days){const d=new Date(`${date}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
+function close(actual,expected,epsilon=1e-12){assert.ok(Math.abs(actual-expected)<=epsilon,`expected ${actual} to be within ${epsilon} of ${expected}`)}
 function receipt(i,{store='A',ensembleKey='E1',delta=.01,selectorDecision='SHADOW_CHAMPION'}={}){
  return{
   store,targetDate:shift('2026-01-01',i),selectorDecision,ensembleKey,
@@ -49,15 +50,15 @@ test('blocked ensemble releases after 12 positive exact-ensemble OOS deltas',()=
  assert.equal(result.stateAfter,'ALLOWED');
  assert.equal(result.reason,'oos_gate_released');
  assert.equal(result.evidenceCount,12);
- assert.equal(result.meanDelta,.01);
- assert.equal(result.sdDelta,0);
- assert.equal(result.oosScore,.01);
+ close(result.meanDelta,.01);
+ close(result.sdDelta,0);
+ close(result.oosScore,.01);
 });
 
 test('allowed ensemble stays allowed at positive score below release threshold',()=>{
  const prior=Array.from({length:12},(_,i)=>receipt(i,{delta:.001}));
  const result=evaluate({priorReceipts:prior,previousState:'ALLOWED'});
- assert.equal(result.oosScore,.001);
+ close(result.oosScore,.001);
  assert.ok(result.oosScore<DEFAULT_OOS_GATE_CONFIG.releaseScore);
  assert.equal(result.operationalDecision,'SHADOW_CHAMPION');
  assert.equal(result.stateAfter,'ALLOWED');
@@ -87,7 +88,7 @@ test('only latest 24 exact-ensemble receipts enter the rolling score',()=>{
  const result=evaluate({priorReceipts:[...oldBad,...recentGood],previousState:'BLOCKED'});
  assert.equal(result.evidenceCount,24);
  assert.deepEqual(result.evidenceDates,recentGood.map(item=>item.targetDate));
- assert.equal(result.meanDelta,.01);
+ close(result.meanDelta,.01);
  assert.equal(result.operationalDecision,'SHADOW_CHAMPION');
 });
 
