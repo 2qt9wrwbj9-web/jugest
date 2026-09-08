@@ -38,7 +38,7 @@ export async function main(argv=process.argv.slice(2)){
  const bundle=await buildHistoricalSampleBundleParallel({
   store,days,endDate:args.end??null,minPriorDays,
   workers:workerSetting(args.workers),memoryBudgetMB:positiveNumber(args['memory-budget-mb'],'--memory-budget-mb',undefined),
-  maxWorkers:int(args['max-workers'],'--max-workers',{min:1,defaultValue:4})
+  maxWorkers:int(args['max-workers'],'--max-workers',{min:1,defaultValue:3})
  });
  if(bundleOutput)await writeFile(bundleOutput,`${JSON.stringify(bundle,null,2)}\n`,'utf8');
  const report=await runWalkForwardBacktest({bundle,store,warmupDays,startDate:args.start??null,endDate:args.end??null});
