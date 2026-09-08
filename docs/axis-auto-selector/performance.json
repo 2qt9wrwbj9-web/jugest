@@ -1,0 +1,43 @@
+{
+  "schema": "jugest-axis-shadow-performance-v1",
+  "measuredAt": "2026-09-08T03:11:44Z",
+  "environment": {
+    "runner": "GitHub Actions ubuntu-24.04",
+    "node": "v22.23.2",
+    "platform": "linux-x64",
+    "workflowRunId": 34182647680,
+    "verifiedCommit": "26a06af11d8878abfd543f3a3a9c4d66ec2d5ae1"
+  },
+  "maxCandidateEnsembles": 25000,
+  "measurements": {
+    "deterministic24": {
+      "evaluatedDates": 24,
+      "axisCount": 3,
+      "candidateEnsembles": 66,
+      "elapsedMs": 78.158,
+      "rssBefore": 48357376,
+      "rssAfter": 62783488,
+      "heapUsedPeakApprox": 5162512,
+      "decision": "CONTROL",
+      "selectedAxisCount": 3,
+      "holdoutEvaluations": 0
+    },
+    "synthetic180": {
+      "evaluatedDates": 180,
+      "axisCount": 3,
+      "candidateEnsembles": 66,
+      "elapsedMs": 422.409,
+      "rssBefore": 62783488,
+      "rssAfter": 79069184,
+      "heapUsedPeakApprox": 9875104,
+      "decision": "CONTROL",
+      "selectedAxisCount": 3,
+      "holdoutEvaluations": 1
+    }
+  },
+  "notes": [
+    "Elapsed time is a single CI measurement, not a latency SLA.",
+    "heapUsedPeakApprox is the larger of the before/after process heap snapshots and is not a sampled true peak.",
+    "Both runs used the bounded Phase 1 registry with three approved axes and stayed far below the 25000-candidate hard cap."
+  ]
+}
