@@ -63,5 +63,6 @@
   "node --test tests/ui-home-jobs.mjs",
   "node tests/store-analysis-evidence-view.mjs",
   "node tests/store-optimization-research.mjs",
-  "node --test tests/axis-auto-selector-parity.mjs tests/axis-auto-selector-registry.mjs tests/axis-auto-selector-evaluator.mjs tests/axis-auto-selector-selector.mjs tests/axis-auto-selector-profile.mjs tests/axis-auto-selector-cli.mjs tests/axis-auto-selector-runtime-parity.mjs"
+  "node --test tests/axis-auto-selector-parity.mjs tests/axis-auto-selector-registry.mjs tests/axis-auto-selector-evaluator.mjs tests/axis-auto-selector-selector.mjs tests/axis-auto-selector-profile.mjs tests/axis-auto-selector-cli.mjs tests/axis-auto-selector-runtime-parity.mjs",
+  "node --test tests/axis-phase2a-builder.mjs tests/axis-phase2a-cli.mjs tests/axis-phase2a-input.mjs tests/axis-phase2a-jugest-runtime.mjs tests/axis-phase2a-walk-forward.mjs"
 ]
