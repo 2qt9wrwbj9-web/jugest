@@ -3,6 +3,7 @@ import {createAxisRegistry} from './registry.mjs';
 import {scoreDay,validatePointInTimeSamples} from './evaluator.mjs';
 import {DEFAULT_SELECTOR_CONFIG} from './selector.mjs';
 import {rankShadowRows,runShadowEvaluation} from './shadow.mjs';
+import {DEFAULT_OOS_GATE_CONFIG,evaluateOperationalGate} from './oos-gate.mjs';
 import {summarizeWalkForward} from './report.mjs';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -27,10 +28,27 @@ function ensembleKey(profile){
  return digest({decision:profile.decision,selectedAxes:(profile.selectedAxes||[]).map(axis=>({id:axis.id,version:axis.version,weight:axis.weight}))});
 }
 function selectedAxes(profile){return (profile.selectedAxes||[]).map(axis=>({id:axis.id,version:axis.version,weight:axis.weight}))}
-function preOutcomeHash({sample,profile,historyThrough,controlRankedKeys,shadowRankedKeys}){
+function latestGateState(receipts,store,eKey){
+ for(let index=receipts.length-1;index>=0;index-=1){
+  const receipt=receipts[index];
+  if(receipt.store!==store||receipt.ensembleKey!==eKey)continue;
+  const state=receipt.gate?.stateAfter;
+  if(state==='BLOCKED'||state==='ALLOWED')return state;
+ }
+ return'BLOCKED';
+}
+function preOutcomeHash({sample,store,profile,historyThrough,selectorDecision,operationalDecision,eKey,gate,controlRankedKeys,shadowRankedKeys,operationalRankedKeys}){
  return digest({
-  targetDate:sample.targetDate,trainingCutoff:sample.trainingCutoff,sourceSignature:sample.sourceSignature,
-  historyThrough,profileId:profile.id,decision:profile.decision,selectedAxes:selectedAxes(profile),controlRankedKeys,shadowRankedKeys
+  store,targetDate:sample.targetDate,trainingCutoff:sample.trainingCutoff,sourceSignature:sample.sourceSignature,
+  historyThrough,profileId:profile.id,decision:profile.decision,selectorDecision,operationalDecision,ensembleKey:eKey,
+  gate:{
+   stateBefore:gate.stateBefore,stateAfter:gate.stateAfter,reason:gate.reason,
+   evidenceCount:gate.evidenceCount,evidenceDates:gate.evidenceDates,windowStart:gate.windowStart,windowEnd:gate.windowEnd,
+   meanDelta:gate.meanDelta,sdDelta:gate.sdDelta,oosScore:gate.oosScore,
+   minEvidenceDays:gate.minEvidenceDays,windowEligibleDays:gate.windowEligibleDays,
+   releaseScore:gate.releaseScore,keepScore:gate.keepScore,uncertaintyPenalty:gate.uncertaintyPenalty
+  },
+  selectedAxes:selectedAxes(profile),controlRankedKeys,shadowRankedKeys,operationalRankedKeys
  });
 }
 function requireBundle(bundle,requestedStore){
@@ -41,7 +59,7 @@ function requireBundle(bundle,requestedStore){
  return validatePointInTimeSamples(bundle.samples);
 }
 
-export async function runWalkForwardBacktest({bundle,store=null,warmupDays=DEFAULT_SELECTOR_CONFIG.minEvaluatedDays,startDate=null,endDate=null,registry=createAxisRegistry(),config=DEFAULT_SELECTOR_CONFIG}={}){
+export async function runWalkForwardBacktest({bundle,store=null,warmupDays=DEFAULT_SELECTOR_CONFIG.minEvaluatedDays,startDate=null,endDate=null,registry=createAxisRegistry(),config=DEFAULT_SELECTOR_CONFIG,oosGateConfig=DEFAULT_OOS_GATE_CONFIG}={}){
  requireDate(startDate,'startDate');requireDate(endDate,'endDate');
  if(startDate&&endDate&&startDate>endDate)throw new RangeError('startDate must not be after endDate');
  if(!Number.isInteger(warmupDays)||warmupDays<0)throw new TypeError('warmupDays must be a non-negative integer');
@@ -58,27 +76,42 @@ export async function runWalkForwardBacktest({bundle,store=null,warmupDays=DEFAU
   }
   const historyThrough=history.at(-1)?.targetDate??null;
   const evaluation=await runShadowEvaluation({store:bundle.store,samples:history,registry,config});
-  const profile=evaluation.profile;
+  const profile=evaluation.profile,selectorDecision=profile.decision;
   const rankedShadow=rankShadowRows(sample.rows,profile,registry);
+  const controlRankedKeys=controlKeys(sample),shadowRankedKeys=rankedShadow.map(row=>row.key),eKey=ensembleKey(profile);
+  const stateBefore=latestGateState(receipts,bundle.store,eKey);
+  const gate=evaluateOperationalGate({
+   store:bundle.store,targetDate:sample.targetDate,ensembleKey:eKey,selectorDecision,
+   priorReceipts:receipts,previousState:stateBefore,config:oosGateConfig
+  });
+  const operationalDecision=gate.operationalDecision;
+  const operationalRankedKeys=operationalDecision==='SHADOW_CHAMPION'?shadowRankedKeys:controlRankedKeys;
+  const frozenPreOutcomeHash=preOutcomeHash({
+   sample,store:bundle.store,profile,historyThrough,selectorDecision,operationalDecision,eKey,gate,
+   controlRankedKeys,shadowRankedKeys,operationalRankedKeys
+  });
+
   const shadowRankByKey=new Map(rankedShadow.map(row=>[row.key,row.shadowRank]));
   const controlRankByKey=new Map(sample.rows.map(row=>[row.key,row.controlRank]));
-  const control=scoreByRank(sample,controlRankByKey),shadow=scoreByRank(sample,shadowRankByKey);
-  const controlRankedKeys=controlKeys(sample),shadowRankedKeys=rankedShadow.map(row=>row.key),eKey=ensembleKey(profile);
+  const operationalRankByKey=new Map(operationalRankedKeys.map((key,index)=>[key,index+1]));
+  const control=scoreByRank(sample,controlRankByKey),shadow=scoreByRank(sample,shadowRankByKey),operational=scoreByRank(sample,operationalRankByKey);
+  const controlUtility=finite(control?.utility)?control.utility:null,shadowUtility=finite(shadow?.utility)?shadow.utility:null,operationalUtility=finite(operational?.utility)?operational.utility:null;
   receipts.push(deepFreeze({
-   targetDate:sample.targetDate,trainingCutoff:sample.trainingCutoff,sourceSignature:sample.sourceSignature,
-   historyThrough,historyCount:history.length,decision:profile.decision,reasons:[...profile.reasons],profileId:profile.id,
-   ensembleKey:eKey,selectedAxes:selectedAxes(profile),
-   preOutcomeHash:preOutcomeHash({sample,profile,historyThrough,controlRankedKeys,shadowRankedKeys}),
-   controlRankedKeys,shadowRankedKeys,
-   controlUtility:finite(control?.utility)?control.utility:null,shadowUtility:finite(shadow?.utility)?shadow.utility:null,
-   utilityDelta:finite(control?.utility)&&finite(shadow?.utility)?shadow.utility-control.utility:null,
-   control:control??null,shadow:shadow??null
+   store:bundle.store,targetDate:sample.targetDate,trainingCutoff:sample.trainingCutoff,sourceSignature:sample.sourceSignature,
+   historyThrough,historyCount:history.length,decision:profile.decision,selectorDecision,operationalDecision,reasons:[...profile.reasons],profileId:profile.id,
+   ensembleKey:eKey,selectedAxes:selectedAxes(profile),gate,
+   preOutcomeHash:frozenPreOutcomeHash,
+   controlRankedKeys,shadowRankedKeys,operationalRankedKeys,
+   controlUtility,shadowUtility,operationalUtility,
+   utilityDelta:finite(controlUtility)&&finite(shadowUtility)?shadowUtility-controlUtility:null,
+   operationalUtilityDelta:finite(controlUtility)&&finite(operationalUtility)?operationalUtility-controlUtility:null,
+   control:control??null,shadow:shadow??null,operational:operational??null
   }));
   history.push(sample);
  }
  const summary=summarizeWalkForward({receipts,warmupDays:warmupCount,totalSamples:samples.filter(sample=>!endDate||sample.targetDate<=endDate).length});
  return deepFreeze({
-  schema:'jugest-axis-walk-forward-v1',shadowOnly:true,store:bundle.store,
+  schema:'jugest-axis-walk-forward-v1',shadowOnly:true,phase2b:true,store:bundle.store,
   range:{startDate:startDate??samples[0]?.targetDate??null,endDate:endDate??samples.at(-1)?.targetDate??null},
   warmup:{requested:warmupDays,count:warmupCount},receipts,summary
  });
