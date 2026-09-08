@@ -28,9 +28,9 @@ export async function main(argv=process.argv.slice(2)){
  if(!args.shadow)throw new TypeError('--shadow is required; Phase 2A cannot modify authoritative ranking');
  const input=required(args.input,'--input'),store=required(args.store,'--store'),output=required(args.output,'--output');
  const bundleOutput=args['bundle-output']??null;
- const paths=[input,output,...(bundleOutput?[bundleOutput]:[])].map(resolve);
+ const paths=[input,output,...(bundleOutput?[bundleOutput]:[])].map(value=>resolve(value));
  if(new Set(paths).size!==paths.length)throw new TypeError('--input, --output and --bundle-output must be different paths');
- const raw=await readJson(input),days=extractExternalDays(raw),runtime=await bootJugestResearchRuntime();
+ let raw=await readJson(input);const days=extractExternalDays(raw,{store});raw=null;const runtime=await bootJugestResearchRuntime();
  const minPriorDays=int(args['min-prior'],'--min-prior',{min:1,defaultValue:1});
  const warmupDays=int(args.warmup,'--warmup',{min:0,defaultValue:24});
  // Do not apply --start while building: earlier point-in-time samples are needed as warm-up/training history.
