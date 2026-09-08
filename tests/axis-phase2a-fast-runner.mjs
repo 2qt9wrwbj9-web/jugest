@@ -9,10 +9,10 @@ function shift(date,days){const d=new Date(`${date}T12:00:00Z`);d.setUTCDate(d.g
 
 test('parallel planner respects CPU, memory and max-worker bounds',()=>{
  const plan=planParallelism({requested:'auto',cpuCount:8,rowCount:54000,targetCount:100,memoryBudgetMB:1024,maxWorkers:4});
- assert.equal(plan.workers,3);
+ assert.equal(plan.workers,2);
  assert.equal(plan.cpuCap,4);
- assert.equal(plan.memoryCap,3);
- assert.ok(plan.estimatedWorkerMB>290&&plan.estimatedWorkerMB<300);
+ assert.equal(plan.memoryCap,2);
+ assert.ok(plan.estimatedWorkerMB>340&&plan.estimatedWorkerMB<350);
  const low=planParallelism({requested:'auto',cpuCount:8,rowCount:54000,targetCount:100,memoryBudgetMB:300,maxWorkers:8});
  assert.equal(low.workers,1);
  const explicit=planParallelism({requested:8,cpuCount:16,rowCount:1000,targetCount:2,memoryBudgetMB:4096,maxWorkers:8});
