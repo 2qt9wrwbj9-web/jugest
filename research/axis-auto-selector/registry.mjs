@@ -161,7 +161,7 @@ export function createAxisRegistry(input){
     has:id=>byId.has(id),
     list:()=>list,
     approved:()=>approved,
-    groupCap:id=>caps[id]??null,
+    groupCap:id=>Object.hasOwn(caps,id)?caps[id]:null,
     groupCaps:()=>caps
   });
 }
