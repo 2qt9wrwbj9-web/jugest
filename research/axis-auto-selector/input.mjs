@@ -11,7 +11,7 @@ function expandDay(day,index){
  if(!Array.isArray(day.machines))throw new TypeError(`external history day ${index} machines must be an array`);
  return{...structuredClone(day),machines:day.machines.map(expandMachine)};
 }
-export function extractExternalDays(input){
+export function extractExternalDays(input,{store=null}={}){
  let days=null;
  if(Array.isArray(input))days=input;
  else if(isRecord(input)){
@@ -20,5 +20,7 @@ export function extractExternalDays(input){
   else if(Array.isArray(input.days))days=input.days;
  }
  if(!Array.isArray(days)||days.length===0)throw new TypeError('input does not contain externalDays history');
- return days.map(expandDay);
+ const selected=typeof store==='string'&&store.trim()!==''?days.filter(day=>isRecord(day)&&day.shop===store):days;
+ if(selected.length===0&&store)throw new TypeError(`store ${store} has no history days`);
+ return selected.map(expandDay);
 }
