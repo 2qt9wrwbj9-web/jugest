@@ -42,3 +42,15 @@ test('parallel historical builder is semantically identical to sequential curren
  assert.equal(parallel.buildAudit.execution.mode,'parallel');
  assert.equal(parallel.buildAudit.execution.workers,2);
 });
+
+test('fast runner recycles the worker after every target while keeping bounded concurrency',async()=>{
+ const days=makeRawPredictionHistory(predictionHistorySpec).sort((a,b)=>a.date.localeCompare(b.date));
+ const end=days.at(-1).date,start=shift(end,-3);
+ const bundle=await buildHistoricalSampleBundleParallel({store:predictionHistorySpec.shop,days,startDate:start,endDate:end,minPriorDays:20,workers:2,memoryBudgetMB:4096,rootDir:process.cwd()});
+ const execution=bundle.buildAudit.execution;
+ assert.equal(execution.workerLifecycle,'per-target');
+ assert.equal(execution.workers,2);
+ assert.equal(execution.tasks,4);
+ assert.equal(execution.chunks.length,4);
+ assert.ok(execution.chunks.every(chunk=>chunk.targetCount===1&&chunk.startDate===chunk.endDate));
+});
