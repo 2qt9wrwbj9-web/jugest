@@ -99,13 +99,18 @@ export function generateCandidates({registry,availability={},config=DEFAULT_SELE
 
 function availabilityFromTrain(train,registry){
   const approved=registry.approved();
-  const totals=Object.create(null),finiteCounts=Object.create(null);
-  for(const axis of approved){totals[axis.id]=0;finiteCounts[axis.id]=0;}
-  for(const sample of train)for(const row of sample.rows)for(const axis of approved){
-    totals[axis.id]+=1;
-    if(finite(row.axes?.[axis.id]))finiteCounts[axis.id]+=1;
+  const availableDays=Object.create(null);
+  for(const axis of approved)availableDays[axis.id]=0;
+  for(const sample of train){
+    for(const axis of approved){
+      let validRows=0;
+      for(const row of sample.rows){
+        if(finite(row.actualES)&&finite(row.actualP4)&&finite(row.axes?.[axis.id]))validRows+=1;
+      }
+      if(validRows>=10)availableDays[axis.id]+=1;
+    }
   }
-  return freeze(Object.fromEntries(approved.map(axis=>[axis.id,totals[axis.id]?finiteCounts[axis.id]/totals[axis.id]:0])));
+  return freeze(Object.fromEntries(approved.map(axis=>[axis.id,train.length?availableDays[axis.id]/train.length:0])));
 }
 
 function controlSamples(samples){
@@ -115,14 +120,14 @@ function controlSamples(samples){
 }
 function evaluateControl(samples){return evaluatePeriod(controlSamples(samples),{'__current-control-rank':1});}
 function scoreOrNegInf(summary){return finite(summary?.score)?summary.score:-Infinity;}
+function periodBundle(samples,weights){return evaluatePeriod(samples,weights);}
 function gateAdvantage(candidate,control,fallback,minAdvantage){
-  const candidateScore=scoreOrNegInf(candidate);
-  const reference=Math.max(scoreOrNegInf(control),scoreOrNegInf(fallback));
-  return finite(candidateScore)&&candidateScore>=reference+minAdvantage-EPSILON;
+  const cs=scoreOrNegInf(candidate),reference=Math.max(scoreOrNegInf(control),scoreOrNegInf(fallback));
+  return finite(cs)&&cs>=reference+minAdvantage-EPSILON;
 }
 
 export function shrinkSelectedWeights(rawWeights,{sampleCount,advantage,fallback=FALLBACK_AXIS_WEIGHTS}={}){
-  const entries=Object.entries(rawWeights).filter(([,value])=>finite(value)&&value>0);
+  const entries=Object.entries(rawWeights).filter(([,v])=>finite(v)&&v>0);
   if(!entries.length)throw new TypeError('rawWeights must contain positive finite weights');
   const raw=normalized(entries);
   const targetEntries=entries.map(([id])=>[id,own(fallback,id)&&finite(fallback[id])&&fallback[id]>0?fallback[id]:0]);
@@ -136,7 +141,13 @@ export function shrinkSelectedWeights(rawWeights,{sampleCount,advantage,fallback
 }
 
 function emptyResult(reason,extra={}){
-  return freeze({decision:'control',reason,candidateCount:0,holdoutEvaluations:0,selectedAxisIds:freeze([]),...extra});
+  return freeze({decision:'CONTROL',reasons:freeze([reason]),candidateCount:0,holdoutEvaluations:0,selectedAxisIds:freeze([]),...extra});
+}
+function betterCandidate(candidate,score,best){
+  if(!best||score>best.score+EPSILON)return true;
+  if(Math.abs(score-best.score)>EPSILON)return false;
+  if(candidate.axisIds.length!==best.candidate.axisIds.length)return candidate.axisIds.length<best.candidate.axisIds.length;
+  return candidateKey(candidate)<candidateKey(best.candidate);
 }
 
 export function selectShadowEnsemble({samples,registry,control=null,fallback=FALLBACK_AXIS_WEIGHTS,config=DEFAULT_SELECTOR_CONFIG}){
@@ -145,15 +156,10 @@ export function selectShadowEnsemble({samples,registry,control=null,fallback=FAL
   if(!split.ok)return emptyResult(split.reason,{split});
   const availability=availabilityFromTrain(split.train,registry);
   let candidates;
-  try{
-    candidates=generateCandidates({registry,availability,config:cfg});
-  }catch(error){
-    if(error instanceof RangeError&&/candidate limit/i.test(error.message))return emptyResult('candidate_cap_exceeded',{availability,error:error.message,split});
-    throw error;
-  }
+  try{candidates=generateCandidates({registry,availability,config:cfg});}
+  catch(error){if(error instanceof RangeError&&/candidate limit/i.test(error.message))return emptyResult('candidate_cap_exceeded',{availability,error:error.message,split});throw error;}
   const sourceSeen=new Set(),eligibleAxisIds=[];
-  for(const axis of registry.approved()){
-    if((availability[axis.id]??0)+EPSILON<cfg.minAxisAvailability||sourceSeen.has(axis.sourceId))continue;
+  for(const axis of registry.approved())if((availability[axis.id]??0)+EPSILON>=cfg.minAxisAvailability&&!sourceSeen.has(axis.sourceId)){
     sourceSeen.add(axis.sourceId);
     eligibleAxisIds.push(axis.id);
   }
@@ -161,23 +167,21 @@ export function selectShadowEnsemble({samples,registry,control=null,fallback=FAL
 
   let best=null;
   for(const candidate of candidates){
-    const train=evaluatePeriod(split.train,candidate.weights);
+    const train=periodBundle(split.train,candidate.weights);
     const score=scoreOrNegInf(train);
-    if(!best||score>best.score+EPSILON||(Math.abs(score-best.score)<=EPSILON&&candidateKey(candidate)<candidateKey(best.candidate))){
+    if(betterCandidate(candidate,score,best)){
       best={candidate,train,score};
     }
   }
-  if(!best||!finite(best.train.score)){
-    return emptyResult('no_train_score',{availability,eligibleAxisIds:freeze(eligibleAxisIds),candidateCount:candidates.length,split});
-  }
+  if(!best||!finite(best.train.score))return emptyResult('no_train_score',{availability,eligibleAxisIds:freeze(eligibleAxisIds),candidateCount:candidates.length,split});
 
   const controlEvaluate=control?.evaluatePeriod||evaluateControl;
-  const validationCandidate=evaluatePeriod(split.validation,best.candidate.weights);
+  const validationCandidate=periodBundle(split.validation,best.candidate.weights);
   const validationControl=controlEvaluate(split.validation);
-  const validationFallback=evaluatePeriod(split.validation,fallback);
+  const validationFallback=periodBundle(split.validation,fallback);
   const validation=freeze({candidate:validationCandidate,control:validationControl,fallback:validationFallback});
   if(!gateAdvantage(validationCandidate,validationControl,validationFallback,cfg.validationMinAdvantage)){
-    return freeze({decision:'control',reason:'validation_gate',candidateCount:candidates.length,holdoutEvaluations:0,
+    return freeze({decision:'CONTROL',reasons:freeze(['validation_advantage_below_threshold']),candidateCount:candidates.length,holdoutEvaluations:0,
       availability,eligibleAxisIds:freeze(eligibleAxisIds),selectedAxisIds:best.candidate.axisIds,rawWeights:best.candidate.weights,
       train:best.train,validation,split});
   }
@@ -187,9 +191,9 @@ export function selectShadowEnsemble({samples,registry,control=null,fallback=FAL
   const shrunk=shrinkSelectedWeights(best.candidate.weights,{sampleCount:split.train.length,advantage:validationAdvantage,fallback});
   let holdoutEvaluations=0;
   holdoutEvaluations+=1;
-  const holdoutCandidate=evaluatePeriod(split.holdout,shrunk.weights);
+  const holdoutCandidate=periodBundle(split.holdout,shrunk.weights);
   const holdoutControl=controlEvaluate(split.holdout);
-  const holdoutFallback=evaluatePeriod(split.holdout,fallback);
+  const holdoutFallback=periodBundle(split.holdout,fallback);
   const holdout=freeze({candidate:holdoutCandidate,control:holdoutControl,fallback:holdoutFallback});
   const holdoutPass=gateAdvantage(holdoutCandidate,holdoutControl,holdoutFallback,cfg.holdoutMinAdvantage)
     &&holdoutCandidate.n>=cfg.minHoldoutDays
@@ -197,6 +201,12 @@ export function selectShadowEnsemble({samples,registry,control=null,fallback=FAL
   const common={candidateCount:candidates.length,holdoutEvaluations,availability,eligibleAxisIds:freeze(eligibleAxisIds),
     selectedAxisIds:best.candidate.axisIds,rawWeights:best.candidate.weights,weights:shrunk.weights,shrink:shrunk,
     train:best.train,validation,holdout,split};
-  if(!holdoutPass)return freeze({decision:'control',reason:'holdout_gate',...common});
-  return freeze({decision:'shadow_champion',reason:'accepted',...common});
+  if(!holdoutPass){
+    const reasons=[];
+    if(!gateAdvantage(holdoutCandidate,holdoutControl,holdoutFallback,cfg.holdoutMinAdvantage))reasons.push('holdout_advantage_below_threshold');
+    if(holdoutCandidate.n<cfg.minHoldoutDays)reasons.push('holdout_insufficient_days');
+    if(holdoutCandidate.winRate+EPSILON<cfg.holdoutMinWinRate)reasons.push('holdout_win_rate_below_threshold');
+    return freeze({decision:'CONTROL',reasons:freeze(reasons),...common});
+  }
+  return freeze({decision:'SHADOW_CHAMPION',reasons:freeze(['all_gates_passed']),...common});
 }
