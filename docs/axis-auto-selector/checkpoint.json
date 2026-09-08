@@ -1,0 +1,20 @@
+{
+  "schema": "jugest-axis-implementation-checkpoint-v1",
+  "status": "task2_registry_review_pending",
+  "branch": "astra/axis-auto-selector-shadow",
+  "resumeHead": "7b055ff844387e2fc8ad6a66ff5f53dfa3c98552",
+  "runtimeBase": "273ed61ed2019365ae1b38d76288f20e9625c9e1",
+  "mainVerified": "273ed61ed2019365ae1b38d76288f20e9625c9e1",
+  "resumedOn": "2026-09-08",
+  "completed": ["spec_plan_handoff_read", "preflight_code_review", "historical_preflight_64_of_64", "26_runtime_hashes_reverified"],
+  "baselineCommit": "c4a5f2218915746b72c59937b8f3d191ecc57510",
+  "baselineFixtureSha256": "d33aabb650494a7f8d51e7d5be706c7680b9c152259019c4714a91362ee69cf0",
+  "registryCommit": "7b055ff844387e2fc8ad6a66ff5f53dfa3c98552",
+  "focusedTests": {"baselineParity": "3/3 PASS", "registry": "9/9 PASS", "productionPreservation": "3/3 PASS", "freshResumeCombined": "15/15 PASS"},
+  "inProgress": "Task1 independently approved; Task2 implementation complete, interrupted independent review resumed",
+  "remaining": ["registry_review", "evaluator", "selector_guards", "profile_persistence", "shadow_cli", "full_regression_performance_report"],
+  "previousTestLog": "Previous /tmp preflight log no longer present; historical PASS not a final verification",
+  "shadowOnly": true,
+  "productionChanged": false,
+  "axisPreviewDeployed": false
+}
