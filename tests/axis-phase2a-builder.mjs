@@ -48,6 +48,14 @@ test('historical builder gives prediction runtime only dates strictly before eac
  }
 });
 
+test('historical builder judges normalized store history once and reuses judged snapshots',()=>{
+ const runtime=fakeRuntime(),judge=runtime.ensureExternalJudgedSync.bind(runtime);let judgeCalls=0;
+ runtime.ensureExternalJudgedSync=(days,store)=>{judgeCalls+=1;return judge(days,store)};
+ const bundle=buildHistoricalSampleBundle({store:'A',days:makeDays(),runtime,startDate:'2026-01-08',endDate:'2026-01-15'});
+ assert.ok(bundle.samples.length>0);
+ assert.equal(judgeCalls,1);
+});
+
 test('target outcome poisoning changes outcome only, never that target pre-outcome snapshot',()=>{
  const days=makeDays(),target='2026-01-12';
  const original=buildHistoricalSampleBundle({store:'A',days,runtime:fakeRuntime(),startDate:target,endDate:target});
