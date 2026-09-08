@@ -87,12 +87,28 @@ function runWorker(workerData){
   const worker=new Worker(new URL('./historical-worker.mjs',import.meta.url),{workerData});
   let settled=false;
   worker.once('message',message=>{
-   settled=true;
-   if(message?.ok)resolve(message);else{const error=new Error(message?.error?.message||'historical worker failed');error.name=message?.error?.name||'Error';error.stack=message?.error?.stack||error.stack;reject(error);}
+   if(settled)return;settled=true;
+   const finish=async()=>{
+    try{await worker.terminate()}catch{}
+    if(message?.ok)return resolve(message);
+    const error=new Error(message?.error?.message||'historical worker failed');error.name=message?.error?.name||'Error';error.stack=message?.error?.stack||error.stack;reject(error);
+   };
+   finish().catch(reject);
   });
-  worker.once('error',error=>{settled=true;reject(error)});
-  worker.once('exit',code=>{if(!settled&&code!==0)reject(new Error(`historical worker exited with code ${code}`));});
+  worker.once('error',error=>{if(settled)return;settled=true;reject(error)});
+  worker.once('exit',code=>{if(!settled&&code!==0){settled=true;reject(new Error(`historical worker exited with code ${code}`))}});
  });
+}
+async function runPerTargetQueue({indices,limit,run}){
+ const results=new Array(indices.length);let cursor=0;
+ const lane=async()=>{
+  while(true){
+   const position=cursor++;if(position>=indices.length)return;
+   results[position]=await run(indices[position],position);
+  }
+ };
+ await Promise.all(Array.from({length:Math.min(limit,indices.length)},()=>lane()));
+ return results;
 }
 
 export async function buildHistoricalSampleBundleParallel({store,days,startDate=null,endDate=null,minPriorDays=1,workers='auto',memoryBudgetMB=defaultMemoryBudgetMB(),maxWorkers=4,rootDir=process.cwd(),cpuCount=availableParallelism()}={}){
@@ -104,22 +120,24 @@ export async function buildHistoricalSampleBundleParallel({store,days,startDate=
  const selected=orderedStoreDays(days,store),rowCount=selected.reduce((sum,day)=>sum+day.machines.length,0);
  const targetIndices=selected.map((_,index)=>index).filter(index=>(!startDate||selected[index].date>=startDate)&&(!endDate||selected[index].date<=endDate));
  const plan=planParallelism({requested:workers,cpuCount,rowCount,targetCount:targetIndices.length,memoryBudgetMB,maxWorkers});
- if(plan.workers===1||targetIndices.length<=1){
+ if(targetIndices.length<=1){
   const runtime=await bootJugestResearchRuntime({rootDir});
   const bundle=buildHistoricalSampleBundle({store,days:selected,runtime,startDate,endDate,minPriorDays});
-  return deepFreeze({...bundle,buildAudit:{...bundle.buildAudit,execution:{mode:'sequential',workers:1,elapsedMs:performance.now()-started,rowCount,targetCount:targetIndices.length,plan}}});
+  return deepFreeze({...bundle,buildAudit:{...bundle.buildAudit,execution:{mode:'sequential',workers:1,workerLifecycle:'single-target',tasks:targetIndices.length,elapsedMs:performance.now()-started,rowCount,targetCount:targetIndices.length,plan}}});
  }
- const prefixRows=[];let cumulativeRows=0;for(let i=0;i<selected.length;i+=1){cumulativeRows+=selected[i].machines.length;prefixRows[i]=Math.max(1,cumulativeRows)}
- const chunks=partitionTargetIndices(targetIndices,plan.workers,{costs:targetIndices.map(index=>prefixRows[index])});
- const tasks=chunks.map(chunk=>{
-  const first=chunk[0],last=chunk.at(-1),chunkDays=selected.slice(0,last+1);
-  return runWorker({store,days:chunkDays,startDate:selected[first].date,endDate:selected[last].date,minPriorDays,rootDir});
+ const results=await runPerTargetQueue({
+  indices:targetIndices,limit:plan.workers,
+  run:async index=>{
+   const targetDate=selected[index].date;
+   const result=await runWorker({store,days:selected.slice(0,index+1),startDate:targetDate,endDate:targetDate,minPriorDays,rootDir});
+   return{result,index};
+  }
  });
- const results=await Promise.all(tasks),samples=[],skipped=[],chunkAudit=[];
- for(let i=0;i<results.length;i+=1){
-  const result=results[i],chunk=chunks[i];
+ const samples=[],skipped=[],chunkAudit=[];
+ for(const entry of results){
+  const {result,index}=entry,targetDate=selected[index].date;
   samples.push(...result.bundle.samples);skipped.push(...result.bundle.buildAudit.skipped);
-  chunkAudit.push({startDate:selected[chunk[0]].date,endDate:selected[chunk.at(-1)].date,targetCount:chunk.length,builtSamples:result.bundle.samples.length,skipped:result.bundle.buildAudit.skipped.length,...result.metrics});
+  chunkAudit.push({startDate:targetDate,endDate:targetDate,targetCount:1,builtSamples:result.bundle.samples.length,skipped:result.bundle.buildAudit.skipped.length,...result.metrics});
  }
  samples.sort((a,b)=>a.targetDate.localeCompare(b.targetDate));skipped.sort((a,b)=>String(a.targetDate).localeCompare(String(b.targetDate))||String(a.reason).localeCompare(String(b.reason)));
  return deepFreeze({
@@ -127,6 +145,6 @@ export async function buildHistoricalSampleBundleParallel({store,days,startDate=
   source:{kind:'current-jugest-v4PredictStore',pointInTime:true,outcomeProxy:'external expectedSetting/p4'},
   range:{startDate:startDate??selected[0].date,endDate:endDate??selected.at(-1).date,availableDays:selected.length},
   samples,
-  buildAudit:{builtSamples:samples.length,skipped,execution:{mode:'parallel',workers:plan.workers,elapsedMs:performance.now()-started,rowCount,targetCount:targetIndices.length,plan,chunks:chunkAudit}}
+  buildAudit:{builtSamples:samples.length,skipped,execution:{mode:'parallel',workers:plan.workers,workerLifecycle:'per-target',tasks:targetIndices.length,elapsedMs:performance.now()-started,rowCount,targetCount:targetIndices.length,plan,chunks:chunkAudit}}
  });
 }
