@@ -7,13 +7,15 @@ function makeBundle(count=40){
  const samples=Array.from({length:count},(_,day)=>({
   targetDate:shift('2026-01-01',day),trainingCutoff:shift('2025-12-31',day),sourceSignature:`sig-${day}`,
   rows:Array.from({length:12},(_,i)=>{
-   const practical=(11-i)/11, inverse=1-practical;
+   const practical=(11-i)/11;
+   const model=((i*7+day*3)%12)/11;
+   const strict=((i*5+day*2+1)%12)/11;
    return{
     key:`my|${i+1}`,
     controlRank:12-i,
-    controlScore:inverse,
+    controlScore:i/11,
     fixedBonus:0,
-    axes:{'practical-v1':practical,'model-v1':inverse,'strict-v1':inverse},
+    axes:{'practical-v1':practical,'model-v1':model,'strict-v1':strict},
     actualES:1+practical*5,
     actualP4:.05+practical*.9
    };
