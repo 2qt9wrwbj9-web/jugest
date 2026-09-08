@@ -1,0 +1,112 @@
+{
+  "schema": "jugest-axis-phase2a-real-store-summary-v1",
+  "date": "2026-09-08",
+  "shadowOnly": true,
+  "runtimeControl": "current point-in-time v4PredictStore",
+  "workerPolicy": {
+    "lifecycle": "per-target",
+    "concurrency": 3,
+    "resultRetention": "parent process retains completed bundle/receipt; worker runtime is terminated after each target"
+  },
+  "stores": [
+    {
+      "store": "グリーン",
+      "availableDays": 210,
+      "rows": 9030,
+      "targetTasks": 190,
+      "builtSamples": 165,
+      "warmupDays": 24,
+      "evaluatedDays": 141,
+      "shadowChampionDays": 26,
+      "controlDays": 115,
+      "abstainRate": 0.8156028368794326,
+      "shadowWins": 7,
+      "controlWins": 15,
+      "ties": 119,
+      "delta": {
+        "meanUtility": -0.008256702748281516,
+        "top3": {"es": -0.007449716860637829, "p4": -0.002429180805544341},
+        "top5": {"es": -0.012274032665848594, "p4": -0.0035997537544951437},
+        "top10": {"es": -0.004024120891102975, "p4": -0.001154207720266991}
+      },
+      "championDayMeanUtilityDelta": -0.0447767341349113,
+      "buildElapsedMs": 288217.76155700005,
+      "parityTargets": ["2026-09-05", "2026-09-06"],
+      "parity": "2/2 exact"
+    },
+    {
+      "store": "ジアス大船",
+      "availableDays": 134,
+      "rows": 14469,
+      "targetTasks": 114,
+      "builtSamples": 89,
+      "warmupDays": 24,
+      "evaluatedDays": 65,
+      "shadowChampionDays": 13,
+      "controlDays": 52,
+      "abstainRate": 0.8,
+      "shadowWins": 4,
+      "controlWins": 3,
+      "ties": 58,
+      "delta": {
+        "meanUtility": 0.006337236588986717,
+        "top3": {"es": 0.00787938548003414, "p4": 0.0027383529158288566},
+        "top5": {"es": 0.006459332762933145, "p4": 0.001814544077315447},
+        "top10": {"es": 0.002823357420399575, "p4": 0.0010799226651482946}
+      },
+      "championDayMeanUtilityDelta": 0.0316861829449335,
+      "buildElapsedMs": 282013.484498,
+      "parityTargets": ["2026-09-05", "2026-09-06"],
+      "parity": "2/2 exact"
+    },
+    {
+      "store": "セブンS川崎店",
+      "availableDays": 150,
+      "rows": 16500,
+      "targetTasks": 130,
+      "builtSamples": 105,
+      "warmupDays": 24,
+      "evaluatedDays": 81,
+      "shadowChampionDays": 15,
+      "controlDays": 66,
+      "abstainRate": 0.8148148148148148,
+      "shadowWins": 2,
+      "controlWins": 3,
+      "ties": 76,
+      "delta": {
+        "meanUtility": 0.0015025321778151801,
+        "top3": {"es": 0.0030667262873208673, "p4": 0.0007967478434608571},
+        "top5": {"es": 0.00060186809492567, "p4": 0.0001848266522848606},
+        "top10": {"es": -0.0000041702033403701044, "p4": 0.00001388624692265708}
+      },
+      "championDayMeanUtilityDelta": 0.008113673760201907,
+      "buildElapsedMs": 336626.59388999996,
+      "parityTargets": ["2026-09-05", "2026-09-06"],
+      "parity": "2/2 exact"
+    }
+  ],
+  "combined": {
+    "evaluatedDays": 287,
+    "shadowChampionDays": 54,
+    "controlDays": 233,
+    "shadowAdoptionRate": 0.18815331010452963,
+    "shadowWins": 13,
+    "controlWins": 21,
+    "ties": 253,
+    "nonTieShadowWinRate": 0.38235294117647056,
+    "weightedDelta": {
+      "meanUtility": -0.0021971066300366816,
+      "top3": {"es": -0.00100991356053911, "p4": -0.0003483797168381427},
+      "top5": {"es": -0.004397319374930376, "p4": -0.001305397057572256},
+      "top10": {"es": -0.0013387477344603384, "p4": -0.00031854888265599776}
+    },
+    "championDayMeanUtilityDelta": -0.011677214867046808,
+    "productionPromotion": "NO-GO"
+  },
+  "notes": [
+    "Outcome metrics are JUGEST end-of-day expectedSetting/p4 proxies, not verified hidden settings.",
+    "Per-target workers preserve the completed result in the parent process, then terminate the worker runtime/heap before the next target.",
+    "The three-store evidence is heterogeneous: positive at ジアス大船 and セブンS川崎店, negative at グリーン; combined weighted evidence is negative.",
+    "No visible ranking, main branch, Production, Collector, Device Sync, or protected judgment math is changed by this research evidence."
+  ]
+}
