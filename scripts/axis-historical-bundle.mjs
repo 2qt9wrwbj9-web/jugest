@@ -27,7 +27,7 @@ export async function main(argv=process.argv.slice(2)){
  if(!args.shadow)throw new TypeError('--shadow is required; historical replay is research-only');
  const input=required(args.input,'--input'),store=required(args.store,'--store'),output=required(args.output,'--output');
  if(resolve(input)===resolve(output))throw new TypeError('--input and --output must be different paths');
- const raw=await readJson(input),days=extractExternalDays(raw),runtime=await bootJugestResearchRuntime();
+ let raw=await readJson(input);const days=extractExternalDays(raw,{store});raw=null;const runtime=await bootJugestResearchRuntime();
  const bundle=buildHistoricalSampleBundle({store,days,runtime,startDate:args.start??null,endDate:args.end??null,minPriorDays:positiveInteger(args['min-prior'],'--min-prior',1)});
  await writeFile(output,`${JSON.stringify(bundle,null,2)}\n`,'utf8');
  process.stdout.write(`JUGEST axis historical bundle store=${store} samples=${bundle.samples.length} skipped=${bundle.buildAudit.skipped.length}\n`);
