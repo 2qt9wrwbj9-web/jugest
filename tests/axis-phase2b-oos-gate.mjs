@@ -67,6 +67,30 @@ test('allowed ensemble state is derived from its own latest receipt and can keep
  assert.equal(result.reason,'oos_gate_kept');
 });
 
+test('a different Shadow ensemble resets operational state but retains exact-ensemble evidence for re-release',()=>{
+ const prior=[
+  ...Array.from({length:12},(_,i)=>receipt(i,{delta:.001,stateAfter:i===11?'ALLOWED':'BLOCKED'})),
+  receipt(12,{ensembleKey:'E2',delta:.02,stateAfter:'ALLOWED'})
+ ];
+ const result=evaluate({priorReceipts:prior});
+ assert.equal(result.evidenceCount,12);
+ close(result.meanDelta,.001);
+ assert.equal(result.stateBefore,'BLOCKED');
+ assert.equal(result.operationalDecision,'CONTROL');
+ assert.equal(result.reason,'oos_gate_blocked');
+});
+
+test('CONTROL gaps do not reset an unchanged Shadow ensemble state',()=>{
+ const prior=[
+  ...Array.from({length:12},(_,i)=>receipt(i,{delta:.001,stateAfter:i===11?'ALLOWED':'BLOCKED'})),
+  receipt(12,{ensembleKey:'CONTROL',selectorDecision:'CONTROL',delta:0,stateAfter:'BLOCKED'})
+ ];
+ const result=evaluate({priorReceipts:prior});
+ assert.equal(result.stateBefore,'ALLOWED');
+ assert.equal(result.operationalDecision,'SHADOW_CHAMPION');
+ assert.equal(result.reason,'oos_gate_kept');
+});
+
 test('allowed ensemble blocks when its conservative OOS score turns negative',()=>{
  const prior=Array.from({length:12},(_,i)=>receipt(i,{delta:-.002,stateAfter:i===11?'ALLOWED':'BLOCKED'}));
  const result=evaluate({priorReceipts:prior});
