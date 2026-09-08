@@ -29,8 +29,8 @@ export function planParallelism({requested='auto',cpuCount=availableParallelism(
   requestedCount=positiveInt(n,'requested workers');
  }
  const cpuCap=Math.max(1,Math.min(maxWorkers,Math.max(1,cpuCount-1)));
- // Measured research-runtime heap is roughly 160 MiB plus store-history pressure. Stay intentionally conservative.
- const estimatedWorkerMB=160+rowCount*.0025;
+ // Measured research-runtime heap is around 200 MiB even for modest stores; reserve extra headroom as history grows.
+ const estimatedWorkerMB=200+rowCount*.0027;
  const memoryCap=Math.max(1,Math.floor(memoryBudgetMB/estimatedWorkerMB));
  const targetCap=Math.max(1,targetCount||1);
  let workers=Math.min(cpuCap,memoryCap,targetCap,requestedCount??Infinity);
@@ -78,9 +78,9 @@ function orderedStoreDays(days,store){
  return selected;
 }
 function defaultMemoryBudgetMB(){
- // Research runner only: leave more than half the machine memory to the OS/JUGEST shell and cap automatic appetite at 2 GiB.
+ // Research runner only: default to a <=1 GiB pool and leave most machine memory to the OS/JUGEST shell.
  const totalMB=totalmem()/MB;
- return Math.max(512,Math.min(2048,totalMB*.45));
+ return Math.max(512,Math.min(1024,totalMB*.35));
 }
 function runWorker(workerData){
  return new Promise((resolve,reject)=>{
