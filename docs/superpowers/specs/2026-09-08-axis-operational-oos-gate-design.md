@@ -100,28 +100,29 @@ Per store, the gate has only two effective states: `BLOCKED` and `ALLOWED`. Cold
 
 For target date D:
 
-1. If selector decision is `CONTROL`, final decision is `CONTROL` with reason `selector_control`. Gate state is not used to promote anything.
-2. If fewer than `minEvidenceDays` prior gate-eligible receipts exist, final decision is `CONTROL` with reason `oos_insufficient_evidence`.
+1. If selector decision is `CONTROL`, final decision is `CONTROL` with reason `selector_control`. The gate state carries forward unchanged; a selector CONTROL day neither resets nor advances operational health evidence.
+2. If fewer than `minEvidenceDays` prior gate-eligible receipts exist, final decision is `CONTROL` with reason `oos_insufficient_evidence` and state `BLOCKED`.
 3. If the previous operational state was not `ALLOWED`, Shadow is released only when both:
    - `oosScore >= releaseScore`, and
    - `meanDelta > 0`.
 4. If the previous operational state was `ALLOWED`, Shadow remains allowed only while both:
    - `oosScore >= keepScore`, and
    - `meanDelta >= 0`.
-5. Otherwise final decision is `CONTROL` with reason `oos_gate_blocked`.
+5. Otherwise final decision is `CONTROL` with reason `oos_gate_blocked` and state `BLOCKED`.
 
 This gives deliberate hysteresis: entering/re-entering Shadow requires positive conservative evidence, while an already healthy Shadow may remain active down to neutral conservative evidence.
 
-The state transition is deterministic and derived only from prior frozen receipts. No wall-clock state or hidden cache may change the answer.
+The previous state is the immediately preceding receipt's `gate.stateAfter` for the same store. If no prior receipt exists, it is `BLOCKED`. The state transition is deterministic and derived only from prior frozen receipts. No wall-clock state or hidden cache may change the answer.
 
 ## Receipt contract
 
-Phase 2B extends the walk-forward receipt without overwriting existing fields.
+Phase 2B extends the walk-forward receipt without overwriting existing fields. Every receipt gains the store identifier so pure gate validation can reject mixed-store evidence.
 
 Required new fields:
 
 ```json
 {
+  "store": "STORE NAME",
   "selectorDecision": "SHADOW_CHAMPION",
   "operationalDecision": "CONTROL",
   "gate": {
@@ -129,6 +130,7 @@ Required new fields:
     "stateAfter": "BLOCKED",
     "reason": "oos_gate_blocked",
     "evidenceCount": 18,
+    "evidenceDates": ["YYYY-MM-DD"],
     "windowStart": "YYYY-MM-DD",
     "windowEnd": "YYYY-MM-DD",
     "meanDelta": -0.0012,
@@ -140,7 +142,9 @@ Required new fields:
 }
 ```
 
-The pre-outcome receipt hash must include selector decision, operational decision, gate state/statistics, evidence dates, selected axes, control ranked keys, and frozen Shadow ranked keys. It must exclude the current target's outcomes and post-outcome score.
+`evidenceDates` is the exact ordered set used for the current decision, capped to the current rolling window. `evidenceCount` equals its length.
+
+The pre-outcome receipt hash must include store, selector decision, operational decision, gate state/statistics, exact evidence dates, selected axes, control ranked keys, and frozen Shadow ranked keys. It must exclude the current target's outcomes and post-outcome score.
 
 ## Ranking behavior
 
@@ -185,7 +189,7 @@ Tests must prove all of the following:
 - Changing any future outcome cannot change earlier gate decisions or hashes.
 - A later profile or later gate state cannot flow backward.
 - A blocked Shadow day's frozen counterfactual is scored only after its outcome is revealed and may influence only later dates.
-- Store A receipts cannot affect Store B.
+- Store A receipts cannot affect Store B; mixed-store prior receipts fail closed.
 - Re-running the same bundle produces identical decisions and receipt hashes.
 - Sequential and Fast Runner bundle generation remain identical; Phase 2B must not change historical sample construction.
 
@@ -193,7 +197,14 @@ Tests must prove all of the following:
 
 The three already-inspected Phase 2A stores are permitted for implementation debugging and regression fixtures, but they are **not** valid final proof of Phase 2B effectiveness.
 
-Before looking at Phase 2B results on unused real data, the defaults above and algorithm must be frozen in source and tests.
+Before looking at Phase 2B results on unused real data, the defaults above and algorithm must be frozen in source and tests. The implementation must then write a holdout lock artifact containing:
+
+- implementation commit SHA;
+- gate config and algorithm version;
+- selected untouched store/period identifiers;
+- hashes of the input bundle partitions used for final evaluation.
+
+The lock is committed before final holdout results are opened.
 
 Final Phase 2B evidence must come from one of:
 
@@ -214,6 +225,7 @@ Primary pure API:
 
 ```js
 evaluateOperationalGate({
+  store,
   selectorDecision,
   priorReceipts,
   previousState,
@@ -221,7 +233,7 @@ evaluateOperationalGate({
 })
 ```
 
-It returns a deeply frozen, machine-readable gate decision/statistics object and has no file/network/time dependency.
+It returns a deeply frozen, machine-readable gate decision/statistics object and has no file/network/time dependency. It validates that all supplied prior receipts belong to `store` and are strictly chronological.
 
 Existing integration point:
 
@@ -249,13 +261,14 @@ Phase 2B returns CONTROL when:
 
 - selector is CONTROL;
 - evidence is insufficient;
-- a required prior receipt is malformed;
+- a gate-eligible prior receipt is malformed;
 - utilityDelta is missing/non-finite in a receipt that claims to be eligible evidence;
 - chronology is invalid;
+- store identity is mixed or missing;
 - gate statistics are non-finite;
 - config is invalid.
 
-Malformed evidence must not be silently skipped in a way that could turn a blocked decision into an allowed one.
+Malformed gate-eligible evidence must not be silently skipped in a way that could turn a blocked decision into an allowed one.
 
 ## Testing strategy
 
@@ -269,7 +282,8 @@ TDD order:
 6. report accounting tests for prevented loss / missed gain;
 7. sequential determinism and existing Fast Runner parity;
 8. full regression and all Production-preservation suites;
-9. only then locked unused real-store / unused-period evaluation.
+9. commit the holdout lock;
+10. only then open the locked unused real-store / unused-period evaluation.
 
 No test may weaken existing exact/ULP parity requirements just to make Phase 2B pass.
 
