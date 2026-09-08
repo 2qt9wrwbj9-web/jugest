@@ -2,73 +2,146 @@
 
 ## Status
 
-Phase 2A infrastructure is implemented on `sol/axis-phase2a-walk-forward` as a research-only, shadow-only extension of Phase 1.
+Phase 2A historical replay and the bounded Fast Runner are implemented on `sol/axis-phase2a-fast-runner` as research-only, shadow-only infrastructure.
 
-Verification source commit: `4756efdb0ee2b90cd241260ee828fdb6a9a94a99`.
+Latest code verification source commit: `5e6be05895e18f2fae8c217e0988c331a44c8d2e`.
+GitHub Actions run: `34232296375` on Node `22.23.2` — focused Fast Runner tests, full regression, and mandatory preservation regressions all PASS.
 
 No main merge, Production deployment, visible-ranking connection, Collector change, Device Sync change, or protected judgment-math change was made.
 
 ## Purpose
 
-Phase 2A answers a narrower question than Production promotion:
+Phase 2A asks:
 
 > Given only information available before each historical target date, would the Phase 1 Axis Auto-Selector have ranked that store's machines better than the current point-in-time JUGEST control?
 
-It does not claim to recover the store's hidden true settings. End-of-day JUGEST `expectedSetting` / `p4` are used as outcome proxies.
+It does not claim to recover hidden true settings. End-of-day JUGEST `expectedSetting` / `p4` are outcome proxies.
 
-## Pipeline
+## Point-in-time pipeline
 
 1. Read a JUGEST full-backup JSON, direct `externalDays`, or a direct day array.
-2. Expand the backup's packed external machine rows without mutating the input.
-3. Boot the current JUGEST runtime headlessly in a Node VM with network access disabled.
-4. For each historical target date D:
-   - pass only store history dated `< D` to current `v4PredictStore`;
-   - capture current control rank, score, practical/model/strict signals and fixed validated bonus;
-   - hash the pre-outcome source/history snapshot;
-   - only after prediction, judge D's observed data to obtain `actualES` and `actualP4` outcome proxies.
-5. Feed chronological samples to the Phase 1 selector.
-6. Keep the first 24 usable samples as warm-up by default.
-7. For every later target date:
-   - choose the shadow profile from previously revealed samples only;
-   - freeze profile/rank/pre-outcome receipt before scoring that target;
-   - compare current control vs shadow using the existing Phase 1 day-utility semantics;
-   - reveal the target outcome only for scoring, then make that sample available to later dates.
-8. Aggregate wins, utility, Top3/5/10 ES/P4 lift, abstention/control rate, ensemble changes and axis usage.
+2. Filter the requested store before expanding/processing unrelated stores.
+3. Expand packed external machine rows without mutating the source input.
+4. For each historical target date D, give the prediction runtime only history dated `< D`.
+5. Capture current control rank/score, practical/model/strict signals, fixed validated bonus, and the pre-outcome source signature.
+6. Only after the prediction is frozen, attach D's end-of-day outcome proxy.
+7. Keep the first 24 usable samples as warm-up by default.
+8. For every later date, choose the shadow profile using previously revealed samples only, freeze the receipt, then score D.
+9. Aggregate control-vs-shadow utility, Top3/5/10 ES/P4, wins/ties, abstention, profile changes and axis usage.
+
+## Fast Runner execution policy
+
+Historical replay initially became memory-heavy when one worker retained a JUGEST runtime across many target dates. The production-independent research runner now uses a strict lifecycle:
+
+`one target date -> fresh worker/runtime -> compute -> post completed result to parent -> terminate worker -> free worker heap/cache`
+
+Completed samples/receipts remain in the parent process; only worker runtime memory is discarded.
+
+Concurrency is bounded by CPU, estimated memory pressure, target count and an explicit maximum. Automatic/default maximum concurrency is **3 workers**. CLI overrides remain available for controlled research, but the default is intentionally conservative because four concurrent full JUGEST runtimes showed worse resource pressure in measurement.
+
+The Fast Runner records `workerLifecycle: "per-target"` and one audit chunk per target date. Tests require the parallel result to be semantically identical to the sequential current-JUGEST replay.
 
 ## Leakage controls
 
-Phase 2A regression tests prove the following contracts on deterministic fixtures:
+Regression tests cover:
 
-- prediction source dates are strictly earlier than the target date;
-- duplicate store dates and malformed chronology fail closed;
-- changing a target day's outcome cannot change that target's profile, ranks or pre-outcome receipt hash;
-- changing data after a tested cutoff cannot change earlier historical samples or receipts;
-- walk-forward history is revealed one target at a time;
-- the default warm-up is exactly 24 usable samples when evaluation starts at the beginning of the bundle.
+- prediction source dates strictly earlier than target date;
+- duplicate dates / malformed chronology fail closed;
+- target outcome poisoning cannot alter that target's pre-outcome profile/ranks/hash;
+- future poisoning cannot alter earlier samples/receipts;
+- historical state is revealed one target at a time;
+- warm-up remains 24 usable samples by default;
+- per-target parallel execution returns the same historical samples as sequential replay;
+- worker recycling changes execution lifetime only, not ranking semantics.
 
-The real-current-JUGEST replay test also boots the checked-in runtime and builds a historical target through `v4PredictStore` using only pre-target raw history.
+Every real-store run below also re-ran the latest two built target dates sequentially and matched the Fast Runner exactly: **6/6 target comparisons PASS across three stores**.
 
-## Input support
+## Real backup evidence — 2026-09-08
 
-The input adapter accepts the real JUGEST backup shape:
+The same JUGEST full backup was replayed for three stores. All results are OOS-style walk-forward with 24 usable-sample warm-up and current point-in-time `v4PredictStore` as CONTROL.
 
-```text
-{
-  "app": "juggler-tool",
-  "backupVersion": 1,
-  "state": {
-    "externalDays": [...]
-  }
-}
-```
+| Store | History | Built samples | Evaluated | Shadow days | Shadow / Control wins | Mean utility delta | Top5 ES delta | Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| グリーン | 210 days / 9,030 rows | 165 | 141 | 26 | 7 / 15 | **-0.008257** | **-0.012274** | negative |
+| ジアス大船 | 134 days / 14,469 rows | 89 | 65 | 13 | 4 / 3 | **+0.006337** | **+0.006459** | positive |
+| セブンS川崎店 | 150 days / 16,500 rows | 105 | 81 | 15 | 2 / 3 | **+0.001503** | **+0.000602** | small positive mean, mixed win count |
 
-The packed `externalDays[].machines[]` tuple generated by current JUGEST is expanded as:
+### グリーン
 
-```text
-[machine, tableNo, games, diff, bb, rb, gamesSource, diffSource]
-```
+- 190 target worker tasks; build compute ~288.2 s.
+- 141 evaluated days after warm-up.
+- Shadow adopted 26/141 days; abstain/control rate 81.56%.
+- 7 Shadow wins, 15 Control wins, 119 ties.
+- Mean utility delta: **-0.0082567027**.
+- Top3 ES/P4 delta: **-0.0074497 / -0.0024292**.
+- Top5 ES/P4 delta: **-0.0122740 / -0.0035998**.
+- Top10 ES/P4 delta: **-0.0040241 / -0.0011542**.
+- On the 26 actual Shadow-adoption days, mean utility delta was **-0.0447767**.
+- Latest two targets matched sequential replay exactly.
 
-Direct `{ externalDays: [...] }`, `{ days: [...] }`, and a direct day array are also accepted for research tooling.
+### ジアス大船
+
+- 114 target worker tasks; build compute ~282.0 s.
+- 65 evaluated days after warm-up.
+- Shadow adopted 13/65 days; abstain/control rate 80.0%.
+- 4 Shadow wins, 3 Control wins, 58 ties.
+- Mean utility delta: **+0.0063372366**.
+- Top3 ES/P4 delta: **+0.0078794 / +0.0027384**.
+- Top5 ES/P4 delta: **+0.0064593 / +0.0018145**.
+- Top10 ES/P4 delta: **+0.0028234 / +0.0010799**.
+- On Shadow-adoption days, mean utility delta was **+0.0316862**.
+- Latest two targets matched sequential replay exactly.
+
+### セブンS川崎店
+
+- 130 target worker tasks; build compute ~336.6 s.
+- 81 evaluated days after warm-up.
+- Shadow adopted 15/81 days; abstain/control rate 81.48%.
+- 2 Shadow wins, 3 Control wins, 76 ties.
+- Mean utility delta: **+0.0015025322**.
+- Top3 ES/P4 delta: **+0.0030667 / +0.0007967**.
+- Top5 ES/P4 delta: **+0.0006019 / +0.0001848**.
+- Top10 ES/P4 delta: **-0.0000042 / +0.0000139**.
+- On Shadow-adoption days, mean utility delta was **+0.0081137**.
+- Latest two targets matched sequential replay exactly.
+
+## Three-store combined view
+
+Across **287 evaluated days**:
+
+- Shadow adopted on **54 days (18.82%)**; CONTROL/abstain on 233 days.
+- 13 Shadow wins, 21 Control wins, 253 ties.
+- Among non-ties, Shadow win rate was **38.24%**.
+- Evaluated-day-weighted mean utility delta was **-0.0021971**.
+- Weighted Top3 ES/P4 delta: **-0.0010099 / -0.0003484**.
+- Weighted Top5 ES/P4 delta: **-0.0043973 / -0.0013054**.
+- Weighted Top10 ES/P4 delta: **-0.0013387 / -0.0003185**.
+- Across the 54 actual Shadow-adoption days, mean utility delta was **-0.0116772**.
+
+The evidence is heterogeneous: the selector improved ジアス大船 and was slightly positive on average at セブンS川崎店, but the loss at グリーン was large enough to make the combined result negative.
+
+This is exactly why Phase 2 remains shadow-only. A short positive window or a successful validation/holdout profile is not sufficient evidence for Production promotion.
+
+## Axis behavior observed
+
+At ジアス大船, accepted profiles were strongly `practical-v1` dominant; `model-v1` appeared only once. At セブンS川崎店, `practical-v1` also dominated most accepted profiles, with occasional model contribution. グリーン used a materially more balanced practical/strict mix and selected model more often, yet its OOS result was negative.
+
+This suggests the next research question is not simply "make the selector more aggressive." The important failure mode is **store-specific post-selection instability**: a profile can pass train/validation/final-holdout gates and still perform poorly in subsequent walk-forward operation.
+
+## Verification
+
+Fresh GitHub Actions verification on `5e6be05895e18f2fae8c217e0988c331a44c8d2e`, run `34232296375`:
+
+- focused Fast Runner / Phase 2A tests: PASS;
+- full regression suite: PASS;
+- mandatory Production preservation regressions: PASS;
+- per-target lifecycle regression: PASS;
+- default automatic max-concurrency regression: PASS;
+- parallel-vs-sequential sample parity: PASS.
+
+Earlier Phase 2A and Phase 1 verification remains covered by the full suite, including protected runtime, Collector and ranking-preservation checks.
+
+Temporary verification/export workflows used during development were removed after successful verification.
 
 ## Commands
 
@@ -81,68 +154,31 @@ node scripts/axis-phase2a.mjs \
   --output /path/to/phase2a-report.json \
   --bundle-output /path/to/phase2a-samples.json \
   --warmup 24 \
+  --workers auto \
   --shadow
 ```
 
-Optional `--start YYYY-MM-DD` and `--end YYYY-MM-DD` bound the reported evaluation window. Earlier samples are deliberately retained for warm-up/training when `--start` is used.
+Useful research controls:
 
-Two-step mode is also available:
-
-```bash
-node scripts/axis-historical-bundle.mjs --input backup.json --store "STORE NAME" --output samples.json --shadow
-node scripts/axis-walk-forward-backtest.mjs --input samples.json --store "STORE NAME" --output report.json --warmup 24 --shadow
-```
+- `--workers auto|N`
+- `--memory-budget-mb N`
+- `--max-workers N` (default 3)
+- `--start YYYY-MM-DD`
+- `--end YYYY-MM-DD`
+- `--min-prior N`
 
 All Phase 2A execution paths require explicit `--shadow`.
 
-## Output
+## Evidence files
 
-Each evaluated date stores an immutable-style audit receipt containing:
+Machine-readable real-store summary:
 
-- target date and training cutoff;
-- history-through date and history count;
-- current source signature;
-- Phase 1 profile decision/reasons;
-- selected axis ids/versions/weights;
-- ensemble identity separate from profile-id churn;
-- pre-outcome receipt hash;
-- current control and shadow ranked keys;
-- current/shadow utility and Top3/5/10 lift details.
+`docs/axis-auto-selector/evidence/phase2a-real-store-summary-2026-09-08.json`
 
-The aggregate summary contains:
+## Readiness / decision
 
-- evaluated/scored days;
-- SHADOW_CHAMPION vs CONTROL days and abstention rate;
-- shadow/control wins and ties;
-- mean day utility;
-- mean Top3/5/10 ES lift and P4 lift;
-- shadow-minus-control deltas;
-- ensemble changes;
-- axis usage and mean selected weight.
+**Production promotion: NO-GO.**
 
-## Verification
+Phase 2A infrastructure itself is ready for continued research and larger real-store replay. The next architecture candidate is a separate **Phase 2B operational OOS gate** that observes only already-revealed post-selection performance and can return a store to CONTROL when a previously accepted Shadow ensemble becomes unstable. Any such gate must be evaluated with new chronological separation so the three-store evidence above is not reused as both design data and final proof.
 
-Fresh GitHub Actions verification on Node `22.23.2` at `4756efdb0ee2b90cd241260ee828fdb6a9a94a99`:
-
-- Phase 2A syntax checks: PASS;
-- Phase 2A focused tests: **16/16 PASS**;
-- full regression suite: **66/66 commands PASS**;
-- Phase 1 Axis suite inside full regression: **50/50 PASS**;
-- Collector V3 explicit suite: **33/33 PASS**;
-- Production preservation: **3/3 PASS**;
-- Collector preservation: **20 Production hashes + five byte-exact clean-jitter files PASS**;
-- store-analysis evidence view: PASS;
-- research chronology / poisoning guards: PASS;
-- home/jobs regression: **10/10 PASS**.
-
-## Deliberate non-claims / remaining work
-
-- No real user-store backup has been run through the full Phase 2A pipeline yet, so there is **no real-store performance claim**.
-- The Phase 1 benchmark (~78 ms for 24 synthetic days and ~422 ms for 180 synthetic days) is not a Phase 2A full-replay benchmark. Phase 2A repeatedly invokes the real historical JUGEST predictor and may take materially longer.
-- Outcome values are JUGEST end-of-day inference proxies, not verified hidden settings.
-- `calendar-v1` remains `approved:false`.
-- Shadow results must not alter visible ranking or Production without a later explicit promotion decision by Hiro.
-
-## Readiness
-
-Phase 2A infrastructure is ready for the first real single-store historical run. The next evidence-producing step is to supply a current JUGEST full-backup JSON and run one store with sufficient history, inspect skipped-day/data-quality audit, then review control-vs-shadow metrics before widening to additional stores.
+`calendar-v1` remains `approved:false`. Visible ranking and Production remain unchanged until an explicit later promotion decision by Hiro.
