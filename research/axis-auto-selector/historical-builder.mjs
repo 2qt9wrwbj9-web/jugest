@@ -66,6 +66,8 @@ export function buildHistoricalSampleBundle({store,days,runtime,startDate=null,e
  if(startDate&&endDate&&startDate>endDate)throw new RangeError('startDate must not be after endDate');
  if(!Number.isInteger(minPriorDays)||minPriorDays<1)throw new TypeError('minPriorDays must be a positive integer');
  const normalized=normalizeStoreDays({store,days,runtime});
+ // External judgement is row-local. Judge each normalized store day once, then keep the strict < target slice for every prediction.
+ runtime.ensureExternalJudgedSync(normalized,store);
  const samples=[],skipped=[];
  for(let targetIndex=0;targetIndex<normalized.length;targetIndex+=1){
   const targetBase=normalized[targetIndex],targetDate=targetBase.date;
@@ -74,14 +76,11 @@ export function buildHistoricalSampleBundle({store,days,runtime,startDate=null,e
   const priorBase=normalized.slice(0,targetIndex);
   if(priorBase.length<minPriorDays){skipped.push({targetDate,reason:'insufficient_prior_days',priorDays:priorBase.length});continue}
   const sourceDays=structuredClone(priorBase);
-  runtime.ensureExternalJudgedSync(sourceDays,store);
   const trainingCutoff=sourceDays.at(-1)?.date;
   if(!trainingCutoff||trainingCutoff>=targetDate)throw new RangeError(`invalid training cutoff for ${targetDate}`);
   const prediction=runtime.predictStore(store,targetDate,sourceDays,{noCache:true});
   if(!isRecord(prediction)||!Array.isArray(prediction.rows)||prediction.rows.length===0){skipped.push({targetDate,reason:'no_prediction',priorDays:sourceDays.length});continue}
-  const target=structuredClone(targetBase);
-  runtime.ensureExternalJudgedSync([target],store);
-  const outcomes=new Map((target.machines||[]).map(row=>[rowKey(row),row]));
+  const outcomes=new Map((targetBase.machines||[]).map(row=>[rowKey(row),row]));
   const prepared=[];
   for(const predicted of prediction.rows){
    const base=preOutcomeRow(predicted);if(!base)continue;
