@@ -45,9 +45,12 @@ function validateReceiptStream(priorReceipts,targetDate){
  }
 }
 function stateFor({priorReceipts,store,ensembleKey}){
+ // CONTROL gaps do not change Shadow trust. The most recent Shadow ensemble does:
+ // if it differs from the current ensemble, current trust re-enters through BLOCKED.
  for(let index=priorReceipts.length-1;index>=0;index-=1){
   const receipt=priorReceipts[index];
-  if(receipt.store!==store||receipt.ensembleKey!==ensembleKey)continue;
+  if(receipt.store!==store||receipt.selectorDecision!=='SHADOW_CHAMPION')continue;
+  if(receipt.ensembleKey!==ensembleKey)return'BLOCKED';
   const state=receipt.gate?.stateAfter;
   if(!['BLOCKED','ALLOWED'].includes(state))throw new TypeError(`same-ensemble receipt ${receipt.targetDate} gate.stateAfter must be BLOCKED or ALLOWED`);
   return state;
