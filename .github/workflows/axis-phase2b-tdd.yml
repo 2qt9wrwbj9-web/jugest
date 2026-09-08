@@ -15,4 +15,4 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: node --test tests/axis-phase2b-oos-gate.mjs
+      - run: node --test tests/axis-phase2b-oos-gate.mjs tests/axis-phase2b-walk-forward.mjs
