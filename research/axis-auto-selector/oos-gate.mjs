@@ -44,6 +44,16 @@ function validateReceiptStream(priorReceipts,targetDate){
   previous=receipt.targetDate;
  }
 }
+function stateFor({priorReceipts,store,ensembleKey}){
+ for(let index=priorReceipts.length-1;index>=0;index-=1){
+  const receipt=priorReceipts[index];
+  if(receipt.store!==store||receipt.ensembleKey!==ensembleKey)continue;
+  const state=receipt.gate?.stateAfter;
+  if(!['BLOCKED','ALLOWED'].includes(state))throw new TypeError(`same-ensemble receipt ${receipt.targetDate} gate.stateAfter must be BLOCKED or ALLOWED`);
+  return state;
+ }
+ return'BLOCKED';
+}
 function evidenceFor({priorReceipts,store,ensembleKey,windowEligibleDays}){
  const eligible=[];
  for(const receipt of priorReceipts){
@@ -63,10 +73,10 @@ function stats(evidence,uncertaintyPenalty){
  if(!finite(meanDelta)||!finite(sdDelta)||!finite(oosScore))throw new RangeError('gate statistics must be finite');
  return{meanDelta,sdDelta,oosScore};
 }
-function resultBase({store,targetDate,ensembleKey,selectorDecision,previousState,cfg,evidence,statistics}){
+function resultBase({store,targetDate,ensembleKey,selectorDecision,stateBefore,cfg,evidence,statistics}){
  const evidenceDates=evidence.map(receipt=>receipt.targetDate);
  return{
-  store,targetDate,ensembleKey,selectorDecision,stateBefore:previousState,
+  store,targetDate,ensembleKey,selectorDecision,stateBefore,
   evidenceCount:evidenceDates.length,evidenceDates,
   windowStart:evidenceDates[0]??null,windowEnd:evidenceDates.at(-1)??null,
   meanDelta:statistics.meanDelta,sdDelta:statistics.sdDelta,oosScore:statistics.oosScore,
@@ -75,22 +85,22 @@ function resultBase({store,targetDate,ensembleKey,selectorDecision,previousState
  };
 }
 
-export function evaluateOperationalGate({store,targetDate,ensembleKey,selectorDecision,priorReceipts=[],previousState='BLOCKED',config=DEFAULT_OOS_GATE_CONFIG}={}){
+export function evaluateOperationalGate({store,targetDate,ensembleKey,selectorDecision,priorReceipts=[],config=DEFAULT_OOS_GATE_CONFIG}={}){
  requireNonEmpty(store,'store');requireNonEmpty(ensembleKey,'ensembleKey');
  if(!validDate(targetDate))throw new TypeError('targetDate must be a valid YYYY-MM-DD date');
  if(!['CONTROL','SHADOW_CHAMPION'].includes(selectorDecision))throw new TypeError('selectorDecision must be CONTROL or SHADOW_CHAMPION');
- if(!['BLOCKED','ALLOWED'].includes(previousState))throw new TypeError('previousState must be BLOCKED or ALLOWED');
  const cfg=configWithDefaults(config);
  validateReceiptStream(priorReceipts,targetDate);
+ const stateBefore=stateFor({priorReceipts,store,ensembleKey});
  const evidence=evidenceFor({priorReceipts,store,ensembleKey,windowEligibleDays:cfg.windowEligibleDays});
  const statistics=stats(evidence,cfg.uncertaintyPenalty);
- const base=resultBase({store,targetDate,ensembleKey,selectorDecision,previousState,cfg,evidence,statistics});
- if(selectorDecision==='CONTROL')return deepFreeze({...base,operationalDecision:'CONTROL',stateAfter:previousState,reason:'selector_control'});
+ const base=resultBase({store,targetDate,ensembleKey,selectorDecision,stateBefore,cfg,evidence,statistics});
+ if(selectorDecision==='CONTROL')return deepFreeze({...base,operationalDecision:'CONTROL',stateAfter:stateBefore,reason:'selector_control'});
  if(evidence.length<cfg.minEvidenceDays)return deepFreeze({...base,operationalDecision:'CONTROL',stateAfter:'BLOCKED',reason:'oos_insufficient_evidence'});
- if(previousState==='ALLOWED'&&statistics.oosScore>=cfg.keepScore&&statistics.meanDelta>=0){
+ if(stateBefore==='ALLOWED'&&statistics.oosScore>=cfg.keepScore&&statistics.meanDelta>=0){
   return deepFreeze({...base,operationalDecision:'SHADOW_CHAMPION',stateAfter:'ALLOWED',reason:'oos_gate_kept'});
  }
- if(previousState!=='ALLOWED'&&statistics.oosScore>=cfg.releaseScore&&statistics.meanDelta>0){
+ if(stateBefore==='BLOCKED'&&statistics.oosScore>=cfg.releaseScore&&statistics.meanDelta>0){
   return deepFreeze({...base,operationalDecision:'SHADOW_CHAMPION',stateAfter:'ALLOWED',reason:'oos_gate_released'});
  }
  return deepFreeze({...base,operationalDecision:'CONTROL',stateAfter:'BLOCKED',reason:'oos_gate_blocked'});
