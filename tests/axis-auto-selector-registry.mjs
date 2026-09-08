@@ -183,3 +183,26 @@ test('adapter rejects malformed required row identity, rank, and control score',
     /identity/i
   );
 });
+
+test('adapter preserves reserved custom axis ids as own signal properties',()=>{
+  const registry=createAxisRegistry({
+    definitions:[{...baseDefinition,id:'__proto__',label:'Reserved proto axis'}],
+    correlationGroups:[{id:'example'}]
+  });
+  const out=axisSignalsFromPredictionRow({
+    key:'reserved|1',rank:1,hybridScore:.5,exampleSignal:.7
+  },registry);
+
+  assert.equal(Object.hasOwn(out.axes,'__proto__'),true);
+  assert.equal(out.axes['__proto__'],.7);
+});
+
+test('groupCap returns null for uncapped groups whose ids shadow Object prototype names',()=>{
+  const registry=createAxisRegistry({
+    definitions:[{...baseDefinition,correlationGroup:'toString'}],
+    correlationGroups:[{id:'toString'}]
+  });
+
+  assert.equal(registry.groupCap('toString'),null);
+  assert.deepEqual(registry.groupCaps(),{});
+});
