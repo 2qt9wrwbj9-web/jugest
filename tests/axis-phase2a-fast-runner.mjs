@@ -19,6 +19,13 @@ test('parallel planner respects CPU, memory and max-worker bounds',()=>{
  assert.equal(explicit.workers,2);
 });
 
+test('automatic planner defaults to at most three concurrent workers',()=>{
+ const plan=planParallelism({requested:'auto',cpuCount:16,rowCount:1000,targetCount:100,memoryBudgetMB:4096});
+ assert.equal(plan.maxWorkers,3);
+ assert.equal(plan.cpuCap,3);
+ assert.equal(plan.workers,3);
+});
+
 test('target partitioning is contiguous, balanced and deterministic',()=>{
  const chunks=partitionTargetIndices([24,25,26,27,28,29,30,31],3);
  assert.deepEqual(chunks,[[24,25,26],[27,28,29],[30,31]]);
