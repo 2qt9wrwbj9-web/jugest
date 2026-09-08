@@ -21,7 +21,9 @@ No Production deployment, main/alias/environment action, Collector change or vis
 2026-09-08 resume: remote main is now `273ed61` (user's authorized Production promotion outside this task); feature branch still `a128347`. All 26 captured runtime hashes match. Existing partial baseline helper/generator are being completed, not rewritten. Previous `/tmp` preflight log did not survive; its 64/64 PASS is historical, and final candidate requires fresh regression.
 
 - Task 1: complete, commit `c4a5f22`; parity3/3 and production-preservation3/3, independent review approved. Five utility cases, three real runtime prediction cases, immutable fixture hash `d33aabb650494a7f8d51e7d5be706c7680b9c152259019c4714a91362ee69cf0`.
-- Task 2: registry/adapter RED → GREEN complete, commit `7b055ff`; registry9/9 and combined parity12/12. Independent review resumed because the interrupted review result did not survive.
+- Task 2: registry/adapter RED → GREEN complete, commit `7b055ff`; registry9/9 and combined parity12/12. Independent review resumed because the interrupted review result did not survive. Review found a reserved-custom-identifier defect; fix round 1 is pending, so Task 2 is NOT approved.
 - Tasks 3–7: pending.
 
 Latest resume: local HEAD `7b055ff` contains two unpushed implementation commits. No tracked partial diff or stash. Fresh registry/parity/preservation15/15 and protected26/26 PASS. New WORK-CHECKPOINT.md and tracked evidence preserve the local work; push only to the requested feature branch after each logical task per the user's updated requirement.
+
+Authenticated git push failed after local recovery commit `90f1031`. No ordinary GH_TOKEN/GITHUB_TOKEN is configured. API commit creation cannot preserve local author/committer/timestamps/SHA. Stop for restored push authentication or explicit authorization of an alternative persistence/history workflow; do not silently substitute commit identities. No API writes, production changes or feature edits were made during this resume.
