@@ -1,6 +1,28 @@
 # Axis Auto-Selector Phase 1 — Work checkpoint
 
-Updated: 2026-09-08. Shadow-only. **BLOCKED: authenticated git push unavailable.** Do not start again from the remote documentation commit.
+Updated: 2026-09-08. Shadow-only. **API persistence restored by explicit user authorization. Task 2 reserved-name fix in progress.**
+
+## Current authoritative checkpoint (supersedes historical blocker below)
+
+- Local branch retained: `astra/axis-auto-selector-shadow`; resume HEAD `65be2ac9af03fa98f48436f37b11939ddcc8e1d1`.
+- Equivalent remote HEAD: `e2e3ba8ad30e5de4fc211fa9add14da2e5f2b685`, fast-forward from `a128347bdc2e0e9b41b327e18d4c3755a112b5d4`, never force.
+- Local HEAD tree and remote branch tree both `0c1dfbb28ca03acd7271abd9c1cbe7fdfa036638`; all four intermediate commit trees also match exactly.
+- Remote main verified unchanged at `273ed61ed2019365ae1b38d76288f20e9625c9e1`; protected26/26 hashes match.
+- No rebase/reset/cherry-pick or local branch replacement. Local and remote commit identities differ; keep the mapping and compare trees, not SHA equality.
+- User explicitly approved API-based equivalent-tree commits. CLI installation/authentication recovery is abandoned; no further CLI downloads, credentials or ordinary git push attempts.
+- Next: Task2 reserved-name RED→GREEN fix, independent scoped re-review, commit, API persistence, checkpoint update; then saved Task3 brief/safety supplement.
+- Tasks3–7 remain pending. No historical/future-poisoning/selector performance claim yet.
+
+| Original local commit | Equivalent remote commit | Verified identical tree SHA |
+| --- | --- | --- |
++| `c4a5f2218915746b72c59937b8f3d191ecc57510` | `f8b78c358bfe226a7ddcf196abf097013c2260d0` | `fd21a65590c4c666957f134451c05d85a2fa722f` |
+| `7b055ff844387e2fc8ad6a66ff5f53dfa3c98552` | `a3c9b77b243870cd67d241b2379d506a98981cd0` | `2f4071ebf6df71937e9e2f8169d7c787189f57ef` |
+| `90f1031116ea951f25a24e85f2c6cfe9e60319ff` | `be8c46d4789b80e7135ea414d88819308eb974bb` | `2c48117188a6991edfd1a5ee50dddd6de0ccaa19` |
+| `65be2ac9af03fa98f48436f37b11939ddcc8e1d1` | `e2e3ba8ad30e5de4fc211fa9add14da2e5f2b685` | `0c1dfbb28ca03acd7271abd9c1cbe7fdfa036638` |
+
+The documentation commit containing this mapping is persisted separately using the same procedure. Its own remote SHA is recorded by the next checkpoint and by the API commit's Local-Equivalent trailer, avoiding a self-referential hash.
+
+## Historical recovery record
 
 ## Verified resume state
 
