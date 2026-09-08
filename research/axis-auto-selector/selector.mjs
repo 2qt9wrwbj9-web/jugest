@@ -110,7 +110,10 @@ function availabilityFromTrain(train,registry){
       if(validRows>=10)availableDays[axis.id]+=1;
     }
   }
-  return freeze(Object.fromEntries(approved.map(axis=>[axis.id,train.length?availableDays[axis.id]/train.length:0])));
+  return freeze(Object.fromEntries(approved.map(axis=>[
+    axis.id,
+    train.length>=(axis.minHistory??0)&&train.length?availableDays[axis.id]/train.length:0
+  ])));
 }
 
 function controlSamples(samples){
