@@ -28,15 +28,6 @@ function ensembleKey(profile){
  return digest({decision:profile.decision,selectedAxes:(profile.selectedAxes||[]).map(axis=>({id:axis.id,version:axis.version,weight:axis.weight}))});
 }
 function selectedAxes(profile){return (profile.selectedAxes||[]).map(axis=>({id:axis.id,version:axis.version,weight:axis.weight}))}
-function latestGateState(receipts,store,eKey){
- for(let index=receipts.length-1;index>=0;index-=1){
-  const receipt=receipts[index];
-  if(receipt.store!==store||receipt.ensembleKey!==eKey)continue;
-  const state=receipt.gate?.stateAfter;
-  if(state==='BLOCKED'||state==='ALLOWED')return state;
- }
- return'BLOCKED';
-}
 function preOutcomeHash({sample,store,profile,historyThrough,selectorDecision,operationalDecision,eKey,gate,controlRankedKeys,shadowRankedKeys,operationalRankedKeys}){
  return digest({
   store,targetDate:sample.targetDate,trainingCutoff:sample.trainingCutoff,sourceSignature:sample.sourceSignature,
@@ -79,10 +70,9 @@ export async function runWalkForwardBacktest({bundle,store=null,warmupDays=DEFAU
   const profile=evaluation.profile,selectorDecision=profile.decision;
   const rankedShadow=rankShadowRows(sample.rows,profile,registry);
   const controlRankedKeys=controlKeys(sample),shadowRankedKeys=rankedShadow.map(row=>row.key),eKey=ensembleKey(profile);
-  const stateBefore=latestGateState(receipts,bundle.store,eKey);
   const gate=evaluateOperationalGate({
    store:bundle.store,targetDate:sample.targetDate,ensembleKey:eKey,selectorDecision,
-   priorReceipts:receipts,previousState:stateBefore,config:oosGateConfig
+   priorReceipts:receipts,config:oosGateConfig
   });
   const operationalDecision=gate.operationalDecision;
   const operationalRankedKeys=operationalDecision==='SHADOW_CHAMPION'?shadowRankedKeys:controlRankedKeys;
