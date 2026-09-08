@@ -4,8 +4,8 @@ import {
   DEFAULT_SELECTOR_CONFIG,FALLBACK_AXIS_WEIGHTS,generateCandidates,selectShadowEnsemble,shrinkSelectedWeights
 } from '../research/axis-auto-selector/selector.mjs';
 
-const axis=(id,{sourceId=id,approved=true,group=id,maxWeight=1}={})=>Object.freeze({
-  id,sourceId,approved,correlationGroup:group,maxWeight,availability:'finite-source-value',sourceField:`${id}Signal`
+const axis=(id,{sourceId=id,approved=true,group=id,maxWeight=1,minHistory=0}={})=>Object.freeze({
+  id,sourceId,approved,correlationGroup:group,maxWeight,minHistory,availability:'finite-source-value',sourceField:`${id}Signal`
 });
 const registry=(axes,caps={})=>Object.freeze({
   approved:()=>Object.freeze(axes.filter(x=>x.approved)),
@@ -150,6 +150,15 @@ test('axis availability is computed from training history only',()=>{
   const out=selectShadowEnsemble({samples,registry:registry(axes)});
   assert.ok(out.availability['model-v1']<.8);
   assert.ok(!out.eligibleAxisIds.includes('model-v1'));
+});
+
+test('registry minimum-history requirement can make an otherwise available axis ineligible',()=>{
+  const slow=axis('slow-v1',{minHistory:13});
+  const samples=Array.from({length:24},(_,i)=>day(i,{mode:'good'}));
+  for(const sample of samples)for(const row of sample.rows)row.axes['slow-v1']=.9;
+  const out=selectShadowEnsemble({samples,registry:registry([...axes,slow])});
+  assert.equal(out.availability['slow-v1'],0);
+  assert.ok(!out.eligibleAxisIds.includes('slow-v1'));
 });
 
 test('insufficient history abstains before search or holdout',()=>{
