@@ -3,10 +3,9 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {extractExternalDays} from '../research/axis-auto-selector/input.mjs';
-import {bootJugestResearchRuntime} from '../research/axis-auto-selector/jugest-headless.mjs';
-import {buildHistoricalSampleBundle} from '../research/axis-auto-selector/historical-builder.mjs';
+import {buildHistoricalSampleBundleParallel} from '../research/axis-auto-selector/historical-parallel.mjs';
 
-const VALUE_FLAGS=new Set(['--input','--store','--output','--start','--end','--min-prior']);
+const VALUE_FLAGS=new Set(['--input','--store','--output','--start','--end','--min-prior','--workers','--memory-budget-mb','--max-workers']);
 function parseArgs(argv){
  const out={shadow:false};
  for(let i=0;i<argv.length;i+=1){
@@ -20,6 +19,8 @@ function parseArgs(argv){
 }
 function required(value,flag){if(typeof value!=='string'||value.trim()==='')throw new TypeError(`${flag} is required`);return value}
 function positiveInteger(value,flag,defaultValue){if(value===undefined)return defaultValue;const n=Number(value);if(!Number.isInteger(n)||n<1)throw new TypeError(`${flag} must be a positive integer`);return n}
+function positiveNumber(value,flag,defaultValue){if(value===undefined)return defaultValue;const n=Number(value);if(!Number.isFinite(n)||n<=0)throw new TypeError(`${flag} must be a positive number`);return n}
+function workerSetting(value){if(value===undefined||value==='auto')return'auto';return positiveInteger(value,'--workers',1)}
 async function readJson(path){try{return JSON.parse(await readFile(path,'utf8'))}catch(error){throw new TypeError(`input JSON could not be read: ${error?.message||error}`)}}
 
 export async function main(argv=process.argv.slice(2)){
@@ -27,10 +28,16 @@ export async function main(argv=process.argv.slice(2)){
  if(!args.shadow)throw new TypeError('--shadow is required; historical replay is research-only');
  const input=required(args.input,'--input'),store=required(args.store,'--store'),output=required(args.output,'--output');
  if(resolve(input)===resolve(output))throw new TypeError('--input and --output must be different paths');
- let raw=await readJson(input);const days=extractExternalDays(raw,{store});raw=null;const runtime=await bootJugestResearchRuntime();
- const bundle=buildHistoricalSampleBundle({store,days,runtime,startDate:args.start??null,endDate:args.end??null,minPriorDays:positiveInteger(args['min-prior'],'--min-prior',1)});
+ let raw=await readJson(input);const days=extractExternalDays(raw,{store});raw=null;
+ const bundle=await buildHistoricalSampleBundleParallel({
+  store,days,startDate:args.start??null,endDate:args.end??null,
+  minPriorDays:positiveInteger(args['min-prior'],'--min-prior',1),
+  workers:workerSetting(args.workers),memoryBudgetMB:positiveNumber(args['memory-budget-mb'],'--memory-budget-mb',undefined),
+  maxWorkers:positiveInteger(args['max-workers'],'--max-workers',4)
+ });
  await writeFile(output,`${JSON.stringify(bundle,null,2)}\n`,'utf8');
- process.stdout.write(`JUGEST axis historical bundle store=${store} samples=${bundle.samples.length} skipped=${bundle.buildAudit.skipped.length}\n`);
+ const execution=bundle.buildAudit.execution;
+ process.stdout.write(`JUGEST axis historical bundle store=${store} samples=${bundle.samples.length} skipped=${bundle.buildAudit.skipped.length} workers=${execution.workers} buildMs=${Math.round(execution.elapsedMs)}\n`);
  return bundle;
 }
 const invoked=process.argv[1]&&resolve(process.argv[1])===resolve(fileURLToPath(import.meta.url));
