@@ -31,9 +31,14 @@ export function axisSignalsFromPredictionRow(row,registry){
 
   const axes={};
   for(const axis of registry.list()){
-    axes[axis.id]=axis.availability==='finite-source-value'&&axis.sourceField!==null
-      ?finiteOrNull(row[axis.sourceField])
-      :null;
+    Object.defineProperty(axes,axis.id,{
+      value:axis.availability==='finite-source-value'&&axis.sourceField!==null
+        ?finiteOrNull(row[axis.sourceField])
+        :null,
+      enumerable:true,
+      writable:true,
+      configurable:true
+    });
   }
 
   return Object.freeze({
