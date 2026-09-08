@@ -100,16 +100,23 @@ test('shrinkage happens after selection and moves raw weights toward fallback wi
   const raw={'practical-v1':.8,'model-v1':.2};
   const out=shrinkSelectedWeights(raw,{sampleCount:12,advantage:.02});
   assert.deepEqual(Object.keys(out.weights),Object.keys(raw));
-  assert.ok(out.shrink>0&&out.shrink<1);
+  assert.ok(Math.abs(out.shrink-.45)<1e-12);
   const target=.55/(.55+.30);
   assert.ok(Math.abs(out.weights['practical-v1']-target)<Math.abs(.8-target));
   assert.ok(Math.abs(Object.values(out.weights).reduce((a,b)=>a+b,0)-1)<1e-12);
 });
 
+test('train-score ties prefer fewer active axes before lexicographic ids and weights',()=>{
+  const samples=Array.from({length:24},(_,i)=>day(i,{mode:'good'}));
+  const out=selectShadowEnsemble({samples,registry:registry(axes)});
+  assert.deepEqual(out.selectedAxisIds,['practical-v1']);
+});
+
 test('selector adopts a clearly superior candidate only after train, validation and one holdout evaluation',()=>{
   const samples=Array.from({length:24},(_,i)=>day(i,{mode:'good'}));
   const out=selectShadowEnsemble({samples,registry:registry(axes)});
-  assert.equal(out.decision,'shadow_champion');
+  assert.equal(out.decision,'SHADOW_CHAMPION');
+  assert.deepEqual(out.reasons,['all_gates_passed']);
   assert.equal(out.holdoutEvaluations,1);
   assert.ok(out.candidateCount>0);
   assert.ok(out.selectedAxisIds.includes('practical-v1'));
@@ -124,16 +131,16 @@ test('validation gate retains control when current point-in-time ranking is alre
     sample.rows.forEach((row,i)=>{row.controlRank=i+1;row.controlScore=1-i/11;});
   }
   const out=selectShadowEnsemble({samples,registry:registry(axes)});
-  assert.equal(out.decision,'control');
-  assert.equal(out.reason,'validation_gate');
+  assert.equal(out.decision,'CONTROL');
+  assert.ok(out.reasons.includes('validation_advantage_below_threshold'));
   assert.equal(out.holdoutEvaluations,0);
 });
 
 test('holdout failure evaluates only the train/validation winner once and never tries a runner-up',()=>{
   const samples=Array.from({length:24},(_,i)=>day(i,{mode:i<18?'good':'bad'}));
   const out=selectShadowEnsemble({samples,registry:registry(axes)});
-  assert.equal(out.decision,'control');
-  assert.equal(out.reason,'holdout_gate');
+  assert.equal(out.decision,'CONTROL');
+  assert.ok(out.reasons.some(reason=>reason.startsWith('holdout_')));
   assert.equal(out.holdoutEvaluations,1);
 });
 
@@ -147,8 +154,8 @@ test('axis availability is computed from training history only',()=>{
 
 test('insufficient history abstains before search or holdout',()=>{
   const out=selectShadowEnsemble({samples:Array.from({length:23},(_,i)=>day(i)),registry:registry(axes)});
-  assert.equal(out.decision,'control');
-  assert.equal(out.reason,'insufficient_history');
+  assert.equal(out.decision,'CONTROL');
+  assert.deepEqual(out.reasons,['insufficient_history']);
   assert.equal(out.candidateCount,0);
   assert.equal(out.holdoutEvaluations,0);
 });
