@@ -18,7 +18,7 @@ function validDate(value){
 function positiveInt(value,name){if(!Number.isInteger(value)||value<1)throw new TypeError(`${name} must be a positive integer`);return value}
 function positiveNumber(value,name){if(typeof value!=='number'||!Number.isFinite(value)||value<=0)throw new TypeError(`${name} must be a positive finite number`);return value}
 
-export function planParallelism({requested='auto',cpuCount=availableParallelism(),rowCount=0,targetCount=1,memoryBudgetMB=1024,maxWorkers=4}={}){
+export function planParallelism({requested='auto',cpuCount=availableParallelism(),rowCount=0,targetCount=1,memoryBudgetMB=1024,maxWorkers=3}={}){
  positiveInt(cpuCount,'cpuCount');
  if(!Number.isInteger(rowCount)||rowCount<0)throw new TypeError('rowCount must be a non-negative integer');
  if(!Number.isInteger(targetCount)||targetCount<0)throw new TypeError('targetCount must be a non-negative integer');
@@ -111,7 +111,7 @@ async function runPerTargetQueue({indices,limit,run}){
  return results;
 }
 
-export async function buildHistoricalSampleBundleParallel({store,days,startDate=null,endDate=null,minPriorDays=1,workers='auto',memoryBudgetMB=defaultMemoryBudgetMB(),maxWorkers=4,rootDir=process.cwd(),cpuCount=availableParallelism()}={}){
+export async function buildHistoricalSampleBundleParallel({store,days,startDate=null,endDate=null,minPriorDays=1,workers='auto',memoryBudgetMB=defaultMemoryBudgetMB(),maxWorkers=3,rootDir=process.cwd(),cpuCount=availableParallelism()}={}){
  const started=performance.now();
  if(startDate!==null&&!validDate(startDate))throw new TypeError('startDate must be a valid YYYY-MM-DD date');
  if(endDate!==null&&!validDate(endDate))throw new TypeError('endDate must be a valid YYYY-MM-DD date');
