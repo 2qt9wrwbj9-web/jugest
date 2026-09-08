@@ -1,0 +1,1594 @@
+{
+  "baseCommit": "273ed61ed2019365ae1b38d76288f20e9625c9e1",
+  "fallbackWeights": {
+    "practical": 0.55,
+    "model": 0.3,
+    "strict": 0.15
+  },
+  "utilityCases": [
+    {
+      "name": "numeric-key-tie",
+      "weights": {
+        "practical": 0.55,
+        "model": 0.3,
+        "strict": 0.15
+      },
+      "samples": [
+        {
+          "date": "2026-04-01",
+          "rows": [
+            {
+              "key": "台10",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.800000000000001,
+              "actualP4": 0.86
+            },
+            {
+              "key": "台2",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.4,
+              "actualP4": 0.795
+            },
+            {
+              "key": "台1",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 5,
+              "actualP4": 0.73
+            },
+            {
+              "key": "台12",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.6,
+              "actualP4": 0.6649999999999999
+            },
+            {
+              "key": "台11",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.2,
+              "actualP4": 0.6
+            },
+            {
+              "key": "台3",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.8000000000000003,
+              "actualP4": 0.535
+            },
+            {
+              "key": "台20",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.4000000000000004,
+              "actualP4": 0.47000000000000003
+            },
+            {
+              "key": "台4",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 3,
+              "actualP4": 0.405
+            },
+            {
+              "key": "台30",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.6,
+              "actualP4": 0.34
+            },
+            {
+              "key": "台5",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.2,
+              "actualP4": 0.275
+            },
+            {
+              "key": "台21",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.8,
+              "actualP4": 0.21000000000000002
+            },
+            {
+              "key": "台6",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.4,
+              "actualP4": 0.14500000000000002
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "score": 0.586216,
+        "mean": 0.568716,
+        "sd": 0,
+        "winRate": 1,
+        "n": 1
+      }
+    },
+    {
+      "name": "fixed-bonus-and-raw-score",
+      "weights": {
+        "practical": 0.55,
+        "model": 0.3,
+        "strict": 0.15
+      },
+      "samples": [
+        {
+          "date": "2026-04-02",
+          "rows": [
+            {
+              "key": "bonus-1",
+              "practicalSignal": 0.95,
+              "modelSignal": 0.95,
+              "strictSignal": 0.95,
+              "hybridValidatedBonus": 0.18,
+              "actualES": 1.2,
+              "actualP4": 0.08
+            },
+            {
+              "key": "bonus-2",
+              "practicalSignal": 0.2,
+              "modelSignal": 0.2,
+              "strictSignal": 0.2,
+              "hybridValidatedBonus": 1.05,
+              "actualES": 5.9,
+              "actualP4": 0.94
+            },
+            {
+              "key": "bonus-3",
+              "practicalSignal": 0.75,
+              "modelSignal": 0.71,
+              "strictSignal": 0.6639999999999999,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.4000000000000004,
+              "actualP4": 0.46
+            },
+            {
+              "key": "bonus-4",
+              "practicalSignal": 0.715,
+              "modelSignal": 0.685,
+              "strictSignal": 0.6459999999999999,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.050000000000001,
+              "actualP4": 0.6000000000000001
+            },
+            {
+              "key": "bonus-5",
+              "practicalSignal": 0.6799999999999999,
+              "modelSignal": 0.66,
+              "strictSignal": 0.628,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.7,
+              "actualP4": 0.74
+            },
+            {
+              "key": "bonus-6",
+              "practicalSignal": 0.6449999999999999,
+              "modelSignal": 0.635,
+              "strictSignal": 0.61,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.1,
+              "actualP4": 0.18
+            },
+            {
+              "key": "bonus-7",
+              "practicalSignal": 0.6099999999999999,
+              "modelSignal": 0.61,
+              "strictSignal": 0.592,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.75,
+              "actualP4": 0.32
+            },
+            {
+              "key": "bonus-8",
+              "practicalSignal": 0.575,
+              "modelSignal": 0.585,
+              "strictSignal": 0.574,
+              "hybridValidatedBonus": 0.04,
+              "actualES": 3.4000000000000004,
+              "actualP4": 0.46
+            },
+            {
+              "key": "bonus-9",
+              "practicalSignal": 0.5399999999999999,
+              "modelSignal": 0.56,
+              "strictSignal": 0.5559999999999999,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.050000000000001,
+              "actualP4": 0.6000000000000001
+            },
+            {
+              "key": "bonus-10",
+              "practicalSignal": 0.5049999999999999,
+              "modelSignal": 0.535,
+              "strictSignal": 0.538,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.7,
+              "actualP4": 0.74
+            },
+            {
+              "key": "bonus-11",
+              "practicalSignal": 0.4699999999999999,
+              "modelSignal": 0.51,
+              "strictSignal": 0.52,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.1,
+              "actualP4": 0.18
+            },
+            {
+              "key": "bonus-12",
+              "practicalSignal": 0.43499999999999994,
+              "modelSignal": 0.485,
+              "strictSignal": 0.502,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.75,
+              "actualP4": 0.32
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "score": 0.2226119999999998,
+        "mean": 0.2051119999999998,
+        "sd": 0,
+        "winRate": 1,
+        "n": 1
+      }
+    },
+    {
+      "name": "multiple-days-stability",
+      "weights": {
+        "practical": 0.2,
+        "model": 0.65,
+        "strict": 0.15
+      },
+      "samples": [
+        {
+          "date": "2026-04-03",
+          "rows": [
+            {
+              "key": "day-0-table-10",
+              "practicalSignal": 0,
+              "modelSignal": 0.08333333333333333,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 1,
+              "actualP4": 0.04
+            },
+            {
+              "key": "day-0-table-2",
+              "practicalSignal": 0.5833333333333334,
+              "modelSignal": 0.5,
+              "strictSignal": 0.4166666666666667,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-0-table-31",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.9166666666666666,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-0-table-4",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 0.25,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-0-table-15",
+              "practicalSignal": 0.16666666666666666,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.08333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.636363636363637,
+              "actualP4": 0.7090909090909092
+            },
+            {
+              "key": "day-0-table-6",
+              "practicalSignal": 0.75,
+              "modelSignal": 0,
+              "strictSignal": 0.3333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-0-table-27",
+              "practicalSignal": 0.25,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 1,
+              "actualP4": 0.04
+            },
+            {
+              "key": "day-0-table-8",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-0-table-19",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0.16666666666666666,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-0-table-20",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-0-table-11",
+              "practicalSignal": 0.4166666666666667,
+              "modelSignal": 1,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.636363636363637,
+              "actualP4": 0.7090909090909092
+            },
+            {
+              "key": "day-0-table-12",
+              "practicalSignal": 1,
+              "modelSignal": 0.3333333333333333,
+              "strictSignal": 0.75,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            }
+          ]
+        },
+        {
+          "date": "2026-04-04",
+          "rows": [
+            {
+              "key": "day-1-table-10",
+              "practicalSignal": 0.25,
+              "modelSignal": 0.25,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.181818181818182,
+              "actualP4": 0.6254545454545455
+            },
+            {
+              "key": "day-1-table-2",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-1-table-31",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.4545454545454546,
+              "actualP4": 0.12363636363636366
+            },
+            {
+              "key": "day-1-table-4",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-1-table-15",
+              "practicalSignal": 0.4166666666666667,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.181818181818182,
+              "actualP4": 0.6254545454545455
+            },
+            {
+              "key": "day-1-table-6",
+              "practicalSignal": 1,
+              "modelSignal": 0.16666666666666666,
+              "strictSignal": 0.75,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-1-table-27",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 1,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 1.4545454545454546,
+              "actualP4": 0.12363636363636366
+            },
+            {
+              "key": "day-1-table-8",
+              "practicalSignal": 0,
+              "modelSignal": 1,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-1-table-19",
+              "practicalSignal": 0.5833333333333334,
+              "modelSignal": 0.3333333333333333,
+              "strictSignal": 0.4166666666666667,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.181818181818182,
+              "actualP4": 0.6254545454545455
+            },
+            {
+              "key": "day-1-table-20",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.75,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-1-table-11",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 0.08333333333333333,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.4545454545454546,
+              "actualP4": 0.12363636363636366
+            },
+            {
+              "key": "day-1-table-12",
+              "practicalSignal": 0.16666666666666666,
+              "modelSignal": 0.5,
+              "strictSignal": 0.08333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            }
+          ]
+        },
+        {
+          "date": "2026-04-05",
+          "rows": [
+            {
+              "key": "day-2-table-10",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 1,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-2-table-2",
+              "practicalSignal": 0,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-2-table-31",
+              "practicalSignal": 0.5833333333333334,
+              "modelSignal": 0.16666666666666666,
+              "strictSignal": 0.4166666666666667,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-2-table-4",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-2-table-15",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 1,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-2-table-6",
+              "practicalSignal": 0.16666666666666666,
+              "modelSignal": 0.3333333333333333,
+              "strictSignal": 0.08333333333333333,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-2-table-27",
+              "practicalSignal": 0.75,
+              "modelSignal": 0.75,
+              "strictSignal": 0.3333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-2-table-8",
+              "practicalSignal": 0.25,
+              "modelSignal": 0.08333333333333333,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-2-table-19",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.5,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-2-table-20",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0.9166666666666666,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-2-table-11",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 0.25,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-2-table-12",
+              "practicalSignal": 0.4166666666666667,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            }
+          ]
+        },
+        {
+          "date": "2026-04-06",
+          "rows": [
+            {
+              "key": "day-3-table-10",
+              "practicalSignal": 0.75,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 0.3333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.090909090909091,
+              "actualP4": 0.7927272727272728
+            },
+            {
+              "key": "day-3-table-2",
+              "practicalSignal": 0.25,
+              "modelSignal": 1,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-3-table-31",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.3333333333333333,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.181818181818182,
+              "actualP4": 0.6254545454545455
+            },
+            {
+              "key": "day-3-table-4",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0.75,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0,
+              "actualES": 1,
+              "actualP4": 0.04
+            },
+            {
+              "key": "day-3-table-15",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 0.08333333333333333,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 3.2727272727272725,
+              "actualP4": 0.4581818181818182
+            },
+            {
+              "key": "day-3-table-6",
+              "practicalSignal": 0.4166666666666667,
+              "modelSignal": 0.5,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-3-table-27",
+              "practicalSignal": 1,
+              "modelSignal": 0.9166666666666666,
+              "strictSignal": 0.75,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.3636363636363633,
+              "actualP4": 0.2909090909090909
+            },
+            {
+              "key": "day-3-table-8",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.25,
+              "strictSignal": 1,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.636363636363637,
+              "actualP4": 0.7090909090909092
+            },
+            {
+              "key": "day-3-table-19",
+              "practicalSignal": 0,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.4545454545454546,
+              "actualP4": 0.12363636363636366
+            },
+            {
+              "key": "day-3-table-20",
+              "practicalSignal": 0.5833333333333334,
+              "modelSignal": 0,
+              "strictSignal": 0.4166666666666667,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.727272727272727,
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-3-table-11",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 6,
+              "actualP4": 0.9600000000000001
+            },
+            {
+              "key": "day-3-table-12",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            }
+          ]
+        },
+        {
+          "date": "2026-04-07",
+          "rows": [
+            {
+              "key": "day-4-table-10",
+              "practicalSignal": 1,
+              "modelSignal": 0.75,
+              "strictSignal": 0.75,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-2",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.08333333333333333,
+              "strictSignal": 1,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-4-table-31",
+              "practicalSignal": 0,
+              "modelSignal": 0.5,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-4",
+              "practicalSignal": 0.5833333333333334,
+              "modelSignal": 0.9166666666666666,
+              "strictSignal": 0.4166666666666667,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-4-table-15",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.25,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-6",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-4-table-27",
+              "practicalSignal": 0.16666666666666666,
+              "modelSignal": 0,
+              "strictSignal": 0.08333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-8",
+              "practicalSignal": 0.75,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 0.3333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-4-table-19",
+              "practicalSignal": 0.25,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-20",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.16666666666666666,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-4-table-11",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 2.8181818181818183,
+              "actualP4": 0.37454545454545457
+            },
+            {
+              "key": "day-4-table-12",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 1,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "score": -0.09394377483293631,
+        "mean": -0.07314501818181841,
+        "sd": 0.45278059700520656,
+        "winRate": 0.6,
+        "n": 5
+      }
+    },
+    {
+      "name": "degenerate-empty",
+      "weights": {
+        "practical": 0.55,
+        "model": 0.3,
+        "strict": 0.15
+      },
+      "samples": [],
+      "expected": {
+        "score": "-Infinity",
+        "mean": "NaN",
+        "sd": "NaN",
+        "winRate": 0,
+        "n": 0
+      }
+    },
+    {
+      "name": "degenerate-fewer-than-ten-valid",
+      "weights": {
+        "practical": 0.55,
+        "model": 0.3,
+        "strict": 0.15
+      },
+      "samples": [
+        {
+          "date": "2026-04-09",
+          "rows": [
+            {
+              "key": "day-9-table-10",
+              "practicalSignal": 0.08333333333333333,
+              "modelSignal": 0.5,
+              "strictSignal": 0.6666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 2.3636363636363633,
+              "actualP4": 0.2909090909090909
+            },
+            {
+              "key": "day-9-table-2",
+              "practicalSignal": 0.6666666666666666,
+              "modelSignal": 0.9166666666666666,
+              "strictSignal": 0.9166666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.9090909090909092,
+              "actualP4": 0.2072727272727273
+            },
+            {
+              "key": "day-9-table-31",
+              "practicalSignal": 0.16666666666666666,
+              "modelSignal": 0.25,
+              "strictSignal": 0.08333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 1.4545454545454546,
+              "actualP4": 0.12363636363636366
+            },
+            {
+              "key": "day-9-table-4",
+              "practicalSignal": 0.75,
+              "modelSignal": 0.6666666666666666,
+              "strictSignal": 0.3333333333333333,
+              "hybridValidatedBonus": 0,
+              "actualES": 1,
+              "actualP4": 0.04
+            },
+            {
+              "key": "day-9-table-15",
+              "practicalSignal": 0.25,
+              "modelSignal": 0,
+              "strictSignal": 0.5833333333333334,
+              "hybridValidatedBonus": 0,
+              "actualES": 6,
+              "actualP4": 0.9600000000000001
+            },
+            {
+              "key": "day-9-table-6",
+              "practicalSignal": 0.8333333333333334,
+              "modelSignal": 0.4166666666666667,
+              "strictSignal": 0.8333333333333334,
+              "hybridValidatedBonus": 0.035,
+              "actualES": 5.545454545454545,
+              "actualP4": 0.8763636363636365
+            },
+            {
+              "key": "day-9-table-27",
+              "practicalSignal": 0.3333333333333333,
+              "modelSignal": 0.8333333333333334,
+              "strictSignal": 0,
+              "hybridValidatedBonus": 0,
+              "actualES": 5.090909090909091,
+              "actualP4": 0.7927272727272728
+            },
+            {
+              "key": "day-9-table-8",
+              "practicalSignal": 0.9166666666666666,
+              "modelSignal": 0.16666666666666666,
+              "strictSignal": 0.25,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.636363636363637,
+              "actualP4": 0.7090909090909092
+            },
+            {
+              "key": "day-9-table-19",
+              "practicalSignal": 0.4166666666666667,
+              "modelSignal": 0.5833333333333334,
+              "strictSignal": 0.5,
+              "hybridValidatedBonus": 0,
+              "actualES": 4.181818181818182,
+              "actualP4": 0.6254545454545455
+            },
+            {
+              "key": "day-9-table-20",
+              "practicalSignal": 1,
+              "modelSignal": 1,
+              "strictSignal": 0.75,
+              "hybridValidatedBonus": 0,
+              "actualES": "invalid",
+              "actualP4": 0.5418181818181819
+            },
+            {
+              "key": "day-9-table-11",
+              "practicalSignal": 0.5,
+              "modelSignal": 0.3333333333333333,
+              "strictSignal": 1,
+              "hybridValidatedBonus": 0,
+              "actualES": 3.2727272727272725,
+              "actualP4": "invalid"
+            },
+            {
+              "key": "day-9-table-12",
+              "practicalSignal": 0,
+              "modelSignal": 0.75,
+              "strictSignal": 0.16666666666666666,
+              "hybridValidatedBonus": 0,
+              "actualES": "invalid",
+              "actualP4": 0.37454545454545457
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "score": "-Infinity",
+        "mean": "NaN",
+        "sd": "NaN",
+        "winRate": 0,
+        "n": 0
+      }
+    }
+  ],
+  "predictionHistory": {
+    "shop": "軸選択ベースライン店",
+    "startDate": "2026-01-01",
+    "days": 72,
+    "tables": [
+      "2",
+      "10",
+      "101",
+      "102",
+      "111",
+      "112",
+      "201",
+      "202",
+      "211",
+      "212",
+      "301",
+      "302"
+    ],
+    "machines": [
+      "my",
+      "im"
+    ],
+    "createdAt": 1767225600000
+  },
+  "predictionCases": [
+    {
+      "name": "custom-source-fallback",
+      "targetDate": "2026-03-14",
+      "sourceMode": "custom",
+      "expected": {
+        "trainingDays": 72,
+        "lifetimeDays": 72,
+        "from": "2026-01-01",
+        "to": "2026-03-13",
+        "ranking": {
+          "hybridWeights": {
+            "practical": 0.55,
+            "model": 0.3,
+            "strict": 0.15,
+            "validatedCalendarMax": 0.05
+          },
+          "hybridOptimization": {
+            "weights": {
+              "practical": 0.55,
+              "model": 0.3,
+              "strict": 0.15
+            },
+            "mode": "fallback",
+            "reason": "配合未学習または店舗データ更新後",
+            "samples": 0,
+            "stored": false,
+            "trainedAt": null,
+            "trainedTo": null
+          }
+        },
+        "rows": [
+          {
+            "rank": 1,
+            "machine": "im",
+            "tableNo": "112",
+            "aimScore": 88,
+            "hybridScore": 0.8827201779272783,
+            "predP4": 0.07965730665206688,
+            "predES": 3.0537662015932154,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.8756123989329059,
+            "strictSignal": 0.6105559816478324,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 2,
+            "machine": "im",
+            "tableNo": "302",
+            "aimScore": 88,
+            "hybridScore": 0.8817068536342032,
+            "predP4": 0.07846737763560643,
+            "predES": 3.0523687166540747,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.875674001963149,
+            "strictSignal": 0.6036772803001799,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 3,
+            "machine": "my",
+            "tableNo": "2",
+            "aimScore": 86,
+            "hybridScore": 0.8579476450327908,
+            "predP4": 0.07220403423410193,
+            "predES": 3.0550555267764183,
+            "practicalSignal": 0.92,
+            "modelSignal": 0.8725578956783289,
+            "strictSignal": 0.57290795727252,
+            "hybridValidatedBonus": 0.0042440827384139955
+          },
+          {
+            "rank": 4,
+            "machine": "my",
+            "tableNo": "201",
+            "aimScore": 85,
+            "hybridScore": 0.8518426824739582,
+            "predP4": 0.07032309360664082,
+            "predES": 3.0529356835708312,
+            "practicalSignal": 0.92,
+            "modelSignal": 0.8726064831010782,
+            "strictSignal": 0.5604049169575641,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 5,
+            "machine": "im",
+            "tableNo": "10",
+            "aimScore": 47,
+            "hybridScore": 0.4730571112912552,
+            "predP4": 0.05079680005634698,
+            "predES": 3.019871639190288,
+            "practicalSignal": 0.46,
+            "modelSignal": 0.45506449276513866,
+            "strictSignal": 0.5088585679993063,
+            "hybridValidatedBonus": 0.007208978261817607
+          },
+          {
+            "rank": 6,
+            "machine": "im",
+            "tableNo": "202",
+            "aimScore": 47,
+            "hybridScore": 0.47248059755717897,
+            "predP4": 0.03984124147777837,
+            "predES": 3.007005133792379,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4421835770463159,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 7,
+            "machine": "im",
+            "tableNo": "102",
+            "aimScore": 47,
+            "hybridScore": 0.47090384825038545,
+            "predP4": 0.03792238846816394,
+            "predES": 3.004751580728066,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.43167191500102586,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 8,
+            "machine": "im",
+            "tableNo": "212",
+            "aimScore": 47,
+            "hybridScore": 0.47090384825038545,
+            "predP4": 0.03792238846816394,
+            "predES": 3.004751580728066,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.43167191500102586,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 9,
+            "machine": "my",
+            "tableNo": "111",
+            "aimScore": 44,
+            "hybridScore": 0.43997103649995145,
+            "predP4": 0.03356480743422377,
+            "predES": 3.0115086432623697,
+            "practicalSignal": 0.44,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4118069099996764,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 10,
+            "machine": "my",
+            "tableNo": "301",
+            "aimScore": 44,
+            "hybridScore": 0.43997103649995145,
+            "predP4": 0.03356480743422377,
+            "predES": 3.0115086432623697,
+            "practicalSignal": 0.44,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4118069099996764,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 11,
+            "machine": "my",
+            "tableNo": "101",
+            "aimScore": 44,
+            "hybridScore": 0.4391008016939904,
+            "predP4": 0.022629913154377224,
+            "predES": 2.999184883009372,
+            "practicalSignal": 0.45,
+            "modelSignal": 0.454,
+            "strictSignal": 0.3693386779599359,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 12,
+            "machine": "my",
+            "tableNo": "211",
+            "aimScore": 44,
+            "hybridScore": 0.4391008016939904,
+            "predP4": 0.022629913154377224,
+            "predES": 2.999184883009372,
+            "practicalSignal": 0.45,
+            "modelSignal": 0.454,
+            "strictSignal": 0.3693386779599359,
+            "hybridValidatedBonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "fresh-stored-profile",
+      "targetDate": "2026-03-14",
+      "sourceMode": "stored",
+      "expected": {
+        "trainingDays": 72,
+        "lifetimeDays": 72,
+        "from": "2026-01-01",
+        "to": "2026-03-13",
+        "ranking": {
+          "hybridWeights": {
+            "practical": 0.15,
+            "model": 0.7,
+            "strict": 0.15,
+            "validatedCalendarMax": 0.05
+          },
+          "hybridOptimization": {
+            "weights": {
+              "practical": 0.15,
+              "model": 0.7,
+              "strict": 0.15
+            },
+            "mode": "stored-walk-forward",
+            "reason": "accepted",
+            "samples": 8,
+            "stored": true,
+            "trainedAt": 1768000000000,
+            "trainedTo": "2026-03-13"
+          }
+        },
+        "rows": [
+          {
+            "rank": 1,
+            "machine": "im",
+            "tableNo": "112",
+            "aimScore": 86,
+            "hybridScore": 0.8569651375004406,
+            "predP4": 0.07965730665206688,
+            "predES": 3.0537662015932154,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.8756123989329059,
+            "strictSignal": 0.6105559816478324,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 2,
+            "machine": "im",
+            "tableNo": "302",
+            "aimScore": 86,
+            "hybridScore": 0.8559764544194628,
+            "predP4": 0.07846737763560643,
+            "predES": 3.0523687166540747,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.875674001963149,
+            "strictSignal": 0.6036772803001799,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 3,
+            "machine": "my",
+            "tableNo": "2",
+            "aimScore": 84,
+            "hybridScore": 0.8389708033041222,
+            "predP4": 0.07220403423410193,
+            "predES": 3.0550555267764183,
+            "practicalSignal": 0.92,
+            "modelSignal": 0.8725578956783289,
+            "strictSignal": 0.57290795727252,
+            "hybridValidatedBonus": 0.0042440827384139955
+          },
+          {
+            "rank": 4,
+            "machine": "my",
+            "tableNo": "201",
+            "aimScore": 83,
+            "hybridScore": 0.8328852757143894,
+            "predP4": 0.07032309360664082,
+            "predES": 3.0529356835708312,
+            "practicalSignal": 0.92,
+            "modelSignal": 0.8726064831010782,
+            "strictSignal": 0.5604049169575641,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 5,
+            "machine": "im",
+            "tableNo": "10",
+            "aimScore": 47,
+            "hybridScore": 0.4710829083973106,
+            "predP4": 0.05079680005634698,
+            "predES": 3.019871639190288,
+            "practicalSignal": 0.46,
+            "modelSignal": 0.45506449276513866,
+            "strictSignal": 0.5088585679993063,
+            "hybridValidatedBonus": 0.007208978261817607
+          },
+          {
+            "rank": 6,
+            "machine": "im",
+            "tableNo": "202",
+            "aimScore": 47,
+            "hybridScore": 0.46608059755717896,
+            "predP4": 0.03984124147777837,
+            "predES": 3.007005133792379,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4421835770463159,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 7,
+            "machine": "im",
+            "tableNo": "102",
+            "aimScore": 46,
+            "hybridScore": 0.46450384825038543,
+            "predP4": 0.03792238846816394,
+            "predES": 3.004751580728066,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.43167191500102586,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 8,
+            "machine": "im",
+            "tableNo": "212",
+            "aimScore": 46,
+            "hybridScore": 0.46450384825038543,
+            "predP4": 0.03792238846816394,
+            "predES": 3.004751580728066,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.43167191500102586,
+            "hybridValidatedBonus": 0.011453061000231603
+          },
+          {
+            "rank": 9,
+            "machine": "my",
+            "tableNo": "111",
+            "aimScore": 45,
+            "hybridScore": 0.44557103649995145,
+            "predP4": 0.03356480743422377,
+            "predES": 3.0115086432623697,
+            "practicalSignal": 0.44,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4118069099996764,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 10,
+            "machine": "my",
+            "tableNo": "301",
+            "aimScore": 45,
+            "hybridScore": 0.44557103649995145,
+            "predP4": 0.03356480743422377,
+            "predES": 3.0115086432623697,
+            "practicalSignal": 0.44,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4118069099996764,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 11,
+            "machine": "my",
+            "tableNo": "101",
+            "aimScore": 44,
+            "hybridScore": 0.44070080169399034,
+            "predP4": 0.022629913154377224,
+            "predES": 2.999184883009372,
+            "practicalSignal": 0.45,
+            "modelSignal": 0.454,
+            "strictSignal": 0.3693386779599359,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 12,
+            "machine": "my",
+            "tableNo": "211",
+            "aimScore": 44,
+            "hybridScore": 0.44070080169399034,
+            "predP4": 0.022629913154377224,
+            "predES": 2.999184883009372,
+            "practicalSignal": 0.45,
+            "modelSignal": 0.454,
+            "strictSignal": 0.3693386779599359,
+            "hybridValidatedBonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "historical-target-rejects-newer-profile",
+      "targetDate": "2026-03-01",
+      "sourceMode": "stored",
+      "expected": {
+        "trainingDays": 59,
+        "lifetimeDays": 59,
+        "from": "2026-01-01",
+        "to": "2026-02-28",
+        "ranking": {
+          "hybridWeights": {
+            "practical": 0.55,
+            "model": 0.3,
+            "strict": 0.15,
+            "validatedCalendarMax": 0.05
+          },
+          "hybridOptimization": {
+            "weights": {
+              "practical": 0.55,
+              "model": 0.3,
+              "strict": 0.15
+            },
+            "mode": "fallback",
+            "reason": "配合未学習または店舗データ更新後",
+            "samples": 0,
+            "stored": false,
+            "trainedAt": null,
+            "trainedTo": null
+          }
+        },
+        "rows": [
+          {
+            "rank": 1,
+            "machine": "im",
+            "tableNo": "112",
+            "aimScore": 87,
+            "hybridScore": 0.873633748589421,
+            "predP4": 0.08507333723155705,
+            "predES": 3.0407395336557745,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.8775600426907011,
+            "strictSignal": 0.622438238548071,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 2,
+            "machine": "im",
+            "tableNo": "302",
+            "aimScore": 87,
+            "hybridScore": 0.866226327428741,
+            "predP4": 0.07605558770625359,
+            "predES": 3.0286215352769887,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.8705304158820335,
+            "strictSignal": 0.5871146844275399,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 3,
+            "machine": "my",
+            "tableNo": "111",
+            "aimScore": 84,
+            "hybridScore": 0.8430810061199169,
+            "predP4": 0.06993545936407679,
+            "predES": 3.040210628815905,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.760629763673869,
+            "strictSignal": 0.5643717357524481,
+            "hybridValidatedBonus": 0.013236316654888928
+          },
+          {
+            "rank": 4,
+            "machine": "my",
+            "tableNo": "301",
+            "aimScore": 84,
+            "hybridScore": 0.8418714811602555,
+            "predP4": 0.06879513672929709,
+            "predES": 3.0388879989177346,
+            "practicalSignal": 0.94,
+            "modelSignal": 0.7605939255220753,
+            "strictSignal": 0.5563799123249593,
+            "hybridValidatedBonus": 0.013236316654888928
+          },
+          {
+            "rank": 5,
+            "machine": "my",
+            "tableNo": "201",
+            "aimScore": 47,
+            "hybridScore": 0.4744045977717822,
+            "predP4": 0.050062958106913115,
+            "predES": 3.0171610430999882,
+            "practicalSignal": 0.46,
+            "modelSignal": 0.454,
+            "strictSignal": 0.47978854077928806,
+            "hybridValidatedBonus": 0.013236316654888928
+          },
+          {
+            "rank": 6,
+            "machine": "my",
+            "tableNo": "2",
+            "aimScore": 47,
+            "hybridScore": 0.470760904214713,
+            "predP4": 0.04585544731894171,
+            "predES": 3.0122808632321902,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.46013016806220747,
+            "hybridValidatedBonus": 0.007041379005381889
+          },
+          {
+            "rank": 7,
+            "machine": "my",
+            "tableNo": "101",
+            "aimScore": 47,
+            "hybridScore": 0.4699867277221868,
+            "predP4": 0.035364811311165555,
+            "predES": 3.0001130535163125,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.413669407115319,
+            "hybridValidatedBonus": 0.013236316654888928
+          },
+          {
+            "rank": 8,
+            "machine": "my",
+            "tableNo": "211",
+            "aimScore": 47,
+            "hybridScore": 0.4699867277221868,
+            "predP4": 0.035364811311165555,
+            "predES": 3.0001130535163125,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.413669407115319,
+            "hybridValidatedBonus": 0.013236316654888928
+          },
+          {
+            "rank": 9,
+            "machine": "im",
+            "tableNo": "102",
+            "aimScore": 46,
+            "hybridScore": 0.4550775158586725,
+            "predP4": 0.032471303831443386,
+            "predES": 2.970053232858135,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.40251677239115,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 10,
+            "machine": "im",
+            "tableNo": "212",
+            "aimScore": 46,
+            "hybridScore": 0.4550775158586725,
+            "predP4": 0.032471303831443386,
+            "predES": 2.970053232858135,
+            "practicalSignal": 0.47,
+            "modelSignal": 0.454,
+            "strictSignal": 0.40251677239115,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 11,
+            "machine": "im",
+            "tableNo": "10",
+            "aimScore": 45,
+            "hybridScore": 0.4514632169312292,
+            "predP4": 0.03610721758698743,
+            "predES": 2.9749391522187754,
+            "practicalSignal": 0.46,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4150881128748611,
+            "hybridValidatedBonus": 0
+          },
+          {
+            "rank": 12,
+            "machine": "im",
+            "tableNo": "202",
+            "aimScore": 45,
+            "hybridScore": 0.4509183199666592,
+            "predP4": 0.03464917722290884,
+            "predES": 2.9729798462169255,
+            "practicalSignal": 0.46,
+            "modelSignal": 0.454,
+            "strictSignal": 0.4114554664443943,
+            "hybridValidatedBonus": 0
+          }
+        ]
+      }
+    }
+  ]
+}
