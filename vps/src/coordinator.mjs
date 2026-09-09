@@ -149,7 +149,7 @@ export class Coordinator{
       return null;
     }
     const runningJob=markJobRunning(this.db,{jobId:claimed.id,owner:this.owner,nowIso:at});
-    const entry={job:runningJob,leaseMiB,heapMiB,peakRssMiB:0,finished:false,cancelled:false,handle:null};
+    const entry={id:runningJob.id,type:runningJob.type,job:runningJob,leaseMiB,heapMiB,peakRssMiB:0,finished:false,cancelled:false,handle:null};
     try{
       entry.handle=this.spawnChild({
         job:runningJob,leaseMiB,heapMiB,workerPath:this.workerPath,
