@@ -122,6 +122,17 @@ export function failJob(db,{jobId,owner,nowIso:at,retryAtIso,errorClass='error',
   });
 }
 
+export function deferJob(db,{jobId,owner,nowIso:at,retryAtIso,errorClass='deferred',message='',peakRssMiB=null,exitCode=143}={}){
+  requireOwner(owner);requireIso(at,'nowIso');requireIso(retryAtIso,'retryAtIso');
+  return transaction(db,()=>{
+    const job=getJob(db,jobId);
+    if(!job||!['leased','running'].includes(job.state)||job.leaseOwner!==owner)throw new Error('job is not active for owner');
+    db.prepare(`UPDATE jobs SET state='retry_wait',lease_owner=NULL,heartbeat_at=NULL,available_at=?,last_error_class=?,last_error_message=?,updated_at=? WHERE id=?`).run(retryAtIso,errorClass,String(message),at,jobId);
+    db.prepare(`UPDATE job_runs SET ended_at=?,exit_code=?,peak_rss_mib=?,error_class=? WHERE job_id=? AND attempt=?`).run(at,exitCode,peakRssMiB,errorClass,jobId,job.attempts);
+    return getJob(db,jobId);
+  });
+}
+
 export function cancelJob(db,{jobId,nowIso:at=nowIso(),reason='cancelled'}={}){
   requireIso(at,'nowIso');
   db.prepare(`UPDATE jobs SET state='cancelled',lease_owner=NULL,heartbeat_at=NULL,available_at=NULL,last_error_class='cancelled',last_error_message=?,updated_at=?
