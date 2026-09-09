@@ -68,13 +68,13 @@ test('daily work jumps ahead of queued research as soon as a slot is released',a
   }finally{f.cleanup()}
 });
 
-test('emergency pressure cancels research before backfill and preserves daily work',async()=>{
+test('emergency pressure stops low-priority work in order, preserves daily work, and makes stopped jobs retryable',async()=>{
   const f=fixture();
   let snapshot=normalSnapshot(1600);
   try{
-    enqueue(f.db,'research',{type:'RESEARCH',priority:50,lease:150});
-    enqueue(f.db,'backfill',{type:'BACKFILL',priority:40,lease:150});
-    enqueue(f.db,'daily',{type:'DAILY_ANALYSIS',priority:20,lease:150});
+    const research=enqueue(f.db,'research',{type:'RESEARCH',priority:50,lease:150});
+    const backfill=enqueue(f.db,'backfill',{type:'BACKFILL',priority:40,lease:150});
+    const daily=enqueue(f.db,'daily',{type:'DAILY_ANALYSIS',priority:20,lease:150});
     const sp=fakeSpawner();
     const coordinator=new Coordinator({db:f.db,memoryReader:async()=>snapshot,spawnChild:sp.spawn,owner:'test',clock:()=>new Date('2026-09-09T00:00:10.000Z')});
     await coordinator.tick();
@@ -84,6 +84,10 @@ test('emergency pressure cancels research before backfill and preserves daily wo
     assert.deepEqual(sp.killOrder,[sp.calls.find(x=>x.job.type==='RESEARCH').job.id,sp.calls.find(x=>x.job.type==='BACKFILL').job.id]);
     assert.deepEqual(result.cancelled.map(x=>x.type),['RESEARCH','BACKFILL']);
     assert.equal(sp.calls.find(x=>x.job.type==='DAILY_ANALYSIS').handle.killed,false);
+    assert.equal(getJob(f.db,research.id).state,'retry_wait');
+    assert.equal(getJob(f.db,backfill.id).state,'retry_wait');
+    assert.equal(getJob(f.db,daily.id).state,'running');
+    assert.equal(getJob(f.db,research.id).lastErrorClass,'memory_emergency');
   }finally{f.cleanup()}
 });
 
