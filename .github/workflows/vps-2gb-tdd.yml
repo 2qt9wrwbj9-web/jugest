@@ -20,3 +20,11 @@ jobs:
         run: npm test
       - name: VPS tests
         run: npm --prefix vps test
+      - name: Mandatory Production preservation
+        run: |
+          node --test tests/production-preservation.mjs
+          node --test tests/collector-batch-v3.mjs
+          node tests/collector-preservation.mjs
+          node tests/store-analysis-evidence-view.mjs
+          node tests/store-optimization-research.mjs
+          node --test tests/ui-home-jobs.mjs
