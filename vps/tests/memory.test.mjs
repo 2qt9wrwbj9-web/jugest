@@ -11,7 +11,8 @@ test('resource policy defaults match the frozen 2 GiB design',()=>{
     pauseUsedRatio:0.82,
     emergencyUsedRatio:0.88,
     maxAnalysisChildren:3,
-    sampleIntervalMs:2000
+    sampleIntervalMs:2000,
+    emergencyCooldownMs:10000
   });
   assert.equal(Object.isFrozen(DEFAULT_RESOURCE_POLICY),true);
 });
@@ -20,6 +21,7 @@ test('resource policy validates monotonic pressure bands and reserves',()=>{
   assert.throws(()=>loadResourcePolicy({cautionUsedRatio:.9,pauseUsedRatio:.8}),/pressure/i);
   assert.throws(()=>loadResourcePolicy({hardReserveMiB:200,emergencyReserveMiB:300}),/reserve/i);
   assert.throws(()=>loadResourcePolicy({maxAnalysisChildren:0}),/maxAnalysisChildren/);
+  assert.throws(()=>loadResourcePolicy({emergencyCooldownMs:1000}),/emergencyCooldownMs/);
 });
 
 test('parseMemInfo converts kernel kB values to MiB',()=>{
