@@ -30,7 +30,6 @@ export async function runCoordinator({
   });
   await tick();
   const timer=setInterval(tick,policy.sampleIntervalMs);
-  timer.unref?.();
 
   const stop=signal=>{
     if(stopping)return;
