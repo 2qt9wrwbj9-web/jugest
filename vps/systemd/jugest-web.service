@@ -1,0 +1,30 @@
+[Unit]
+Description=JUGEST VPS web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jugest
+Group=jugest
+WorkingDirectory=/opt/jugest/current/vps
+EnvironmentFile=-/etc/jugest/jugest.env
+Environment=JUGEST_WEB_ROOT=/opt/jugest/current
+Environment=JUGEST_WEB_HOST=127.0.0.1
+Environment=JUGEST_WEB_PORT=3000
+ExecStart=/usr/bin/node src/web-main.mjs
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
