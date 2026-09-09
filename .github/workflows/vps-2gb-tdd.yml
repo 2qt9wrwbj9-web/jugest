@@ -1,0 +1,22 @@
+name: VPS 2GB TDD
+
+on:
+  push:
+    branches:
+      - sol/vps-2gb-memory-scheduler
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install root dependencies
+        run: npm install --ignore-scripts
+      - name: Root regression baseline
+        run: npm test
+      - name: VPS tests
+        run: npm --prefix vps test
