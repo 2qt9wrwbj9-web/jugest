@@ -1,0 +1,19 @@
+name: VPS web foundation verification
+
+on:
+  push:
+    branches:
+      - sol/vps-web-foundation
+
+jobs:
+  test-vps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run VPS tests
+        working-directory: vps
+        run: npm test
