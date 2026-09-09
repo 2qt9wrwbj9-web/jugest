@@ -91,6 +91,40 @@ test('emergency pressure stops low-priority work in order, preserves daily work,
   }finally{f.cleanup()}
 });
 
+test('emergency-deferred work resumes only after memory stays below pause threshold for cooldown',async()=>{
+  const f=fixture();
+  let snapshot=normalSnapshot(1200);
+  let nowMs=Date.parse('2026-09-09T00:00:00.000Z');
+  try{
+    const research=enqueue(f.db,'cooldown-research',{type:'RESEARCH',priority:50,lease:150});
+    const sp=fakeSpawner();
+    const policy=loadResourcePolicy({maxAnalysisChildren:1,emergencyCooldownMs:4000});
+    const coordinator=new Coordinator({db:f.db,memoryReader:async()=>snapshot,spawnChild:sp.spawn,owner:'test',policy,clock:()=>new Date(nowMs)});
+    await coordinator.tick();
+    assert.equal(sp.calls.length,1);
+
+    snapshot={...normalSnapshot(200),usedRatio:.90,effectiveAvailableMiB:200};
+    nowMs+=2000;
+    await coordinator.tick();
+    assert.equal(getJob(f.db,research.id).state,'retry_wait');
+
+    snapshot=normalSnapshot(1200);
+    nowMs+=2000;
+    await coordinator.tick();
+    assert.equal(sp.calls.length,1);
+
+    nowMs+=3999;
+    await coordinator.tick();
+    assert.equal(sp.calls.length,1);
+
+    nowMs+=1;
+    await coordinator.tick();
+    assert.equal(sp.calls.length,2);
+    assert.equal(sp.calls[1].job.id,research.id);
+    assert.equal(getJob(f.db,research.id).state,'running');
+  }finally{f.cleanup()}
+});
+
 test('observed peak RSS is learned by job type and size class for future leases',async()=>{
   const f=fixture();
   try{
