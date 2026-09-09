@@ -34,6 +34,8 @@ export class Coordinator{
     this.workerPath=workerPath;
     this.running=new Map();
     this._tickChain=Promise.resolve();
+    this._emergencyLatched=false;
+    this._belowPauseSinceMs=null;
   }
 
   get runningCount(){return this.running.size;}
@@ -176,13 +178,33 @@ export class Coordinator{
 
   async _tick(){
     const at=iso(this.clock);
+    const nowMs=Date.parse(at);
     const snapshot=await this.memoryReader();
     const pressure=classifyPressure(snapshot,this.policy);
     const result={pressure,started:[],cancelled:[]};
 
-    if(pressure==='EMERGENCY')result.cancelled=this._cancelEmergency(at);
-    this._recordSample(snapshot,at,{pressure,cancelled:result.cancelled});
-    if(pressure==='PAUSE'||pressure==='EMERGENCY')return result;
+    if(pressure==='EMERGENCY'){
+      this._emergencyLatched=true;
+      this._belowPauseSinceMs=null;
+      result.cancelled=this._cancelEmergency(at);
+    }else if(this._emergencyLatched&&pressure==='PAUSE'){
+      this._belowPauseSinceMs=null;
+    }
+
+    let cooldownRemainingMs=0;
+    if(this._emergencyLatched&&pressure!=='PAUSE'&&pressure!=='EMERGENCY'){
+      if(this._belowPauseSinceMs===null)this._belowPauseSinceMs=nowMs;
+      const cooldownMs=Number.isFinite(this.policy.emergencyCooldownMs)?this.policy.emergencyCooldownMs:10000;
+      const elapsed=Math.max(0,nowMs-this._belowPauseSinceMs);
+      cooldownRemainingMs=Math.max(0,cooldownMs-elapsed);
+      if(cooldownRemainingMs===0){
+        this._emergencyLatched=false;
+        this._belowPauseSinceMs=null;
+      }
+    }
+
+    this._recordSample(snapshot,at,{pressure,cancelled:result.cancelled,cooldownRemainingMs});
+    if(pressure==='PAUSE'||pressure==='EMERGENCY'||this._emergencyLatched)return result;
 
     let projected={...snapshot};
     while(this.runningCount<this.policy.maxAnalysisChildren){
