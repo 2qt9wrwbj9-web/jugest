@@ -1,7 +1,7 @@
 import {DEFAULT_RESOURCE_POLICY} from './config.mjs';
 import {classifyPressure} from './memory.mjs';
 import {canAdmit,deriveHeapLimitMiB,estimateLeaseMiB,selectEmergencyVictims,updateEwmaPeakMiB} from './scheduler-policy.mjs';
-import {cancelJob,claimNextJob,completeJob,failJob,getJob,heartbeatJob,markJobRunning,peekNextJob} from './queue.mjs';
+import {claimNextJob,completeJob,deferJob,failJob,getJob,heartbeatJob,markJobRunning,peekNextJob} from './queue.mjs';
 import {spawnJobChild} from './child-runner.mjs';
 
 function iso(clock){return clock().toISOString();}
@@ -132,7 +132,16 @@ export class Coordinator{
     for(const entry of selectEmergencyVictims([...this.running.values()])){
       if(entry.finished||entry.cancelled)continue;
       entry.cancelled=true;
-      cancelJob(this.db,{jobId:entry.job.id,nowIso:at,reason:'memory_emergency'});
+      deferJob(this.db,{
+        jobId:entry.job.id,
+        owner:this.owner,
+        nowIso:at,
+        retryAtIso:at,
+        errorClass:'memory_emergency',
+        message:'memory pressure emergency',
+        peakRssMiB:entry.peakRssMiB||null,
+        exitCode:143
+      });
       this.running.delete(entry.job.id);
       cancelled.push({id:entry.job.id,type:entry.job.type});
       try{entry.handle?.kill('SIGTERM')}catch{}
