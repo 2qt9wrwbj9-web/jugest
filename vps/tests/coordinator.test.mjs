@@ -52,6 +52,23 @@ test('coordinator fills spare RAM with multiple children but preserves hard rese
   }finally{f.cleanup()}
 });
 
+test('running memory lease commitments remain reserved across later scheduler ticks',async()=>{
+  const f=fixture();
+  try{
+    enqueue(f.db,'lease-a',{lease:200});
+    enqueue(f.db,'lease-b',{lease:200});
+    const sp=fakeSpawner();
+    const coordinator=new Coordinator({db:f.db,memoryReader:async()=>normalSnapshot(750),spawnChild:sp.spawn,owner:'test',clock:()=>new Date('2026-09-09T00:00:10.000Z')});
+    await coordinator.tick();
+    assert.equal(sp.calls.length,2);
+
+    enqueue(f.db,'lease-c',{lease:200});
+    await coordinator.tick();
+    assert.equal(sp.calls.length,2);
+    assert.equal(getJob(f.db,3).state,'queued');
+  }finally{f.cleanup()}
+});
+
 test('daily work jumps ahead of queued research as soon as a slot is released',async()=>{
   const f=fixture();
   try{
