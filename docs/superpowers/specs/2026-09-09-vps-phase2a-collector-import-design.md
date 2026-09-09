@@ -78,7 +78,7 @@ Phase 2A must not reinterpret HTML or rerun parser logic. The Collector `day` ob
 
 - Collector pull HTTP client;
 - receiver credential loading from VPS environment only;
-- durable import cursor;
+- durable import cursor and revision-generation handling;
 - store/day canonical hashing;
 - idempotent store/day persistence;
 - machine-row persistence without inventing new judgement semantics;
@@ -86,6 +86,8 @@ Phase 2A must not reinterpret HTML or rerun parser logic. The Collector `day` ob
 - lightweight import-status snapshot;
 - read-only local/API snapshot surface;
 - retry/reset/replay behavior;
+- importer single-writer lease;
+- separate run-attempt and semantic-failure accounting for queue jobs;
 - TDD and root Production-preservation verification.
 
 ### Phase 2B — explicitly not part of this implementation
@@ -126,7 +128,7 @@ Tests inject a fake transport. No test depends on live Vercel network access.
 
 `sourceStoreId` is used directly as VPS `stores.id` in Phase 2A.
 
-This avoids a second store-identity mapping layer and preserves the existing Collector store identity exactly. `shop` becomes `stores.name`. The original source identity and latest observed Collector metadata are also retained in `source_metadata_json`.
+This avoids a second store-identity mapping layer and preserves the existing Collector store identity exactly. `shop` becomes `stores.name`.
 
 For each item:
 
@@ -136,7 +138,20 @@ business_date  = item.day.date
 shop           = item.shop
 ```
 
-The importer fails closed if `sourceStoreId`, `shop`, `day.date`, or `day.machines` is absent/invalid.
+`stores.source_metadata_json` contains only non-secret source metadata:
+
+```js
+{
+  source: 'vercel-collector-v3',
+  sourceStoreId,
+  collectorChannelId,
+  latestGeneration,
+  latestRevision,
+  sourceUpdatedAt
+}
+```
+
+The importer fails closed if `sourceStoreId`, `shop`, `day.date`, or `day.machines` is absent/invalid. An explicit empty `day.machines: []` is valid and is not treated as a missing field.
 
 ## Canonical JSON and hashes
 
@@ -159,7 +174,7 @@ store_days.parser_version    = NULL
 quality_status               = 'valid'
 ```
 
-The Collector revision/source metadata is retained separately in VPS import metadata.
+Collector revision/source metadata is retained in import receipts and store metadata instead.
 
 ## Machine row storage
 
@@ -167,7 +182,7 @@ Phase 2A must not infer a semantic machine identity that the current parser cont
 
 For every imported `day.machines` array, the importer replaces the complete machine set for that `store_id × business_date` transactionally and stores rows in source array order.
 
-`machine_key` is therefore an ordinal transport key, not a machine-identity claim:
+`machine_key` is an ordinal transport key, not a machine-identity claim:
 
 ```text
 000000
@@ -182,11 +197,12 @@ Phase 2B reconstructs the exact original machine array order before calling any 
 
 ## Schema additions
 
-Add a migration for:
+Add migrations for:
 
 ```sql
 CREATE TABLE collector_import_cursors (
   channel_id TEXT PRIMARY KEY,
+  generation INTEGER NOT NULL DEFAULT 1,
   next_revision INTEGER NOT NULL DEFAULT 0,
   server_revision INTEGER NOT NULL DEFAULT 0,
   last_success_at TEXT,
@@ -197,19 +213,51 @@ CREATE TABLE collector_import_cursors (
 
 CREATE TABLE collector_import_receipts (
   channel_id TEXT NOT NULL,
+  generation INTEGER NOT NULL,
   revision INTEGER NOT NULL,
   store_id TEXT NOT NULL,
   business_date TEXT NOT NULL,
   normalized_payload_hash TEXT NOT NULL,
   source_updated_at INTEGER,
   imported_at TEXT NOT NULL,
-  PRIMARY KEY(channel_id, revision)
+  PRIMARY KEY(channel_id, generation, revision)
+);
+
+CREATE TABLE collector_import_locks (
+  channel_id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  lease_expires_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 ```
 
-`collector_import_receipts` records what remote revision was committed and supports replay/audit without storing credentials.
+Also add `failure_count INTEGER NOT NULL DEFAULT 0` to `jobs`.
+
+`collector_import_receipts` records what remote revision was committed inside one revision generation. Generation prevents a remote revision reset from colliding with historical receipts that used the same revision numbers.
 
 Existing Phase 1 tables remain the canonical data destination.
+
+## Queue run sequence versus failure budget
+
+Phase 1 currently increments `jobs.attempts` when a job is claimed. That is useful as a run sequence, but benign memory preemption must not consume the semantic failure budget once non-synthetic work begins.
+
+Phase 2A freezes these meanings:
+
+```text
+attempts      = number of times the job has been claimed/run
+failure_count = number of failure-budget-consuming failures
+max_attempts  = maximum failure_count before terminal failed state
+```
+
+Rules:
+
+- `claimNextJob` increments `attempts` only;
+- `deferJob` for memory/resource preemption does not increment `failure_count`;
+- `failJob` increments `failure_count` and uses the incremented value against `max_attempts`;
+- stale leased/running recovery increments `failure_count`, because an abandoned run is an operational failure rather than an intentional resource defer;
+- completion changes neither counter beyond the earlier claim increment.
+
+Phase 1 tests are updated to assert the new explicit failure-budget contract without weakening queue durability or stale recovery.
 
 ## Page transaction and cursor invariant
 
@@ -218,18 +266,19 @@ A remote page is validated before any cursor advance.
 For one successful page, one SQLite transaction must perform all semantic writes:
 
 1. validate every returned item;
-2. upsert `stores`;
-3. compare each existing `store_days.normalized_payload_hash`;
-4. insert/replace changed `store_days` and its complete `machine_day_data` set;
-5. write `collector_import_receipts`;
-6. create the required downstream jobs for changed days using the same transaction;
-7. update the import-status snapshots for changed stores;
-8. advance `collector_import_cursors.next_revision` to the response `nextRevision`;
-9. commit.
+2. resolve the current cursor generation;
+3. upsert `stores`;
+4. compare each existing `store_days.normalized_payload_hash`;
+5. insert/replace changed `store_days` and its complete `machine_day_data` set;
+6. write generation-qualified `collector_import_receipts`;
+7. create required downstream jobs for changed days using the same transaction;
+8. update the import-status snapshots for changed stores;
+9. advance `collector_import_cursors.next_revision` to the response `nextRevision` and persist the observed `serverRevision`;
+10. commit.
 
 If any step fails, the transaction rolls back and the cursor does not move.
 
-To support this without nested `BEGIN` calls, Phase 2A adds a queue insertion primitive that can participate in an already-open transaction. The existing public `enqueueJob()` behavior remains unchanged and continues to use the same canonical validation/idempotency contract.
+To support this without nested `BEGIN` calls, Phase 2A adds a queue insertion primitive that can participate in an already-open transaction. The existing public `enqueueJob()` behavior remains unchanged and uses the same validation/idempotency contract.
 
 ## Idempotency and changed-day semantics
 
@@ -251,7 +300,7 @@ If the same store/day arrives with the same `normalized_payload_hash`:
 
 - do not rewrite machine rows;
 - do not create another semantic job;
-- do record/accept the newer Collector revision receipt if applicable;
+- record/accept the generation-qualified newer Collector revision receipt if applicable;
 - advance the cursor only after the page transaction commits.
 
 ### Corrected/replaced day
@@ -267,31 +316,40 @@ No old partial machine rows may survive a replacement.
 
 ## Remote revision reset
 
-If the stored VPS cursor is ahead of `serverRevision`, treat the Collector as having reset/rebuilt its revision space.
+A Collector revision-space reset is detected when either:
 
-The importer must:
+```text
+response.serverRevision < stored.server_revision
+OR
+stored.next_revision > response.serverRevision
+```
 
-1. record the reset event;
-2. restart remote scanning from revision 0;
-3. preserve already-imported VPS store/day data;
-4. rely on content hashes for idempotent replay;
+On detection the importer must, before committing the returned reset page:
+
+1. increment `collector_import_cursors.generation` by exactly one;
+2. set the effective scan cursor for the new generation to revision 0;
+3. preserve all existing VPS store/day data and prior-generation receipts;
+4. import/rescan the new generation using content hashes for semantic idempotency;
 5. never delete VPS history merely because the remote revision decreased.
 
-A rescan that returns identical payload hashes is therefore cheap and non-destructive.
+The current Collector may internally treat an over-large `sinceRevision` as zero; the importer therefore uses the returned `serverRevision` plus its stored cursor state to detect the reset explicitly.
+
+A rescan that returns identical payload hashes creates new audit receipts for the new generation but no duplicate semantic analysis jobs.
 
 ## Pagination safety
 
 The importer loops while `hasMore === true`, but must fail closed on non-progress:
 
-- `nextRevision` must be a non-negative integer;
+- `nextRevision` and `serverRevision` must be non-negative integers;
 - when items are returned, revisions must be positive integers and must not duplicate within the page;
+- within one generation a returned revision already recorded for a different store/day/hash is corruption and fails closed;
 - a `hasMore:true` response may not repeat the same `nextRevision` indefinitely;
 - malformed page data aborts before cursor advance;
 - HTTP/auth/5xx failures leave the cursor unchanged.
 
 The importer has a configurable per-run page cap to prevent accidental infinite loops; default Phase 2A cap: **100 pages**. A later invocation resumes from the durable cursor.
 
-## Import scheduling
+## Importer single-writer lease
 
 Collection itself remains the existing iPhone Shortcut in Phase 2A.
 
@@ -299,9 +357,20 @@ The VPS importer is lightweight network/SQLite work and is not an analysis child
 
 Default timer cadence: **every 15 minutes**.
 
-A manual CLI may run the same one-shot importer immediately after a Shortcut session. Concurrent importer executions are prevented with a process lock / SQLite lock row so only one cursor writer exists per channel.
+A manual CLI runs the same one-shot importer immediately when desired.
 
-This polling interval is operational, not semantic; changing it later does not change imported data meaning.
+Concurrent executions are controlled by `collector_import_locks`:
+
+- acquire/update the channel row in a short `BEGIN IMMEDIATE` transaction;
+- acquisition succeeds only when no unexpired lease exists, or when the existing lease belongs to the same owner;
+- default lease duration is 5 minutes;
+- refresh the lease between pull pages;
+- release it on clean exit;
+- an expired lease is recoverable by a later importer after crash/process loss.
+
+The importer never holds a SQLite write transaction open across a network request.
+
+This polling interval and lock lease are operational parameters, not semantic data rules.
 
 ## Client import-status snapshot
 
@@ -323,6 +392,7 @@ Payload contains only non-secret operational data:
   latestBusinessDate,
   normalizedPayloadHash,
   machineCount,
+  collectorGeneration,
   collectorRevision,
   importedAt
 }
@@ -332,14 +402,14 @@ This is not a setting prediction and must never be presented as judgement output
 
 ## Read API
 
-Phase 2A may add a minimal VPS read API that exposes only precomputed import-status snapshots and a health endpoint.
+Phase 2A adds a minimal VPS read API that exposes only precomputed import-status snapshots and a health endpoint.
 
 Requirements:
 
 - no endpoint triggers historical analysis;
 - no Collector credentials are returned;
 - bearer/admin secret comes from environment;
-- DB writes are not exposed through the public read API;
+- DB writes are not exposed through the read API;
 - CORS is deny-by-default and configured explicitly;
 - tests run against the handler directly without binding a public port.
 
@@ -351,18 +421,16 @@ Phase 2A must preserve the frozen 2 GiB scheduler defaults and cross-tick lease 
 
 The new placeholder `DAILY_ANALYSIS` job uses the existing priority 20 and starts with a conservative configured lease floor. Its real RSS is learned by the existing EWMA mechanism.
 
-Phase 2A should also close one Phase 1 limitation before real jobs are used: benign memory-emergency deferral must not consume the semantic failure budget. Run sequence/preemption accounting is separated from actual failure-attempt accounting while preserving stale recovery and existing queue behavior.
-
-The graceful shutdown limitation may be hardened in the same phase only as needed to ensure real/placeholder children are durably deferred before coordinator exit. No unrelated scheduler redesign is authorized.
+Phase 2A closes the Phase 1 failure-budget/preemption limitation using the explicit `failure_count` contract above. The Phase 1 graceful-shutdown and conservative-lease limitations remain documented and are not expanded into unrelated scheduler redesign in this phase.
 
 ## Error behavior
 
 - Unauthorized Collector response: importer fails, records sanitized error class, cursor unchanged.
 - Network/timeout: importer fails without DB semantic changes for the uncommitted page.
 - Malformed Collector item: fail closed, cursor unchanged.
-- Duplicate remote revision: fail closed unless it is an exact replay already represented by the committed cursor boundary.
+- Conflicting duplicate remote revision inside one generation: fail closed.
 - SQLite transaction failure: rollback all page writes and cursor movement.
-- Changed day with zero machines: allowed only if the existing Collector-normalized `day.machines` is explicitly an empty array; it is stored faithfully and not silently treated as missing.
+- Explicit `day.machines: []`: store faithfully as a valid empty machine set.
 - Snapshot failure inside the page transaction: page does not commit.
 - Downstream placeholder job failure: imported store/day remains durable; queue retry semantics handle the job independently.
 
@@ -381,16 +449,17 @@ Tests must cover at least:
 5. same-hash replay is a semantic no-op;
 6. changed hash atomically replaces machine rows and creates a new hash-qualified job;
 7. corrected day never leaves stale machine rows;
-8. remote revision reset safely rescans from zero;
+8. remote revision reset increments generation and safely rescans from zero without receipt collision;
 9. malformed/non-progress pagination fails closed;
 10. credentials never enter SQLite/snapshots/log-safe returned objects;
 11. placeholder daily job reconstructs exact machine-array order and hashes deterministically;
 12. import-status snapshot is deterministic and contains no judgement claims;
-13. concurrent importer exclusion;
+13. concurrent importer lease excludes a second live importer and expires safely after crash;
 14. schema migration is restart-safe/idempotent;
-15. Phase 1 scheduler/queue tests remain green;
-16. root `npm test` and mandatory Production-preservation tests remain green;
-17. branch diff contains no modification to existing protected root runtime/Collector/parser/judgement files.
+15. memory defer does not consume `failure_count`, while real/stale failures do;
+16. Phase 1 scheduler/queue tests remain green;
+17. root `npm test` and mandatory Production-preservation tests remain green;
+18. branch diff contains no modification to existing protected root runtime/Collector/parser/judgement files.
 
 ## Proposed Phase 2A file boundary
 
@@ -416,6 +485,7 @@ vps/tests/
   collector-client.test.mjs
   collector-import.test.mjs
   collector-revision-reset.test.mjs
+  collector-lock.test.mjs
   snapshot-api.test.mjs
   data-ready-job.test.mjs
 ```
@@ -427,16 +497,18 @@ Modify only VPS files plus Phase 2A docs/tests/workflow artifacts. Existing root
 Phase 2A is acceptable only if all of the following hold:
 
 1. Existing Shortcut and Vercel Collector V3 require no code change.
-2. A Collector-normalized day can be imported to VPS and reconstructed byte-semantically from canonical JSON/machine order.
+2. A Collector-normalized day can be imported to VPS and reconstructed semantically exactly from canonical JSON/machine order.
 3. Cursor never advances beyond uncommitted data.
 4. Same content can replay indefinitely without duplicate semantic jobs.
 5. Corrected content replaces one store/day atomically and triggers exactly one new hash-qualified job.
-6. Remote revision reset is non-destructive.
+6. Remote revision reset is non-destructive and cannot collide with old revision receipts.
 7. No Collector secret is persisted or exposed.
-8. Client snapshot reads perform no heavy analysis.
-9. Phase 1 2 GiB scheduler safety contracts remain green.
-10. Current root JUGEST/Collector/parser/protected judgement behavior remains preserved.
-11. No `main` merge, Vercel Production deployment, DNS change, or KAGOYA Production deployment occurs.
+8. Concurrent importers cannot both own the same live channel lease.
+9. Memory/resource deferral does not spend the semantic job failure budget.
+10. Client snapshot reads perform no heavy analysis.
+11. Phase 1 2 GiB scheduler safety contracts remain green.
+12. Current root JUGEST/Collector/parser/protected judgement behavior remains preserved.
+13. No `main` merge, Vercel Production deployment, DNS change, or KAGOYA Production deployment occurs.
 
 ## Phase 2B gate
 
