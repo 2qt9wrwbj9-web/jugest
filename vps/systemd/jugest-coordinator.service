@@ -1,0 +1,25 @@
+[Unit]
+Description=JUGEST memory-aware coordinator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jugest
+Group=jugest
+WorkingDirectory=/opt/jugest/current/vps
+EnvironmentFile=-/etc/jugest/jugest.env
+Environment=JUGEST_DB_PATH=/var/lib/jugest/jugest.sqlite
+ExecStart=/usr/bin/node src/main.mjs
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=jugest
+ReadWritePaths=/var/lib/jugest
+
+[Install]
+WantedBy=multi-user.target
