@@ -18,6 +18,11 @@ function projectedAfterLease(snapshot,leaseMiB){
   return {...snapshot,effectiveAvailableMiB,usedRatio};
 }
 
+function projectedAfterOutstandingLeases(snapshot,runningEntries){
+  const committedMiB=runningEntries.reduce((sum,entry)=>sum+(Number.isFinite(entry.leaseMiB)?entry.leaseMiB:0),0);
+  return committedMiB>0?projectedAfterLease(snapshot,committedMiB):{...snapshot};
+}
+
 export class Coordinator{
   constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=new URL('./jobs/synthetic.mjs',import.meta.url)}={}){
     if(!db)throw new TypeError('db is required');
@@ -206,7 +211,8 @@ export class Coordinator{
     this._recordSample(snapshot,at,{pressure,cancelled:result.cancelled,cooldownRemainingMs});
     if(pressure==='PAUSE'||pressure==='EMERGENCY'||this._emergencyLatched)return result;
 
-    let projected={...snapshot};
+    const runningAtAdmission=[...this.running.values()];
+    let projected=projectedAfterOutstandingLeases(snapshot,runningAtAdmission);
     while(this.runningCount<this.policy.maxAnalysisChildren){
       const next=peekNextJob(this.db,{nowIso:at});
       if(!next)break;
