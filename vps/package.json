@@ -11,6 +11,7 @@
     "migrate": "node scripts/migrate.mjs",
     "enqueue": "node scripts/enqueue.mjs",
     "status": "node scripts/status.mjs",
-    "coordinator": "node src/main.mjs"
+    "coordinator": "node src/main.mjs",
+    "web": "node src/web-main.mjs"
   }
 }
