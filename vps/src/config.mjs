@@ -5,7 +5,8 @@ const BASE_POLICY={
   pauseUsedRatio:0.82,
   emergencyUsedRatio:0.88,
   maxAnalysisChildren:3,
-  sampleIntervalMs:2000
+  sampleIntervalMs:2000,
+  emergencyCooldownMs:10000
 };
 
 function finitePositive(value,name){
@@ -25,6 +26,9 @@ function validate(policy){
   }
   if(!Number.isInteger(policy.maxAnalysisChildren)||policy.maxAnalysisChildren<1)throw new RangeError('maxAnalysisChildren must be a positive integer');
   if(!Number.isInteger(policy.sampleIntervalMs)||policy.sampleIntervalMs<100)throw new RangeError('sampleIntervalMs must be an integer >= 100');
+  if(!Number.isInteger(policy.emergencyCooldownMs)||policy.emergencyCooldownMs<policy.sampleIntervalMs){
+    throw new RangeError('emergencyCooldownMs must be an integer >= sampleIntervalMs');
+  }
   return policy;
 }
 
