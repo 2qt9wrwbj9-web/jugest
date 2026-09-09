@@ -104,6 +104,15 @@ export function migrate(db){
       FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS memory_profiles (
+      job_type TEXT NOT NULL,
+      size_class TEXT NOT NULL,
+      ewma_peak_mib REAL NOT NULL,
+      samples INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(job_type,size_class)
+    );
+
     CREATE TABLE IF NOT EXISTS resource_samples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       captured_at TEXT NOT NULL,
