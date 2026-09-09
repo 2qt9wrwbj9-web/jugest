@@ -45,6 +45,13 @@ function requireIso(value,name){if(typeof value!=='string'||!value)throw new Typ
 
 export function getJob(db,id){return rowToJob(db.prepare('SELECT * FROM jobs WHERE id=?').get(id));}
 
+export function peekNextJob(db,{nowIso:at}={}){
+  requireIso(at,'nowIso');
+  return rowToJob(db.prepare(`SELECT * FROM jobs
+    WHERE state='queued' OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))
+    ORDER BY priority ASC,id ASC LIMIT 1`).get(at));
+}
+
 export function enqueueJob(db,{type,priority,idempotencyKey,payload={},sizeClass='small',estimatedLeaseMiB,maxAttempts=3,createdAtIso=nowIso()}={}){
   if(typeof type!=='string'||!type)throw new TypeError('job type is required');
   if(!Number.isInteger(priority))throw new TypeError('job priority must be an integer');
