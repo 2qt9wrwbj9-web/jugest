@@ -6,6 +6,7 @@ import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {openDatabase} from '../src/db.mjs';
+import {runCoordinator} from '../src/main.mjs';
 
 const HERE=dirname(fileURLToPath(import.meta.url));
 const VPS=join(HERE,'..');
@@ -30,6 +31,21 @@ test('migrate, enqueue, and status CLIs operate on one durable SQLite file',()=>
     const db=openDatabase(dbPath);
     try{assert.equal(db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE idempotency_key='cli-r1'").get().n,1)}finally{db.close()}
   }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
+test('coordinator scheduler interval stays referenced for 24-hour service operation',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'jugest-service-'));
+  const dbPath=join(dir,'jugest.sqlite');
+  let runtime;
+  try{
+    runtime=await runCoordinator({dbPath,owner:'service-test'});
+    assert.equal(runtime.timer.hasRef(),true);
+  }finally{
+    if(runtime){clearInterval(runtime.timer);try{runtime.db.close()}catch{}}
+    process.removeAllListeners('SIGTERM');
+    process.removeAllListeners('SIGINT');
+    rmSync(dir,{recursive:true,force:true});
+  }
 });
 
 test('systemd coordinator template runs as unprivileged jugest user with hardening',()=>{
