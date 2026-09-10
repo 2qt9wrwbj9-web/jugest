@@ -1,0 +1,47 @@
+name: VPS Icon Production Check
+
+on:
+  push:
+    branches: [sol/vps-home-icon-fix]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Wait for VPS auto-deploy and verify production icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            if curl -fsS --max-time 10 https://jugest.net/api/health | grep -q '"ok":true'; then
+              if curl -fsS --max-time 10 -o /tmp/apple.png 'https://jugest.net/apple-touch-icon.png?v=512-icon-tune-3'; then
+                if [ "$(wc -c < /tmp/apple.png)" -gt 1000 ]; then
+                  ok=1
+                  break
+                fi
+              fi
+            fi
+            echo "production not updated yet (attempt $attempt)"
+            sleep 10
+          done
+          test "$ok" = 1
+          node --input-type=module <<'NODE'
+          import {writeFile} from 'node:fs/promises';
+          import {execFileSync} from 'node:child_process';
+          import {getGeneratedIcon} from './vps/src/icon-assets.mjs';
+          const names=['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png'];
+          for(const name of names){
+            const expected=await getGeneratedIcon(process.cwd(),name);
+            const out=`/tmp/prod-${name}`;
+            execFileSync('curl',['-fsS','--max-time','15','-o',out,`https://jugest.net/${name}`],{stdio:'inherit'});
+            const actual=await import('node:fs/promises').then(fs=>fs.readFile(out));
+            if(!actual.equals(expected))throw new Error(`${name} differs from preserved JUGEST icon`);
+            console.log(`${name}: exact match (${actual.length} bytes)`);
+          }
+          NODE
