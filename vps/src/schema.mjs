@@ -164,10 +164,17 @@ export function migrate(db){
     CREATE TABLE IF NOT EXISTS collector_control (
       id INTEGER PRIMARY KEY CHECK(id=1),
       global_block_until TEXT,
+      run_owner TEXT,
+      run_lease_expires_at TEXT,
       last_run_started_at TEXT,
       last_run_ended_at TEXT,
       last_run_result TEXT,
       updated_at TEXT NOT NULL
     );
   `);
+
+  // Keep migration safe for a development/canary database created by an earlier collector build.
+  const controlColumns=new Set(db.prepare('PRAGMA table_info(collector_control)').all().map(row=>row.name));
+  if(!controlColumns.has('run_owner'))db.exec('ALTER TABLE collector_control ADD COLUMN run_owner TEXT;');
+  if(!controlColumns.has('run_lease_expires_at'))db.exec('ALTER TABLE collector_control ADD COLUMN run_lease_expires_at TEXT;');
 }
