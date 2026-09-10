@@ -4,21 +4,23 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createWebServer} from './web-server.mjs';
 
 const DEFAULT_WEB_ROOT=fileURLToPath(new URL('../..',import.meta.url));
+const DEFAULT_RELAY_DB='/var/lib/jugest/relay.sqlite';
 
 export function readWebConfig(env=process.env){
   const rootDir=path.resolve(env.JUGEST_WEB_ROOT||DEFAULT_WEB_ROOT);
   const host=String(env.JUGEST_WEB_HOST||'127.0.0.1').trim();
   const rawPort=env.JUGEST_WEB_PORT??'3000';
   const port=Number(rawPort);
+  const relayDbPath=path.resolve(String(env.JUGEST_RELAY_DB||DEFAULT_RELAY_DB));
   if(!host)throw new TypeError('JUGEST_WEB_HOST must not be empty');
-  if(!Number.isInteger(port)||port<1||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 1 to 65535');
-  return {rootDir,host,port};
+  if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 0 to 65535');
+  return {rootDir,host,port,relayDbPath};
 }
 
 export async function runWebServer({config=readWebConfig(),logger=message=>console.log(message)}={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
-  const {rootDir,host,port}=config;
-  const server=createWebServer({rootDir});
+  const {rootDir,host,port,relayDbPath}=config;
+  const server=createWebServer({rootDir,relayDbPath});
   server.listen(port,host);
   await once(server,'listening');
   const address=server.address();
@@ -27,7 +29,8 @@ export async function runWebServer({config=readWebConfig(),logger=message=>conso
     event:'web_listening',
     host,
     port:typeof address==='object'&&address?address.port:port,
-    rootDir:path.resolve(rootDir)
+    rootDir:path.resolve(rootDir),
+    relayDbPath:path.resolve(relayDbPath)
   }));
   return server;
 }
