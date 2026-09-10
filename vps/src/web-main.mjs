@@ -13,7 +13,7 @@ export function readWebConfig(env=process.env){
   const port=Number(rawPort);
   const relayDbPath=path.resolve(String(env.JUGEST_RELAY_DB||DEFAULT_RELAY_DB));
   if(!host)throw new TypeError('JUGEST_WEB_HOST must not be empty');
-  if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 0 to 65535');
+  if(!Number.isInteger(port)||port<1||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 1 to 65535');
   return {rootDir,host,port,relayDbPath};
 }
 
