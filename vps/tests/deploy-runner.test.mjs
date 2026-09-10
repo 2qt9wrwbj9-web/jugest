@@ -40,7 +40,7 @@ function makeExec({remoteSha=NEW_SHA,checkoutSha=NEW_SHA,testCode=0,restartCode=
     if (command==='git' && args[0]==='checkout') {
       return {code:0,stdout:'',stderr:''};
     }
-    if (command==='git' && args[0]==='rev-parse') {
+    if (command==='git' && args.includes('rev-parse')) {
       const sha=(await import('node:fs/promises')).readFile(path.join(cwd,'.fake-head'),'utf8');
       return {code:0,stdout:await sha,stderr:''};
     }
@@ -125,6 +125,30 @@ test('successful test switches release, restarts once, and records success',asyn
   assert.equal(state.lastResult,'success');
 });
 
+test('mandatory health retries through a brief post-restart startup race',async t=>{
+  const fx=await fixture(t);
+  const {exec}=makeExec();
+  let internalAttempts=0;
+  const sleeps=[];
+  const result=await runDeployOnce(options(fx,exec,{
+    checkHealth:async url=>{
+      if (url==='http://127.0.0.1:3000/api/health') {
+        internalAttempts+=1;
+        return internalAttempts>=2;
+      }
+      return true;
+    },
+    healthAttempts:3,
+    healthRetryDelayMs:25,
+    sleep:async ms=>{ sleeps.push(ms); }
+  }));
+
+  assert.equal(result.status,'deployed');
+  assert.equal(internalAttempts,2);
+  assert.deepEqual(sleeps,[25]);
+  assert.equal(path.basename(await readlink(fx.currentPath)),NEW_SHA);
+});
+
 test('post-switch health failure rolls current back and restarts again',async t=>{
   const fx=await fixture(t);
   const {exec,calls}=makeExec();
@@ -135,7 +159,8 @@ test('post-switch health failure rolls current back and restarts again',async t=
       mandatoryChecks+=1;
       if (mandatoryChecks===1) return false;
       return true;
-    }
+    },
+    healthAttempts:1
   }));
   assert.equal(result.status,'rolled-back');
   assert.equal(await readlink(fx.currentPath),fx.oldRelease);
