@@ -1,0 +1,11 @@
+[Unit]
+Description=Check JUGEST deploy/vps for updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+Persistent=true
+Unit=jugest-deploy.service
+
+[Install]
+WantedBy=timers.target
