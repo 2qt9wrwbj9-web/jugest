@@ -8,7 +8,8 @@ import {
   writeState,
   shouldAttemptDeploy,
   atomicSwitchCurrent,
-  cleanupReleases
+  cleanupReleases,
+  resolveCurrentSha
 } from '../src/deploy-core.mjs';
 
 async function tempRoot(t) {
@@ -58,6 +59,33 @@ test('new SHA is eligible for deployment',()=>{
     shouldAttemptDeploy({remoteSha:'new',currentSha:'old',state:{lastAttemptSha:'older',lastResult:'failed'}}),
     {attempt:true,reason:'new-release'}
   );
+});
+
+test('resolveCurrentSha scopes Git safe.directory to the resolved release path',async t=>{
+  const root=await tempRoot(t);
+  const release=path.join(root,'releases','abc');
+  const current=path.join(root,'current');
+  await mkdir(release,{recursive:true});
+  await symlink(release,current,'dir');
+  const expectedSha='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const calls=[];
+  const execGit=async(command,args,options)=>{
+    calls.push({command,args:[...args],options});
+    return {code:0,stdout:`${expectedSha}\n`,stderr:''};
+  };
+
+  const actual=await resolveCurrentSha(current,execGit);
+
+  assert.equal(actual,expectedSha);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].command,'git');
+  assert.deepEqual(calls[0].args,[
+    '-c',
+    `safe.directory=${release}`,
+    'rev-parse',
+    'HEAD'
+  ]);
+  assert.equal(calls[0].options.cwd,current);
 });
 
 test('atomicSwitchCurrent replaces current symlink with target',async t=>{
