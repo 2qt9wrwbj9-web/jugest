@@ -1,0 +1,18 @@
+name: Native Collector TDD
+
+on:
+  push:
+    branches: [sol/vps-native-collector]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.2
+      - name: Focused collector repository tests
+        working-directory: vps
+        run: node --test tests/collector-repository.test.mjs
