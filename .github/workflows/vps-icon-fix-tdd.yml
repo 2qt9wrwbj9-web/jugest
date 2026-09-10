@@ -16,3 +16,5 @@ jobs:
       - name: VPS tests
         working-directory: vps
         run: npm test
+      - name: Root regression
+        run: npm test
