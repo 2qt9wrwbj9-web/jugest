@@ -5,6 +5,7 @@ import {
   readFile,
   readdir,
   readlink,
+  realpath,
   rename,
   rm,
   stat,
@@ -88,7 +89,17 @@ export async function resolveCurrentTarget(currentPath) {
 
 export async function resolveCurrentSha(currentPath,execGit) {
   try {
-    const result=await execGit('git',['rev-parse','HEAD'],{cwd:currentPath});
+    let safeDirectory;
+    try {
+      safeDirectory=await realpath(currentPath);
+    } catch {
+      safeDirectory=path.resolve(currentPath);
+    }
+    const result=await execGit(
+      'git',
+      ['-c',`safe.directory=${safeDirectory}`,'rev-parse','HEAD'],
+      {cwd:currentPath}
+    );
     if (result.code!==0) return null;
     const sha=String(result.stdout??'').trim();
     return /^[0-9a-f]{40}$/i.test(sha)?sha:null;
