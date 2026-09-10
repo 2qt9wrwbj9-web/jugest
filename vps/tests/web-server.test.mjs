@@ -45,9 +45,12 @@ async function startRelayServer(rootDir,relayDbPath){
   server.listen(0,'127.0.0.1');
   await once(server,'listening');
   const {port}=server.address();
+  let closed=false;
   return {
     base:`http://127.0.0.1:${port}`,
     close:async()=>{
+      if(closed)return;
+      closed=true;
       server.closeAllConnections?.();
       await new Promise(resolve=>server.close(resolve));
     }
@@ -71,6 +74,7 @@ test('POST /api/relay serves Collector V2 and persists relay auth across restart
   t.after(()=>rm(root,{recursive:true,force:true}));
 
   const first=await startRelayServer(root,relayDbPath);
+  t.after(()=>first.close());
   const createdResponse=await fetch(`${first.base}/api/relay`,{
     method:'POST',
     headers:{'content-type':'application/json'},
