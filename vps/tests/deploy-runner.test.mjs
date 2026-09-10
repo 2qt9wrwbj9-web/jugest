@@ -53,6 +53,9 @@ function makeExec({remoteSha=NEW_SHA,checkoutSha=NEW_SHA,testCode=0,restartCode=
     if (command==='systemctl' && args[0]==='restart') {
       return {code:restartCode,stdout:'',stderr:restartCode===0?'':'restart failed'};
     }
+    if (command==='curl') {
+      return {code:0,stdout:'{"ok":true,"service":"jugest-vps-web"}\n',stderr:''};
+    }
     throw new Error(`unexpected command: ${command} ${args.join(' ')}`);
   };
   return {exec,calls};
@@ -115,14 +118,31 @@ test('successful test switches release, restarts once, and records success',asyn
   assert.equal(result.status,'deployed');
   assert.equal(path.basename(await readlink(fx.currentPath)),NEW_SHA);
   assert.equal(calls.filter(call=>call.command==='systemctl').length,1);
-  assert.deepEqual(healthCalls.slice(0,2),[
-    'http://127.0.0.1:3000/api/health',
-    'http://127.0.0.1/api/health'
-  ]);
+  assert.equal(healthCalls[0],'http://127.0.0.1:3000/api/health');
   const state=await readState(fx.stateDir);
   assert.equal(state.lastSuccessfulSha,NEW_SHA);
   assert.equal(state.previousSuccessfulSha,OLD_SHA);
   assert.equal(state.lastResult,'success');
+});
+
+test('default nginx probe routes jugest.net HTTPS to loopback instead of plain 127.0.0.1 HTTP',async t=>{
+  const fx=await fixture(t);
+  const {exec,calls}=makeExec();
+  const result=await runDeployOnce(options(fx,exec,{
+    checkHealth:async()=>true
+  }));
+
+  assert.equal(result.status,'deployed');
+  const curlCall=calls.find(call=>call.command==='curl');
+  assert.ok(curlCall,'expected a curl-based local TLS nginx health probe');
+  assert.deepEqual(curlCall.args,[
+    '--silent',
+    '--show-error',
+    '--fail',
+    '--max-time','5',
+    '--resolve','jugest.net:443:127.0.0.1',
+    'https://jugest.net/api/health'
+  ]);
 });
 
 test('mandatory health retries through a brief post-restart startup race',async t=>{
@@ -152,12 +172,12 @@ test('mandatory health retries through a brief post-restart startup race',async 
 test('post-switch health failure rolls current back and restarts again',async t=>{
   const fx=await fixture(t);
   const {exec,calls}=makeExec();
-  let mandatoryChecks=0;
+  let internalChecks=0;
   const result=await runDeployOnce(options(fx,exec,{
     checkHealth:async url=>{
       if (url.startsWith('https://')) return true;
-      mandatoryChecks+=1;
-      if (mandatoryChecks===1) return false;
+      internalChecks+=1;
+      if (internalChecks===1) return false;
       return true;
     },
     healthAttempts:1
