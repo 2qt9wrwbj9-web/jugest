@@ -20,7 +20,9 @@ export const DEPLOY_DEFAULTS=Object.freeze({
   internalHealth:'http://127.0.0.1:3000/api/health',
   nginxHealth:'http://127.0.0.1/api/health',
   externalHealth:'https://jugest.net/api/health',
-  keepReleases:5
+  keepReleases:5,
+  healthAttempts:20,
+  healthRetryDelayMs:250
 });
 
 export async function execCommand(command,args,{cwd}={}) {
@@ -119,9 +121,22 @@ async function restartWeb(exec,webService) {
   await requireCommand(exec,'systemctl',['restart',webService]);
 }
 
-async function mandatoryHealth(checkHealth,internalHealth,nginxHealth) {
-  if (!(await checkHealth(internalHealth))) return {ok:false,failed:internalHealth};
-  if (!(await checkHealth(nginxHealth))) return {ok:false,failed:nginxHealth};
+async function waitForHealth(checkHealth,url,{attempts,delayMs,sleep}) {
+  const totalAttempts=Math.max(1,attempts);
+  for (let attempt=1;attempt<=totalAttempts;attempt+=1) {
+    if (await checkHealth(url)) return true;
+    if (attempt<totalAttempts && delayMs>0) await sleep(delayMs);
+  }
+  return false;
+}
+
+async function mandatoryHealth(checkHealth,internalHealth,nginxHealth,retryOptions) {
+  if (!(await waitForHealth(checkHealth,internalHealth,retryOptions))) {
+    return {ok:false,failed:internalHealth};
+  }
+  if (!(await waitForHealth(checkHealth,nginxHealth,retryOptions))) {
+    return {ok:false,failed:nginxHealth};
+  }
   return {ok:true,failed:null};
 }
 
@@ -137,10 +152,14 @@ export async function runDeployOnce(options={}) {
   const nginxHealth=options.nginxHealth??DEPLOY_DEFAULTS.nginxHealth;
   const externalHealth=options.externalHealth??DEPLOY_DEFAULTS.externalHealth;
   const keepReleases=options.keepReleases??DEPLOY_DEFAULTS.keepReleases;
+  const healthAttempts=options.healthAttempts??DEPLOY_DEFAULTS.healthAttempts;
+  const healthRetryDelayMs=options.healthRetryDelayMs??DEPLOY_DEFAULTS.healthRetryDelayMs;
+  const sleep=options.sleep??(ms=>new Promise(resolve=>setTimeout(resolve,ms)));
   const exec=options.exec??execCommand;
   const checkHealth=options.checkHealth??defaultCheckHealth;
   const acquireLock=options.acquireLock??(async()=>true);
   const logger=options.logger??(message=>console.log(message));
+  const retryOptions={attempts:healthAttempts,delayMs:healthRetryDelayMs,sleep};
 
   if (!(await acquireLock())) return {status:'locked'};
 
@@ -190,7 +209,7 @@ export async function runDeployOnce(options={}) {
     await atomicSwitchCurrent({currentPath,targetPath:releasePath});
     switched=true;
     await restartWeb(exec,webService);
-    const health=await mandatoryHealth(checkHealth,internalHealth,nginxHealth);
+    const health=await mandatoryHealth(checkHealth,internalHealth,nginxHealth,retryOptions);
     if (!health.ok) throw new Error(`mandatory health failed: ${health.failed}`);
 
     try {
@@ -221,7 +240,7 @@ export async function runDeployOnce(options={}) {
       try {
         await atomicSwitchCurrent({currentPath,targetPath:previousTarget});
         await restartWeb(exec,webService);
-        const rollbackHealth=await mandatoryHealth(checkHealth,internalHealth,nginxHealth);
+        const rollbackHealth=await mandatoryHealth(checkHealth,internalHealth,nginxHealth,retryOptions);
         if (!rollbackHealth.ok) {
           throw new Error(`rollback health failed: ${rollbackHealth.failed}`);
         }
