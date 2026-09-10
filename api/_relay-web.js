@@ -16,7 +16,7 @@ export function patchRelaySource(input){
   let source=String(input||'');
   source=replaceRequired(source,
     "async function iosCollectorWaitSeconds(s, channelId) {\n  let rec = await s.get(iosCollectorWindowKey(channelId), { type:'json' });\n  const t = now();\n  if (!rec || !Array.isArray(rec.offsets) || +rec.startedAt + 900000 <= t) rec = { startedAt:t, offsets:iosCollectorMakeOffsets(), used:0 };\n  if((+rec.used||0)>=5)return null;\n  const i = Math.max(0, Math.min(4, +rec.used || 0)), target = +rec.startedAt + (+rec.offsets[i] || 0) * 1000;\n  rec.used = i + 1; rec.lastTouchAt = t; await s.setJSON(iosCollectorWindowKey(channelId), rec);\n  return Math.max(0, Math.min(800, Math.ceil((target - t) / 1000)));\n}",
-    "async function iosCollectorWaitSeconds() {\n  return randomInt(0, 31);\n}",
+    "async function iosCollectorWaitSeconds() {\n  return randomInt(10, 31);\n}",
     'single-fetch short jitter');
   source=replaceRequired(source,
     "  if(!(await iosCollectorWindowCapacity(s,auth.channelId)))return json(req,{ok:true,state:'WAIT',reason:'rate_limit',waitSeconds:await iosCollectorWindowRetrySeconds(s,auth.channelId),message:'15分5件の取得間隔を調整中'});\n",
