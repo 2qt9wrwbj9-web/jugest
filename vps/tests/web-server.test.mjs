@@ -85,7 +85,7 @@ test('POST /api/relay serves Collector V2 and persists relay auth across restart
   assert.equal(created.ok,true);
   assert.match(String(created.channelId||''),/^[A-Za-z0-9_-]+$/);
   assert.match(String(created.receiverToken||''),/^[A-Za-z0-9_-]+$/);
-  assert.match(String(created.collectorKey||''),/^[A-Za-z0-9_-]+$/);
+  assert.match(String(created.collectorKey||''),/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
   await first.close();
 
   const second=await startRelayServer(root,relayDbPath);
