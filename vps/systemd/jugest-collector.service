@@ -1,0 +1,28 @@
+[Unit]
+Description=JUGEST VPS native ana-slo collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=jugest
+Group=jugest
+WorkingDirectory=/opt/jugest/current/vps
+EnvironmentFile=-/etc/jugest/jugest.env
+Environment=JUGEST_DB_PATH=/var/lib/jugest/jugest.sqlite
+Environment=JUGEST_COLLECTOR_RAW_ROOT=/var/lib/jugest/collector/raw
+ExecStart=/usr/bin/node /opt/jugest/current/vps/scripts/collector.mjs collect-now
+TimeoutStartSec=5min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/jugest
