@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createReadStream} from 'node:fs';
 import {realpath,stat} from 'node:fs/promises';
 import {getGeneratedIcon} from './icon-assets.mjs';
+import {createVpsRelayHandler} from './relay-handler.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -24,7 +25,7 @@ const MIME_TYPES=new Map([
 ]);
 
 function send(res,status,body='',headers={}){
-  const data=Buffer.from(body);
+  const data=Buffer.isBuffer(body)?body:Buffer.from(body);
   res.writeHead(status,{'content-length':String(data.length),...headers});
   if(res.req?.method==='HEAD')res.end();
   else res.end(data);
@@ -63,16 +64,25 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir}={}){
+export function createWebHandler({rootDir,relayDbPath=null}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   const absoluteRoot=path.resolve(rootDir);
+  const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath}):null;
   return async function jugestWebHandler(req,res){
+    const url=new URL(req.url||'/','http://127.0.0.1');
+    if(url.pathname==='/api/relay'){
+      if(!relayHandler){
+        send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
+        return;
+      }
+      return await relayHandler(req,res);
+    }
+
     if(req.method!=='GET'&&req.method!=='HEAD'){
       send(res,405,'Method Not Allowed\n',{'content-type':'text/plain; charset=utf-8','allow':'GET, HEAD'});
       return;
     }
 
-    const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/health'){
       const body=JSON.stringify({ok:true,service:'jugest-vps-web'});
       send(res,200,body,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
