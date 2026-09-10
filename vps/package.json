@@ -14,6 +14,8 @@
     "coordinator": "node src/main.mjs",
     "web": "node src/web-main.mjs",
     "deploy": "node scripts/deploy-vps.mjs",
-    "deploy:status": "node scripts/deploy-status.mjs"
+    "deploy:status": "node scripts/deploy-status.mjs",
+    "collector": "node scripts/collector.mjs",
+    "collector:status": "node scripts/collector.mjs status"
   }
 }
