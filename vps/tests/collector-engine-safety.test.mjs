@@ -19,7 +19,7 @@ function archive(){return async({root,storeId,date,html})=>({path:`${root}/${sto
 
 test('quality D response remains pending and is retried later',async()=>{
   const f=fixture();try{seed(f.db,'2026-09-09');
-    await runCollectorOnce({db:f.db,rawRoot:f.dir,clock:()=>new Date(NOW),transport:transport(),archive:archive(),parse:({date,sourceUrl})=>({...day(date),sourceUrl,quality:{score:40,grade:'D',warnings:['bad'],totalMachines:1}}),sleep:async()=>{},maxRequests:1});
+    await runCollectorOnce({db:f.db,rawRoot:f.dir,clock:()=>new Date(NOW),transport:transport(),archive:archive(),parser:({date,sourceUrl})=>({...day(date),sourceUrl,quality:{score:40,grade:'D',warnings:['bad'],totalMachines:1}}),sleep:async()=>{},maxRequests:1});
     const state=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(state.state,'pending');assert.equal(state.retryAfter,'2026-09-09T19:45:00.000Z');assert.match(state.lastErrorClass,/quality/i);
   }finally{f.cleanup()}}
 );
