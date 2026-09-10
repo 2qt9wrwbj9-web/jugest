@@ -124,5 +124,50 @@ export function migrate(db){
       decision_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS resource_samples_time_idx ON resource_samples(captured_at);
+
+    CREATE TABLE IF NOT EXISTS collector_stores (
+      store_id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+      history_start TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS collector_days (
+      store_id TEXT NOT NULL,
+      business_date TEXT NOT NULL,
+      state TEXT NOT NULL CHECK(state IN ('pending','running','collected','excluded')),
+      retry_after TEXT,
+      run_owner TEXT,
+      started_at TEXT,
+      lease_expires_at TEXT,
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      not_found_count INTEGER NOT NULL DEFAULT 0,
+      first_not_found_at TEXT,
+      last_attempt_at TEXT,
+      last_success_at TEXT,
+      last_http_status INTEGER,
+      last_error_class TEXT,
+      last_error_message TEXT,
+      raw_artifact_path TEXT,
+      raw_sha256 TEXT,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(store_id,business_date),
+      FOREIGN KEY(store_id) REFERENCES collector_stores(store_id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS collector_days_sched_idx
+      ON collector_days(state,retry_after,business_date DESC,store_id);
+
+    CREATE TABLE IF NOT EXISTS collector_control (
+      id INTEGER PRIMARY KEY CHECK(id=1),
+      global_block_until TEXT,
+      last_run_started_at TEXT,
+      last_run_ended_at TEXT,
+      last_run_result TEXT,
+      updated_at TEXT NOT NULL
+    );
   `);
 }
