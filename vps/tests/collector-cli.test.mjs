@@ -33,7 +33,10 @@ test('add defaults disabled; enable seeds history; disable only disables future 
     const enabled=run(['enable','--store-id','abc'],f);assert.equal(enabled.status,0,enabled.stderr);assert.equal(json(enabled.stdout).store.enabled,true);
     const status=json(run(['status'],f).stdout);assert.deepEqual(status.nextEligible,{storeId:'abc',businessDate:'2026-09-09'});
     const disabled=run(['disable','--store-id','abc'],f);assert.equal(disabled.status,0,disabled.stderr);assert.equal(json(disabled.stdout).store.enabled,false);
-    const db=openDatabase(f.dbPath);try{const rows=db.prepare('SELECT business_date,state FROM collector_days WHERE store_id=? ORDER BY business_date').all('abc');assert.deepEqual(rows,[{business_date:'2026-09-08',state:'pending'},{business_date:'2026-09-09',state:'pending'}]);}finally{db.close()}
+    const db=openDatabase(f.dbPath);try{
+      const rows=db.prepare('SELECT business_date,state FROM collector_days WHERE store_id=? ORDER BY business_date').all('abc').map(row=>({business_date:row.business_date,state:row.state}));
+      assert.deepEqual(rows,[{business_date:'2026-09-08',state:'pending'},{business_date:'2026-09-09',state:'pending'}]);
+    }finally{db.close()}
   }finally{f.cleanup()}
 });
 
