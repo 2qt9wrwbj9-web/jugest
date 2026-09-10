@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll JUGEST VPS native collector about once per minute
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Persistent=true
+Unit=jugest-collector.service
+
+[Install]
+WantedBy=timers.target
