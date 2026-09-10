@@ -2,6 +2,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {createReadStream} from 'node:fs';
 import {realpath,stat} from 'node:fs/promises';
+import {getGeneratedIcon} from './icon-assets.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -86,6 +87,15 @@ export function createWebHandler({rootDir}={}){
 
     const file=await resolveStaticFile(absoluteRoot,segments);
     if(!file){
+      const icon=segments.length===1?await getGeneratedIcon(absoluteRoot,segments[0]):null;
+      if(icon){
+        send(res,200,icon,{
+          'content-type':'image/png',
+          'x-content-type-options':'nosniff',
+          'cache-control':'public, max-age=300'
+        });
+        return;
+      }
       send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
       return;
     }
