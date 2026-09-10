@@ -97,7 +97,12 @@ test('installer refuses migration when existing current tests fail',async t=>{
 
 test('installer never enables the deploy timer by itself',async()=>{
   const installer=await readFile(path.join(vpsRoot,'scripts','install-auto-deploy.sh'),'utf8');
-  assert.doesNotMatch(installer,/systemctl\s+enable/);
-  assert.doesNotMatch(installer,/systemctl\s+start\s+jugest-deploy\.timer/);
+  const executableLines=installer
+    .split(/\r?\n/)
+    .map(line=>line.trim())
+    .filter(line=>line && !line.startsWith('#') && !line.startsWith('echo '));
+  assert.equal(executableLines.some(line=>/systemctl\s+enable/.test(line)),false);
+  assert.equal(executableLines.some(line=>/systemctl\s+start\s+jugest-deploy\.timer/.test(line)),false);
+  assert.equal(executableLines.some(line=>/\$\{SYSTEMCTL\}.*\benable\b/.test(line)),false);
   assert.match(installer,/timer remains disabled/i);
 });
