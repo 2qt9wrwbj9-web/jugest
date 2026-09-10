@@ -113,7 +113,11 @@ test('404 becomes excluded only after >=3 misses and >=24 hours; other errors ne
     nowMs+=45*60*1000;await run();row=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(row.notFoundCount,2);assert.equal(row.state,'pending');
     nowMs+=45*60*1000;await run();row=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(row.notFoundCount,3);assert.equal(row.state,'pending');
     status=500;nowMs+=45*60*1000;await run();row=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(row.notFoundCount,3);assert.equal(row.state,'pending');
-    status=404;nowMs=Date.parse(NOW_ISO)+24*60*60*1000;await run();row=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(row.state,'excluded');
+    status=404;
+    nowMs=Date.parse(NOW_ISO)+24*60*60*1000;
+    ensureCollectorTargets(f.db,{now:new Date(nowMs),historyBackfill:false});
+    f.db.prepare("UPDATE collector_days SET state='collected' WHERE store_id='abc' AND business_date='2026-09-10'").run();
+    await run();row=getCollectorDay(f.db,'abc','2026-09-09');assert.equal(row.state,'excluded');
   }finally{f.cleanup()}
 });
 
