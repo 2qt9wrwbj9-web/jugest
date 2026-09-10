@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,mkdir,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {once} from 'node:events';
 import {createWebServer} from '../src/web-server.mjs';
 
@@ -21,6 +22,19 @@ async function withServer(t,run){
     server.closeAllConnections?.();
     await new Promise(resolve=>server.close(resolve));
     await rm(root,{recursive:true,force:true});
+  });
+  const {port}=server.address();
+  await run(`http://127.0.0.1:${port}`);
+}
+
+async function withRepositoryServer(t,run){
+  const root=fileURLToPath(new URL('../..',import.meta.url));
+  const server=createWebServer({rootDir:root});
+  server.listen(0,'127.0.0.1');
+  await once(server,'listening');
+  t.after(async()=>{
+    server.closeAllConnections?.();
+    await new Promise(resolve=>server.close(resolve));
   });
   const {port}=server.address();
   await run(`http://127.0.0.1:${port}`);
@@ -53,6 +67,19 @@ test('static assets are served with useful content types',async t=>{
     const svg=await fetch(`${base}/assets/logo.svg`);
     assert.equal(svg.status,200);
     assert.equal(svg.headers.get('content-type'),'image/svg+xml');
+  });
+});
+
+test('home-screen icon URLs referenced by index.html are served by the VPS root',async t=>{
+  await withRepositoryServer(t,async base=>{
+    for(const name of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-512.png']){
+      const response=await fetch(`${base}/${name}`);
+      assert.equal(response.status,200,`${name} should be available at the web root`);
+      assert.equal(response.headers.get('content-type'),'image/png');
+      const bytes=Buffer.from(await response.arrayBuffer());
+      assert.ok(bytes.length>1000,`${name} should contain a real PNG payload`);
+      assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],`${name} should have a PNG signature`);
+    }
   });
 });
 
