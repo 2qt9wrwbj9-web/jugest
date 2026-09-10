@@ -58,3 +58,14 @@ test('systemd coordinator template runs as unprivileged jugest user with hardeni
   assert.match(text,/^ReadWritePaths=\/var\/lib\/jugest$/m);
   assert.match(text,/src\/main\.mjs/);
 });
+
+test('systemd web template grants only persistent JUGEST state for relay writes',()=>{
+  const text=readFileSync(join(VPS,'systemd','jugest-web.service'),'utf8');
+  assert.match(text,/^User=jugest$/m);
+  assert.match(text,/^Group=jugest$/m);
+  assert.match(text,/^ProtectSystem=strict$/m);
+  assert.match(text,/^StateDirectory=jugest$/m);
+  assert.match(text,/^StateDirectoryMode=0750$/m);
+  assert.match(text,/^ReadWritePaths=\/var\/lib\/jugest$/m);
+  assert.match(text,/^Environment=JUGEST_RELAY_DB=\/var\/lib\/jugest\/relay\.sqlite$/m);
+});
