@@ -12,6 +12,8 @@
     "enqueue": "node scripts/enqueue.mjs",
     "status": "node scripts/status.mjs",
     "coordinator": "node src/main.mjs",
-    "web": "node src/web-main.mjs"
+    "web": "node src/web-main.mjs",
+    "deploy": "node scripts/deploy-vps.mjs",
+    "deploy:status": "node scripts/deploy-status.mjs"
   }
 }
