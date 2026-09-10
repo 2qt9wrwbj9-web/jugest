@@ -40,6 +40,20 @@ async function withRepositoryServer(t,run){
   await run(`http://127.0.0.1:${port}`);
 }
 
+async function startRelayServer(rootDir,relayDbPath){
+  const server=createWebServer({rootDir,relayDbPath});
+  server.listen(0,'127.0.0.1');
+  await once(server,'listening');
+  const {port}=server.address();
+  return {
+    base:`http://127.0.0.1:${port}`,
+    close:async()=>{
+      server.closeAllConnections?.();
+      await new Promise(resolve=>server.close(resolve));
+    }
+  };
+}
+
 test('GET /api/health returns a small JSON health response',async t=>{
   await withServer(t,async base=>{
     const response=await fetch(`${base}/api/health`);
@@ -48,6 +62,43 @@ test('GET /api/health returns a small JSON health response',async t=>{
     const body=await response.json();
     assert.deepEqual(body,{ok:true,service:'jugest-vps-web'});
   });
+});
+
+test('POST /api/relay serves Collector V2 and persists relay auth across restart',async t=>{
+  const root=await mkdtemp(path.join(tmpdir(),'jugest-relay-web-'));
+  const relayDbPath=path.join(root,'relay.sqlite');
+  await writeFile(path.join(root,'index.html'),'<!doctype html><title>JUGEST RELAY TEST</title>');
+  t.after(()=>rm(root,{recursive:true,force:true}));
+
+  const first=await startRelayServer(root,relayDbPath);
+  const createdResponse=await fetch(`${first.base}/api/relay`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'createIosCollector'})
+  });
+  assert.equal(createdResponse.status,200);
+  const created=await createdResponse.json();
+  assert.equal(created.ok,true);
+  assert.match(String(created.channelId||''),/^[A-Za-z0-9_-]+$/);
+  assert.match(String(created.receiverToken||''),/^[A-Za-z0-9_-]+$/);
+  assert.match(String(created.collectorKey||''),/^[A-Za-z0-9_-]+$/);
+  await first.close();
+
+  const second=await startRelayServer(root,relayDbPath);
+  t.after(()=>second.close());
+  const rotatedResponse=await fetch(`${second.base}/api/relay`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({
+      action:'rotateIosCollectorKey',
+      channelId:created.channelId,
+      receiverToken:created.receiverToken
+    })
+  });
+  assert.equal(rotatedResponse.status,200);
+  const rotated=await rotatedResponse.json();
+  assert.equal(rotated.ok,true);
+  assert.notEqual(rotated.collectorKey,created.collectorKey);
 });
 
 test('GET / serves index.html from the configured JUGEST web root',async t=>{
