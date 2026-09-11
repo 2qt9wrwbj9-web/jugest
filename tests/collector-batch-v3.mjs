@@ -77,7 +77,7 @@ test('parallel Next claims at most one batch; V2 cannot claim its dates',async t
   const f=await fixture(t);const replies=await Promise.all([f.next(),f.next(),f.next()]);
   assert.equal(replies.filter(x=>x.state==='RUN').length,1);assert.equal(replies.filter(x=>x.state==='WAIT').length,2);
   const b=replies.find(x=>x.state==='RUN'),v2=await f.call({action:'iosCollectorNextV2',...f.sender});
-  assert.equal(v2.state,'RUN');assert.ok(!b.jobs.some(j=>j.date===dateOf(v2)));assert.ok(v2.waitSeconds<=30);
+  assert.equal(v2.state,'RUN');assert.ok(!b.jobs.some(j=>j.date===dateOf(v2)));assert.ok(v2.waitSeconds>=30&&v2.waitSeconds<=90);
 });
 
 test('parallel Push of overlapping results is idempotent and does not lose disjoint days',async t=>{
