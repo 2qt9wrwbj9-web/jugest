@@ -4,6 +4,9 @@ import {canAdmit,deriveHeapLimitMiB,estimateLeaseMiB,selectEmergencyVictims,upda
 import {claimNextJob,completeJob,deferJob,failJob,getJob,heartbeatJob,markJobRunning,peekNextJob} from './queue.mjs';
 import {spawnJobChild} from './child-runner.mjs';
 
+const SYNTHETIC_WORKER=new URL('./jobs/synthetic.mjs',import.meta.url);
+const DAILY_ANALYSIS_WORKER=new URL('./jobs/daily-analysis.mjs',import.meta.url);
+
 function iso(clock){return clock().toISOString();}
 function plusMs(isoText,ms){return new Date(new Date(isoText).getTime()+ms).toISOString();}
 function queueDepth(db,at){return db.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE state='queued' OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))`).get(at).n;}
@@ -24,12 +27,13 @@ function projectedAfterOutstandingLeases(snapshot,runningEntries){
 }
 
 export class Coordinator{
-  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=new URL('./jobs/synthetic.mjs',import.meta.url),maxDailyAnalysisChildren=1}={}){
+  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=null,workerPathForJob=null,maxDailyAnalysisChildren=1}={}){
     if(!db)throw new TypeError('db is required');
     if(typeof memoryReader!=='function')throw new TypeError('memoryReader is required');
     if(typeof spawnChild!=='function')throw new TypeError('spawnChild is required');
     if(typeof owner!=='string'||!owner)throw new TypeError('owner is required');
     if(typeof clock!=='function')throw new TypeError('clock is required');
+    if(workerPathForJob!==null&&typeof workerPathForJob!=='function')throw new TypeError('workerPathForJob must be a function');
     if(!Number.isInteger(maxDailyAnalysisChildren)||maxDailyAnalysisChildren<1)throw new TypeError('maxDailyAnalysisChildren must be a positive integer');
     this.db=db;
     this.memoryReader=memoryReader;
@@ -37,7 +41,8 @@ export class Coordinator{
     this.owner=owner;
     this.policy=policy;
     this.clock=clock;
-    this.workerPath=workerPath;
+    this.workerPath=workerPath??SYNTHETIC_WORKER;
+    this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):(job=>job.type==='DAILY_ANALYSIS'?DAILY_ANALYSIS_WORKER:SYNTHETIC_WORKER));
     this.maxDailyAnalysisChildren=maxDailyAnalysisChildren;
     this.running=new Map();
     this._tickChain=Promise.resolve();
@@ -170,7 +175,7 @@ export class Coordinator{
     const entry={id:runningJob.id,type:runningJob.type,job:runningJob,leaseMiB,heapMiB,peakRssMiB:0,finished:false,cancelled:false,handle:null};
     try{
       entry.handle=this.spawnChild({
-        job:runningJob,leaseMiB,heapMiB,workerPath:this.workerPath,
+        job:runningJob,leaseMiB,heapMiB,workerPath:this.workerPathForJob(runningJob),
         onMessage:message=>this._handleMessage(entry,message),
         onExit:(code,signal)=>this._finishExit(entry,code,signal)
       });
@@ -235,3 +240,5 @@ export class Coordinator{
     return result;
   }
 }
+
+export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER};
