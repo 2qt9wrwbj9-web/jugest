@@ -76,6 +76,7 @@ export function migrate(db){
       estimated_lease_mib REAL NOT NULL,
       max_attempts INTEGER NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
+      failure_count INTEGER NOT NULL DEFAULT 0,
       state TEXT NOT NULL DEFAULT 'queued' CHECK (state IN ('queued','leased','running','succeeded','retry_wait','failed','cancelled')),
       lease_owner TEXT,
       heartbeat_at TEXT,
@@ -125,4 +126,6 @@ export function migrate(db){
     );
     CREATE INDEX IF NOT EXISTS resource_samples_time_idx ON resource_samples(captured_at);
   `);
+  const jobColumns=db.prepare('PRAGMA table_info(jobs)').all().map(row=>row.name);
+  if(!jobColumns.includes('failure_count'))db.exec('ALTER TABLE jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0;');
 }
