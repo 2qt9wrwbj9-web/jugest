@@ -22,6 +22,7 @@ function deterministicRandomInt(min,max){
 
 const packed=zlib.gunzipSync(Buffer.from(p0+p1+p2,'base64')).toString('utf8');
 const source=patchRelaySource(packed);
+assert.ok(source.includes('return randomInt(30, 91);'),'single-fetch cadence should use an inclusive 30..90 second jitter range');
 const mod=new Function('createBlobStore','createHash','randomBytes','randomInt','timingSafeEqual',source)(()=>store,createHash,randomBytes,deterministicRandomInt,timingSafeEqual);
 const handler=mod.default;
 
@@ -49,7 +50,7 @@ for(let i=0;i<6;i++){
   const next=await call({action:'iosCollectorNextV2',collectorKey:c.j.collectorKey});
   assert.equal(next.j.state,'RUN',`rapid invocation ${i+1} should issue one job without a 15-minute rate-limit WAIT`);
   assert.ok(Number.isInteger(next.j.waitSeconds),`waitSeconds should be an integer on invocation ${i+1}`);
-  assert.ok(next.j.waitSeconds>=0&&next.j.waitSeconds<=30,`waitSeconds should stay within 0..30 seconds, got ${next.j.waitSeconds}`);
+  assert.ok(next.j.waitSeconds>=30&&next.j.waitSeconds<=90,`waitSeconds should stay within 30..90 seconds, got ${next.j.waitSeconds}`);
   const match=String(next.j.url||'').match(/\/(20\d{2}-\d{2}-\d{2})-/);
   assert.ok(match,`job URL should contain a date: ${next.j.url}`);
   assert.ok(!seen.has(match[1]),`each invocation should advance to a new missing day: ${match[1]}`);
@@ -61,4 +62,4 @@ for(let i=0;i<6;i++){
 
 assert.equal(seen.size,6);
 assert.equal(kv.has(`ios-window/${c.j.channelId}`),false,'single-fetch cadence should not create the old 15-minute window state');
-console.log('PASS Collector single-fetch cadence uses 0..30s jitter and no 15-minute window limit');
+console.log('PASS Collector single-fetch cadence uses 30..90s jitter and no 15-minute window limit');
