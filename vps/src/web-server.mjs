@@ -5,6 +5,7 @@ import {realpath,stat} from 'node:fs/promises';
 import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
+import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -72,6 +73,9 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
     :null;
+  const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
+    ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
+    :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/relay'){
@@ -80,6 +84,13 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
         return;
       }
       return await relayHandler(req,res);
+    }
+    if(url.pathname==='/api/vps/backfill'){
+      if(!backfillHandler){
+        send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
+        return;
+      }
+      return await backfillHandler(req,res);
     }
     if(url.pathname==='/api/vps'||url.pathname.startsWith('/api/vps/')){
       if(!analyticsHandler){
