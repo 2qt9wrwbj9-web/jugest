@@ -1,5 +1,5 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
-import {enqueueJob} from '../queue.mjs';
+import {requestStoreAnalysisRefresh} from '../analysis/refresh-state.mjs';
 import {archiveRawArtifact} from './raw-archive.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
@@ -45,7 +45,7 @@ export async function ingestCollectorDay(db,input={}){
     parserBuild,
     latestRevision:revision
   });
-  let changed=false,job;
+  let changed=false,job=null;
 
   db.exec('BEGIN IMMEDIATE');
   try{
@@ -77,16 +77,13 @@ export async function ingestCollectorDay(db,input={}){
       day.machines.forEach((machine,index)=>insert.run(storeId,businessDate,String(index).padStart(6,'0'),canonicalJson(machine)));
     }
 
-    job=enqueueJob(db,{
-      type:'DAILY_ANALYSIS',
-      priority:20,
-      idempotencyKey:`daily:${storeId}:${businessDate}:${normalizedHash}:${ANALYSIS_VERSION}`,
-      payload:{storeId,businessDate,normalizedHash,analysisVersion:ANALYSIS_VERSION},
-      sizeClass:'medium',
-      estimatedLeaseMiB:512,
-      maxAttempts:3,
-      createdAtIso:nowIso
+    const refresh=requestStoreAnalysisRefresh(db,{
+      storeId,
+      analysisVersion:ANALYSIS_VERSION,
+      nowIso,
+      dirty:changed
     });
+    job=refresh.job;
     db.exec('COMMIT');
   }catch(error){
     try{db.exec('ROLLBACK')}catch{}
@@ -101,6 +98,6 @@ export async function ingestCollectorDay(db,input={}){
     rawSha256:artifact.sha256,
     rawArtifactPath:artifact.path,
     machineCount:day.machines.length,
-    jobId:job.id
+    jobId:job?.id??null
   };
 }
