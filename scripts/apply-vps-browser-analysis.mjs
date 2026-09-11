@@ -84,6 +84,18 @@ replaceLiteral(
   async runStoreAnalysis(){return this.loadVpsStoreAnalysis()}`
 );
 
+replaceRegex(
+  'VPS-owned store analysis controls',
+  /<div class="intel-controls analysis-controls">[\s\S]*?<button type="button" data-analysis-run \$\{this\.state\.analysisLoading\?'disabled':''\}>\$\{this\.state\.analysisLoading\?'解析中…':'法則探索を実行'\}<\/button><\/div>/,
+  '<div class="intel-controls analysis-controls"><div class="analysis-vps-contract"><small>VPS自動解析</small><b>180日 / 2000G / 単一 / 最低4日</b><span>取得済み店舗データをVPSで自動整理・解析</span></div><button type="button" data-analysis-run ${this.state.analysisLoading?\'disabled\':\'\'}>${this.state.analysisLoading?\'取得中…\':\'VPS解析結果を更新\'}</button></div>'
+);
+
+replaceLiteral(
+  'VPS store analysis empty state',
+  '<div class="info-card"><b>まだ店舗解析は走らせていない</b><span>条件を確認して実行した時だけ、既存の単一根拠・複合探索を動かす。</span></div>',
+  '<div class="info-card"><b>VPS解析結果を待っています</b><span>ショートカットで送信した店舗データはVPSで自動整理・解析され、完了後ここに表示されます。</span></div>'
+);
+
 if(changes){
   fs.writeFileSync(target,source);
   console.log(`patched app-v510.js (${changes} replacements)`);
