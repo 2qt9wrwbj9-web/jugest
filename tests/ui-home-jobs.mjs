@@ -57,9 +57,13 @@ test('opening notifications reads current occurrences; new occurrences alone bec
  app.state.summary.pending=0;app.render();app.state.summary.pending=2;app.render();
  assert.match(app.mount.innerHTML,/class="notification-badge">1</);
 });
-test('analysis captures store/options, survives every workspace and returns to its completed result',async()=>{
- const {app,bridge,ctx}=await boot();const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let resolve,calls=0;
- b.runStoreAnalysis=(shop,opts,progress)=>{calls++;assert.equal(shop,'A');assert.equal(opts.period,'180');progress?.(.42,'条件を検証中');return new Promise(r=>resolve=r)};
+test('VPS analysis captures the selected store, survives every workspace and returns to its completed result',async()=>{
+ const {app,bridge,ctx}=await boot();const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let resolve,calls=0,localCalls=0;
+ ctx.JUGEST_VPS_ANALYTICS_CLIENT={
+  getDefaultAnalysis:(shop)=>{calls++;assert.equal(shop,'A');return new Promise(r=>resolve=r)},
+  getStatus:async()=>({status:{status:'analyzed'}})
+ };
+ b.runStoreAnalysis=async()=>{localCalls++;throw Error('local analysis must not run on the canonical VPS path')};
  b.getStoreAnalysisHistory=async()=>[];
  app.state.activeStore='A';app.navigate('store','analysis');const pending=app.runStoreAnalysis();
  await Promise.resolve();assert.equal(app.state.analysisLoading,true);
@@ -67,22 +71,24 @@ test('analysis captures store/options, survives every workspace and returns to i
  for(const tab of ['live','home','records','data']){app.navigate(tab);assert.equal(app.state.analysisLoading,true);assert.match(app.mount.innerHTML,/class="analysis-chip/)}
  app.state.activeStore='B';app.navigate('store','analysis');assert.doesNotMatch(app.mount.innerHTML,/class="analysis-chip/,'inline progress must not be duplicated even after selecting another store');
  app.state.activeStore='B';app.state.analysisOpts.period='30';app.runStoreAnalysis();assert.equal(calls,1);
- resolve({shop:'A',days:30,positive:[],negative:[]});await pending;
+ resolve({analysis:{shop:'A',days:30,positive:[],negative:[]}});await pending;
+ assert.equal(localCalls,0);
  app.handleAction('analysis-return');assert.equal(app.state.activeStore,'A');assert.equal(app.state.screen,'analysis');assert.equal(app.state.analysisResult.shop,'A');
+ ctx.JUGEST_VPS_ANALYTICS_CLIENT.getDefaultAnalysis=async()=>({analysis:{shop:'A',days:30,positive:[],negative:[]}});
  app.navigate('home');app.handleAction('store-analysis');assert.equal(app.state.analysisResult.shop,'A');
 });
-test('failed analysis remains reachable without presenting completion',async()=>{
- const {app,bridge,ctx}=await boot();ctx.JUGEST_CORE_BRIDGE={...bridge,runStoreAnalysis:async()=>{throw Error('offline')}};app.state.activeStore='A';
- await app.runStoreAnalysis();app.navigate('home');assert.match(app.mount.innerHTML,/解析を完了できませんでした/);
+test('failed VPS analysis remains reachable without silently invoking local analysis',async()=>{
+ const {app,bridge,ctx}=await boot();let localCalls=0;ctx.JUGEST_VPS_ANALYTICS_CLIENT={getDefaultAnalysis:async()=>{throw Error('offline')}};ctx.JUGEST_CORE_BRIDGE={...bridge,runStoreAnalysis:async()=>{localCalls++;throw Error('local should stay disabled')}};app.state.activeStore='A';
+ await app.runStoreAnalysis();assert.equal(localCalls,0);app.navigate('home');assert.match(app.mount.innerHTML,/解析を完了できませんでした/);
  app.handleAction('analysis-return');assert.match(app.mount.innerHTML,/offline/);
 });
-test('analysis progress updates do not rebuild the whole app on every tick',async()=>{
- const {app,bridge,ctx}=await boot({appFile:'public/app-v510.js'});const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;let progress,finish;
+test('explicit local-analysis fallback preserves progress updates without rebuilding the whole app',async()=>{
+ const {app,bridge,ctx}=await boot({appFile:'public/app-v510.js'});const b={...bridge};ctx.JUGEST_CORE_BRIDGE=b;ctx.JUGEST_LOCAL_ANALYSIS_FALLBACK=true;ctx.JUGEST_VPS_ANALYTICS_CLIENT={getDefaultAnalysis:async()=>{throw Error('vps offline')}};let progress,finish;
  b.runStoreAnalysis=(shop,opts,onProgress)=>{progress=onProgress;return new Promise(r=>finish=r)};
  b.getStoreAnalysisHistory=async()=>[];
  app.state.activeStore='A';app.navigate('home');
  const original=app.render.bind(app);let renders=0;app.render=(...args)=>{renders++;return original(...args)};
- const pending=app.runStoreAnalysis();await Promise.resolve();
+ const pending=app.runStoreAnalysis();await Promise.resolve();await Promise.resolve();
  const afterStart=renders;
  progress(.11,'候補を抽出中');progress(.22,'候補を採点中');progress(.33,'根拠を整理中');
  assert.equal(renders,afterStart,'progress-only ticks must patch the visible progress UI without full mount.innerHTML replacement');
