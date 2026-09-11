@@ -12,60 +12,64 @@ Approved architecture for moving JUGEST analytical source data and analytical ex
 - Current Relay storage: `/var/lib/jugest/relay.sqlite`
 - Production authorization: **none**. This spec authorizes feature-branch design/implementation/testing only.
 
-This design supersedes the older Phase 2A polling-import topology in `2026-09-09-vps-phase2a-collector-import-design.md` for the new steady-state path. The Relay itself now runs on the VPS, so a second Vercel-to-VPS polling importer is unnecessary.
+This design supersedes the older Phase 2A Vercel-to-VPS polling-import topology for the steady-state path. Relay now runs on the VPS, so a second importer hop is unnecessary.
 
 ## Goal
 
 Make the VPS the single canonical home for acquired store/day data and JUGEST analytical outputs.
-
-The steady-state path is:
 
 ```text
 iPhone Shortcut
   -> ana-slo fetch on iPhone
   -> POST jugest.net/api/relay (iosCollectorPushV2)
   -> existing Relay validation + existing Collector parser
-  -> raw HTML gzip archive on VPS
+  -> immutable raw HTML gzip archive on VPS
   -> canonical SQLite store/day persistence on VPS
-  -> return ok:true to iPhone only after canonical persistence succeeds
-  -> enqueue/coalesce VPS analysis work
-  -> memory-aware analysis worker
+  -> durable store-analysis dirty/request state
+  -> only then return ok:true to iPhone
+  -> memory-aware VPS analysis worker
   -> analysis_state / analysis_receipts / client_snapshots
   -> JUGEST browser reads VPS API results
 ```
 
-The browser is no longer the canonical analytical database and does not run heavy store analysis. IndexedDB may remain only for genuinely device-local concerns such as UI state, drafts, and live unsaved inputs.
+The browser is no longer the canonical analytical database and does not run heavy store analysis. IndexedDB may remain only for intentionally device-local state such as UI preferences, drafts, and unsaved live-play inputs.
 
-## Non-goals and protected boundaries
+## Protected boundaries
 
-This work must not:
+This migration changes execution location, persistence, orchestration, and APIs. It must not change analytical semantics.
 
-- change Juggler/HANA probability tables;
-- change `externalJudge` semantics;
-- change single-evidence math or evidence catalog semantics;
-- change strict Champion eligibility or math;
-- change Calibration;
-- change store-share constraint behavior;
-- change HANA hard constraints;
-- change ranking or prediction semantics;
-- reactivate direct VPS -> ana-slo collection;
-- add anti-bot evasion, CAPTCHA bypass, proxy rotation, or residential proxy behavior;
-- change `main`;
-- deploy to Production without explicit user approval immediately before deployment.
+It must not change:
 
-The migration changes execution location, persistence, orchestration, and APIs. It does not redesign the analytical mathematics.
+- Juggler/HANA probability tables;
+- `externalJudge` semantics;
+- single-evidence math or evidence catalog semantics;
+- strict Champion eligibility/math;
+- Calibration;
+- store-share constraint behavior;
+- HANA hard constraints;
+- ranking/prediction semantics.
 
-## Why the iPhone remains the source fetcher
+It also must not reactivate direct VPS -> ana-slo acquisition or introduce anti-bot evasion, CAPTCHA bypass, proxy rotation, or residential proxy behavior.
 
-Direct ana-slo acquisition from the KAGOYA VPS has already been tested and receives Cloudflare HTTP 403, including browser-like request/TLS experiments. Therefore the compliant architecture keeps source retrieval on the iPhone and sends the fetched page to the VPS.
+`main`, `deploy/vps`, and live systemd services remain untouched until explicit Production approval.
 
-The VPS performs all work after acquisition: validation, durable archival, canonical persistence, analysis scheduling, analysis execution, and result serving.
+## Acquisition boundary
+
+Direct ana-slo acquisition from the KAGOYA VPS has already been tested and receives Cloudflare HTTP 403. Therefore source retrieval stays on the iPhone.
+
+Everything after retrieval moves to the VPS: validation, raw archival, normalized persistence, analysis scheduling, analysis execution, history, and result serving.
 
 ## Canonical data ownership
 
 ### Analytical source of truth
 
-The VPS SQLite database is the sole canonical analytical source.
+The canonical analytical database defaults to:
+
+```text
+/var/lib/jugest/jugest.sqlite
+```
+
+configured by `JUGEST_DB_PATH`.
 
 Canonical tables remain:
 
@@ -75,68 +79,44 @@ Canonical tables remain:
 - `analysis_state`
 - `analysis_receipts`
 - `client_snapshots`
+- durable queue/run/resource tables.
 
-`relay.sqlite` remains transport/protocol state. It is not the long-term analytical database.
+`/var/lib/jugest/relay.sqlite` remains Collector/Relay protocol state only. It is not the long-term analytical database.
 
-The canonical database defaults to:
+### Browser storage
 
-```text
-/var/lib/jugest/jugest.sqlite
-```
+Acquired store history, normalized machine/day history, and store-analysis history/results must not depend on browser IndexedDB in the VPS-backed path.
 
-and is configured through `JUGEST_DB_PATH`.
-
-### Browser IndexedDB
-
-Acquired store/day history and store-analysis result history must no longer depend on browser IndexedDB in the new VPS-backed path.
-
-Browser storage may continue to hold:
-
-- UI preferences;
-- active screen/store selection;
-- unsaved or device-local live-play state;
-- drafts and other state that is intentionally device-specific.
-
-A browser storage deletion must not delete canonical acquired store history or server analysis history.
+Browser storage may continue to hold intentionally device-local state. Clearing browser storage must not delete canonical acquired history or server analysis history.
 
 ## Existing Relay parser remains authoritative
 
-`iosCollectorPushV2` already performs:
+`iosCollectorPushV2` already performs Collector-key authentication, job/lease validation, upstream/error-page diagnostics, page identity checks, existing HTML parsing, quality checks, machine-count sanity checks, and normalized day creation.
 
-- Collector-key authentication;
-- job/lease validation;
-- upstream/error-page diagnostics;
-- page identity validation;
-- existing Collector HTML parsing;
-- quality checks;
-- machine-count sanity checks;
-- normalized day creation;
-- Relay revision/receipt persistence.
+Canonical VPS ingest consumes the **same normalized `day` object produced by the existing Relay parser**. It must not independently reinterpret the HTML with a second competing parser for first-pass canonical semantics.
 
-The canonical VPS ingest path must consume the **same normalized `day` object produced by the existing Relay parser**. It must not independently reinterpret the HTML with a second competing parser for canonical semantics.
-
-The raw HTML is archived separately for audit/reprocessing, but the first canonical normalized payload is the existing Relay parser result.
+Raw HTML is retained for audit/reprocessing, but the normalized payload accepted by the current Relay parser is the canonical initial normalized payload.
 
 ## Push acknowledgement contract
 
-The user explicitly selected fail-closed acknowledgement mode A:
+The user selected fail-closed acknowledgement mode A:
 
-> `ok:true` from `iosCollectorPushV2` means the raw source artifact and canonical VPS store/day data are durably saved.
+> `iosCollectorPushV2` may return `ok:true` only after the raw source and canonical VPS store/day are durably saved and the required analysis refresh is durably requested.
 
-A successful HTTP response therefore requires all of the following:
+Success therefore requires:
 
 1. existing Relay authentication/job validation passes;
 2. existing Collector parser/quality checks pass;
-3. raw HTML archive is durably written;
-4. canonical `stores`, `store_days`, and `machine_day_data` transaction commits;
-5. the required analysis job is durably queued or coalesced;
-6. only then may the Relay transaction complete and success be returned.
+3. immutable raw HTML artifact is durably written;
+4. canonical `stores`, `store_days`, `machine_day_data` transaction commits;
+5. analysis dirty/request state is durably updated;
+6. only then may the Relay transaction commit and HTTP success return.
 
-Heavy store analysis does **not** block the iPhone HTTP request. Analysis starts asynchronously after durable ingest.
+Heavy analysis itself is asynchronous and does not block the iPhone HTTP request.
 
-## Relay integration hook and ordering
+## Relay integration hook
 
-The Relay runtime gains an optional post-parse ingest hook. The default remains absent/no-op so Vercel/legacy behavior is unchanged unless the VPS explicitly wires the hook.
+The Relay runtime gains an optional VPS-only post-parse ingest hook. Default behavior remains absent/no-op so legacy/Vercel behavior is unchanged unless the VPS wires it.
 
 Conceptual interface:
 
@@ -154,28 +134,33 @@ onCollectorSaved({
 }) -> Promise<CanonicalIngestResult>
 ```
 
-The hook runs after the existing parser has produced and saved the normalized Relay day, but before the surrounding Collector transaction is allowed to commit and before `ok:true` is returned.
+The hook runs after the existing parser has created/saved the normalized Relay day inside the Collector transaction, but before that Relay transaction is allowed to commit and before `ok:true` is returned.
 
-### Cross-database atomicity rule
+The hook must obtain the normalized day from the same Relay transaction state/saved record rather than re-running a separate parser when practical.
 
-Relay state and canonical analytical data live in separate SQLite databases, so a true single SQLite transaction across both files is not assumed.
+## Cross-database ordering and idempotency
 
-Ordering is deliberately:
+Relay state and canonical analytical data are separate SQLite databases. No fake cross-database atomicity is claimed.
+
+Ordering is:
 
 ```text
-1. Relay transaction prepares/updates normalized day
-2. canonical ingest hook archives raw + commits canonical DB + durable analysis job
-3. Relay transaction commits
-4. HTTP success returns
+1. Relay transaction prepares normalized day
+2. canonical hook writes immutable raw artifact
+3. canonical DB transaction writes/updates day + dirty analysis request
+4. Relay transaction commits
+5. HTTP success returns
 ```
 
-If step 2 fails, the Relay transaction is rolled back and the iPhone does not receive success.
+If canonical ingest fails, Relay rolls back and the iPhone receives failure/no success.
 
-If step 2 succeeds but step 3 later fails, a retry may repeat canonical ingest. Therefore canonical ingest is content-idempotent and safe to replay. This is preferable to committing Relay first, because a committed Relay duplicate receipt must never suppress a canonical save that did not happen.
+If canonical ingest succeeds but Relay commit later fails, canonical data may exist before the iPhone receives success. A retry is safe because canonical ingest is content-idempotent. The required invariant is one-way: **success implies canonical durability**; canonical durability does not require that a prior HTTP success was observed.
+
+This ordering avoids the more dangerous case where Relay commits a duplicate receipt before canonical storage exists, which could otherwise cause retries to skip canonical ingest.
 
 ## Raw artifact archive
 
-Every successful canonical ingest retains the fetched raw page as gzip.
+Every canonically accepted source page is retained as gzip.
 
 Default root:
 
@@ -183,28 +168,29 @@ Default root:
 /var/lib/jugest/raw
 ```
 
-Path shape:
+Artifacts are immutable and content-addressed enough to prevent a failed DB update from changing the bytes referenced by an older DB row:
 
 ```text
-/var/lib/jugest/raw/<safe-store-id>/<YYYY>/<MM>/<YYYY-MM-DD>.html.gz
+/var/lib/jugest/raw/<safe-store-id>/<YYYY>/<MM>/<YYYY-MM-DD>.<sha256-prefix>.html.gz
 ```
 
 Requirements:
 
-- SHA-256 is computed from the uncompressed UTF-8 source bytes;
-- file write is temp-file + atomic rename;
-- directories are restrictive and owned by the unprivileged JUGEST service account;
-- path segments are validated against traversal;
-- `store_days.raw_artifact_path` stores the final path;
-- `store_days.source_hash` stores raw SHA-256;
-- re-ingesting the same store/date replaces the date artifact atomically only after the new artifact is fully written;
-- a failed canonical DB transaction must not leave a database row claiming a nonexistent raw artifact.
+- SHA-256 is computed from uncompressed UTF-8 source bytes;
+- write uses a temp file plus atomic rename;
+- path segments are traversal-safe;
+- final artifact is never overwritten with different bytes;
+- identical source bytes may reuse the existing same-hash file;
+- `store_days.raw_artifact_path` points to the immutable final artifact;
+- `store_days.source_hash` stores full raw SHA-256;
+- an orphaned immutable artifact after a later DB/Relay failure is acceptable and may be garbage-collected later;
+- a DB row must never point to a nonexistent or subsequently mutated artifact.
 
-The raw archive is an audit/reprocessing asset, not a second analytical source of truth.
+This fixes the date-file overwrite hazard: a failed corrected-day DB transaction cannot silently replace the raw bytes referenced by the old canonical row.
 
 ## Canonical identity and normalized storage
 
-For a successful Collector day:
+For the current single JUGEST Collector domain:
 
 ```text
 store_id      = sourceStoreId
@@ -212,26 +198,19 @@ business_date = day.date
 store name    = shop
 ```
 
-`stores.source_metadata_json` contains non-secret provenance, including source `ana-slo-ios-relay`, Collector channel identifier/hash-safe metadata as needed, parser build, and last source revision. Tokens/Collector keys are never stored.
+`stores.source_metadata_json` stores non-secret provenance such as source `ana-slo-ios-relay`, parser build, and latest source revision. Collector keys/tokens are never persisted there.
 
-`store_days` records:
+If the system later supports multiple independent users/channels with potentially colliding `sourceStoreId` values, canonical identity must be namespaced before multi-tenant use. This implementation does not pretend the current personal deployment is already a multi-tenant service.
 
-- parser build/version from the Relay saved record;
-- raw SHA-256;
-- canonical normalized payload SHA-256;
-- quality status;
-- raw artifact path;
-- timestamps.
+`store_days` records parser build/version, raw SHA-256, normalized payload SHA-256, quality status, raw artifact path, and timestamps.
 
-`machine_day_data` stores the complete normalized machine array for the day. Machine rows are replaced transactionally as one semantic unit on corrected-day ingest.
+`machine_day_data` stores the complete normalized machine array. Corrected-day ingest atomically replaces the entire machine set for that store/date.
 
-Until a stronger stable semantic row key is proven by the existing parser contract, `machine_key` remains an ordinal transport key (`000000`, `000001`, ...) so the exact normalized array can be reconstructed without inventing identity semantics.
+Until a stronger stable row identity is proven by the existing parser contract, `machine_key` is an ordinal transport key (`000000`, `000001`, ...) preserving exact array order without inventing analytical identity semantics.
 
-## Canonical JSON and idempotency
+## Canonical JSON and same-day replay
 
-Canonical JSON uses deterministic lexicographically sorted object keys and preserves array order. Unsupported/non-finite values fail closed.
-
-For each normalized day:
+Canonical JSON sorts object keys lexicographically and preserves array order. Unsupported/non-finite values fail closed.
 
 ```text
 normalized_payload_hash = SHA256(canonicalJson(day))
@@ -239,29 +218,42 @@ normalized_payload_hash = SHA256(canonicalJson(day))
 
 Behavior:
 
-- first store/day: persist full day + queue analysis;
-- same store/day + same hash: semantic no-op; ensure required job/snapshot state exists, then succeed;
-- same store/day + changed hash: atomically replace all machine rows, update hashes/raw pointer, and queue fresh analysis keyed by new hash;
-- duplicate iPhone retries must not create duplicate analysis jobs or duplicate semantic receipts.
+- first store/day: persist full day and mark store analysis dirty;
+- same store/day + same hash: semantic no-op, verify/request analysis state as needed, then succeed;
+- same store/day + changed hash: replace machine rows atomically, update hashes/raw pointer, mark analysis dirty;
+- repeated iPhone retries do not create duplicate semantic jobs/receipts.
 
-## Analysis scheduling
+## Analysis request coalescing
 
-After a changed canonical store/day commits, a durable `DAILY_ANALYSIS` job is queued.
+The current iPhone automation can acquire roughly one day every 30–90 seconds. A historical backfill may therefore ingest hundreds of days. Running a full store analysis once per acquired historical day would waste CPU and keep the 2 GiB VPS unnecessarily busy.
 
-Initial policy:
+Add a small canonical `analysis_requests` (or equivalently named) table keyed by `store_id + analysis_profile/version` containing at least:
 
 ```text
-priority: 20
-idempotency key: daily:<storeId>:<businessDate>:<normalizedPayloadHash>:<analysisVersion>
+desired_generation / dirty_generation
+latest_business_date
+latest_input_hash or store-data revision marker
+queued_or_running state metadata
+updated_at
 ```
 
-Multiple newly acquired days for the same store may arrive faster than analysis completes. The scheduler may coalesce obsolete queued store-analysis refreshes so the newest job analyzes the current canonical history, but it must preserve receipts proving which input frontier/hash produced each published result.
+Every changed canonical day increments/advances the desired generation in the same canonical DB transaction as the day save.
 
-Acquisition and API responsiveness outrank analysis throughput.
+At most one heavy default store-analysis worker runs per store/profile at a time. If more days arrive while it is queued/running:
+
+- do not start one worker per day;
+- let the current worker finish against its captured input frontier;
+- compare completed generation with desired generation;
+- if newer data arrived, run one follow-up refresh against the latest canonical state;
+- obsolete unstarted refresh jobs may be cancelled/superseded transactionally.
+
+This guarantees eventual latest-state analysis while naturally collapsing high-rate backfill input.
+
+The job queue remains durable. A job idempotency key includes store/profile/generation or equivalent content version so a crash/retry cannot duplicate semantic publication.
 
 ## 2 GiB execution policy
 
-Reuse the existing VPS memory-aware scheduler:
+Reuse the existing memory-aware scheduler and its current safety bands:
 
 ```text
 hardReserveMiB: 320
@@ -271,34 +263,34 @@ pauseUsedRatio: 0.82
 emergencyUsedRatio: 0.88
 ```
 
-Although the existing scheduler can admit up to three children, this migration initially limits **heavy JUGEST analysis to one concurrent child**. This avoids turning the first migration into a memory-concurrency experiment.
+Although the generic scheduler can admit up to three children, this migration initially limits **heavy JUGEST analysis to one concurrent child**.
 
-The worker remains a disposable child process with a bounded V8 heap derived from the memory lease. Peak RSS updates the existing EWMA model. Later concurrency increases require KAGOYA soak evidence, not guesswork.
+The worker is a disposable child process with bounded V8 heap derived from its lease. Peak RSS updates the existing EWMA model. Later concurrency increases require real KAGOYA soak evidence.
 
-## Analysis runtime: execute existing semantics, do not rewrite them
+Collector/API responsiveness always outranks analysis throughput.
 
-The first VPS analysis adapter runs the current production JUGEST analytical runtime headlessly in Node rather than manually porting protected formulas.
+## Analysis runtime: execute existing semantics rather than porting formulas
 
-The repository already has a Node `vm` test harness that loads:
+The first VPS analysis adapter runs the current production JUGEST analytical runtime headlessly in Node instead of rewriting protected formulas.
 
-- `hanahana-judge.js`
-- `missing-inference.js`
-- `core-v510.js`
-- inline runtime scripts from `index.html`
+The repository already has a Node `vm` test harness that loads the same current analytical assets (`hanahana-judge.js`, `missing-inference.js`, `core-v510.js`, and inline runtime code from `index.html`). The production VPS adapter will use the same principle with deterministic browser stubs.
 
-The production VPS worker will use the same principle in a VPS-only adapter with deterministic browser stubs. It will load canonical store/day data from SQLite into an ephemeral in-process analytical dataset and call the existing JUGEST bridge/runtime functions.
+Canonical SQLite store/day rows are reconstructed into the exact existing normalized `externalDays` analytical contract and injected into an **ephemeral in-process runtime**. The worker then calls the existing JUGEST bridge/runtime functions.
 
 Important distinction:
 
-- canonical persistence is SQLite on VPS;
-- the worker may use an ephemeral RAM/browser-storage shim solely to satisfy the unchanged runtime interface;
-- that shim is discarded when the child exits and is **not** a browser IndexedDB source of truth.
+- durable source data lives only in VPS SQLite/raw storage;
+- an ephemeral RAM/browser-storage shim may exist inside the disposable worker only to satisfy the unchanged current runtime interface;
+- the shim is discarded when the child exits;
+- it is not browser persistence and is never the canonical source.
 
-If a narrow VPS-only data-injection seam is required, it may be added only as plumbing. It may assign/load the existing normalized `externalDays` representation, but it must not alter judgement, evidence, ranking, calibration, prediction, or store-analysis formulas.
+If a narrow VPS-only injection seam is required, it may only load/assign normalized input or expose existing result functions. It must not modify judgement/evidence/ranking/calibration/prediction/store-analysis formulas.
 
-## Automatic analysis profile
+Analysis jobs pin/log an `analysis_version` tied to the JUGEST runtime/release so receipts and snapshots are reproducible and an old snapshot is never silently relabeled as output of newer code.
 
-Every changed day triggers the default store-analysis refresh using the current UI defaults:
+## Automatic default analysis profile
+
+Changed canonical data automatically requests the existing default store analysis:
 
 ```text
 period  = 180 days
@@ -307,30 +299,29 @@ maxDims = 1
 minDays = 4
 ```
 
-The worker first ensures the store/day rows have the existing setting-judgement fields required by downstream analysis, using the unchanged current judgement functions. It then runs the unchanged store-analysis pipeline for the store.
+The worker uses the unchanged current judgement path to enrich rows needed by downstream store analysis, then calls the unchanged store-analysis pipeline.
 
-Heavy variants (for example maxDims 2/3, long walk-forward relearning, research, or backfill) are separate lower-priority jobs and are not silently added to every acquisition.
+Heavy variants such as maxDims 2/3, long walk-forward relearning, research, or historical experiments are separate lower-priority/manual jobs and are not silently added to every acquisition.
 
 ## Incremental migration rule
 
-Long-term operation should be incremental where exact semantic parity can be proven, as defined by the existing 2 GiB backend design.
+Canonical ingestion and request coalescing are incremental immediately.
 
-For this implementation, correctness outranks premature incremental rewriting:
+For protected analysis itself, correctness outranks premature optimization:
 
-- canonical day ingestion is incremental immediately;
-- analysis job scheduling is incremental/coalesced immediately;
-- analytical components may initially perform a bounded store-history replay inside the disposable worker if that is necessary to preserve exact current semantics;
-- each future conversion from replay to persistent rolling `analysis_state` requires parity tests before adoption.
+- components may initially perform a bounded store-history replay inside the disposable worker when required for exact semantic parity;
+- future conversions to persistent rolling `analysis_state` are allowed only after deterministic parity tests prove identical results;
+- no approximate shortcut is adopted merely to save RAM/CPU.
 
-No approximate shortcut is allowed solely to reduce memory or CPU.
+This follows the existing 2 GiB backend design: incremental where exact, bounded replay where semantics are not yet safely incremental.
 
-## Analysis outputs and snapshots
+## Analysis publication
 
-A successful analysis writes, in one canonical DB transaction:
+A successful analysis publication transaction writes:
 
 - versioned `analysis_state` where applicable;
-- one `analysis_receipts` row containing store/date frontier, analysis version, input hash, output hash, completion time;
-- `client_snapshots` for browser consumption.
+- `analysis_receipts` recording store, target/frontier date, analysis version, input hash, output hash, completion time;
+- `client_snapshots` used by the browser.
 
 Initial snapshot types include at least:
 
@@ -340,183 +331,183 @@ store-data-summary
 store-latest-status
 ```
 
-The default store-analysis snapshot contains the same compact result currently exposed by the v5.1.2 bridge: source range, row/day counts, mean setting summary, positive/negative evidence summaries, machine summaries, and supported complex-pattern summaries. Any next-session/plan snapshot is generated only by the unchanged prediction path and must retain its current future-data protections.
+The default analysis snapshot mirrors the compact result already exposed by the current v5.1.2 bridge: input range, day/row counts, overall summaries, machine summaries, positive/negative evidence summaries, and supported complex-pattern summaries.
 
-Snapshots are immutable-by-version semantically: changing an analytical implementation increments its version rather than silently reinterpreting an old receipt.
+If analysis fails, the last known-good snapshot remains published and status records that newer canonical data is pending/failed analysis.
 
-## VPS read API
+Any prediction/next-session snapshot must use the unchanged prediction path and preserve existing future-data leakage protections.
 
-The web service exposes read-only analytical endpoints backed by canonical SQLite/snapshots. Example route family:
+## Read API and authentication
+
+Analytical reads must not make canonical store history publicly enumerable merely because `jugest.net` is public.
+
+The browser already has Collector linkage credentials locally. The VPS-backed analytical API should reuse the existing authenticated JUGEST/Collector session boundary or derive a dedicated read credential from it; secrets are never embedded in static source or URLs.
+
+Read route shapes may be REST-like, for example:
 
 ```text
-GET /api/vps/stores
-GET /api/vps/stores/:storeId/days?from=&to=
-GET /api/vps/stores/:storeId/days/:date
-GET /api/vps/stores/:storeId/analysis/default
-GET /api/vps/stores/:storeId/analysis/history
-GET /api/vps/stores/:storeId/status
+/api/vps/stores
+/api/vps/stores/:storeId/days
+/api/vps/stores/:storeId/days/:date
+/api/vps/stores/:storeId/analysis/default
+/api/vps/stores/:storeId/analysis/history
+/api/vps/stores/:storeId/status
 ```
 
-Requirements:
+Exact GET/POST/header shape is an implementation detail, but requirements are fixed:
 
-- normal read endpoints never trigger a full historical analysis;
-- secrets are never returned;
-- payloads are compact/paginated where needed;
-- store/day raw HTML is not publicly exposed by default;
-- CORS remains same-origin/explicit allowlist;
-- health remains lightweight;
-- API continues serving while heavy analysis is paused or running.
+- authenticated/authorized read of analytical data;
+- no secrets in query strings;
+- ordinary read never triggers full historical analysis;
+- raw HTML is not publicly exposed by default;
+- compact/paginated day payloads where needed;
+- same-origin/explicit CORS policy;
+- API remains responsive while analysis is running or paused.
 
-Administrative/manual reanalysis is a separate authenticated internal/admin action and is not part of ordinary GET traffic.
+Manual/admin reanalysis is a separate authenticated action, not an ordinary page GET.
 
 ## Browser migration
 
 The JUGEST browser becomes a presentation/interaction client for analytical store data.
 
-For VPS-backed store features:
+VPS-backed analytical features must read VPS APIs/snapshots for:
 
-- store/day lists read the VPS API;
-- daily machine data read the VPS API;
-- default store-analysis results read snapshots from the VPS API;
-- analysis history reads VPS analysis receipts/snapshots;
-- ordinary UI navigation does not re-run historical analysis locally;
-- imported analytical store history is not persisted back to browser IndexedDB.
+- store/day lists;
+- daily machine data;
+- default store-analysis results;
+- analysis history/status;
+- future VPS-backed prediction snapshots.
 
-During implementation, existing browser code may retain old IndexedDB helpers for backward compatibility or rollback, but the new production VPS-backed route must not depend on them for analytical correctness.
+Ordinary navigation must not launch historical analysis locally, and acquired analytical store history must not be persisted back to browser IndexedDB.
 
-A later cleanup may physically remove obsolete browser analytical storage only after parity and rollback windows are complete.
+Old analytical IndexedDB helpers may remain temporarily for rollback/backward-compatibility code paths during the migration, but the VPS-backed path must work with an empty analytical IndexedDB. Physical deletion of old browser data/helpers is a later cleanup after the rollback window.
 
 ## Failure behavior
 
 ### Source/parse/quality failure
 
-Existing Collector failure behavior remains authoritative. No canonical data is written and no success is returned.
+Existing Collector failure behavior remains authoritative. No canonical day is published and no success is returned.
 
 ### Raw archive failure
 
-Fail the Push. Do not publish a canonical store/day that claims a missing artifact.
+Fail the Push. Do not commit canonical metadata referencing an absent artifact.
 
 ### Canonical SQLite failure
 
-Rollback canonical semantic writes, fail the Push, and allow safe retry.
+Rollback canonical semantic writes/dirty state, fail the Push, allow safe retry. An immutable orphan raw artifact is harmless and may be cleaned later.
 
 ### Relay commit failure after canonical success
 
-Retry may repeat canonical ingest. Hash/idempotency rules make this safe and prevent duplicate analysis jobs.
+Retry may repeat canonical ingest. Hash/idempotency rules prevent duplicate semantic jobs/publications.
 
 ### Analysis failure
 
-The already-ingested canonical store/day remains durable. The HTTP Push has already succeeded because heavy analysis is asynchronous. The queue records the failure and retries according to bounded queue policy. The last known-good client snapshot remains available and status exposes that newer data is awaiting/failed analysis.
+Canonical store/day remains durable. Queue failure/retry is independent of acquisition durability. Last known-good snapshot remains available with stale/pending/error status.
 
 ### Memory pressure
 
-Do not start a new heavy worker at pause/emergency pressure. Existing low-priority work may be terminated under emergency policy. Collector/API availability remains prioritized.
+At pause/emergency pressure, start no heavy worker. Emergency policy may terminate lower-priority disposable work. Web/Relay/API stay prioritized.
 
 ### Worker crash/OOM
 
-Record the run failure and peak RSS when observable, update future memory estimates, retry with backoff/lower concurrency, and never lose canonical store/day data.
+Record failure/peak RSS where observable, update lease estimates, retry with backoff, and never lose canonical store/day data.
 
-## Security and filesystem layout
+## Filesystem and service layout
 
-Recommended persistent paths:
+Persistent state:
 
 ```text
 /var/lib/jugest/relay.sqlite          # Relay protocol state
 /var/lib/jugest/jugest.sqlite         # canonical analytical DB
-/var/lib/jugest/raw/...               # gzip raw HTML archive
+/var/lib/jugest/raw/...               # immutable gzip raw artifacts
 ```
 
-Services run as the unprivileged `jugest` account. `StateDirectory=jugest` or equivalent owns writable state. Tokens remain environment-only. Raw HTML and SQLite files are not served as static files.
+Services run as unprivileged `jugest`; raw/SQLite files are not served statically.
 
-## Service layout
-
-The existing `jugest-web.service` continues to serve the site/API/Relay.
-
-The existing coordinator implementation is activated only when this feature is explicitly deployed and verified. It runs separately from the web process so analysis memory pressure or worker failure cannot kill Relay/API service.
-
-Initial services:
+Initial runtime services:
 
 ```text
-jugest-web.service          # web + API + Relay + synchronous canonical ingest
-jugest-coordinator.service  # durable queue + analysis child orchestration
+jugest-web.service          # web + Relay + synchronous canonical ingest + read API
+jugest-coordinator.service  # durable queue + disposable analysis children
 ```
 
-No Production service is enabled by merely merging feature-branch code. Installation/enablement is a separate deployment step requiring explicit approval.
+The coordinator already exists in source but is **not currently installed/running in Production**. This feature may modify/prepare it on the feature branch, but live enablement is a separate Production action requiring explicit approval.
 
-## Backfill and existing browser data
+## Existing historical data/backfill
 
-This design addresses new iPhone acquisitions first. Existing historical browser/backup data can be bulk-imported into the same canonical store/day schema using the same normalized-day persistence primitive.
+New iPhone acquisitions are the first required end-to-end path.
 
-Backfill/import must be idempotent and lower priority than current daily work. It must not be required for the first end-to-end new-day canary.
+Existing historical browser/backup data can later be bulk-imported through the same canonical normalized-day persistence primitive. Backfill is idempotent and lower priority than current daily work.
 
-No historical data is deleted from browser storage during the first migration/canary phase.
+No browser historical data is deleted during the first migration/canary phase.
 
-## Testing strategy
+## TDD and parity requirements
 
-Implementation uses TDD and must include all of the following.
+### Ingest
 
-### Ingest tests
+1. Push cannot return success until immutable raw + canonical day + durable dirty/request state exist.
+2. gzip decompresses to the exact submitted source and SHA matches.
+3. normalized canonical day matches the existing Relay parser result exactly.
+4. same-hash retry is a semantic no-op.
+5. changed-day retry atomically replaces complete machine rows.
+6. canonical DB failure prevents Relay success.
+7. Relay commit failure after canonical success retries safely without duplicate semantic jobs.
+8. corrected-day DB failure cannot mutate raw bytes referenced by the previous canonical row.
+9. Collector secrets never enter canonical DB, raw metadata, snapshots, or log-safe return values.
 
-1. successful Push does not return success until raw archive + canonical DB + durable job exist;
-2. raw archive SHA/path and gzip contents match submitted source;
-3. parser result persisted to canonical DB matches the existing Relay normalized `day` exactly;
-4. same-hash retry is idempotent;
-5. changed-day retry atomically replaces all machine rows;
-6. canonical DB failure prevents Relay success;
-7. simulated Relay commit failure after canonical success can retry without duplicate semantic jobs;
-8. Collector secrets never enter canonical DB/raw metadata/log-safe results.
+### Coalescing/scheduler
 
-### Analysis parity tests
+10. hundreds of rapid same-store ingests do not create hundreds of heavy simultaneous/redundant analyses.
+11. data arriving during an analysis causes at most the necessary follow-up refresh to reach the latest generation.
+12. initial heavy-analysis concurrency is one even though the generic scheduler can admit more.
+13. existing 70/82/88% pressure bands and 320/220 MiB reserves remain unchanged.
+14. analysis failure/retry cannot roll back or corrupt canonical acquired data.
 
-9. canonical SQLite days reconstructed for a store match the existing browser `externalDays` analytical input contract;
-10. headless VPS judgement output matches the current production runtime for fixed fixtures;
-11. default store-analysis output matches the current production runtime for identical input and parameters;
-12. future-data leakage guards remain identical;
-13. protected formula/probability source hashes or semantic preservation tests remain unchanged.
+### Analytical parity
 
-### Scheduler tests
+15. SQLite days reconstruct the exact existing `externalDays` analytical input contract.
+16. headless VPS judgement output equals the current production runtime for deterministic fixtures.
+17. default store-analysis output equals the current production runtime for identical input/parameters.
+18. future-data leakage guards remain identical.
+19. protected-source preservation/semantic regression tests remain green.
 
-14. one-heavy-worker migration cap is enforced even when the generic scheduler permits more;
-15. 70/82/88% pressure bands and 320/220 MiB reserves remain unchanged;
-16. analysis failure/retry does not affect canonical ingest durability;
-17. newer queued store refresh can supersede obsolete unstarted refresh work without losing receipts.
+### API/browser
 
-### API/browser tests
-
-18. snapshot GET endpoints are read-only and do not trigger heavy analysis;
-19. JUGEST VPS-backed store views can render without analytical IndexedDB contents;
-20. deleting browser analytical IndexedDB does not remove VPS-backed store history/results;
-21. UI/draft/local state remains functional;
-22. root regression suite and existing Relay/VPS tests remain green.
+20. analytical reads require authorization and do not leak credentials.
+21. snapshot/day reads never trigger heavy historical analysis.
+22. VPS-backed store views work with empty analytical IndexedDB.
+23. deleting browser analytical IndexedDB does not remove VPS-backed history/results.
+24. device-local UI/draft/live state remains functional.
+25. root regression suite and existing Relay/VPS tests remain green.
 
 ## Rollout sequence
 
-1. implement and test entirely on `sol/vps-canonical-ingest-analysis`;
+1. implement/test only on `sol/vps-canonical-ingest-analysis`;
 2. verify diff does not alter protected analytical semantics;
-3. create/verify canonical DB and raw paths in a non-production/test environment or disposable paths;
-4. run end-to-end simulated Push -> raw -> canonical DB -> queued analysis -> snapshot tests;
-5. verify 2 GiB memory behavior with representative fixtures;
-6. prepare deployment instructions/checkpoint;
-7. stop and request explicit user approval before updating `deploy/vps` or enabling `jugest-coordinator.service` in Production;
-8. after approved deployment, canary with a small number of real iPhone acquisitions and verify raw/canonical/snapshot parity before relying on it as the sole analytical path.
+3. run end-to-end simulated Push -> raw -> canonical DB -> coalesced analysis -> snapshot tests on disposable paths;
+4. run deterministic browser-vs-VPS parity tests;
+5. run representative 2 GiB memory/load tests with one heavy child;
+6. prepare deployment/checkpoint instructions;
+7. stop and request explicit user approval before touching `deploy/vps` or live services;
+8. after approved deployment, canary with a small set of real iPhone acquisitions and verify raw/canonical/snapshot parity before relying on VPS as the sole analytical path.
 
 ## Acceptance criteria
 
-The implementation is ready for Production approval only if all are true:
+Ready for Production approval only when all are true:
 
-1. `iosCollectorPushV2 ok:true` implies raw gzip and canonical store/day are durable on VPS.
-2. Repeated/retried Push is idempotent.
-3. Existing Relay parser remains the canonical normalization semantics.
-4. New analytical store data no longer requires browser IndexedDB persistence.
-5. Heavy store analysis runs on VPS, not iPhone/browser.
-6. The VPS analysis adapter produces parity with the current protected runtime on deterministic fixtures.
-7. Automatic post-ingest analysis is durable, retryable, and memory-aware.
-8. Initial heavy-analysis concurrency is one.
-9. API/Relay remains responsive under analysis load in representative 2 GiB tests.
-10. No protected judgement/ranking/calibration/store-share/HANA semantics changed.
+1. `iosCollectorPushV2 ok:true` guarantees raw gzip + canonical store/day + durable analysis request on VPS.
+2. retries and corrected-day writes are idempotent/safe.
+3. existing Relay parser remains canonical normalization semantics.
+4. analytical store history/results no longer require browser IndexedDB.
+5. heavy judgement/store analysis runs on VPS, not browser/iPhone.
+6. VPS headless adapter matches current protected runtime on deterministic fixtures.
+7. automatic analysis is durable, coalesced, retryable, memory-aware.
+8. heavy-analysis concurrency starts at one.
+9. API/Relay remains responsive under representative 2 GiB load.
+10. no protected judgement/ranking/calibration/store-share/HANA semantics changed.
 11. `main` remains unchanged.
-12. `deploy/vps` and live systemd services remain unchanged until explicit deployment approval.
+12. `deploy/vps` and live services remain unchanged until explicit Production approval.
 
 ## Production safety rule
 
-Feature-branch implementation, tests, specs, plans, and review artifacts are authorized by the user. Production promotion is not. Immediately before any update to `deploy/vps` or any live KAGOYA service enable/restart that activates this new pipeline, obtain explicit user approval.
+Feature-branch implementation, tests, specs, plans, and review artifacts are authorized. Production promotion is not. Immediately before any update to `deploy/vps` or any live KAGOYA service enable/restart that activates this pipeline, obtain explicit user approval.
