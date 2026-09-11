@@ -23,6 +23,7 @@ function rowToJob(row){
     estimatedLeaseMiB:row.estimated_lease_mib,
     maxAttempts:row.max_attempts,
     attempts:row.attempts,
+    failureCount:row.failure_count??0,
     state:row.state,
     leaseOwner:row.lease_owner,
     heartbeatAt:row.heartbeat_at,
@@ -61,8 +62,8 @@ export function enqueueJob(db,{type,priority,idempotencyKey,payload={},sizeClass
   if(!Number.isInteger(maxAttempts)||maxAttempts<1)throw new TypeError('maxAttempts must be a positive integer');
   const existing=rowToJob(db.prepare('SELECT * FROM jobs WHERE idempotency_key=?').get(idempotencyKey));
   if(existing)return existing;
-  db.prepare(`INSERT INTO jobs(type,priority,idempotency_key,payload_json,size_class,estimated_lease_mib,max_attempts,attempts,state,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,0,'queued',?,?)`).run(type,priority,idempotencyKey,canonicalJson(payload),sizeClass,estimatedLeaseMiB,maxAttempts,createdAtIso,createdAtIso);
+  db.prepare(`INSERT INTO jobs(type,priority,idempotency_key,payload_json,size_class,estimated_lease_mib,max_attempts,attempts,failure_count,state,created_at,updated_at)
+    VALUES(?,?,?,?,?,?,?,0,0,'queued',?,?)`).run(type,priority,idempotencyKey,canonicalJson(payload),sizeClass,estimatedLeaseMiB,maxAttempts,createdAtIso,createdAtIso);
   return rowToJob(db.prepare('SELECT * FROM jobs WHERE idempotency_key=?').get(idempotencyKey));
 }
 
@@ -114,9 +115,10 @@ export function failJob(db,{jobId,owner,nowIso:at,retryAtIso,errorClass='error',
   return transaction(db,()=>{
     const job=getJob(db,jobId);
     if(!job||!['leased','running'].includes(job.state)||job.leaseOwner!==owner)throw new Error('job is not active for owner');
-    const nextState=job.attempts>=job.maxAttempts?'failed':'retry_wait';
+    const failureCount=(job.failureCount||0)+1;
+    const nextState=failureCount>=job.maxAttempts?'failed':'retry_wait';
     const available=nextState==='retry_wait'?retryAtIso:null;
-    db.prepare(`UPDATE jobs SET state=?,lease_owner=NULL,heartbeat_at=NULL,available_at=?,last_error_class=?,last_error_message=?,updated_at=? WHERE id=?`).run(nextState,available,errorClass,String(message),at,jobId);
+    db.prepare(`UPDATE jobs SET state=?,failure_count=?,lease_owner=NULL,heartbeat_at=NULL,available_at=?,last_error_class=?,last_error_message=?,updated_at=? WHERE id=?`).run(nextState,failureCount,available,errorClass,String(message),at,jobId);
     db.prepare(`UPDATE job_runs SET ended_at=?,exit_code=?,peak_rss_mib=?,error_class=? WHERE job_id=? AND attempt=?`).run(at,exitCode,peakRssMiB,errorClass,jobId,job.attempts);
     return getJob(db,jobId);
   });
@@ -145,9 +147,10 @@ export function recoverStaleJobs(db,{staleBeforeIso,nowIso:at}={}){
   return transaction(db,()=>{
     const rows=db.prepare(`SELECT * FROM jobs WHERE state IN ('leased','running') AND heartbeat_at IS NOT NULL AND heartbeat_at<? ORDER BY id`).all(staleBeforeIso);
     for(const row of rows){
-      const nextState=row.attempts>=row.max_attempts?'failed':'retry_wait';
+      const failureCount=(row.failure_count||0)+1;
+      const nextState=failureCount>=row.max_attempts?'failed':'retry_wait';
       const available=nextState==='retry_wait'?at:null;
-      db.prepare(`UPDATE jobs SET state=?,lease_owner=NULL,heartbeat_at=NULL,available_at=?,last_error_class='stale_recovery',last_error_message='stale lease recovered',updated_at=? WHERE id=?`).run(nextState,available,at,row.id);
+      db.prepare(`UPDATE jobs SET state=?,failure_count=?,lease_owner=NULL,heartbeat_at=NULL,available_at=?,last_error_class='stale_recovery',last_error_message='stale lease recovered',updated_at=? WHERE id=?`).run(nextState,failureCount,available,at,row.id);
       db.prepare(`UPDATE job_runs SET ended_at=?,exit_code=-1,error_class='stale_recovery' WHERE job_id=? AND attempt=? AND ended_at IS NULL`).run(at,row.id,row.attempts);
     }
     return rows.length;
