@@ -88,6 +88,18 @@ export function migrate(db){
     );
     CREATE INDEX IF NOT EXISTS jobs_sched_idx ON jobs(state,priority,available_at,id);
 
+    CREATE TABLE IF NOT EXISTS analysis_refresh_state (
+      store_id TEXT NOT NULL,
+      analysis_version TEXT NOT NULL,
+      generation INTEGER NOT NULL DEFAULT 0,
+      completed_generation INTEGER NOT NULL DEFAULT 0,
+      active_job_id INTEGER,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (store_id,analysis_version),
+      FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+      FOREIGN KEY (active_job_id) REFERENCES jobs(id) ON DELETE SET NULL
+    );
+
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
