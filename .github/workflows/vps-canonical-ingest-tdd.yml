@@ -24,5 +24,5 @@ jobs:
           git diff --exit-code -- app-v510.js
       - run: node --test tests/vps-browser-analytics.mjs tests/vps-browser-analysis-static.mjs
       - run: npm test
-      - run: npm test
         working-directory: vps
+      - run: npm test
