@@ -32,7 +32,7 @@ const STORE_RESET_HELPER=`async function vpsResetStoreAcquiredData(name){
 export function patchJugestIndexSource(input){
   let source=String(input??'');
   if(!source.includes('async function vpsResetStoreAcquiredData(name)')){
-    if(!source.includes(BRIDGE_START))throw new Error('JUGEST bridge start anchor not found');
+    if(!source.includes(BRIDGE_START))throw new Error('JUGEST bridge anchor (start) not found');
     source=source.replace(BRIDGE_START,`${STORE_RESET_HELPER}\n\n${BRIDGE_START}`);
   }
   if(!source.includes(BACKFILL_BRIDGE)||!source.includes(STORE_RESET_BRIDGE)){
