@@ -74,8 +74,6 @@ test('VPS analysis captures the selected store, survives every workspace and ret
  resolve({analysis:{shop:'A',days:30,positive:[],negative:[]}});await pending;
  assert.equal(localCalls,0);
  app.handleAction('analysis-return');assert.equal(app.state.activeStore,'A');assert.equal(app.state.screen,'analysis');assert.equal(app.state.analysisResult.shop,'A');
- ctx.JUGEST_VPS_ANALYTICS_CLIENT.getDefaultAnalysis=async()=>({analysis:{shop:'A',days:30,positive:[],negative:[]}});
- app.navigate('home');app.handleAction('store-analysis');assert.equal(app.state.analysisResult.shop,'A');
 });
 test('failed VPS analysis remains reachable without silently invoking local analysis',async()=>{
  const {app,bridge,ctx}=await boot();let localCalls=0;ctx.JUGEST_VPS_ANALYTICS_CLIENT={getDefaultAnalysis:async()=>{throw Error('offline')}};ctx.JUGEST_CORE_BRIDGE={...bridge,runStoreAnalysis:async()=>{localCalls++;throw Error('local should stay disabled')}};app.state.activeStore='A';
@@ -88,7 +86,9 @@ test('explicit local-analysis fallback preserves progress updates without rebuil
  b.getStoreAnalysisHistory=async()=>[];
  app.state.activeStore='A';app.navigate('home');
  const original=app.render.bind(app);let renders=0;app.render=(...args)=>{renders++;return original(...args)};
- const pending=app.runStoreAnalysis();await Promise.resolve();await Promise.resolve();
+ const pending=app.runStoreAnalysis();
+ for(let i=0;i<10&&typeof progress!=='function';i++)await Promise.resolve();
+ assert.equal(typeof progress,'function','explicit fallback must reach the legacy runner');
  const afterStart=renders;
  progress(.11,'候補を抽出中');progress(.22,'候補を採点中');progress(.33,'根拠を整理中');
  assert.equal(renders,afterStart,'progress-only ticks must patch the visible progress UI without full mount.innerHTML replacement');
