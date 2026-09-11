@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - sol/vps-canonical-ingest-analysis
+      - 'sol/vps-*'
   workflow_dispatch:
 
 jobs:
