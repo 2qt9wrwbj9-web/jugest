@@ -64,10 +64,10 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   const absoluteRoot=path.resolve(rootDir);
-  const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath}):null;
+  const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot}):null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/relay'){
@@ -139,7 +139,7 @@ export function createWebServer(options={}){
     Promise.resolve(handler(req,res)).catch(error=>{
       console.error(JSON.stringify({level:'error',event:'web_request_failed',message:String(error?.message??error)}));
       if(!res.headersSent)send(res,500,'Internal Server Error\n',{'content-type':'text/plain; charset=utf-8'});
-      else res.destroy();
+      else res.destroy(error);
     });
   });
 }
