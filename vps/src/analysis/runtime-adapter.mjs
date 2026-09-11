@@ -17,8 +17,8 @@ function mustFunction(value,name){if(typeof value!=='function')throw new Error(`
 
 async function bootRuntime(rootDir){
   const root=path.resolve(rootDir);
-  const listeners=new Map(),timers=new Map(),classes=new Map();
-  let timerId=0;
+  const listeners=new Map(),intervals=new Map(),classes=new Map();
+  let intervalId=0;
   const localStorage=memoryStorage();
   const location={protocol:'data:',href:'data:text/html,jugest-vps-runtime',origin:'null',search:'',reload(){}};
   const document={hidden:false,visibilityState:'visible',createElement:()=>makeElement(),getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],body:makeElement(),documentElement:makeElement(),addEventListener(type,fn){listeners.set(`document:${type}`,fn)},removeEventListener(type){listeners.delete(`document:${type}`)}};
@@ -26,7 +26,9 @@ async function bootRuntime(rootDir){
     console,URL,URLSearchParams,Blob,Response,Request,Headers,AbortController,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,DataView,crypto:webcrypto,structuredClone,atob,btoa,
     CompressionStream:globalThis.CompressionStream,DecompressionStream:globalThis.DecompressionStream,ReadableStream:globalThis.ReadableStream,TransformStream:globalThis.TransformStream,
     localStorage,location,document,navigator:{onLine:false,storage:{estimate:async()=>({usage:0,quota:0})}},performance:globalThis.performance,
-    setTimeout(fn,ms=0){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)},setInterval(fn,ms=0){timers.set(++timerId,{fn,ms,interval:true});return timerId},clearInterval(id){timers.delete(id)},requestAnimationFrame:fn=>{fn(Date.now());return ++timerId},cancelAnimationFrame(){},queueMicrotask,
+    setTimeout:(fn,ms=0,...args)=>globalThis.setTimeout(fn,ms,...args),clearTimeout:id=>globalThis.clearTimeout(id),
+    setInterval(fn,ms=0){intervals.set(++intervalId,{fn,ms});return intervalId},clearInterval(id){intervals.delete(id)},
+    requestAnimationFrame:fn=>globalThis.setTimeout(()=>fn(Date.now()),0),cancelAnimationFrame:id=>globalThis.clearTimeout(id),queueMicrotask,
     addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(fn)},removeEventListener(type,fn){listeners.get(type)?.delete(fn)},
     history:{pushState(){},replaceState(){}},alert(){},confirm:()=>true,prompt:()=>null,fetch:async()=>{throw new Error('Unexpected network access from VPS analysis runtime')},
     HTMLElement:class {constructor(){this.isConnected=true}attachShadow(){this.shadowRoot=makeElement();return this.shadowRoot}},customElements:{get:key=>classes.get(key),define:(key,value)=>classes.set(key,value)}
