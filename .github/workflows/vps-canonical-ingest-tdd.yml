@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-package-lock
+      - run: node --test tests/vps-browser-analytics.mjs
       - run: npm test
       - run: npm test
         working-directory: vps
