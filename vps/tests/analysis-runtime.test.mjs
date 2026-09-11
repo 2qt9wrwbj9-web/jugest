@@ -29,7 +29,7 @@ function fixture(){
       VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a',date,'fixture','raw-'+date,'norm-'+date,'/tmp/'+date+'.gz',now,now);
     const rows=[
       {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'102',games,bb,rb,diff},
-      {machine:'fk2',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:games+200,bb:bb+1,rb:Math.max(1,rb-2),diff:diff-80}
+      {machine:'fk',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:games+200,bb:bb+1,rb:Math.max(1,rb-2),diff:diff-80}
     ];
     rows.forEach((row,index)=>db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
       .run('store-a',date,String(index).padStart(6,'0'),JSON.stringify(row)));
@@ -61,8 +61,8 @@ test('headless adapter runs the existing JUGEST store-analysis bridge over VPS c
     });
     assert.equal(result.shop,'解析テスト店');
     assert.equal(result.days,4);
-    assert.ok(result.rowCount>=8);
-    assert.ok(Array.isArray(result.machines));
+    assert.equal(result.rowCount,8);
+    assert.equal(result.machines.length,2);
     assert.ok(Array.isArray(result.positive));
     assert.ok(Array.isArray(result.patterns));
   }finally{f.cleanup()}
