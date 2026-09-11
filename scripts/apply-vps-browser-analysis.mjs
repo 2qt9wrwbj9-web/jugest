@@ -27,7 +27,7 @@ function replaceRegex(name,pattern,to){
 replaceLiteral(
   'VPS analytics module loader',
   "const UI_KEY='jugest:v510:ui';\nconst MOTION=Object.freeze({fast:160,view:220,sheet:320});",
-  "const UI_KEY='jugest:v510:ui';\nlet vpsAnalyticsClientPromise=null;\nfunction getVpsAnalyticsClient(){\n  if(!vpsAnalyticsClientPromise)vpsAnalyticsClientPromise=import('./vps-browser-analytics.mjs').then(module=>module.createVpsAnalyticsClient());\n  return vpsAnalyticsClientPromise;\n}\nconst MOTION=Object.freeze({fast:160,view:220,sheet:320});"
+  "const UI_KEY='jugest:v510:ui';\nlet vpsAnalyticsClientPromise=null;\nfunction getVpsAnalyticsClient(){\n  if(global.JUGEST_VPS_ANALYTICS_CLIENT)return Promise.resolve(global.JUGEST_VPS_ANALYTICS_CLIENT);\n  if(!vpsAnalyticsClientPromise)vpsAnalyticsClientPromise=import('./vps-browser-analytics.mjs').then(module=>module.createVpsAnalyticsClient());\n  return vpsAnalyticsClientPromise;\n}\nconst MOTION=Object.freeze({fast:160,view:220,sheet:320});"
 );
 
 replaceRegex(
