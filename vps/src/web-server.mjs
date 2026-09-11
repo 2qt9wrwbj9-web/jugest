@@ -138,7 +138,7 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
     const isRootIndex=ext==='.html'&&(segments.length===0||(segments.length===1&&segments[0]==='index.html'));
     if(isRootIndex){
       const source=await readFile(file.path,'utf8');
-      const body=patchJugestIndexSource(source);
+      const body=source.includes('window.JUGEST_CORE_BRIDGE=')?patchJugestIndexSource(source):source;
       send(res,200,body,{
         'content-type':contentType,
         'last-modified':file.mtime.toUTCString(),
