@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
-import {enqueueJob,claimNextJob,markJobRunning,heartbeatJob,completeJob,failJob,recoverStaleJobs,getJob} from '../src/queue.mjs';
+import {enqueueJob,claimNextJob,markJobRunning,heartbeatJob,completeJob,failJob,deferJob,recoverStaleJobs,getJob} from '../src/queue.mjs';
 
 function makeDb(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-vps-'));
@@ -31,6 +31,8 @@ test('database initializes WAL and required pragmas plus schema',()=>{
     assert.equal(f.db.prepare('PRAGMA busy_timeout').get().timeout,5000);
     const names=f.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r=>r.name);
     for(const name of ['jobs','job_runs','resource_samples','stores','store_days','machine_day_data','analysis_state','analysis_receipts','client_snapshots'])assert.ok(names.includes(name),name);
+    const jobColumns=f.db.prepare('PRAGMA table_info(jobs)').all().map(r=>r.name);
+    assert.ok(jobColumns.includes('failure_count'));
   }finally{f.cleanup()}
 });
 
@@ -91,6 +93,26 @@ test('leased job moves to running, heartbeats, and succeeds',()=>{
   }finally{f.cleanup()}
 });
 
+test('resource defers increment run attempts but never consume failure budget',()=>{
+  const f=makeDb();
+  try{
+    const queued=enqueueJob(f.db,jobInput({idempotencyKey:'defer-budget',maxAttempts:1}));
+    claimNextJob(f.db,{owner:'c1',nowIso:'2026-09-09T00:00:00.000Z'});
+    markJobRunning(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:01.000Z'});
+    const deferred=deferJob(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:02.000Z',retryAtIso:'2026-09-09T00:00:03.000Z',errorClass:'memory_emergency'});
+    assert.equal(deferred.state,'retry_wait');
+    assert.equal(deferred.attempts,1);
+    assert.equal(deferred.failureCount,0);
+
+    claimNextJob(f.db,{owner:'c1',nowIso:'2026-09-09T00:00:03.000Z'});
+    markJobRunning(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:04.000Z'});
+    const failed=failJob(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:05.000Z',retryAtIso:'2026-09-09T00:01:00.000Z',errorClass:'real_failure'});
+    assert.equal(failed.state,'failed');
+    assert.equal(failed.attempts,2);
+    assert.equal(failed.failureCount,1);
+  }finally{f.cleanup()}
+});
+
 test('failure retries until maxAttempts then fails closed',()=>{
   const f=makeDb();
   try{
@@ -99,16 +121,18 @@ test('failure retries until maxAttempts then fails closed',()=>{
     markJobRunning(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:01.000Z'});
     const retry=failJob(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:00:02.000Z',retryAtIso:'2026-09-09T00:01:00.000Z',errorClass:'synthetic',message:'first'});
     assert.equal(retry.state,'retry_wait');
+    assert.equal(retry.failureCount,1);
     assert.equal(claimNextJob(f.db,{owner:'c1',nowIso:'2026-09-09T00:00:30.000Z'}),null);
     claimNextJob(f.db,{owner:'c1',nowIso:'2026-09-09T00:01:00.000Z'});
     markJobRunning(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:01:01.000Z'});
     const failed=failJob(f.db,{jobId:queued.id,owner:'c1',nowIso:'2026-09-09T00:01:02.000Z',retryAtIso:'2026-09-09T00:02:00.000Z',errorClass:'synthetic',message:'second'});
     assert.equal(failed.state,'failed');
     assert.equal(failed.attempts,2);
+    assert.equal(failed.failureCount,2);
   }finally{f.cleanup()}
 });
 
-test('stale leased/running jobs recover without losing durable data',()=>{
+test('stale leased/running jobs consume failure budget on recovery',()=>{
   const f=makeDb();
   try{
     const retryable=enqueueJob(f.db,jobInput({idempotencyKey:'stale-1',maxAttempts:3}));
@@ -119,6 +143,8 @@ test('stale leased/running jobs recover without losing durable data',()=>{
     const recovered=recoverStaleJobs(f.db,{staleBeforeIso:'2026-09-09T00:10:00.000Z',nowIso:'2026-09-09T00:20:00.000Z'});
     assert.equal(recovered,2);
     assert.equal(getJob(f.db,retryable.id).state,'retry_wait');
+    assert.equal(getJob(f.db,retryable.id).failureCount,1);
     assert.equal(getJob(f.db,terminal.id).state,'failed');
+    assert.equal(getJob(f.db,terminal.id).failureCount,1);
   }finally{f.cleanup()}
 });
