@@ -1,11 +1,12 @@
 import http from 'node:http';
 import path from 'node:path';
 import {createReadStream} from 'node:fs';
-import {realpath,stat} from 'node:fs/promises';
+import {readFile,realpath,stat} from 'node:fs/promises';
 import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
+import {patchJugestIndexSource} from './ui-source-patch.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -134,6 +135,18 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
 
     const ext=path.extname(file.path).toLowerCase();
     const contentType=MIME_TYPES.get(ext)||'application/octet-stream';
+    const isRootIndex=ext==='.html'&&(segments.length===0||(segments.length===1&&segments[0]==='index.html'));
+    if(isRootIndex){
+      const source=await readFile(file.path,'utf8');
+      const body=patchJugestIndexSource(source);
+      send(res,200,body,{
+        'content-type':contentType,
+        'last-modified':file.mtime.toUTCString(),
+        'x-content-type-options':'nosniff',
+        'cache-control':'no-cache'
+      });
+      return;
+    }
     const headers={
       'content-type':contentType,
       'content-length':String(file.size),
