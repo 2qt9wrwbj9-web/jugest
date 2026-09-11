@@ -24,12 +24,13 @@ function projectedAfterOutstandingLeases(snapshot,runningEntries){
 }
 
 export class Coordinator{
-  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=new URL('./jobs/synthetic.mjs',import.meta.url)}={}){
+  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=new URL('./jobs/synthetic.mjs',import.meta.url),maxDailyAnalysisChildren=1}={}){
     if(!db)throw new TypeError('db is required');
     if(typeof memoryReader!=='function')throw new TypeError('memoryReader is required');
     if(typeof spawnChild!=='function')throw new TypeError('spawnChild is required');
     if(typeof owner!=='string'||!owner)throw new TypeError('owner is required');
     if(typeof clock!=='function')throw new TypeError('clock is required');
+    if(!Number.isInteger(maxDailyAnalysisChildren)||maxDailyAnalysisChildren<1)throw new TypeError('maxDailyAnalysisChildren must be a positive integer');
     this.db=db;
     this.memoryReader=memoryReader;
     this.spawnChild=spawnChild;
@@ -37,6 +38,7 @@ export class Coordinator{
     this.policy=policy;
     this.clock=clock;
     this.workerPath=workerPath;
+    this.maxDailyAnalysisChildren=maxDailyAnalysisChildren;
     this.running=new Map();
     this._tickChain=Promise.resolve();
     this._emergencyLatched=false;
@@ -69,7 +71,7 @@ export class Coordinator{
   }
 
   _retryAt(job,at){
-    const exponent=Math.max(0,(job.attempts||1)-1);
+    const exponent=Math.max(0,(job.failureCount??job.attempts??1));
     const base=Math.min(30*60*1000,30*1000*(2**exponent));
     const spread=(job.id%11)*1000;
     return plusMs(at,base+spread);
@@ -216,6 +218,10 @@ export class Coordinator{
     while(this.runningCount<this.policy.maxAnalysisChildren){
       const next=peekNextJob(this.db,{nowIso:at});
       if(!next)break;
+      if(next.type==='DAILY_ANALYSIS'){
+        const runningDaily=[...this.running.values()].filter(entry=>entry.job?.type==='DAILY_ANALYSIS'&&!entry.finished&&!entry.cancelled).length;
+        if(runningDaily>=this.maxDailyAnalysisChildren)break;
+      }
       const profile=this._profile(next);
       const leaseMiB=estimateLeaseMiB({persistedEwmaMiB:profile?.ewma_peak_mib??null,configuredFloorMiB:next.estimatedLeaseMiB});
       const decision=canAdmit({snapshot:projected,policy:this.policy,runningCount:this.runningCount,leaseMiB,priority:next.priority});
