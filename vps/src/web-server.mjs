@@ -4,6 +4,7 @@ import {createReadStream} from 'node:fs';
 import {realpath,stat} from 'node:fs/promises';
 import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
+import {createAnalyticsHandler} from './analytics-handler.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -68,6 +69,9 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   const absoluteRoot=path.resolve(rootDir);
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot}):null;
+  const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
+    ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
+    :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/relay'){
@@ -76,6 +80,13 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
         return;
       }
       return await relayHandler(req,res);
+    }
+    if(url.pathname==='/api/vps'||url.pathname.startsWith('/api/vps/')){
+      if(!analyticsHandler){
+        send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
+        return;
+      }
+      return await analyticsHandler(req,res);
     }
 
     if(req.method!=='GET'&&req.method!=='HEAD'){
