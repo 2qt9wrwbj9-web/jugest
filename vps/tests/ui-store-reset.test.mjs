@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
 
 const index=fs.readFileSync(new URL('../../index.html',import.meta.url),'utf8');
-const ui=fs.readFileSync(new URL('../../vps-ui-enhancements.mjs',import.meta.url),'utf8');
+const ui=fs.readFileSync(new URL('../../vps-store-reset.mjs',import.meta.url),'utf8');
 const patched=patchJugestIndexSource(index);
 
 assert.match(patched,/resetStoreAcquiredData:\(name\)=>vpsResetStoreAcquiredData\(name\)/,'patched bridge must expose the local acquired-data reset');
 assert.match(patched,/async function vpsResetStoreAcquiredData\(name\)/,'patched index must contain the reset implementation');
+assert.match(patched,/vps-store-reset\.mjs/,'patched index must load the store reset module');
 for(const token of ['externalDays=nextDays','modelForecasts=nextForecasts','storeAnalysisHistoryIndex=nextHistory','externalDbSet(externalDays)','storeAnalysisSaveIndex()','autoSaveState()']){
   assert.ok(patched.includes(token),`reset implementation missing ${token}`);
 }
