@@ -5,6 +5,7 @@ const BACKFILL_BATCH_SIZE=15;
 let app=null;
 let root=null;
 let observer=null;
+let bridgeUnsubscribe=null;
 let scheduled=false;
 let settingsOpen=false;
 let settingsPage='hub';
@@ -179,8 +180,12 @@ function onClick(event){
 
 function attach(candidate){
   if(app===candidate&&root===candidate?.shadowRoot)return true;
-  observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
+  observer?.disconnect();
+  bridgeUnsubscribe?.();bridgeUnsubscribe=null;
+  app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
   root.addEventListener('click',onClick,true);
+  const unsubscribe=bridge()?.subscribe?.(()=>{root?.querySelector('[data-vps-backfill-card]')?.remove();schedule()});
+  bridgeUnsubscribe=typeof unsubscribe==='function'?unsubscribe:null;
   observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});schedule();return true;
 }
 
