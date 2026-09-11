@@ -20,6 +20,8 @@ jobs:
           node-version: 22
       - run: npm install --no-package-lock
       - run: node scripts/apply-vps-browser-analysis.mjs
+      - name: Task 7 preservation hashes
+        run: sha256sum app-v510.js tests/ui-home-jobs.mjs
       - run: node --test tests/vps-browser-analytics.mjs tests/vps-browser-analysis-static.mjs
       - run: npm test
       - run: npm test
