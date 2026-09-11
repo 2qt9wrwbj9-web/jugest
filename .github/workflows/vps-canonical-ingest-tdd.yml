@@ -6,6 +6,9 @@ on:
       - sol/vps-canonical-ingest-analysis
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,7 +19,20 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-package-lock
+      - run: node scripts/apply-vps-browser-analysis.mjs
       - run: node --test tests/vps-browser-analytics.mjs tests/vps-browser-analysis-static.mjs
       - run: npm test
       - run: npm test
         working-directory: vps
+      - name: Commit verified browser patch
+        shell: bash
+        run: |
+          if git diff --quiet -- app-v510.js; then
+            echo "browser patch already committed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-v510.js
+          git commit -m "feat: read store analysis from VPS snapshots"
+          git push origin HEAD:${GITHUB_REF_NAME}
