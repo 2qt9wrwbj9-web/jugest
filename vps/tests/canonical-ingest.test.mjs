@@ -42,7 +42,7 @@ const baseInput={
   nowIso:'2026-09-11T01:00:00.000Z'
 };
 
-test('first canonical ingest archives raw, persists ordered machines, and queues analysis',async()=>{
+test('first canonical ingest archives raw, persists ordered machines, and queues one store analysis refresh',async()=>{
   assert.equal(typeof ingestCollectorDay,'function','ingestCollectorDay must exist');
   const f=await fixture();
   try{
@@ -72,12 +72,16 @@ test('first canonical ingest archives raw, persists ordered machines, and queues
 
     const jobs=f.db.prepare("SELECT * FROM jobs WHERE type='DAILY_ANALYSIS'").all();
     assert.equal(jobs.length,1);
-    assert.match(jobs[0].idempotency_key,new RegExp(`^daily:${baseInput.sourceStoreId}:${baseInput.date}:${result.normalizedHash}:vps-runtime-v1$`));
+    assert.match(jobs[0].idempotency_key,new RegExp(`^daily:${baseInput.sourceStoreId}:gen:1:vps-runtime-v1$`));
     assert.equal(result.jobId,jobs[0].id);
+    const refresh=f.db.prepare('SELECT * FROM analysis_refresh_state WHERE store_id=?').get(baseInput.sourceStoreId);
+    assert.equal(refresh.generation,1);
+    assert.equal(refresh.completed_generation,0);
+    assert.equal(refresh.active_job_id,jobs[0].id);
   }finally{await f.close()}
 });
 
-test('same-hash replay is a semantic no-op with one analysis job',async()=>{
+test('same-hash replay is a semantic no-op with one analysis job and unchanged generation',async()=>{
   assert.equal(typeof ingestCollectorDay,'function','ingestCollectorDay must exist');
   const f=await fixture();
   try{
@@ -89,11 +93,31 @@ test('same-hash replay is a semantic no-op with one analysis job',async()=>{
     assert.equal(second.normalizedHash,first.normalizedHash);
     assert.equal(second.rawArtifactPath,first.rawArtifactPath);
     assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS'").get().n,1);
+    assert.equal(f.db.prepare('SELECT generation FROM analysis_refresh_state WHERE store_id=?').get(baseInput.sourceStoreId).generation,1);
     assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM machine_day_data WHERE store_id=? AND business_date=?').get(baseInput.sourceStoreId,baseInput.date).n,2);
   }finally{await f.close()}
 });
 
-test('corrected day replaces complete machine set and queues hash-qualified refresh',async()=>{
+test('many changed days coalesce behind one active store analysis job',async()=>{
+  assert.equal(typeof ingestCollectorDay,'function','ingestCollectorDay must exist');
+  const f=await fixture();
+  try{
+    for(let i=0;i<5;i+=1){
+      const date=`2026-09-${String(6+i).padStart(2,'0')}`;
+      await ingestCollectorDay(f.db,{
+        ...baseInput,date,rawRoot:f.rawRoot,day:sampleDay({date}),revision:20+i,
+        rawText:`<!doctype html><body>${date}</body>`,nowIso:`2026-09-11T01:0${i}:00.000Z`
+      });
+    }
+    assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS'").get().n,1,'backfill must not queue one heavy job per day');
+    const refresh=f.db.prepare('SELECT * FROM analysis_refresh_state WHERE store_id=?').get(baseInput.sourceStoreId);
+    assert.equal(refresh.generation,5);
+    assert.equal(refresh.completed_generation,0);
+    assert.ok(refresh.active_job_id);
+  }finally{await f.close()}
+});
+
+test('corrected day replaces complete machine set but stays coalesced behind active analysis',async()=>{
   assert.equal(typeof ingestCollectorDay,'function','ingestCollectorDay must exist');
   const f=await fixture();
   try{
@@ -108,6 +132,7 @@ test('corrected day replaces complete machine set and queues hash-qualified refr
     const rows=f.db.prepare('SELECT machine_key,payload_json FROM machine_day_data WHERE store_id=? AND business_date=? ORDER BY machine_key').all(baseInput.sourceStoreId,baseInput.date);
     assert.equal(rows.length,1,'stale machine rows must not survive corrected-day replacement');
     assert.equal(JSON.parse(rows[0].payload_json).games,5300);
-    assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS'").get().n,2);
+    assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS'").get().n,1);
+    assert.equal(f.db.prepare('SELECT generation FROM analysis_refresh_state WHERE store_id=?').get(baseInput.sourceStoreId).generation,2);
   }finally{await f.close()}
 });
