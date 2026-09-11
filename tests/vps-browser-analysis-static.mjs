@@ -28,3 +28,18 @@ test('canonical browser analytics path is independent from IndexedDB analytical 
   assert.match(client,/\/api\/vps/);
   assert.doesNotMatch(client,/externalDbGet|externalDbSet|indexedDB/i);
 });
+
+test('store analysis UI presents the fixed VPS analysis contract instead of editable local-heavy options',()=>{
+  const start=app.indexOf('renderStoreAnalysisScreen(){');
+  const end=app.indexOf('renderAnalysisHistory(){',start);
+  assert.ok(start>=0&&end>start,'store analysis renderer must exist');
+  const renderer=app.slice(start,end);
+  assert.match(renderer,/VPS自動解析/);
+  assert.match(renderer,/180日/);
+  assert.match(renderer,/2000G/);
+  assert.match(renderer,/単一/);
+  assert.match(renderer,/最低4日/);
+  assert.match(renderer,/VPS解析結果を更新/);
+  assert.doesNotMatch(renderer,/data-analysis-period|data-analysis-ming|data-analysis-dims|data-analysis-mindays/);
+  assert.doesNotMatch(renderer,/法則探索を実行/);
+});
