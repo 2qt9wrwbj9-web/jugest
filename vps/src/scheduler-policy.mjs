@@ -38,7 +38,7 @@ export function updateEwmaPeakMiB(previous,peak,alpha=.30){
 
 export function selectEmergencyVictims(children=[]){
   if(!Array.isArray(children))throw new TypeError('children must be an array');
-  const rank={RESEARCH:0,BACKFILL:1};
+  const rank={RESEARCH:0,FEATURE_BUILD:0,AXIS_DISCOVERY:0,BACKTEST:0,MODEL_SEARCH:0,BACKFILL:1};
   return children.filter(child=>Object.hasOwn(rank,child?.type)).map((child,index)=>({child,index})).sort((a,b)=>{
     const byType=rank[a.child.type]-rank[b.child.type];
     return byType||a.index-b.index;
