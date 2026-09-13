@@ -76,7 +76,7 @@ function candidatePredicates(samples){
     const values=[...new Set(samples.map(row=>row.features?.[field]).filter(value=>value!==null&&value!==undefined).map(String))].sort();
     for(const value of values)out.push([{field,op:'eq',value}]);
   }
-  const numericFields=[...new Set(samples.flatMap(row=>Object.keys(row.features||{}).filter(key=>key.startsWith('hist_')||key.startsWith('store_')))].sort();
+  const numericFields=[...new Set(samples.flatMap(row=>Object.keys(row.features||{}).filter(key=>key.startsWith('hist_')||key.startsWith('store_'))))].sort();
   for(const field of numericFields){
     const values=samples.map(row=>finite(row.features?.[field])).filter(Number.isFinite);
     for(const q of [.25,.5,.75]){
@@ -112,9 +112,7 @@ export function discoverAxes(samples,{minSupport=20,maxAxes=32,fdrQ=.05,foldCoun
   const singles=candidatePredicates(samples)
     .map(predicates=>makeAxis(samples,predicates,foldCount))
     .filter(axis=>axis.support>=minSupport&&axis.contrast>0&&axis.foldPassRate>=.75&&axis.robustness>=.5);
-  let guarded=applyBenjaminiHochberg(singles,fdrQ).filter(axis=>axis.fdrAccepted);
-  guarded.sort((a,b)=>b.lift-a.lift||b.contrast-a.contrast||a.id.localeCompare(b.id));
-
+  const guarded=applyBenjaminiHochberg(singles,fdrQ).filter(axis=>axis.fdrAccepted).sort((a,b)=>b.lift-a.lift||b.contrast-a.contrast||a.id.localeCompare(b.id));
   const seeds=guarded.slice(0,maxPairSeeds),pairs=[];
   for(let i=0;i<seeds.length;i+=1)for(let j=i+1;j<seeds.length;j+=1){
     const predicates=[...seeds[i].predicates,...seeds[j].predicates];
