@@ -41,6 +41,8 @@ async function fixture(){
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-analysis-default',VERSION,'2026-09-02',canonicalJson(analysis),hashCanonical(analysis),now);
   const status={status:'analyzed',generation:2,completedGeneration:2,businessDate:'2026-09-02'};
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-latest-status',VERSION,'2026-09-02',canonicalJson(status),hashCanonical(status),now);
+  const storeRead={status:'ready',storeId:'store-a',modelFingerprint:'research-model-fp',featureVersion:'store-features-v1',asOfDate:'2026-09-02',targetDate:'2026-09-03',machineCount:1,holdoutScore:1.25,rankings:[{rank:1,machineKey:'101',tableNo:'101',machineName:'my',score:2}]};
+  db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-read-active','store-read-v1','2026-09-03',canonicalJson(storeRead),hashCanonical(storeRead),now);
   db.prepare(`INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','2026-09-02','store-analysis-default',VERSION,'i'.repeat(64),'o'.repeat(64),now);
   db.close();
 
@@ -72,7 +74,7 @@ test('store enumeration is restricted to the authenticated Collector channel',as
   }finally{await f.close()}
 });
 
-test('authorized browser can read compact days, one day, analysis, history and status without raw paths',async()=>{
+test('authorized browser can read compact days, one day, analysis, history, status and active store-read without raw paths',async()=>{
   const f=await fixture();
   try{
     const days=await (await fetch(`${f.base}/api/vps/stores/store-a/days?limit=1`,{headers:f.auth})).json();
@@ -95,6 +97,14 @@ test('authorized browser can read compact days, one day, analysis, history and s
 
     const status=await (await fetch(`${f.base}/api/vps/stores/store-a/status`,{headers:f.auth})).json();
     assert.equal(status.status.status,'analyzed');
+
+    const storeReadResponse=await fetch(`${f.base}/api/vps/stores/store-a/research/store-read`,{headers:f.auth});
+    assert.equal(storeReadResponse.status,200);
+    const storeRead=await storeReadResponse.json();
+    assert.equal(storeRead.storeRead.modelFingerprint,'research-model-fp');
+    assert.equal(storeRead.storeRead.targetDate,'2026-09-03');
+    assert.equal(storeRead.storeRead.rankings[0].tableNo,'101');
+    assert.doesNotMatch(JSON.stringify(storeRead),/raw-secret|html\.gz|model_json/i);
   }finally{await f.close()}
 });
 
@@ -102,6 +112,7 @@ test('cross-channel store reads are forbidden and analytics API is read-only',as
   const f=await fixture();
   try{
     assert.equal((await fetch(`${f.base}/api/vps/stores/store-b/status`,{headers:f.auth})).status,403);
+    assert.equal((await fetch(`${f.base}/api/vps/stores/store-b/research/store-read`,{headers:f.auth})).status,403);
     const post=await fetch(`${f.base}/api/vps/stores`,{method:'POST',headers:f.auth});
     assert.equal(post.status,405);
     assert.equal(post.headers.get('allow'),'GET, HEAD');
