@@ -36,6 +36,15 @@ function rowFromDb(row){
   });
 }
 
+function scoreRowFromDb(row){
+  if(!row)return null;
+  return Object.freeze({
+    predictionId:Number(row.prediction_id),storeId:row.store_id,targetDate:row.target_date,engine:row.engine,
+    scorerVersion:row.scorer_version,outcomeProxyVersion:row.outcome_proxy_version,outcomeInputHash:row.outcome_input_hash,
+    metrics:Object.freeze(safeJson(row.metrics_json,{})||{}),scoreHash:row.score_hash,scoredAt:row.scored_at
+  });
+}
+
 export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersion,modelFingerprint='',featureVersion=null,sourceFrontierDate,inputHash,rankings,createdAt=new Date().toISOString()}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=requiredText(storeId,'storeId'),target=validDate(targetDate,'targetDate'),kind=requiredText(engine,'engine');
@@ -55,7 +64,7 @@ export function listLivePredictions(db,{storeId,targetDate=null,engine=null}={})
   const id=requiredText(storeId,'storeId'),where=['store_id=?'],params=[id];
   if(targetDate!=null){where.push('target_date=?');params.push(validDate(targetDate,'targetDate'))}
   if(engine!=null){const kind=requiredText(engine,'engine');if(!ENGINES.has(kind))throw new TypeError('engine is invalid');where.push('engine=?');params.push(kind)}
-  return Object.freeze(db.prepare(`SELECT * FROM store_prediction_snapshots WHERE ${where.join(' AND ')} ORDER BY target_date DESC,id ASC`).all(...params).map(rowFromDb));
+  return Object.freeze(db.prepare(`SELECT * FROM store_prediction_snapshots WHERE ${where.join(' AND ')} ORDER BY target_date DESC,created_at ASC,id ASC`).all(...params).map(rowFromDb));
 }
 
 function normalizeOutcome(row,index){
@@ -92,4 +101,96 @@ export function scorePredictionRows({predictionRows,outcomeRows}={}){
   return Object.freeze({machineCount,coverage,top1,top3,top5,rankCorrelation,quality:top3.lift*100+top5.lift*10+rankCorrelation});
 }
 
-export const __test={normalizeRanking,normalizeRankings,rowFromDb,topOverlap,spearmanCommon};
+function firstPredictionsForDay(db,storeId,targetDate){
+  const rows=listLivePredictions(db,{storeId,targetDate});
+  const first={};
+  for(const row of rows)if(!first[row.engine])first[row.engine]=row;
+  return first;
+}
+
+function persistPredictionScore(db,{prediction,outcomeRows,outcomeInputHash,nowIso}){
+  const existing=scoreRowFromDb(db.prepare('SELECT * FROM store_prediction_scores WHERE prediction_id=?').get(prediction.id));
+  if(existing){
+    if(existing.outcomeInputHash!==outcomeInputHash)return Object.freeze({score:existing,conflict:true});
+    return Object.freeze({score:existing,conflict:false});
+  }
+  const metrics=scorePredictionRows({predictionRows:prediction.rankings,outcomeRows}),metricsJson=canonicalJson(metrics);
+  const scoreHash=hashCanonical({predictionId:prediction.id,payloadHash:prediction.payloadHash,scorerVersion:SCORER_VERSION,outcomeProxyVersion:OUTCOME_PROXY_VERSION,outcomeInputHash,metrics});
+  db.prepare(`INSERT INTO store_prediction_scores(prediction_id,store_id,target_date,engine,scorer_version,outcome_proxy_version,outcome_input_hash,metrics_json,score_hash,scored_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?)`).run(prediction.id,prediction.storeId,prediction.targetDate,prediction.engine,SCORER_VERSION,OUTCOME_PROXY_VERSION,outcomeInputHash,metricsJson,scoreHash,nowIso);
+  return Object.freeze({score:scoreRowFromDb(db.prepare('SELECT * FROM store_prediction_scores WHERE prediction_id=?').get(prediction.id)),conflict:false});
+}
+
+function winnerFromScores(pre,current){
+  if(!pre||!current)return null;
+  const delta=Number(pre.metrics?.quality||0)-Number(current.metrics?.quality||0);
+  if(Math.abs(delta)<=WIN_EPSILON)return 'tie';
+  return delta>0?'pre_research':'current_shadow';
+}
+
+export function scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows,outcomeInputHash,nowIso=new Date().toISOString()}={}){
+  if(!db?.prepare)throw new TypeError('db is required');
+  const id=requiredText(storeId,'storeId'),target=validDate(targetDate,'targetDate'),outcomeHash=requiredText(outcomeInputHash,'outcomeInputHash'),at=validIso(nowIso,'nowIso');
+  if(!Array.isArray(outcomeRows)||!outcomeRows.length)throw new TypeError('outcomeRows are required');
+  const existingHashes=db.prepare('SELECT DISTINCT outcome_input_hash AS hash FROM store_prediction_scores WHERE store_id=? AND target_date=?').all(id,target).map(row=>row.hash);
+  if(existingHashes.some(hash=>hash!==outcomeHash))return Object.freeze({storeId:id,targetDate:target,winner:null,scores:Object.freeze({}),excludedReason:'outcome_hash_conflict'});
+  const predictions=firstPredictionsForDay(db,id,target),scores={};let conflict=false;
+  for(const engine of ['pre_research','current_shadow']){
+    const prediction=predictions[engine];if(!prediction)continue;
+    const result=persistPredictionScore(db,{prediction,outcomeRows,outcomeInputHash:outcomeHash,nowIso:at});
+    scores[engine]=result.score;if(result.conflict)conflict=true;
+  }
+  if(conflict)return Object.freeze({storeId:id,targetDate:target,winner:null,scores:Object.freeze(scores),excludedReason:'outcome_hash_conflict'});
+  const missing=!scores.pre_research?'missing_pre_research':!scores.current_shadow?'missing_current_shadow':null;
+  return Object.freeze({storeId:id,targetDate:target,winner:winnerFromScores(scores.pre_research,scores.current_shadow),scores:Object.freeze(scores),excludedReason:missing});
+}
+
+function averageMetric(rows,engine){
+  const values=rows.map(row=>row.scores?.[engine]?.metrics).filter(Boolean);
+  const avg=selector=>values.length?values.reduce((sum,value)=>sum+Number(selector(value)||0),0)/values.length:0;
+  return Object.freeze({
+    days:values.length,quality:avg(value=>value.quality),coverage:avg(value=>value.coverage),rankCorrelation:avg(value=>value.rankCorrelation),
+    top1:Object.freeze({rate:avg(value=>value.top1?.rate),lift:avg(value=>value.top1?.lift)}),
+    top3:Object.freeze({rate:avg(value=>value.top3?.rate),lift:avg(value=>value.top3?.lift)}),
+    top5:Object.freeze({rate:avg(value=>value.top5?.rate),lift:avg(value=>value.top5?.lift)})
+  });
+}
+
+function comparisonRows(db,storeId,limit){
+  const targetRows=db.prepare(`SELECT DISTINCT target_date FROM store_prediction_snapshots WHERE store_id=? ORDER BY target_date DESC LIMIT ?`).all(storeId,limit);
+  return targetRows.map(({target_date:targetDate})=>{
+    const predictions=firstPredictionsForDay(db,storeId,targetDate),scores={};
+    for(const engine of ['pre_research','current_shadow']){
+      const prediction=predictions[engine];if(!prediction)continue;
+      const score=scoreRowFromDb(db.prepare('SELECT * FROM store_prediction_scores WHERE prediction_id=?').get(prediction.id));
+      if(score)scores[engine]=score;
+    }
+    let excludedReason=null;
+    if(!predictions.pre_research)excludedReason='missing_pre_research';
+    else if(!predictions.current_shadow)excludedReason='missing_current_shadow';
+    else if(!scores.pre_research||!scores.current_shadow)excludedReason='unscored';
+    const winner=excludedReason?null:winnerFromScores(scores.pre_research,scores.current_shadow);
+    return Object.freeze({targetDate,winner,excludedReason,scores:Object.freeze(scores),predictions:Object.freeze({
+      pre_research:predictions.pre_research?Object.freeze({engineVersion:predictions.pre_research.engineVersion,modelFingerprint:predictions.pre_research.modelFingerprint,featureVersion:predictions.pre_research.featureVersion,sourceFrontierDate:predictions.pre_research.sourceFrontierDate,payloadHash:predictions.pre_research.payloadHash,createdAt:predictions.pre_research.createdAt}):null,
+      current_shadow:predictions.current_shadow?Object.freeze({engineVersion:predictions.current_shadow.engineVersion,modelFingerprint:predictions.current_shadow.modelFingerprint,featureVersion:predictions.current_shadow.featureVersion,sourceFrontierDate:predictions.current_shadow.sourceFrontierDate,payloadHash:predictions.current_shadow.payloadHash,createdAt:predictions.current_shadow.createdAt}):null
+    })});
+  });
+}
+
+export function buildComparisonSummary(db,{storeId,limit=90}={}){
+  if(!db?.prepare)throw new TypeError('db is required');
+  const id=requiredText(storeId,'storeId'),bounded=Math.max(1,Math.min(366,Math.trunc(Number(limit)||90))),rows=comparisonRows(db,id,bounded);
+  const paired=rows.filter(row=>!row.excludedReason&&row.scores.pre_research&&row.scores.current_shadow),recent=paired.slice(0,30);
+  const newEngine=averageMetric(paired,'pre_research'),currentEngine=averageMetric(paired,'current_shadow');
+  const recentNew=averageMetric(recent,'pre_research'),recentCurrent=averageMetric(recent,'current_shadow');
+  const counts={newWins:0,currentWins:0,ties:0};
+  for(const row of paired){if(row.winner==='pre_research')counts.newWins+=1;else if(row.winner==='current_shadow')counts.currentWins+=1;else if(row.winner==='tie')counts.ties+=1}
+  return Object.freeze({
+    live:Object.freeze({days:paired.length,...counts,excluded:rows.length-paired.length,newEngine,currentEngine,
+      recent30:Object.freeze({days:recent.length,newEngine:recentNew,currentEngine:recentCurrent,delta:recentNew.quality-recentCurrent.quality}),
+      rows:Object.freeze(rows)}),
+    historical:null
+  });
+}
+
+export const __test={normalizeRanking,normalizeRankings,rowFromDb,scoreRowFromDb,topOverlap,spearmanCommon,winnerFromScores,averageMetric};
