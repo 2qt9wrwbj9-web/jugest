@@ -35,7 +35,7 @@ function seed(){
   return {dir,dbPath,db,job,cleanup(){try{db.close()}catch{}rmSync(dir,{recursive:true,force:true})}};
 }
 
-test('real DAILY_ANALYSIS child runs unchanged JUGEST runtime and persists snapshots',async()=>{
+test('real DAILY_ANALYSIS child emits task workload telemetry and persists snapshots',async()=>{
   const f=seed();
   try{
     const messages=[];
@@ -49,10 +49,21 @@ test('real DAILY_ANALYSIS child runs unchanged JUGEST runtime and persists snaps
         onExit:code=>{if(code!==0&&messages.every(x=>x.type!=='complete')){clearTimeout(timeout);reject(new Error(`daily child exited ${code}`))}}
       });
     });
+    const start=messages.find(x=>x.type==='task_start');
     const done=messages.find(x=>x.type==='complete');
+    assert.ok(start,'daily child must announce task metadata before completion');
+    assert.equal(start.taskMeta.taskKind,'daily_analysis');
+    assert.equal(start.taskMeta.phase,1);
+    assert.equal(start.taskMeta.storeId,'store-child');
+    assert.equal(start.taskMeta.storeMachineCount,2);
+    assert.equal(start.taskMeta.dayCount,4);
+    assert.equal(start.taskMeta.rowCount,8);
     assert.ok(done);
     assert.equal(done.status,'analyzed');
     assert.match(done.resultHash,/^[a-f0-9]{64}$/);
+    assert.ok(Number.isFinite(done.taskMetrics.peakRssMiB));
+    assert.ok(Number.isFinite(done.taskMetrics.cpuMs));
+    assert.ok(done.taskMetrics.durationMs>=0);
     const snap=f.db.prepare("SELECT payload_json FROM client_snapshots WHERE store_id='store-child' AND snapshot_type='store-analysis-default'").get();
     assert.ok(snap);
     const payload=JSON.parse(snap.payload_json);
