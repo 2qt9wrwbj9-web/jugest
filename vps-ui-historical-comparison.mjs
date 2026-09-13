@@ -43,6 +43,7 @@ function historicalHtml(){
   const processed=Number(historical.processed)||0,total=Number(historical.totalCandidates)||0,progress=total?Math.min(1,processed/total):1,recent=Array.isArray(historical.rows)?historical.rows.slice(0,10):[];
   return `<section class="vps-settings-card vps-historical-comparison" data-vps-historical-panel><span class="vps-historical-mode-badge">HISTORICAL WALK-FORWARD</span><h2>${esc(comparisonShop||'選択中の店舗')}</h2><p>各対象日の前日以前だけを使い、新版PREと現行版を時系列で再現した過去検証。LIVE実績とは別集計です。</p><div class="vps-historical-progress"><progress max="1" value="${progress}"></progress><b>${processed}/${total}</b></div><div class="vps-compare-grid"><div class="vps-compare-kpi"><small>採点日数</small><strong>${Number(historical.scored)||0}</strong></div><div class="vps-compare-kpi"><small>新版勝ち</small><strong>${Number(historical.newWins)||0}</strong></div><div class="vps-compare-kpi"><small>現行勝ち</small><strong>${Number(historical.currentWins)||0}</strong></div><div class="vps-compare-kpi"><small>除外</small><strong>${Number(historical.excluded)||0}</strong></div></div><div class="vps-settings-message">直近30日 Quality差 <span class="vps-compare-delta">${fmtSigned(historical.recent30?.delta)}</span>（＋なら新版優勢）</div><table class="vps-compare-table"><thead><tr><th>指標</th><th>新版</th><th>現行版</th></tr></thead><tbody>${metricRows(historical)}</tbody></table><div class="vps-settings-actions"><button type="button" data-vps-historical-refresh>更新</button></div></section><section class="vps-settings-card vps-historical-comparison" data-vps-historical-panel><h2>直近日別</h2><p class="vps-historical-note">snapshot ${esc(historical.snapshotFirstDate||'—')} → ${esc(historical.snapshotLastDate||'—')} / 次: ${esc(historical.nextTargetDate||'完了')}</p><div class="vps-compare-days">${recent.length?recent.map(historicalDayHtml).join(''):'<div class="vps-compare-empty">まだ処理済みの日付がありません。</div>'}</div></section>`;
 }
+function historicalRenderKey(){return JSON.stringify({busy:comparisonBusy,error:comparisonError,shop:comparisonShop,historical:comparisonData?.historical??null})}
 function pendingTarget(live){return (Array.isArray(live?.rows)?live.rows:[]).find(row=>row?.excludedReason==='unscored'&&row?.predictions?.pre_research&&row?.predictions?.current_shadow)?.targetDate||''}
 function enhanceLivePending(wrap){
   const live=comparisonData?.live,target=pendingTarget(live);if(!target)return;
@@ -59,8 +60,11 @@ function renderMode(wrap){
     enhanceLivePending(wrap);return;
   }
   for(const section of baseSections)section.hidden=true;
-  for(const panel of wrap.querySelectorAll('[data-vps-historical-panel]'))panel.remove();
+  const panels=[...wrap.querySelectorAll('[data-vps-historical-panel]')],key=historicalRenderKey();
+  if(panels.length&&panels[0].dataset.vpsHistoricalRenderKey===key)return;
+  for(const panel of panels)panel.remove();
   wrap.insertAdjacentHTML('beforeend',historicalHtml());
+  const first=wrap.querySelector('[data-vps-historical-panel]');if(first)first.dataset.vpsHistoricalRenderKey=key;
 }
 async function loadComparison(force=false){
   const shop=activeShop();if(!shop){comparisonShop='';comparisonData=null;comparisonError='店舗を選択してから精度比較を開いてね。';comparisonBusy=false;schedule();return}
@@ -83,4 +87,4 @@ function start(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 
-export const __test={pendingTarget,historicalHtml,comparisonMode};
+export const __test={pendingTarget,historicalHtml,historicalRenderKey,comparisonMode};
