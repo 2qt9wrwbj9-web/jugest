@@ -7,9 +7,21 @@ import {fileURLToPath} from 'node:url';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {loadStoreDays} from '../src/analysis/store-data.mjs';
-import {runExistingStoreAnalysis} from '../src/analysis/runtime-adapter.mjs';
+import {runExistingStoreAnalysis,runExistingStorePlan} from '../src/analysis/runtime-adapter.mjs';
 
 const REPO_ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
+
+function insertDay(db,date,{games=5000,bb=20,rb=18,diff=100}={}){
+  const now='2026-09-11T00:00:00.000Z';
+  db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
+    VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a',date,'fixture','raw-'+date,'norm-'+date,'/tmp/'+date+'.gz',now,now);
+  const rows=[
+    {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'102',games,bb,rb,diff},
+    {machine:'fk',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:games+200,bb:bb+1,rb:Math.max(1,rb-2),diff:diff-80}
+  ];
+  rows.forEach((row,index)=>db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
+    .run('store-a',date,String(index).padStart(6,'0'),JSON.stringify(row)));
+}
 
 function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-analysis-runtime-'));
@@ -24,16 +36,7 @@ function fixture(){
     ['2026-09-03',4800,18,17,-120],
     ['2026-09-04',5500,23,20,360]
   ];
-  for(const [date,games,bb,rb,diff] of days){
-    db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
-      VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a',date,'fixture','raw-'+date,'norm-'+date,'/tmp/'+date+'.gz',now,now);
-    const rows=[
-      {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'102',games,bb,rb,diff},
-      {machine:'fk',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:games+200,bb:bb+1,rb:Math.max(1,rb-2),diff:diff-80}
-    ];
-    rows.forEach((row,index)=>db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
-      .run('store-a',date,String(index).padStart(6,'0'),JSON.stringify(row)));
-  }
+  for(const [date,games,bb,rb,diff] of days)insertDay(db,date,{games,bb,rb,diff});
   return {db,cleanup(){try{db.close()}catch{}rmSync(dir,{recursive:true,force:true})}};
 }
 
@@ -65,5 +68,32 @@ test('headless adapter runs the existing JUGEST store-analysis bridge over VPS c
     assert.equal(result.machines.length,2);
     assert.ok(Array.isArray(result.positive));
     assert.ok(Array.isArray(result.patterns));
+  }finally{f.cleanup()}
+});
+
+test('headless shadow plan uses the real current Today Plan path and excludes target-day data',async()=>{
+  const f=fixture();
+  try{
+    for(let day=5;day<=12;day+=1){
+      const date=`2026-09-${String(day).padStart(2,'0')}`;
+      insertDay(f.db,date,{games:5000+day*25,bb:19+(day%4),rb:16+(day%5),diff:(day%3===0?900:-150)+day*10});
+    }
+    const loaded=loadStoreDays(f.db,'store-a',{limit:180});
+    const poisonTargetDay={date:'2026-09-13',machines:[
+      {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'102',games:99999,bb:999,rb:999,diff:999999},
+      {machine:'fk',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:99999,bb:1,rb:1,diff:-999999}
+    ]};
+    const result=await runExistingStorePlan({
+      rootDir:REPO_ROOT,
+      shop:loaded.store.name,
+      sourceStoreId:loaded.store.id,
+      days:[...loaded.days,poisonTargetDay],
+      targetDate:'2026-09-13'
+    });
+    assert.equal(result.targetDate,'2026-09-13');
+    assert.equal(result.sourceFrontierDate,'2026-09-12');
+    assert.ok(result.rankings.length>0);
+    assert.deepEqual(Object.keys(result.rankings[0]).sort(),['machineKey','machineName','rank','score','tableNo']);
+    assert.deepEqual(result.rankings.map(row=>row.rank),result.rankings.map((_,index)=>index+1));
   }finally{f.cleanup()}
 });
