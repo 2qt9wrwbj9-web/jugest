@@ -3,6 +3,7 @@ import {openDatabase} from './db.mjs';
 import {migrate} from './schema.mjs';
 import {createRelayStore} from './relay-store.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
+import {buildComparisonSummary} from './research/live-comparison.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -59,6 +60,11 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
       if(parts.length===6&&parts[4]==='research'&&parts[5]==='store-read'){
         const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-read-active' AND version=?`).get(storeId,STORE_READ_VERSION);
         sendJson(req,res,200,{ok:true,store:access.store,storeRead:row?safeJson(row.payload_json,null):null,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null});return;
+      }
+      if(parts.length===6&&parts[4]==='research'&&parts[5]==='comparison'){
+        const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||90)));
+        const comparison=buildComparisonSummary(db,{storeId,limit});
+        sendJson(req,res,200,{ok:true,store:access.store,limit,comparison});return;
       }
       if(parts.length===5&&parts[4]==='status'){
         const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-latest-status' AND version=?`).get(storeId,ANALYSIS_VERSION);
