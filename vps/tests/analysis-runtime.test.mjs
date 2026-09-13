@@ -22,6 +22,7 @@ function insertDay(db,date,{games=5000,bb=20,rb=18,diff=100}={}){
   rows.forEach((row,index)=>db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
     .run('store-a',date,String(index).padStart(6,'0'),JSON.stringify(row)));
 }
+function isoDay(date){return date.toISOString().slice(0,10)}
 
 function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-analysis-runtime-'));
@@ -74,12 +75,13 @@ test('headless adapter runs the existing JUGEST store-analysis bridge over VPS c
 test('headless shadow plan uses the real current Today Plan path and excludes target-day data',async()=>{
   const f=fixture();
   try{
-    for(let day=5;day<=12;day+=1){
-      const date=`2026-09-${String(day).padStart(2,'0')}`;
-      insertDay(f.db,date,{games:5000+day*25,bb:19+(day%4),rb:16+(day%5),diff:(day%3===0?900:-150)+day*10});
+    const base=Date.UTC(2026,8,1);
+    for(let offset=4;offset<=48;offset+=1){
+      const date=isoDay(new Date(base+offset*86400000));
+      insertDay(f.db,date,{games:5000+offset*17,bb:19+(offset%5),rb:16+(offset%6),diff:(offset%4===0?1000:-120)+offset*9});
     }
     const loaded=loadStoreDays(f.db,'store-a',{limit:180});
-    const poisonTargetDay={date:'2026-09-13',machines:[
+    const poisonTargetDay={date:'2026-10-20',machines:[
       {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'102',games:99999,bb:999,rb:999,diff:999999},
       {machine:'fk',category:'juggler',sourceMachineName:'ファンキージャグラー2',tableNo:'101',games:99999,bb:1,rb:1,diff:-999999}
     ]};
@@ -88,10 +90,10 @@ test('headless shadow plan uses the real current Today Plan path and excludes ta
       shop:loaded.store.name,
       sourceStoreId:loaded.store.id,
       days:[...loaded.days,poisonTargetDay],
-      targetDate:'2026-09-13'
+      targetDate:'2026-10-20'
     });
-    assert.equal(result.targetDate,'2026-09-13');
-    assert.equal(result.sourceFrontierDate,'2026-09-12');
+    assert.equal(result.targetDate,'2026-10-20');
+    assert.equal(result.sourceFrontierDate,'2026-10-19');
     assert.ok(result.rankings.length>0);
     assert.deepEqual(Object.keys(result.rankings[0]).sort(),['machineKey','machineName','rank','score','tableNo']);
     assert.deepEqual(result.rankings.map(row=>row.rank),result.rankings.map((_,index)=>index+1));
