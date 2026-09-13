@@ -3,6 +3,7 @@ import {loadStoreDays} from './store-data.mjs';
 import {runExistingStoreAnalysis} from './runtime-adapter.mjs';
 import {getAnalysisRefreshState,requestStoreAnalysisRefresh} from './refresh-state.mjs';
 import {requestStoreFeatureRefresh} from './feature-refresh-state.mjs';
+import {requestShadowPrediction} from './shadow-refresh-state.mjs';
 import {deriveStoreMachineCount} from './task-metrics.mjs';
 
 const DEFAULT_OPTIONS=Object.freeze({period:'180',minG:'2000',maxDims:'1',minDays:'4'});
@@ -74,6 +75,7 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
   const outputHash=hashCanonical(outputPayload);
   let followupJob=null;
   let featureJob=null;
+  let shadowJob=null;
 
   db.exec('BEGIN IMMEDIATE');
   try{
@@ -102,10 +104,11 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
 
     followupJob=requestStoreAnalysisRefresh(db,{storeId,analysisVersion,nowIso:at,dirty:false}).job;
     featureJob=requestStoreFeatureRefresh(db,{storeId,featureVersion:FEATURE_VERSION,frontierDate:latest,nowIso:at,dirty:true}).job;
+    shadowJob=requestShadowPrediction(db,{storeId,frontierDate:latest,nowIso:at}).job;
     db.exec('COMMIT');
   }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
 
-  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null};
+  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null,shadowJobId:shadowJob?.id??null};
 }
 
 export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION};
