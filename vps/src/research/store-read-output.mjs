@@ -1,5 +1,6 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {buildLivePredictionRows} from './backtest.mjs';
+import {persistLivePrediction} from './live-comparison.mjs';
 import {scoreSample} from './model-search.mjs';
 
 export const STORE_READ_SNAPSHOT_TYPE='store-read-active';
@@ -55,6 +56,12 @@ export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,feat
     ON CONFLICT(store_id,snapshot_type,version) DO UPDATE SET
       business_date=excluded.business_date,payload_json=excluded.payload_json,payload_hash=excluded.payload_hash,updated_at=excluded.updated_at`)
     .run(id,STORE_READ_SNAPSHOT_TYPE,STORE_READ_VERSION,targetDate,payloadJson,payloadHash,at);
+  if(rankings.length){
+    persistLivePrediction(db,{
+      storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
+      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days}),rankings,createdAt:at
+    });
+  }
   return Object.freeze({payload,payloadHash,targetDate});
 }
 
