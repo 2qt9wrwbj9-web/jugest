@@ -8,8 +8,17 @@ import {persistTaskMetric} from './analysis/task-metrics.mjs';
 const SYNTHETIC_WORKER=new URL('./jobs/synthetic.mjs',import.meta.url);
 const DAILY_ANALYSIS_WORKER=new URL('./jobs/daily-analysis.mjs',import.meta.url);
 const FEATURE_BUILD_WORKER=new URL('./jobs/feature-build.mjs',import.meta.url);
+const BACKTEST_WORKER=new URL('./jobs/backtest.mjs',import.meta.url);
+const MODEL_SEARCH_WORKER=new URL('./jobs/model-search.mjs',import.meta.url);
 const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH']);
 
+function defaultWorkerPathForJob(job){
+  if(job?.type==='DAILY_ANALYSIS')return DAILY_ANALYSIS_WORKER;
+  if(job?.type==='FEATURE_BUILD')return FEATURE_BUILD_WORKER;
+  if(job?.type==='BACKTEST')return BACKTEST_WORKER;
+  if(job?.type==='MODEL_SEARCH')return MODEL_SEARCH_WORKER;
+  return SYNTHETIC_WORKER;
+}
 function iso(clock){return clock().toISOString();}
 function plusMs(isoText,ms){return new Date(new Date(isoText).getTime()+ms).toISOString();}
 function queueDepth(db,at){return db.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE state='queued' OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))`).get(at).n;}
@@ -47,7 +56,7 @@ export class Coordinator{
     this.policy=policy;
     this.clock=clock;
     this.workerPath=workerPath??SYNTHETIC_WORKER;
-    this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):(job=>job.type==='DAILY_ANALYSIS'?DAILY_ANALYSIS_WORKER:job.type==='FEATURE_BUILD'?FEATURE_BUILD_WORKER:SYNTHETIC_WORKER));
+    this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):defaultWorkerPathForJob);
     this.maxDailyAnalysisChildren=maxDailyAnalysisChildren;
     this.maxResearchChildren=maxResearchChildren;
     this.running=new Map();
@@ -304,4 +313,4 @@ export class Coordinator{
   }
 }
 
-export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER,FEATURE_BUILD_WORKER,RESEARCH_JOB_TYPES};
+export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER,FEATURE_BUILD_WORKER,BACKTEST_WORKER,MODEL_SEARCH_WORKER,RESEARCH_JOB_TYPES,defaultWorkerPathForJob};
