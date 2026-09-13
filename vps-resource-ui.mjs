@@ -5,7 +5,7 @@ let app=null;
 let root=null;
 let observer=null;
 
-function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function esc(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
 function receiver(){try{const v=JSON.parse(localStorage.getItem(RECEIVER_STORAGE_KEY)||'null');const channelId=String(v?.channelId||'').trim(),receiverToken=String(v?.receiverToken||'').trim();return v?.linked&&channelId&&receiverToken?{channelId,receiverToken}:null}catch{return null}}
 function fmtBytes(bytes){const n=Number(bytes);if(!Number.isFinite(n)||n<0)return '—';if(n>=1024**3)return `${(n/1024**3).toFixed(2)} GB`;return `${(n/1024**2).toFixed(0)} MB`}
 function fmtMs(ms){const n=Number(ms);if(!Number.isFinite(n))return '—';return n>=1000?`${(n/1000).toFixed(1)}秒`:`${Math.round(n)}ms`}
@@ -23,7 +23,7 @@ async function loadResources(){
 function style(){
   if(document.querySelector('style[data-vps-resource-ui]'))return;
   const el=document.createElement('style');el.dataset.vpsResourceUi='';el.textContent=`
-.vps-resource-overlay{position:fixed;z-index:95;inset:0;background:#f7f9ff;overflow:auto;padding:calc(22px + env(safe-area-inset-top,0px)) 20px calc(36px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.vps-resource-overlay{position:fixed;z-index:95;inset:0;background:#f7f9ff;overflow:auto;padding:calc(22px + env(safe-area-inset-top,0px)) 20px calc(36px + env(safe-area-inset-bottom,0px));box-sizing:border-box;color:#101a33;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 .vps-resource-wrap{max-width:720px;margin:0 auto}.vps-resource-back{border:0;background:transparent;color:#315fd5;font:inherit;font-weight:800;padding:8px 0 18px;min-height:44px}.vps-resource-kicker{font-size:12px;font-weight:800;letter-spacing:.22em;color:#315fd5;margin:4px 0 10px}.vps-resource-wrap h1{margin:0 0 18px;font-size:32px;color:#101a38}.vps-resource-card{background:#fff;border:1px solid #dfe5f3;border-radius:20px;padding:18px;margin:0 0 14px;box-shadow:0 8px 24px rgba(33,55,110,.05)}.vps-resource-card h2{margin:0 0 12px;font-size:18px}.vps-resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vps-resource-metric{background:#f7f9fd;border-radius:13px;padding:11px}.vps-resource-metric small{display:block;color:#7a8396;margin-bottom:4px}.vps-resource-metric b{font-size:16px;color:#16203e}.vps-resource-actions{display:flex;gap:10px;margin-top:14px}.vps-resource-actions button{min-height:44px;border-radius:13px;border:1px solid #d9e0ee;background:#fff;font:inherit;font-weight:800;padding:9px 14px}.vps-resource-note{font-size:12px;color:#7a8396;line-height:1.55;margin-top:10px}.vps-resource-error{color:#b72d3b}.vps-resource-settings-row{margin-top:0}
 `;document.head.append(el)
 }
