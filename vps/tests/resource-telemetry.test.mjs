@@ -20,6 +20,27 @@ test('runtime telemetry reuses scheduler and job-run evidence without changing s
   const out=readRuntimeTelemetry(db,{historyLimit:10});assert.equal(out.queue.succeeded,1);assert.equal(out.recentRuns[0].durationMs,2500);assert.equal(out.recentRuns[0].observedPeakRssBytes,Math.round(321.5*1024*1024));assert.equal(out.recentRuns[0].storeId,'store-a');assert.equal(out.latestSchedulerSample.queueDepth,2);assert.equal(out.memoryProfiles[0].samples,4);db.close();
 });
 
+test('runtime telemetry exposes bounded per-store task history with scale, RAM, CPU and model metadata',()=>{
+  const db=openDatabase(':memory:');migrate(db);const now='2026-09-13T00:00:00.000Z';
+  db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('store-a','負荷計測店','{}',now,now);
+  for(let i=0;i<3;i+=1){
+    db.prepare(`INSERT INTO analysis_task_metrics(job_id,store_id,phase,task_kind,task_version,model_fingerprint,store_machine_count,store_size_bucket,day_count,row_count,workload_units,started_at,ended_at,duration_ms,start_rss_mib,end_rss_mib,peak_rss_mib,cpu_ms,status,error_class,details_json)
+      VALUES(NULL,'store-a',1,'feature_build','store-features-v1',?,241,'201-300',180,42000,42000,?,?,?,?,?,?,?,'succeeded',NULL,'{}')`)
+      .run(`fp-${i}`,`2026-09-13T00:00:0${i}.000Z`,`2026-09-13T00:00:0${i+1}.000Z`,1000+i,80+i,90+i,300+i,500+i);
+  }
+  const out=readRuntimeTelemetry(db,{historyLimit:2});
+  assert.equal(out.taskHistory.length,2,'historyLimit must bound task history');
+  assert.equal(out.taskHistory[0].storeName,'負荷計測店');
+  assert.equal(out.taskHistory[0].taskKind,'feature_build');
+  assert.equal(out.taskHistory[0].storeMachineCount,241);
+  assert.equal(out.taskHistory[0].storeSizeBucket,'201-300');
+  assert.equal(out.taskHistory[0].rowCount,42000);
+  assert.equal(out.taskHistory[0].peakRssBytes,Math.round(302*1024*1024));
+  assert.equal(out.taskHistory[0].cpuMs,502);
+  assert.equal(out.taskHistory[0].modelFingerprint,'fp-2');
+  db.close();
+});
+
 test('ingest telemetry records before/after memory and duration without changing operation result',async()=>{
   __test.ingestState.running=0;__test.ingestState.recent.length=0;
   const times=[new Date('2026-09-13T00:00:00.000Z'),new Date('2026-09-13T00:00:00.125Z')];
