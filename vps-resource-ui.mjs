@@ -17,6 +17,7 @@ function jobStateLabel(state){return ({queued:'Queued',retry_wait:'Retry待ち',
 function schedulerReason(health={}){return ({running:'解析実行中',leased_not_running:'Lease済みだがRunning未移行',no_scheduler_sample:'Schedulerの記録がない',scheduler_stale:'Scheduler更新が停止・遅延',memory_emergency:'RAM緊急域で停止',memory_pause:'RAM使用率で一時停止',ready_not_running:'実行可能ジョブあり・未起動',retry_wait:'再試行時刻待ち',idle:'待機中'})[health.code]||String(health.code||'不明')}
 function taskKindLabel(kind){return ({daily_analysis:'通常解析',feature_build:'拡張解析',axis_discovery:'評価軸探索',backtest:'バックテスト',model_search:'モデル比較'})[kind]||String(kind||'不明')}
 function taskStatusLabel(status){return ({succeeded:'成功',failed:'失敗',cancelled:'中断'})[status]||String(status||'—')}
+function phaseLabel(phase){return ({1:'①',2:'②',3:'③'})[String(phase)]||`Phase ${Number(phase)||'—'}`}
 
 async function loadResources(){
   const auth=receiver();if(!auth)throw new Error('VPS連携情報がありません');
@@ -39,7 +40,7 @@ function taskHistoryHtml(r){
   if(!taskHistory.length)return '<p class="vps-resource-note">まだ処理実績はありません。</p>';
   return `<div class="vps-resource-history">${taskHistory.map(item=>{
     const fingerprint=item.modelFingerprint?String(item.modelFingerprint).slice(0,12):'';
-    return `<div class="vps-resource-history-item"><div class="vps-resource-history-head"><div><b>${esc(`① ${taskKindLabel(item.taskKind)}`)}</b><div class="vps-resource-history-store">${esc(item.storeName||item.storeId||'—')}</div></div><span>${esc(taskStatusLabel(item.status))}</span></div><div class="vps-resource-history-grid"><div class="vps-resource-history-cell"><small>店舗規模</small><b>${fmtInt(item.storeMachineCount)}台</b></div><div class="vps-resource-history-cell"><small>対象日数</small><b>${fmtInt(item.dayCount)}日</b></div><div class="vps-resource-history-cell"><small>台×日</small><b>${fmtInt(item.rowCount)}</b></div><div class="vps-resource-history-cell"><small>Peak RAM</small><b>${fmtBytes(item.peakRssBytes)}</b></div><div class="vps-resource-history-cell"><small>CPU</small><b>${fmtMs(item.cpuMs)}</b></div><div class="vps-resource-history-cell"><small>処理時間</small><b>${fmtMs(item.durationMs)}</b></div></div>${fingerprint?`<div class="vps-resource-history-fingerprint">model ${esc(fingerprint)}</div>`:''}</div>`;
+    return `<div class="vps-resource-history-item"><div class="vps-resource-history-head"><div><b>${esc(`${phaseLabel(item.phase)} ${taskKindLabel(item.taskKind)}`)}</b><div class="vps-resource-history-store">${esc(item.storeName||item.storeId||'—')}</div></div><span>${esc(taskStatusLabel(item.status))}</span></div><div class="vps-resource-history-grid"><div class="vps-resource-history-cell"><small>店舗規模</small><b>${fmtInt(item.storeMachineCount)}台</b></div><div class="vps-resource-history-cell"><small>対象日数</small><b>${fmtInt(item.dayCount)}日</b></div><div class="vps-resource-history-cell"><small>台×日</small><b>${fmtInt(item.rowCount)}</b></div><div class="vps-resource-history-cell"><small>Peak RAM</small><b>${fmtBytes(item.peakRssBytes)}</b></div><div class="vps-resource-history-cell"><small>CPU</small><b>${fmtMs(item.cpuMs)}</b></div><div class="vps-resource-history-cell"><small>処理時間</small><b>${fmtMs(item.durationMs)}</b></div></div>${fingerprint?`<div class="vps-resource-history-fingerprint">model ${esc(fingerprint)}</div>`:''}</div>`;
   }).join('')}</div>`;
 }
 
@@ -101,4 +102,4 @@ document.addEventListener('click',event=>{
 });
 boot();
 
-export const __test={fmtBytes,fmtMs,fmtAge,schedulerReason,taskKindLabel,taskStatusLabel,taskHistoryHtml};
+export const __test={fmtBytes,fmtMs,fmtAge,schedulerReason,taskKindLabel,taskStatusLabel,phaseLabel,taskHistoryHtml};
