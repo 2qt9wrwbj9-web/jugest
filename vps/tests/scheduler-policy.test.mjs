@@ -42,12 +42,15 @@ test('EWMA peak update is deterministic',()=>{
   assert.equal(updateEwmaPeakMiB(360,300),342);
 });
 
-test('emergency victims choose research before backfill and never daily work',()=>{
+test('emergency victims choose every research type before backfill and never daily work',()=>{
   const children=[
     {id:1,type:'BACKFILL',startedAt:'b'},
     {id:2,type:'DAILY_ANALYSIS',startedAt:'a'},
     {id:3,type:'RESEARCH',startedAt:'c'},
-    {id:4,type:'RESEARCH',startedAt:'d'}
+    {id:4,type:'FEATURE_BUILD',startedAt:'d'},
+    {id:5,type:'BACKTEST',startedAt:'e'},
+    {id:6,type:'MODEL_SEARCH',startedAt:'f'},
+    {id:7,type:'AXIS_DISCOVERY',startedAt:'g'}
   ];
-  assert.deepEqual(selectEmergencyVictims(children).map(x=>x.id),[3,4,1]);
+  assert.deepEqual(selectEmergencyVictims(children).map(x=>x.id),[3,4,5,6,7,1]);
 });
