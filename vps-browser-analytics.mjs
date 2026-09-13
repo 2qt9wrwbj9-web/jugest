@@ -83,6 +83,27 @@ export function createVpsAnalyticsClient({
     async getStatus(shop){
       const store=await resolveStore(shop);
       return request(`/stores/${encodeURIComponent(store.id)}/status`);
+    },
+    async getStoreRead(shop){
+      const store=await resolveStore(shop);
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/research/store-read`);
+      return {
+        store:payload.store||store,
+        storeRead:payload.storeRead??null,
+        businessDate:payload.businessDate??null,
+        payloadHash:payload.payloadHash??null,
+        updatedAt:payload.updatedAt??null
+      };
+    },
+    async getResearchComparison(shop,{limit=90}={}){
+      const store=await resolveStore(shop);
+      const bounded=Math.min(366,Math.max(1,Math.trunc(Number(limit)||90)));
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/research/comparison?limit=${bounded}`);
+      return {
+        store:payload.store||store,
+        limit:Number(payload.limit)||bounded,
+        comparison:payload.comparison??null
+      };
     }
   });
 }
