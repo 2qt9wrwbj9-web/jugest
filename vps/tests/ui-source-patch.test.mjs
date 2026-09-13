@@ -7,11 +7,12 @@ const {patchJugestIndexSource}=patchModule;
 
 const fixture=`<!doctype html><html><body><script>\nwindow.JUGEST_CORE_BRIDGE=window.JUGESTCoreV510.createBridge({\n getSummary:()=>v510CoreSummary(),\n getCollectorKey:()=>v510GetCollectorKey(),\n unlinkCollector:()=>v510UnlinkCollector()\n});\n</script></body></html>`;
 
-test('VPS index patch exposes cloned local externalDays and injects enhancement module exactly once',()=>{
+test('VPS index patch exposes cloned local externalDays and injects enhancement modules exactly once',()=>{
   assert.equal(typeof patchJugestIndexSource,'function','patchJugestIndexSource must exist');
   const once=patchJugestIndexSource(fixture);
   assert.match(once,/getVpsBackfillDays:\(\)=>JSON\.parse\(JSON\.stringify\(externalDays\)\)/);
   assert.match(once,/<script type="module" src="\.\/vps-ui-enhancements\.mjs"><\/script>/);
+  assert.match(once,/<script type="module" src="\.\/vps-ui-historical-comparison\.mjs"><\/script>/);
   const twice=patchJugestIndexSource(once);
   assert.equal(twice,once,'source patch must be idempotent');
 });
