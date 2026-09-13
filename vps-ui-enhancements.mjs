@@ -1,3 +1,5 @@
+import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
+
 const RECEIVER_STORAGE_KEY='jugglerRelayReceiver:v1';
 const FAILURE_ACK_KEY='jugest:vps:analysis-failure-ack';
 const BACKFILL_BATCH_SIZE=15;
@@ -13,9 +15,16 @@ let collectorBusy=false;
 let collectorMessage='';
 let backfillBusy=false;
 let backfillState=null;
+let comparisonBusy=false;
+let comparisonData=null;
+let comparisonError='';
+let comparisonShop='';
+let analyticsClient=null;
 
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
+function getAnalyticsClient(){return analyticsClient||(analyticsClient=createVpsAnalyticsClient())}
+function activeShop(){return String(bridge()?.getActiveStore?.()||'').trim()}
 function readReceiver(){
   try{
     const value=JSON.parse(globalThis.localStorage?.getItem?.(RECEIVER_STORAGE_KEY)||'null');
@@ -27,6 +36,10 @@ function getFailureAck(){try{return globalThis.sessionStorage?.getItem?.(FAILURE
 function setFailureAck(value){try{value?globalThis.sessionStorage?.setItem?.(FAILURE_ACK_KEY,value):globalThis.sessionStorage?.removeItem?.(FAILURE_ACK_KEY)}catch{}}
 function chipFingerprint(chip){return `${chip.getAttribute('aria-label')||''}|${chip.textContent?.trim()||''}`}
 function schedule(){if(scheduled)return;scheduled=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{scheduled=false;reconcile()},0)}
+function fmtNumber(value,digits=2){const n=Number(value);return Number.isFinite(n)?n.toLocaleString('ja-JP',{maximumFractionDigits:digits,minimumFractionDigits:digits}):'—'}
+function fmtPct(value,digits=1){const n=Number(value);return Number.isFinite(n)?`${(n*100).toFixed(digits)}%`:'—'}
+function fmtSigned(value,digits=2){const n=Number(value);if(!Number.isFinite(n))return '—';return `${n>0?'+':''}${n.toFixed(digits)}`}
+function winnerLabel(value){return value==='pre_research'?'新版':value==='current_shadow'?'現行版':value==='tie'?'引き分け':'未採点'}
 
 function styleText(){return `
 [data-vps-settings-gear]{display:inline-flex!important;align-items:center;justify-content:center}
@@ -43,6 +56,7 @@ function styleText(){return `
 .vps-settings-actions{display:grid;gap:10px;margin-top:12px}.vps-settings-actions button,.vps-backfill-card button{min-height:48px;border-radius:14px;border:1px solid #d9e0ee;background:#fff;color:#142041;font:inherit;font-weight:800;padding:10px 14px}.vps-settings-actions button.primary,.vps-backfill-card button.primary{background:#245fe7;color:#fff;border-color:#245fe7}.vps-settings-actions button.danger{color:#b72d3b}.vps-settings-actions button:disabled,.vps-backfill-card button:disabled{opacity:.5}
 .vps-settings-message,.vps-backfill-message{font-size:13px;line-height:1.55;color:#40506e;margin-top:12px}.vps-settings-message.error,.vps-backfill-message.error{color:#b72d3b}
 .vps-progress{width:100%;height:8px;margin:12px 0 4px}.vps-backfill-counts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.vps-backfill-counts span{font-size:12px;border-radius:999px;background:#f0f3f9;padding:6px 9px;color:#43516c}
+.vps-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.vps-compare-kpi{background:#f7f9ff;border:1px solid #e0e6f4;border-radius:14px;padding:12px}.vps-compare-kpi small{display:block;color:#74809a;font-size:11px;margin-bottom:5px}.vps-compare-kpi strong{display:block;font-size:20px;color:#152142}.vps-compare-delta{font-weight:800;color:#315fd5}.vps-compare-table{width:100%;border-collapse:collapse;font-size:13px}.vps-compare-table th,.vps-compare-table td{border-bottom:1px solid #edf0f6;padding:9px 6px;text-align:right}.vps-compare-table th:first-child,.vps-compare-table td:first-child{text-align:left}.vps-compare-days{display:grid;gap:9px}.vps-compare-day{border:1px solid #e2e7f1;border-radius:14px;padding:12px}.vps-compare-day-head{display:flex;justify-content:space-between;gap:10px;font-weight:800}.vps-compare-day-meta{font-size:12px;color:#69758e;margin-top:6px;line-height:1.5}.vps-compare-debug{margin-top:10px;font-size:12px;color:#52617d}.vps-compare-debug summary{cursor:pointer;font-weight:700}.vps-compare-debug code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:7px;background:#f7f9ff;border-radius:10px;padding:9px}.vps-compare-empty{text-align:center;padding:18px 8px;color:#667189}.vps-compare-empty b{display:block;color:#172342;font-size:18px;margin-bottom:6px}@media(max-width:560px){.vps-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vps-settings-overlay h1{font-size:29px}}
 .vps-auto-hidden{display:none!important}
 `}
 
@@ -67,8 +81,55 @@ function collectorSettingsHtml(){
   return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-back>‹ 設定</button><div class="vps-settings-kicker">SETTINGS</div><h1>Collector連携設定</h1><section class="vps-settings-card"><span class="vps-settings-status">${esc(label)}</span><h2>iPhone / Collector</h2><p>取得データをJUGESTへ送るための接続設定。自動取得の実行状況や店舗ごとの取得操作は「データ → 自動取得」で管理する。</p>${waiting&&d.code?`<small>Launcher連携コード</small><div class="vps-settings-code">${esc(d.code)}</div>`:''}${key?`<small>iPhoneキー</small><div class="vps-settings-code">${esc(key)}</div>`:''}<div class="vps-settings-actions">${!linked?`<button type="button" data-vps-collector-ios class="primary" ${collectorBusy?'disabled':''}>iPhone Shortcut用キーを発行</button><button type="button" data-vps-collector-pair ${collectorBusy?'disabled':''}>Collector / Launcherと連携</button>`:`${key?`<button type="button" data-vps-copy-key ${collectorBusy?'disabled':''}>iPhoneキーをコピー</button><button type="button" data-vps-collector-ios ${collectorBusy?'disabled':''}>iPhoneキーを更新</button>`:''}<button type="button" data-vps-collector-unlink class="danger" ${collectorBusy?'disabled':''}>Collector連携を解除</button>`}</div>${collectorMessage?`<div class="vps-settings-message ${collectorMessage.startsWith('エラー')?'error':''}">${esc(collectorMessage)}</div>`:''}</section><section class="vps-settings-card"><h2>Shortcutの接続先</h2><p>現在のShortcutはこのRelayへ送信する。iPhoneキーを更新した場合だけ、Shortcut側のキーも新しい値へ貼り替える。</p><small>送信先</small><div class="vps-settings-code">${esc(endpoint)}</div><small>action</small><div class="vps-settings-code">iosCollectorNextV2 / iosCollectorPushV2</div></section></div>`;
 }
 
+function comparisonMetricRows(live){
+  const n=live?.newEngine||{},c=live?.currentEngine||{};
+  const row=(label,a,b)=>`<tr><td>${esc(label)}</td><td>${a}</td><td>${b}</td></tr>`;
+  return [
+    row('総合Quality',fmtNumber(n.quality),fmtNumber(c.quality)),
+    row('Top1 的中率',fmtPct(n.top1?.rate),fmtPct(c.top1?.rate)),
+    row('Top3 的中率',fmtPct(n.top3?.rate),fmtPct(c.top3?.rate)),
+    row('Top3 Lift',fmtNumber(n.top3?.lift),fmtNumber(c.top3?.lift)),
+    row('Top5 的中率',fmtPct(n.top5?.rate),fmtPct(c.top5?.rate)),
+    row('Top5 Lift',fmtNumber(n.top5?.lift),fmtNumber(c.top5?.lift)),
+    row('順位相関',fmtNumber(n.rankCorrelation),fmtNumber(c.rankCorrelation)),
+    row('採点Coverage',fmtPct(n.coverage),fmtPct(c.coverage))
+  ].join('');
+}
+
+function comparisonDayHtml(row){
+  const preScore=row?.scores?.pre_research,curScore=row?.scores?.current_shadow;
+  const pre=row?.predictions?.pre_research,cur=row?.predictions?.current_shadow;
+  const outcomeInputHash=preScore?.outcomeInputHash||curScore?.outcomeInputHash||'';
+  const debug={
+    outcomeInputHash,
+    pre:{engineVersion:pre?.engineVersion||'',modelFingerprint:pre?.modelFingerprint||'',sourceFrontierDate:pre?.sourceFrontierDate||'',payloadHash:pre?.payloadHash||''},
+    current:{engineVersion:cur?.engineVersion||'',modelFingerprint:cur?.modelFingerprint||'',sourceFrontierDate:cur?.sourceFrontierDate||'',payloadHash:cur?.payloadHash||''}
+  };
+  const quality=`新版 ${fmtNumber(preScore?.metrics?.quality)} / 現行 ${fmtNumber(curScore?.metrics?.quality)}`;
+  return `<div class="vps-compare-day"><div class="vps-compare-day-head"><span>${esc(row?.targetDate||'')}</span><span>${esc(row?.excludedReason?'未採点':winnerLabel(row?.winner))}</span></div><div class="vps-compare-day-meta">${esc(row?.excludedReason?`除外: ${row.excludedReason}`:quality)}</div><details class="vps-compare-debug"><summary>監査情報</summary><code>${esc(JSON.stringify(debug,null,2))}</code></details></div>`;
+}
+
+function comparisonSettingsHtml(){
+  const shop=comparisonShop||activeShop();
+  let body='';
+  if(comparisonBusy){
+    body='<section class="vps-settings-card"><div class="vps-compare-empty"><b>比較データを読み込み中…</b><span>VPSから実運用の採点結果を取得しています。</span></div></section>';
+  }else if(comparisonError){
+    body=`<section class="vps-settings-card"><h2>読み込みエラー</h2><p>${esc(comparisonError)}</p><div class="vps-settings-actions"><button type="button" data-vps-comparison-refresh class="primary">再読み込み</button></div></section>`;
+  }else{
+    const live=comparisonData?.live;
+    if(!live||!Number(live.days)){
+      body=`<section class="vps-settings-card"><div class="vps-compare-empty"><b>比較データ蓄積中</b><span>新版と現行版の翌日予測を固定保存し、翌日の実績が入った日から同じ正解データで採点します。${Number(live?.excluded)||0}件はまだ未採点です。</span></div><div class="vps-settings-actions"><button type="button" data-vps-comparison-refresh>更新</button></div></section>`;
+    }else{
+      const rows=Array.isArray(live.rows)?live.rows:[],recent=rows.slice(0,10),delta=live.recent30?.delta;
+      body=`<section class="vps-settings-card"><span class="vps-settings-status">LIVE SHADOW</span><h2>${esc(shop||'選択中の店舗')}</h2><p>PRE版の新版予測と、裏で走らせた現行JUGEST予測を、後から取得した同一の実績で比較しています。</p><div class="vps-compare-grid"><div class="vps-compare-kpi"><small>採点日数</small><strong>${Number(live.days)||0}</strong></div><div class="vps-compare-kpi"><small>新版勝ち</small><strong>${Number(live.newWins)||0}</strong></div><div class="vps-compare-kpi"><small>現行勝ち</small><strong>${Number(live.currentWins)||0}</strong></div><div class="vps-compare-kpi"><small>引き分け</small><strong>${Number(live.ties)||0}</strong></div></div><div class="vps-settings-message">直近30日 Quality差 <span class="vps-compare-delta">${fmtSigned(delta)}</span>（＋なら新版優勢）</div><table class="vps-compare-table"><thead><tr><th>指標</th><th>新版</th><th>現行版</th></tr></thead><tbody>${comparisonMetricRows(live)}</tbody></table><div class="vps-settings-actions"><button type="button" data-vps-comparison-refresh>更新</button></div></section><section class="vps-settings-card"><h2>直近日別</h2><p>差が出た日を確認するための実運用ログ。監査情報からmodelFingerprint / sourceFrontierDate / outcomeInputHashを確認できます。</p><div class="vps-compare-days">${recent.map(comparisonDayHtml).join('')}</div></section>`;
+    }
+  }
+  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-back>‹ 設定</button><div class="vps-settings-kicker">PRE VALIDATION</div><h1>PRE版 精度比較</h1>${body}</div>`;
+}
+
 function settingsHubHtml(){
-  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button></section></div>`;
+  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-comparison><span><b>PRE版 精度比較</b><small>新版と現行版の翌日ランキングを実運用で比較</small></span><span class="vps-chev">›</span></button></section></div>`;
 }
 
 function renderSettings(){
@@ -77,7 +138,25 @@ function renderSettings(){
   if(!settingsOpen){overlay?.remove();shell.classList.remove('vps-settings-open');return}
   shell.classList.add('vps-settings-open');
   if(!overlay){overlay=document.createElement('div');overlay.className='vps-settings-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','設定');shell.append(overlay)}
-  overlay.innerHTML=settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
+  overlay.innerHTML=settingsPage==='comparison'?comparisonSettingsHtml():settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
+}
+
+async function loadComparison({force=false}={}){
+  const shop=activeShop();
+  if(!shop){comparisonShop='';comparisonData=null;comparisonError='店舗を選択してから精度比較を開いてね。';comparisonBusy=false;renderSettings();return}
+  if(!force&&comparisonData&&comparisonShop===shop){renderSettings();return}
+  if(comparisonBusy&&comparisonShop===shop&&!force)return;
+  comparisonShop=shop;comparisonBusy=true;comparisonError='';renderSettings();
+  try{
+    const payload=await getAnalyticsClient().getResearchComparison(shop,{limit:90});
+    if(comparisonShop!==shop)return;
+    comparisonData=payload?.comparison??null;
+  }catch(error){
+    if(comparisonShop!==shop)return;
+    comparisonData=null;comparisonError=String(error?.message||error||'比較データを取得できませんでした。');
+  }finally{
+    if(comparisonShop===shop){comparisonBusy=false;renderSettings()}
+  }
 }
 
 function failureChip(){return root?.querySelector('.analysis-chip')||null}
@@ -167,6 +246,8 @@ function onClick(event){
   if(target.matches('[data-vps-settings-close]')){event.preventDefault();event.stopPropagation();settingsOpen=false;schedule();return}
   if(target.matches('[data-vps-settings-back]')){event.preventDefault();event.stopPropagation();settingsPage='hub';schedule();return}
   if(target.matches('[data-vps-settings-collector]')){event.preventDefault();event.stopPropagation();settingsPage='collector';schedule();return}
+  if(target.matches('[data-vps-settings-comparison]')){event.preventDefault();event.stopPropagation();settingsPage='comparison';schedule();void loadComparison();return}
+  if(target.matches('[data-vps-comparison-refresh]')){event.preventDefault();event.stopPropagation();void loadComparison({force:true});return}
   if(target.matches('[data-vps-collector-ios]')){event.preventDefault();event.stopPropagation();collectorAction('ios');return}
   if(target.matches('[data-vps-collector-pair]')){event.preventDefault();event.stopPropagation();collectorAction('pair');return}
   if(target.matches('[data-vps-collector-unlink]')){event.preventDefault();event.stopPropagation();collectorAction('unlink');return}
@@ -184,7 +265,14 @@ function attach(candidate){
   bridgeUnsubscribe?.();bridgeUnsubscribe=null;
   app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
   root.addEventListener('click',onClick,true);
-  const unsubscribe=bridge()?.subscribe?.(()=>{root?.querySelector('[data-vps-backfill-card]')?.remove();schedule()});
+  const unsubscribe=bridge()?.subscribe?.(()=>{
+    root?.querySelector('[data-vps-backfill-card]')?.remove();
+    if(settingsPage==='comparison'){
+      const shop=activeShop();
+      if(shop&&shop!==comparisonShop){comparisonData=null;comparisonError='';void loadComparison()}
+    }
+    schedule();
+  });
   bridgeUnsubscribe=typeof unsubscribe==='function'?unsubscribe:null;
   observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});schedule();return true;
 }
@@ -197,4 +285,4 @@ function boot(){
 
 boot();
 
-export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays};
+export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml};
