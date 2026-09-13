@@ -4,6 +4,7 @@ import {runExistingStoreAnalysis} from './runtime-adapter.mjs';
 import {getAnalysisRefreshState,requestStoreAnalysisRefresh} from './refresh-state.mjs';
 import {requestStoreFeatureRefresh} from './feature-refresh-state.mjs';
 import {requestShadowPrediction} from './shadow-refresh-state.mjs';
+import {requestHistoricalComparisonRefresh} from './historical-refresh-state.mjs';
 import {scoreAvailableComparisonDays} from './comparison-refresh.mjs';
 import {deriveStoreMachineCount} from './task-metrics.mjs';
 
@@ -116,7 +117,14 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     console.error('[jugest-daily-analysis] PRE shadow score refresh failed',error);
   }
 
-  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null,shadowJobId:shadowJob?.id??null,comparisonScored:Number(comparisonRefresh?.scored)||0,comparisonExcluded:Number(comparisonRefresh?.excluded)||0};
+  let historicalRefresh={run:null,job:null,reason:null};
+  try{
+    historicalRefresh=requestHistoricalComparisonRefresh(db,{storeId,nowIso:at});
+  }catch(error){
+    console.error('[jugest-daily-analysis] historical comparison refresh failed',error);
+  }
+
+  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null,shadowJobId:shadowJob?.id??null,historicalJobId:historicalRefresh?.job?.id??null,comparisonScored:Number(comparisonRefresh?.scored)||0,comparisonExcluded:Number(comparisonRefresh?.excluded)||0};
 }
 
 export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION};
