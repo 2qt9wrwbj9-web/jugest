@@ -39,6 +39,32 @@ test('VPS browser client resolves a store then reads the precomputed default ana
   }
 });
 
+test('VPS browser client reads PRE store-read and bounded comparison through the same authenticated store scope',async()=>{
+  const calls=[];
+  const fetchFn=async(url,options={})=>{
+    calls.push({url:String(url),options});
+    if(String(url)==='/api/vps/stores')return jsonResponse({ok:true,stores:[{id:'store-1',name:'グリーン'}]});
+    if(String(url)==='/api/vps/stores/store-1/research/store-read')return jsonResponse({ok:true,storeRead:{status:'ready',targetDate:'2026-09-13',modelFingerprint:'fp-pre',rankings:[{rank:1,tableNo:'101',machineName:'my',score:1.2}]},businessDate:'2026-09-13',updatedAt:'2026-09-12T12:00:00Z'});
+    if(String(url)==='/api/vps/stores/store-1/research/comparison?limit=366')return jsonResponse({ok:true,limit:366,comparison:{live:{days:4,newWins:3,currentWins:1,ties:0,rows:[]},historical:null}});
+    throw new Error(`unexpected URL ${url}`);
+  };
+  const client=createVpsAnalyticsClient({fetchFn,storage:storageWith({channelId:'channel_123456789',receiverToken:'secret-token',linked:true})});
+  const storeRead=await client.getStoreRead('グリーン');
+  assert.equal(storeRead.storeRead.modelFingerprint,'fp-pre');
+  assert.equal(storeRead.storeRead.targetDate,'2026-09-13');
+  const comparison=await client.getResearchComparison('グリーン',{limit:9999});
+  assert.equal(comparison.limit,366);
+  assert.equal(comparison.comparison.live.newWins,3);
+  assert.deepEqual(calls.map(call=>call.url),[
+    '/api/vps/stores','/api/vps/stores/store-1/research/store-read',
+    '/api/vps/stores','/api/vps/stores/store-1/research/comparison?limit=366'
+  ]);
+  for(const call of calls){
+    assert.equal(call.options.headers['x-jugest-channel-id'],'channel_123456789');
+    assert.equal(call.options.headers.authorization,'Bearer secret-token');
+  }
+});
+
 test('VPS browser client never falls through to local data when the canonical API has no snapshot',async()=>{
   const fetchFn=async(url)=>String(url)==='/api/vps/stores'
     ?jsonResponse({ok:true,stores:[{id:'store-1',name:'グリーン'}]})
