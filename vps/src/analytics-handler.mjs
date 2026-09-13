@@ -4,6 +4,7 @@ import {migrate} from './schema.mjs';
 import {createRelayStore} from './relay-store.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
 import {buildComparisonSummary} from './research/live-comparison.mjs';
+import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -63,7 +64,8 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
       }
       if(parts.length===6&&parts[4]==='research'&&parts[5]==='comparison'){
         const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||90)));
-        const comparison=buildComparisonSummary(db,{storeId,limit});
+        const live=buildComparisonSummary(db,{storeId,limit});
+        const comparison={...live,historical:buildHistoricalComparisonSummary(db,{storeId,limit})};
         sendJson(req,res,200,{ok:true,store:access.store,limit,comparison});return;
       }
       if(parts.length===5&&parts[4]==='status'){
