@@ -44,24 +44,23 @@
   - `advanceHistoricalCursor(db,input) -> HistoricalRun`
   - `markHistoricalRunComplete(db,input)` / `markHistoricalRunStale(db,input)`
 
+The test file defines deterministic local fixture helpers `makeDays(count)`, `replaceDay(days,date)`, `fixtureResult(runId)`, and fixed `T0/T1/T2` ISO timestamps.
+
 - [ ] **Step 1: Write RED tests for deterministic run identity and append-once day rows**
 
 ```js
-test('same fixed snapshot reuses the run and changed history inside snapshot creates a new run',()=>{
-  const a=ensureHistoricalComparisonRun(db,{storeId:'s',days:days60,nowIso:T0});
-  const same=ensureHistoricalComparisonRun(db,{storeId:'s',days:[...days60,newerDay],nowIso:T1});
-  assert.equal(a.id,same.id,'newer live day must not restart fixed historical snapshot');
-  const changed=ensureHistoricalComparisonRun(db,{storeId:'s',days:replaceDay(days60,days60[10].date),nowIso:T2});
-  assert.notEqual(changed.id,a.id);
-  assert.equal(getHistoricalComparisonRun(db,{storeId:'s',runId:a.id}).state,'stale');
-});
+const days60=makeDays(60),newerDay=makeDays(61).at(-1);
+const a=ensureHistoricalComparisonRun(db,{storeId:'s',days:days60,nowIso:T0});
+const same=ensureHistoricalComparisonRun(db,{storeId:'s',days:[...days60,newerDay],nowIso:T1});
+assert.equal(a.id,same.id,'newer live day must not restart fixed historical snapshot');
+const changed=ensureHistoricalComparisonRun(db,{storeId:'s',days:replaceDay(days60,days60[10].date),nowIso:T2});
+assert.notEqual(changed.id,a.id);
+assert.equal(getHistoricalComparisonRun(db,{storeId:'s',runId:a.id}).state,'stale');
 
-test('historical result is append-once for run plus target date',()=>{
-  const run=ensureHistoricalComparisonRun(db,{storeId:'s',days:days60,nowIso:T0});
-  assert.equal(persistHistoricalComparisonDay(db,fixtureResult(run.id)).inserted,true);
-  assert.equal(persistHistoricalComparisonDay(db,fixtureResult(run.id)).inserted,false);
-  assert.equal(db.prepare('SELECT COUNT(*) n FROM historical_comparison_days').get().n,1);
-});
+const run=ensureHistoricalComparisonRun(db,{storeId:'s',days:days60,nowIso:T0});
+assert.equal(persistHistoricalComparisonDay(db,fixtureResult(run.id)).inserted,true);
+assert.equal(persistHistoricalComparisonDay(db,fixtureResult(run.id)).inserted,false);
+assert.equal(db.prepare('SELECT COUNT(*) n FROM historical_comparison_days').get().n,1);
 ```
 
 - [ ] **Step 2: Run RED**
@@ -74,26 +73,26 @@ Expected: module/table missing failure.
 
 - [ ] **Step 3: Add schema**
 
-Add `historical_comparison_runs` with: `id`, `store_id`, `replay_version`, `history_identity`, `snapshot_first_date`, `snapshot_last_date`, `next_target_date`, state (`queued|running|complete|failed|stale`), total/processed/scored/excluded counts, `pre_state_json`, `pre_fingerprint`, `pre_frontier_date`, error/timestamps, and a unique `(store_id,replay_version,history_identity)` constraint.
+Add `historical_comparison_runs` with `id`, `store_id`, `replay_version`, `history_identity`, `snapshot_first_date`, `snapshot_last_date`, `next_target_date`, state (`queued|running|complete|failed|stale`), total/processed/scored/excluded counts, `pre_state_json`, `pre_fingerprint`, `pre_frontier_date`, error/timestamps, and unique `(store_id,replay_version,history_identity)`.
 
 Add `historical_comparison_days` with append-once `(run_id,target_date)` PK plus PRE/current prediction JSON+hashes, shared `outcome_input_hash`, PRE/current metrics, winner/exclusion, PRE fingerprint/feature/frontier, scorer version, and created timestamp.
 
 - [ ] **Step 4: Implement fixed-snapshot identity**
 
-At first creation, `snapshot_last_date` is the newest valid canonical date then present. `computeHistoricalSnapshotIdentity()` hashes only ordered canonical data with `date <= snapshot_last_date`. When `ensureHistoricalComparisonRun()` is called later:
+At first creation, `snapshot_last_date` is the newest valid canonical date then present. `computeHistoricalSnapshotIdentity()` hashes only ordered canonical data with `date <= snapshot_last_date`. The helper flow is:
 
 ```js
 const active=getLatestNonStaleRun(db,storeId);
 if(active){
   const prefix=days.filter(day=>day.date<=active.snapshotLastDate);
   const currentIdentity=computeHistoricalSnapshotIdentity(prefix,{snapshotLastDate:active.snapshotLastDate});
-  if(currentIdentity===active.historyIdentity)return active; // ignore newer LIVE tail
-  markHistoricalRunStale(...);
+  if(currentIdentity===active.historyIdentity)return active;
+  markHistoricalRunStale(db,{runId:active.id,nowIso,reason:'history_identity_changed'});
 }
-return createRunFromCurrentSnapshot(...);
+return createHistoricalRun(db,{storeId,days,nowIso});
 ```
 
-Initialize PRE state from `baselineModel()` only.
+`createHistoricalRun()` is private to the module and initializes `pre_state_json` from `baselineModel()` only.
 
 - [ ] **Step 5: Run GREEN and commit**
 
@@ -119,34 +118,29 @@ git commit -m "feat: add historical comparison ledger"
 - `predictHistoricalPre({storeId,historyDays,targetDate,state}) -> Prediction`
 - `compareHistoricalTarget({rootDir,storeId,shop,days,targetDate,preState}) -> HistoricalTargetResult`
 
+The test file defines local `makeDays(count)`, `poisonOnlyDatesAfter(days,targetDate)`, and `replayFixtureChronologically(days)` helpers.
+
 - [ ] **Step 1: Write RED tests for future poisoning and live-model isolation**
 
 ```js
-test('future poisoning cannot change an earlier PRE historical prediction',async()=>{
-  const target=days70[50].date;
-  const a=await compareHistoricalTarget({rootDir:ROOT,storeId:'s',shop:'S',days:days70,targetDate:target,preState:initialHistoricalPreState()});
-  const poisoned=poisonOnlyDatesAfter(days70,target);
-  const b=await compareHistoricalTarget({rootDir:ROOT,storeId:'s',shop:'S',days:poisoned,targetDate:target,preState:initialHistoricalPreState()});
-  assert.deepEqual(a.prePrediction.rankings,b.prePrediction.rankings);
-  assert.equal(a.prePrediction.inputHash,b.prePrediction.inputHash);
-});
-
-test('historical PRE begins from baseline independently of live registry',()=>{
-  const s=initialHistoricalPreState();
-  assert.equal(s.generation,0);
-  assert.equal(s.fingerprint,baselineModel().fingerprint);
-});
+const days70=makeDays(70),target=days70[50].date;
+const a=await compareHistoricalTarget({rootDir:ROOT,storeId:'s',shop:'S',days:days70,targetDate:target,preState:initialHistoricalPreState()});
+const b=await compareHistoricalTarget({rootDir:ROOT,storeId:'s',shop:'S',days:poisonOnlyDatesAfter(days70,target),targetDate:target,preState:initialHistoricalPreState()});
+assert.deepEqual(a.prePrediction.rankings,b.prePrediction.rankings);
+assert.equal(a.prePrediction.inputHash,b.prePrediction.inputHash);
+const initial=initialHistoricalPreState();
+assert.equal(initial.generation,0);
+assert.equal(initial.fingerprint,baselineModel().fingerprint);
 ```
 
-- [ ] **Step 2: Write RED test for strict current cutoff and shared outcome hash**
+- [ ] **Step 2: Write RED test for strict cutoff and shared outcome hash**
 
 ```js
-test('both engines predict before target and score against one outcome hash',async()=>{
-  const r=await compareHistoricalTarget(fixtureArgs);
-  assert.ok(r.prePrediction.sourceFrontierDate<r.targetDate);
-  assert.ok(r.currentPrediction.sourceFrontierDate<r.targetDate);
-  if(!r.excludedReason)assert.equal(r.preScore.outcomeInputHash,r.currentScore.outcomeInputHash);
-});
+const days70=makeDays(70),targetDate=days70[55].date;
+const r=await compareHistoricalTarget({rootDir:ROOT,storeId:'s',shop:'S',days:days70,targetDate,preState:initialHistoricalPreState()});
+assert.ok(r.prePrediction.sourceFrontierDate<r.targetDate);
+assert.ok(r.currentPrediction.sourceFrontierDate<r.targetDate);
+if(!r.excludedReason)assert.equal(r.preScore.outcomeInputHash,r.currentScore.outcomeInputHash);
 ```
 
 - [ ] **Step 3: Run RED**
@@ -157,48 +151,49 @@ node --test vps/tests/historical-walk-forward.test.mjs
 
 - [ ] **Step 4: Implement isolated chronological PRE evolution**
 
-For every new simulated frontier, rebuild `buildWalkForwardDataset({minHistoryDays:7})`, split chronologically, discover axes from training data, then run `searchModels()` using the carried champion model. **Reset frontier-local `noImproveCount` to zero whenever the simulated frontier advances**, matching live `research-cycle` behavior. Keep historical `seenFingerprints` across frontiers because live registry history is persistent.
-
-Use live convergence semantics exactly:
+For every new simulated frontier, rebuild `buildWalkForwardDataset({minHistoryDays:7})`, split chronologically, discover axes from training data, then run `searchModels()` using the carried champion model. Reset frontier-local `noImproveCount` to zero whenever the simulated frontier advances, matching live `research-cycle` behavior. Keep historical `seenFingerprints` across frontiers because live registry history is persistent.
 
 ```js
-let noImproveCount=0;
+const dataset=buildWalkForwardDataset({storeId,days:historyDays,minHistoryDays:7});
+const split=splitChronologicalSamples(dataset.samples);
+let model=state.model,generation=state.generation,noImproveCount=0;
+const seen=new Set(state.seenFingerprints||[fingerprintModel(model)]);
 for(let round=0;round<maxSearchRounds;round+=1){
-  const result=searchModels(...);
+  const axes=discoverAxes(split.train);
+  const result=searchModels({champion:model,axes,train:split.train,validation:split.validation,round});
   const proposed=result.best?.model?.fingerprint??null;
-  const repeated=Boolean(proposed&&seen.has(proposed)&&proposed!==fingerprintModel(model));
-  if(result.improved&&result.best?.model&&!repeated&&proposed!==fingerprintModel(model)){
+  const currentFingerprint=fingerprintModel(model);
+  const repeated=Boolean(proposed&&seen.has(proposed)&&proposed!==currentFingerprint);
+  if(result.improved&&result.best?.model&&!repeated&&proposed!==currentFingerprint){
     model=result.best.model;generation+=1;seen.add(proposed);noImproveCount=0;continue;
   }
   noImproveCount+=1;
   const convergence=shouldConverge({seenFingerprints:repeated?new Set([proposed]):new Set(),proposedFingerprint:proposed,noImproveCount});
-  if(convergence)return {state:...,converged:true};
+  if(convergence){
+    const nextState=Object.freeze({...state,model,fingerprint:fingerprintModel(model),generation,seenFingerprints:Object.freeze([...seen])});
+    return Object.freeze({state:nextState,datasetHash:dataset.inputHash,converged:true});
+  }
 }
-return {state:...,converged:false};
+const nextState=Object.freeze({...state,model,fingerprint:fingerprintModel(model),generation,seenFingerprints:Object.freeze([...seen])});
+return Object.freeze({state:nextState,datasetHash:dataset.inputHash,converged:false});
 ```
 
-If the 64-round safety cap is reached without convergence, do not pretend the PRE prediction is final: target date is excluded as `pre_cycle_incomplete` and the latest isolated champion remains available to continue chronology.
+If the 64-round safety cap is reached without convergence, target date is excluded as `pre_cycle_incomplete`; do not count it as a PRE prediction win/loss.
 
 - [ ] **Step 5: Implement PRE prediction and current plan**
 
 PRE ranking uses `buildLivePredictionRows()` plus `scoreSample()` and deterministic score/machine-key ordering. Current ranking calls:
 
 ```js
-runExistingStorePlan({
-  rootDir,shop,sourceStoreId:storeId,
-  days:historyDays.slice(-400),
-  targetDate
-})
+runExistingStorePlan({rootDir,shop,sourceStoreId:storeId,days:historyDays.slice(-400),targetDate})
 ```
 
-Only days `< targetDate` may enter either path.
-
-Target outcome is finite `diff` rows from the canonical target day. Build exactly one `outcomeInputHash`, score both with existing `scorePredictionRows()`, and choose winner using LIVE `WIN_EPSILON` semantics. Missing engine output, missing outcome, or incomplete PRE cycle becomes an exclusion, never a win/loss/tie.
+Only days `< targetDate` enter either path. Target outcome is finite `diff` rows from the canonical target day. Build exactly one `outcomeInputHash`, score both with existing `scorePredictionRows()`, and choose winner using LIVE `WIN_EPSILON` semantics. Missing engine output, missing outcome, or incomplete PRE cycle is excluded.
 
 - [ ] **Step 6: Add warm-up/first-valid-day test**
 
 ```js
-const rows=await replayFixtureChronologically(days70);
+const rows=await replayFixtureChronologically(makeDays(70));
 const first=rows.findIndex(row=>!row.excludedReason);
 assert.ok(first>=7);
 for(const row of rows.slice(7,first))assert.ok(row.excludedReason);
@@ -225,6 +220,8 @@ git commit -m "feat: add isolated historical walk-forward comparison"
 - Create: `vps/tests/historical-coordinator.test.mjs`
 
 **Interfaces:**
+- `HISTORICAL_JOB_PRIORITY = 80`
+- `HISTORICAL_JOB_LEASE_MIB = 768`
 - `requestHistoricalComparisonRefresh(db,{storeId,nowIso}) -> {run,job}`
 - `bootstrapHistoricalComparisonRuns(db,{nowIso}) -> {requested,skipped}`
 - Job type: `HISTORICAL_COMPARE`.
@@ -236,6 +233,7 @@ const a=requestHistoricalComparisonRefresh(db,{storeId:'s',nowIso:T0});
 const b=requestHistoricalComparisonRefresh(db,{storeId:'s',nowIso:T1});
 assert.equal(a.job.id,b.job.id);
 assert.equal(a.job.type,'HISTORICAL_COMPARE');
+assert.equal(a.job.priority,80);
 assert.match(String(__test.defaultWorkerPathForJob({type:'HISTORICAL_COMPARE'})),/historical-compare\.mjs/);
 assert.equal(__test.RESEARCH_JOB_TYPES.has('HISTORICAL_COMPARE'),true);
 ```
@@ -248,36 +246,31 @@ node --test vps/tests/historical-worker.test.mjs vps/tests/historical-coordinato
 
 - [ ] **Step 3: Implement refresh/bootstrap**
 
-Use an idempotency key containing store, run ID, and cursor:
+Use idempotency key `historical-compare:<storeId>:<runId>:<nextTargetDate>`, priority `80`, size class `large`, estimated lease `768 MiB`, max attempts `3`.
 
-```text
-historical-compare:<storeId>:<runId>:<nextTargetDate>
-```
+`bootstrapHistoricalComparisonRuns()` scans registered stores once on the Coordinator's first tick and requests a run only when the store has at least 8 valid canonical days and no active/complete fixed-snapshot run. Newer live dates after a completed snapshot do not cause a full historical rerun; LIVE shadow covers those dates.
 
-Use a numeric priority lower than every live research job and a large lease consistent with the current research lane. `bootstrapHistoricalComparisonRuns()` scans registered stores once on the Coordinator's first tick and requests a run only when the store has enough canonical history and no active/complete fixed-snapshot run. Newer live dates after a completed snapshot do not cause a full historical rerun; LIVE shadow covers those dates.
-
-After successful `DAILY_ANALYSIS`, request historical refresh only if no historical snapshot exists yet or a backfill/change inside the fixed snapshot boundary has invalidated it. Failure to request historical work must not fail `DAILY_ANALYSIS`.
+After successful `DAILY_ANALYSIS`, request historical refresh only if no historical snapshot exists yet or a backfill/change inside the fixed snapshot boundary invalidated it. Failure to request historical work must not fail `DAILY_ANALYSIS`.
 
 - [ ] **Step 4: Implement one-target worker**
 
-One child invocation must: load/migrate DB; load run/cursor; reload valid canonical days; verify identity only through `snapshot_last_date`; if stale, mark old run stale and request a new run; otherwise compare exactly `next_target_date`; append one day row; persist PRE state/cursor transactionally; mark complete at snapshot end or enqueue exactly one next cursor job; emit existing task telemetry/result hash.
+Export `executeHistoricalCompare({dbPath,job,rootDir})`. One invocation loads/migrates DB; loads run/cursor; reloads valid canonical days; verifies identity only through `snapshot_last_date`; on stale input marks old run stale and requests one replacement; otherwise compares exactly `next_target_date`; appends one day row; persists PRE state/cursor transactionally; marks complete at snapshot end or enqueues exactly one next cursor job; emits existing task telemetry/result hash.
 
 - [ ] **Step 5: Add resume/idempotency test**
 
 ```js
-await executeHistoricalCompare(job1);
-const firstCount=countDays(db);
-const cursor=activeRun(db).nextTargetDate;
-await executeHistoricalCompare(job2);
+await executeHistoricalCompare({dbPath,job:job1,rootDir:ROOT});
+const firstCount=countDays(db),cursor=activeRun(db).nextTargetDate;
+await executeHistoricalCompare({dbPath,job:job2,rootDir:ROOT});
 assert.equal(countDays(db),firstCount+1);
 assert.notEqual(activeRun(db).nextTargetDate,cursor);
-await executeHistoricalCompare(job2); // replay same cursor/job payload
+await executeHistoricalCompare({dbPath,job:job2,rootDir:ROOT});
 assert.equal(countDistinctRunDates(db),countDays(db));
 ```
 
 - [ ] **Step 6: Wire Coordinator**
 
-Add `HISTORICAL_COMPARE_WORKER`, route it in `defaultWorkerPathForJob`, and add `HISTORICAL_COMPARE` to `RESEARCH_JOB_TYPES`. Keep `maxResearchChildren=1` behavior unchanged. Run the bootstrap once per Coordinator process before normal admission.
+Add `HISTORICAL_COMPARE_WORKER`, route it in `defaultWorkerPathForJob`, add `HISTORICAL_COMPARE` to `RESEARCH_JOB_TYPES`, keep `maxResearchChildren=1`, and run bootstrap once per Coordinator process before normal admission.
 
 - [ ] **Step 7: Run GREEN and commit**
 
@@ -289,7 +282,7 @@ git commit -m "feat: schedule resumable historical comparison"
 
 ---
 
-### Task 4: Historical aggregation through existing authenticated comparison API
+### Task 4: Historical aggregation through the existing authenticated comparison API
 
 **Files:**
 - Modify: `vps/src/research/historical-comparison.mjs`
@@ -301,10 +294,13 @@ git commit -m "feat: schedule resumable historical comparison"
 - `buildHistoricalComparisonSummary(db,{storeId,limit=90}) -> HistoricalSummary|null`
 - Existing `buildComparisonSummary()` keeps `live` backward-compatible and replaces `historical:null` with the new summary.
 
+The test file defines `seedHistoricalFixture()` locally and returns a migrated in-memory DB with two scored days and one excluded day.
+
 - [ ] **Step 1: Write aggregation RED test**
 
 ```js
-const s=buildHistoricalComparisonSummary(seedHistoricalFixture(),{storeId:'s'});
+const db=seedHistoricalFixture();
+const s=buildHistoricalComparisonSummary(db,{storeId:'s'});
 assert.equal(s.scored,2);
 assert.equal(s.excluded,1);
 assert.equal(s.newWins,1);
@@ -313,11 +309,11 @@ assert.equal(s.currentWins,1);
 
 - [ ] **Step 2: Implement summary**
 
-Return: state/progress, store/run/replay version, fixed date range, processed/scored/excluded, W/L/T, PRE/current average metrics, recent-30 quality delta, exclusion breakdown, simulated fingerprint/frontier, bounded recent day rows, and last error. Use the same metric and winner semantics as LIVE; never add historical rows into LIVE counts.
+Return state/progress, store/run/replay version, fixed date range, processed/scored/excluded, W/L/T, PRE/current average metrics, recent-30 quality delta, exclusion breakdown, simulated fingerprint/frontier, bounded recent day rows, and last error. Reuse LIVE metric/winner semantics and never merge historical rows into LIVE counts.
 
 - [ ] **Step 3: Keep endpoint/auth unchanged**
 
-`GET /api/vps/stores/:storeId/research/comparison?limit=90` remains the only comparison endpoint. Existing receiver auth and store isolation remain mandatory.
+`GET /api/vps/stores/:storeId/research/comparison?limit=90` remains the only comparison endpoint. Extend `comparison-api.test.mjs` so unauthorized remains `401`, another channel's store remains `403`, and an authorized response contains both `comparison.live` and `comparison.historical`.
 
 - [ ] **Step 4: Run API/summary tests and commit**
 
@@ -340,7 +336,7 @@ git commit -m "feat: expose historical comparison results"
 
 - [ ] **Step 1: Write UI RED tests**
 
-Require `data-vps-comparison-mode`, `LIVE`, `過去検証`, and target-aware pending rendering. Given an unscored LIVE row for `2026-09-14`, output must include both `9/14予測を固定済み` and `9/14の実績データ待ち`.
+Require `data-vps-comparison-mode`, `LIVE`, `過去検証`, and target-aware pending rendering. Given an unscored LIVE row for `2026-09-14`, rendered output must include `9/14予測を固定済み` and `9/14の実績データ待ち`.
 
 - [ ] **Step 2: Implement two-mode comparison UI**
 
@@ -368,6 +364,8 @@ git commit -m "feat: show historical PRE comparison in settings"
 - Modify: `vps/src/jobs/historical-compare.mjs`
 - Create: `vps/tests/historical-staleness.test.mjs`
 
+The test file defines `insertOldMissingDay(days)` and two-store fixtures locally.
+
 - [ ] **Step 1: Write RED test for changed old history but unchanged new LIVE tail**
 
 ```js
@@ -381,11 +379,11 @@ assert.equal(getHistoricalComparisonRun(db,{storeId:'s',runId:run.id}).state,'st
 
 - [ ] **Step 2: Write multi-store isolation test**
 
-Two stores must have independent run IDs, cursors, jobs, and day rows; processing one must not advance the other.
+Create runs for stores `s1` and `s2`, process one target for `s1`, then assert `s2` run ID, cursor, processed count, and day-row count are unchanged.
 
 - [ ] **Step 3: Implement stale restart**
 
-Before each target, recompute identity only for canonical dates `<= snapshot_last_date`. On mismatch, retain old day rows for audit, mark old run stale, create/request one replacement fixed snapshot, and complete the obsolete job without retry looping.
+Before each target, recompute identity only for canonical dates `<= snapshot_last_date`. On mismatch, retain old rows for audit, mark old run stale, create/request one replacement fixed snapshot, and complete the obsolete job without retry looping.
 
 - [ ] **Step 4: Run tests and commit**
 
@@ -416,21 +414,21 @@ node --test \
   vps/tests/pre-shadow-settings-ui.test.mjs
 ```
 
-- [ ] **Step 2: Run the repository's complete CI-equivalent suites**
+- [ ] **Step 2: Run complete CI-equivalent suites**
 
-Run exactly the workflow commands for VPS, root regressions, Collector, and production-preservation. All must pass before completion is claimed.
+Run the exact workflow commands for VPS, root regressions, Collector, and production-preservation. All must pass before completion is claimed.
 
 - [ ] **Step 3: Protected-surface diff audit**
 
-Compare implementation HEAD against plan/spec checkpoint and verify no unintended changes to `hanahana-judge.js`, `core-v510.js`, Juggler probability tables, protected `externalJudge` / Calibration / strict Champion logic, or Collector contract. `index.html` and `app-v510.js` should remain unchanged; if implementation would require broadening into them, stop and ask Hiro first.
+Compare implementation HEAD against checkpoint `78a7c362cb249e3dc2d46ca6df8ff007ffd21f58` and verify no unintended changes to `hanahana-judge.js`, `core-v510.js`, Juggler probability tables, protected `externalJudge` / Calibration / strict Champion logic, or Collector contract. `index.html` and `app-v510.js` remain unchanged; if implementation would require broadening into them, stop and ask Hiro first.
 
 - [ ] **Step 4: Verify production refs are unchanged**
 
-`main` and `deploy/vps` must still point to the pre-implementation production refs. Only `sol/vps-research-pipeline-phase1-impl` advances.
+`main` and `deploy/vps` must still point to their pre-implementation production refs. Only `sol/vps-research-pipeline-phase1-impl` advances.
 
 - [ ] **Step 5: Checkpoint and commit**
 
-Record feature-branch SHA, test counts, protected-file audit, historical replay design version, and `not deployed` status in `docs/vps/VPS-RESEARCH-PHASE1-PREDEPLOY-CHECKPOINT.md`.
+Record feature-branch SHA, test counts, protected-file audit, historical replay version, and `not deployed` status in `docs/vps/VPS-RESEARCH-PHASE1-PREDEPLOY-CHECKPOINT.md`.
 
 - [ ] **Step 6: Stop at production boundary**
 
