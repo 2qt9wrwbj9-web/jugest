@@ -35,7 +35,7 @@ function seed(){
   return {dir,dbPath,db,job,cleanup(){try{db.close()}catch{}rmSync(dir,{recursive:true,force:true})}};
 }
 
-test('real DAILY_ANALYSIS child emits task workload telemetry and persists snapshots',async()=>{
+test('real DAILY_ANALYSIS child emits task workload telemetry once and persists snapshots',async()=>{
   const f=seed();
   try{
     const messages=[];
@@ -49,8 +49,10 @@ test('real DAILY_ANALYSIS child emits task workload telemetry and persists snaps
         onExit:code=>{if(code!==0&&messages.every(x=>x.type!=='complete')){clearTimeout(timeout);reject(new Error(`daily child exited ${code}`))}}
       });
     });
-    const start=messages.find(x=>x.type==='task_start');
+    const starts=messages.filter(x=>x.type==='task_start');
+    const start=starts[0];
     const done=messages.find(x=>x.type==='complete');
+    assert.equal(starts.length,1,'daily child must emit task_start exactly once');
     assert.ok(start,'daily child must announce task metadata before completion');
     assert.equal(start.taskMeta.taskKind,'daily_analysis');
     assert.equal(start.taskMeta.phase,1);
@@ -61,6 +63,10 @@ test('real DAILY_ANALYSIS child emits task workload telemetry and persists snaps
     assert.ok(done);
     assert.equal(done.status,'analyzed');
     assert.match(done.resultHash,/^[a-f0-9]{64}$/);
+    assert.equal(done.taskMetrics.taskKind,'daily_analysis');
+    assert.equal(done.taskMetrics.storeMachineCount,2);
+    assert.equal(done.taskMetrics.dayCount,4);
+    assert.equal(done.taskMetrics.rowCount,8);
     assert.ok(Number.isFinite(done.taskMetrics.peakRssMiB));
     assert.ok(Number.isFinite(done.taskMetrics.cpuMs));
     assert.ok(done.taskMetrics.durationMs>=0);
