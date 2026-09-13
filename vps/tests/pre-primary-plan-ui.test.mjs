@@ -21,5 +21,13 @@ test('Today Plan falls through to the untouched current JUGEST path when PRE is 
   assert.match(source,/stopImmediatePropagation/);
   assert.match(source,/data-vps-plan-fallback/);
   assert.match(source,/現行版で表示中/);
-  assert.match(source,/button\.click\(\)/);
+  assert.match(source,/currentButton\s*=\s*restorePlanButton\(\)/);
+  assert.match(source,/planBypassOnce=true;currentButton\.click\(\)/);
+});
+
+test('PRE lookup keeps the current Today Plan button usable and suppresses duplicate PRE requests',()=>{
+  assert.match(source,/data-vps-pre-busy/);
+  assert.match(source,/if\(prePlanState\?\.busy\)\{event\.preventDefault\(\);event\.stopImmediatePropagation\(\);return\}/);
+  assert.doesNotMatch(source,/prePlanState\?\.busy[\s\S]{0,180}button\.disabled=true/);
+  assert.match(source,/function restorePlanButton\(\)/);
 });
