@@ -206,7 +206,7 @@ function failureChip(){return root?.querySelector('.analysis-chip')||null}
 function reconcileFailureChip(){
   const chip=failureChip();if(!chip)return;
   const text=chip.textContent||'';
-  if(!text.includes('解析失敗')){if(text.includes('店舗解析中')||text.includes('解析完了'))setFailureAck('');chip.style.removeProperty('display');return}
+  if(!text.includes('解析失敗')){if(text.includes('店舗解析中')||text.includes('解析完了'))setFailureAck('');return}
   const fingerprint=chipFingerprint(chip);
   if(getFailureAck()===fingerprint)chip.style.display='none';else chip.style.removeProperty('display');
 }
