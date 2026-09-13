@@ -117,6 +117,35 @@ export function migrate(db){
       FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS analysis_task_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER,
+      store_id TEXT NOT NULL,
+      phase INTEGER NOT NULL CHECK (phase IN (1,2,3)),
+      task_kind TEXT NOT NULL,
+      task_version TEXT NOT NULL,
+      model_fingerprint TEXT,
+      store_machine_count INTEGER NOT NULL,
+      store_size_bucket TEXT NOT NULL,
+      day_count INTEGER NOT NULL,
+      row_count INTEGER NOT NULL,
+      workload_units INTEGER NOT NULL,
+      started_at TEXT NOT NULL,
+      ended_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      start_rss_mib REAL,
+      end_rss_mib REAL,
+      peak_rss_mib REAL,
+      cpu_ms REAL,
+      status TEXT NOT NULL CHECK (status IN ('succeeded','failed','cancelled')),
+      error_class TEXT,
+      details_json TEXT NOT NULL DEFAULT '{}',
+      FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE SET NULL,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS analysis_task_metrics_store_time_idx ON analysis_task_metrics(store_id,started_at DESC);
+    CREATE INDEX IF NOT EXISTS analysis_task_metrics_kind_time_idx ON analysis_task_metrics(task_kind,started_at DESC);
+
     CREATE TABLE IF NOT EXISTS memory_profiles (
       job_type TEXT NOT NULL,
       size_class TEXT NOT NULL,
