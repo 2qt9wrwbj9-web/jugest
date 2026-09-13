@@ -37,8 +37,14 @@ export async function executeHistoricalCompare({dbPath,job,rootDir=fileURLToPath
     const machineScale=deriveStoreMachineCount(snapshotDays),rowCount=snapshotDays.reduce((sum,day)=>sum+(Array.isArray(day.machines)?day.machines.length:0),0);
     process.send?.({type:'task_start',taskMeta:{taskKind:'HISTORICAL_COMPARE',phase:3,taskVersion:run.replayVersion,storeId,modelFingerprint:run.preFingerprint||null,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,dayCount:snapshotDays.length,rowCount,workloadUnits:rowCount,details:{runId,targetDate}}});
     const result=await compareHistoricalTarget({rootDir,storeId,shop:loaded.store.name,days:snapshotDays,targetDate,preState:run.preState});
-    persistHistoricalComparisonDay(db,{runId,storeId,targetDate,prePrediction:result.prePrediction,currentPrediction:result.currentPrediction,outcomeInputHash:result.outcomeInputHash??result.preScore?.outcomeInputHash??null,preMetrics:result.preScore?.metrics??null,currentMetrics:result.currentScore?.metrics??null,winner:result.winner,excludedReason:result.excludedReason,preState:result.preState,scorerVersion:SCORER_VERSION,createdAt:nowIso});
-    const next=nextTarget(snapshotDays,targetDate,run.snapshotLastDate),advanced=advanceHistoricalCursor(db,{runId,nextTargetDate:next,processedDelta:1,scoredDelta:result.excludedReason?0:1,excludedDelta:result.excludedReason?1:0,preState:result.preState,nowIso});
+    const next=nextTarget(snapshotDays,targetDate,run.snapshotLastDate);
+    let advanced;
+    db.exec('BEGIN IMMEDIATE');
+    try{
+      persistHistoricalComparisonDay(db,{runId,storeId,targetDate,prePrediction:result.prePrediction,currentPrediction:result.currentPrediction,outcomeInputHash:result.outcomeInputHash??result.preScore?.outcomeInputHash??null,preMetrics:result.preScore?.metrics??null,currentMetrics:result.currentScore?.metrics??null,winner:result.winner,excludedReason:result.excludedReason,preState:result.preState,scorerVersion:SCORER_VERSION,createdAt:nowIso});
+      advanced=advanceHistoricalCursor(db,{runId,nextTargetDate:next,processedDelta:1,scoredDelta:result.excludedReason?0:1,excludedDelta:result.excludedReason?1:0,preState:result.preState,nowIso});
+      db.exec('COMMIT');
+    }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
     let followupJobId=null;if(next){const refresh=requestHistoricalComparisonRefresh(db,{storeId,nowIso});followupJobId=refresh.job?.id??null}
     return {status:result.excludedReason?'excluded':'scored',storeId,runId,targetDate,nextTargetDate:advanced.nextTargetDate,followupJobId,winner:result.winner,excludedReason:result.excludedReason,outputHash:hashCanonical({runId,storeId,targetDate,winner:result.winner,excludedReason:result.excludedReason,nextTargetDate:advanced.nextTargetDate})};
   }finally{db.close()}
