@@ -1,5 +1,6 @@
 import {createRelayRuntime} from '../../api/_relay-web.js';
 import {runWebHandler} from '../../api/_node-web.js';
+import {markCollectorActivity} from './collector-activity.mjs';
 import {openDatabase} from './db.mjs';
 import {ingestCollectorDay} from './ingest/canonical-ingest.mjs';
 import {createRelayStore} from './relay-store.mjs';
@@ -7,6 +8,7 @@ import {migrate} from './schema.mjs';
 import {measureIngest} from './resource-telemetry.mjs';
 
 const MAX_RELAY_BODY_BYTES=8*1024*1024;
+const COLLECTOR_PUSH_ACTIONS=new Set(['iosCollectorPushV2','iosCollectorPushBatchV3']);
 
 async function readNodeBody(req){
   const method=String(req.method||'GET').toUpperCase();
@@ -24,6 +26,14 @@ async function readNodeBody(req){
     chunks.push(buf);
   }
   return Buffer.concat(chunks,size);
+}
+
+function relayAction(body){
+  if(!body)return '';
+  try{
+    const parsed=JSON.parse(Buffer.isBuffer(body)?body.toString('utf8'):String(body));
+    return String(parsed?.action||'');
+  }catch{return ''}
 }
 
 function sendRelayError(res,error){
@@ -85,9 +95,10 @@ export function createVpsRelayHandler({dbPath,canonicalDbPath=null,rawRoot=null}
   return async function vpsRelayHandler(req,res){
     try{
       const body=await readNodeBody(req);
+      if(canonicalDbPath&&COLLECTOR_PUSH_ACTIONS.has(relayAction(body)))markCollectorActivity({dbPath:canonicalDbPath});
       return await runWebHandler({method:req.method,url:req.url,headers:req.headers,body},res,runtime.default);
     }catch(error){if(!res.headersSent)sendRelayError(res,error);else res.destroy(error)}
   };
 }
 
-export const __test={MAX_RELAY_BODY_BYTES,findSavedCollectorDay,installCanonicalPushHook};
+export const __test={MAX_RELAY_BODY_BYTES,COLLECTOR_PUSH_ACTIONS,relayAction,findSavedCollectorDay,installCanonicalPushHook};
