@@ -46,14 +46,10 @@ test('both historical engines predict strictly before target and share one outco
   assert.ok(['pre_research','current_shadow','tie'].includes(result.winner));
 });
 
-test('seven days is only a warmup floor; dates remain excluded until both engines are valid',async()=>{
-  const days=makeDays(56),state=initialHistoricalPreState(),rows=[];
-  for(let index=7;index<days.length;index+=1){
-    const row=await compareHistoricalTarget({rootDir:ROOT,storeId:'store-a',shop:'解析テスト店',days,targetDate:days[index].date,preState:state});
-    rows.push(row);
-    if(!row.excludedReason)break;
-  }
-  const first=rows.findIndex(row=>!row.excludedReason);
-  assert.ok(first>=0,'fixture should eventually make both engines valid');
-  for(const row of rows.slice(0,first))assert.ok(row.excludedReason);
+test('seven days is only a warmup floor and does not force an invalid current prediction into scoring',async()=>{
+  const days=makeDays(56),state=initialHistoricalPreState();
+  const early=await compareHistoricalTarget({rootDir:ROOT,storeId:'store-a',shop:'解析テスト店',days,targetDate:days[7].date,preState:state});
+  assert.ok(early.excludedReason,'the warmup floor alone must not guarantee a scored comparison');
+  const mature=await compareHistoricalTarget({rootDir:ROOT,storeId:'store-a',shop:'解析テスト店',days,targetDate:days[55].date,preState:state});
+  assert.equal(mature.excludedReason,null,'the fixture should become valid once both engines have enough history');
 }
