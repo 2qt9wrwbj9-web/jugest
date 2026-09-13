@@ -8,7 +8,7 @@ import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {enqueueJob,getJob} from '../src/queue.mjs';
 import {loadResourcePolicy} from '../src/config.mjs';
-import {Coordinator} from '../src/coordinator.mjs';
+import {CollectorAwareCoordinator} from '../src/collector-aware-coordinator.mjs';
 import {createWebServer} from '../src/web-server.mjs';
 
 function dbFixture(){
@@ -34,7 +34,7 @@ test('recent Collector activity preempts running historical research and blocks 
     const job=enqueueJob(f.db,{type:'HISTORICAL_COMPARE',priority:80,idempotencyKey:'hist-1',payload:{storeId:'s1',runId:1,targetDate:'2026-09-01'},sizeClass:'large',estimatedLeaseMiB:256,maxAttempts:3,createdAtIso:'2026-09-14T00:00:00.000Z'});
     const sp=fakeSpawner();
     const policy=loadResourcePolicy({maxAnalysisChildren:1});
-    const coordinator=new Coordinator({db:f.db,memoryReader:async()=>snapshot(),spawnChild:sp.spawn,owner:'test',policy,clock:()=>new Date('2026-09-14T00:00:10.000Z'),collectorActivityReader:()=>collectorActive});
+    const coordinator=new CollectorAwareCoordinator({db:f.db,memoryReader:async()=>snapshot(),spawnChild:sp.spawn,owner:'test',policy,clock:()=>new Date('2026-09-14T00:00:10.000Z'),collectorActivityReader:()=>collectorActive});
     await coordinator.tick();
     assert.equal(sp.calls.length,1);
     assert.equal(getJob(f.db,job.id).state,'running');
