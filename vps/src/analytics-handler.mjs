@@ -5,6 +5,7 @@ import {createRelayStore} from './relay-store.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
+const STORE_READ_VERSION='store-read-v1';
 const RELAY_STORE_NAME='juggler-relay-v1';
 function digest(value){return createHash('sha256').update(String(value||'')).digest('hex')}
 function secureMatch(raw,expectedHash){if(!raw||!/^[a-f0-9]{64}$/i.test(String(expectedHash||'')))return false;const a=Buffer.from(digest(raw),'hex'),b=Buffer.from(String(expectedHash),'hex');return a.length===b.length&&timingSafeEqual(a,b)}
@@ -55,6 +56,10 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
       if(parts.length===6&&parts[4]==='analysis'&&parts[5]==='history'){
         const rows=db.prepare(`SELECT target_date,component,version,input_hash,output_hash,created_at FROM analysis_receipts WHERE store_id=? ORDER BY id DESC LIMIT 100`).all(storeId);sendJson(req,res,200,{ok:true,store:access.store,history:rows.map(row=>({targetDate:row.target_date,component:row.component,version:row.version,inputHash:row.input_hash,outputHash:row.output_hash,createdAt:row.created_at}))});return;
       }
+      if(parts.length===6&&parts[4]==='research'&&parts[5]==='store-read'){
+        const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-read-active' AND version=?`).get(storeId,STORE_READ_VERSION);
+        sendJson(req,res,200,{ok:true,store:access.store,storeRead:row?safeJson(row.payload_json,null):null,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null});return;
+      }
       if(parts.length===5&&parts[4]==='status'){
         const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-latest-status' AND version=?`).get(storeId,ANALYSIS_VERSION);
         const refresh=db.prepare(`SELECT generation,completed_generation,active_job_id,updated_at FROM analysis_refresh_state WHERE store_id=? AND analysis_version=?`).get(storeId,ANALYSIS_VERSION);
@@ -64,4 +69,4 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
     }finally{db.close()}
   };
 }
-export const __test={ANALYSIS_VERSION,secureMatch};
+export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,secureMatch};
