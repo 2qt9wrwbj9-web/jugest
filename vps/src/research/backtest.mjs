@@ -59,6 +59,18 @@ function storeHistoryFeatures(historyDays){
   return out;
 }
 
+function featuresForMachine({targetDate,historyDays,machine,index}){
+  return Object.freeze({
+    weekday:weekday(targetDate),
+    date_last_digit:lastDigit(targetDate),
+    machine_name:machine.__machineName,
+    table_no:machine.__tableNo||String(index),
+    table_last_digit:lastDigit(machine.__tableNo||String(index)),
+    ...historicalMachineFeatures(historyDays,machine),
+    ...storeHistoryFeatures(historyDays)
+  });
+}
+
 function targetRowsForDay({storeId,targetDay,historyDays,strongFraction}){
   const raw=targetDay.machines.map((machine,index)=>({
     storeId,
@@ -67,15 +79,7 @@ function targetRowsForDay({storeId,targetDay,historyDays,strongFraction}){
     tableNo:machine.__tableNo||String(index),
     machineName:machine.__machineName,
     outcomeScore:finite(machine.diff),
-    features:Object.freeze({
-      weekday:weekday(targetDay.date),
-      date_last_digit:lastDigit(targetDay.date),
-      machine_name:machine.__machineName,
-      table_no:machine.__tableNo||String(index),
-      table_last_digit:lastDigit(machine.__tableNo||String(index)),
-      ...historicalMachineFeatures(historyDays,machine),
-      ...storeHistoryFeatures(historyDays)
-    })
+    features:featuresForMachine({targetDate:targetDay.date,historyDays,machine,index})
   })).filter(row=>Number.isFinite(row.outcomeScore));
   const ranked=[...raw].sort((a,b)=>b.outcomeScore-a.outcomeScore||a.machineKey.localeCompare(b.machineKey));
   const strongCount=Math.max(1,Math.ceil(ranked.length*strongFraction));
@@ -95,6 +99,22 @@ export function buildWalkForwardDataset({storeId,days,minHistoryDays=4,strongFra
   }
   const inputHash=hashCanonical({datasetVersion:DATASET_VERSION,outcomeProxyVersion:OUTCOME_PROXY_VERSION,storeId:id,minHistoryDays,strongFraction,samples});
   return Object.freeze({datasetVersion:DATASET_VERSION,outcomeProxyVersion:OUTCOME_PROXY_VERSION,storeId:id,minHistoryDays,strongFraction,samples:Object.freeze(samples),inputHash});
+}
+
+export function buildLivePredictionRows({storeId,days,targetDate}={}){
+  const id=text(storeId),target=text(targetDate);
+  if(!id)throw new TypeError('storeId is required');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(target))throw new TypeError('targetDate must be YYYY-MM-DD');
+  const historyDays=normalizeDays(days).filter(day=>day.date<target);
+  const roster=historyDays.at(-1)?.machines??[];
+  return Object.freeze(roster.map((machine,index)=>Object.freeze({
+    storeId:id,
+    targetDate:target,
+    machineKey:machine.__tableNo||String(index),
+    tableNo:machine.__tableNo||String(index),
+    machineName:machine.__machineName,
+    features:featuresForMachine({targetDate:target,historyDays,machine,index})
+  })));
 }
 
 function rowsForDates(samples,dateSet){return samples.filter(sample=>dateSet.has(sample.targetDate))}
@@ -117,4 +137,4 @@ export function splitChronologicalSamples(samples,{trainRatio=.60,validationRati
   });
 }
 
-export const __test={normalizeDays,historicalMachineFeatures,storeHistoryFeatures,targetRowsForDay,lastDigit,weekday};
+export const __test={normalizeDays,historicalMachineFeatures,storeHistoryFeatures,targetRowsForDay,lastDigit,weekday,featuresForMachine};
