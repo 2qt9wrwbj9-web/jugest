@@ -198,6 +198,18 @@ export function migrate(db){
       FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS active_store_models (
+      store_id TEXT PRIMARY KEY,
+      fingerprint TEXT NOT NULL,
+      model_json TEXT NOT NULL,
+      feature_version TEXT NOT NULL,
+      source_frontier_date TEXT NOT NULL,
+      holdout_score REAL,
+      activated_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
