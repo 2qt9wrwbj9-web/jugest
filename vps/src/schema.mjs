@@ -190,6 +190,8 @@ export function migrate(db){
       repeated_fingerprint TEXT,
       state TEXT NOT NULL CHECK(state IN ('idle','running','converged','failed')),
       last_error TEXT,
+      frontier_date TEXT,
+      search_round INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
@@ -266,4 +268,7 @@ export function migrate(db){
   const featureColumns=db.prepare('PRAGMA table_info(feature_refresh_state)').all().map(row=>row.name);
   if(!featureColumns.includes('requested_frontier_date'))db.exec('ALTER TABLE feature_refresh_state ADD COLUMN requested_frontier_date TEXT;');
   if(!featureColumns.includes('completed_frontier_date'))db.exec('ALTER TABLE feature_refresh_state ADD COLUMN completed_frontier_date TEXT;');
+  const researchColumns=db.prepare('PRAGMA table_info(research_loops)').all().map(row=>row.name);
+  if(!researchColumns.includes('frontier_date'))db.exec('ALTER TABLE research_loops ADD COLUMN frontier_date TEXT;');
+  if(!researchColumns.includes('search_round'))db.exec('ALTER TABLE research_loops ADD COLUMN search_round INTEGER NOT NULL DEFAULT 0;');
 }
