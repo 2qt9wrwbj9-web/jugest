@@ -41,6 +41,17 @@ test('runtime telemetry exposes bounded per-store task history with scale, RAM, 
   db.close();
 });
 
+test('task history defaults to 20 records and hard-caps requested history at 50',()=>{
+  const db=openDatabase(':memory:');migrate(db);const now='2026-09-13T00:00:00.000Z';
+  db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('store-cap','履歴上限店','{}',now,now);
+  const insert=db.prepare(`INSERT INTO analysis_task_metrics(job_id,store_id,phase,task_kind,task_version,model_fingerprint,store_machine_count,store_size_bucket,day_count,row_count,workload_units,started_at,ended_at,duration_ms,start_rss_mib,end_rss_mib,peak_rss_mib,cpu_ms,status,error_class,details_json)
+    VALUES(NULL,'store-cap',1,'feature_build','v1',NULL,100,'1-100',1,1,1,?,?,1,1,1,1,1,'succeeded',NULL,'{}')`);
+  for(let i=0;i<60;i+=1){const second=String(i%60).padStart(2,'0');insert.run(`2026-09-13T00:00:${second}.000Z`,`2026-09-13T00:00:${second}.001Z`)}
+  assert.equal(readRuntimeTelemetry(db).taskHistory.length,20);
+  assert.equal(readRuntimeTelemetry(db,{historyLimit:1000}).taskHistory.length,50);
+  db.close();
+});
+
 test('ingest telemetry records before/after memory and duration without changing operation result',async()=>{
   __test.ingestState.running=0;__test.ingestState.recent.length=0;
   const times=[new Date('2026-09-13T00:00:00.000Z'),new Date('2026-09-13T00:00:00.125Z')];
