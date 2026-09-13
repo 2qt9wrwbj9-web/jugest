@@ -9,9 +9,21 @@ function requiredText(value,name){const text=String(value??'').trim();if(!text)t
 function validIso(value){const text=requiredText(value,'nowIso');if(!Number.isFinite(Date.parse(text)))throw new TypeError('nowIso must be ISO date-time');return text}
 function validDate(value,name){const text=requiredText(value,name);if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError(`${name} must be YYYY-MM-DD`);return text}
 function newerDate(a,b){if(!a)return b||null;if(!b)return a;return a>=b?a:b}
+function ensureShadowSchema(db){
+  db.exec(`CREATE TABLE IF NOT EXISTS shadow_refresh_state (
+    store_id TEXT PRIMARY KEY,
+    requested_frontier_date TEXT,
+    completed_frontier_date TEXT,
+    active_job_id INTEGER,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE,
+    FOREIGN KEY(active_job_id) REFERENCES jobs(id) ON DELETE SET NULL
+  )`);
+}
 
 export function getShadowRefreshState(db,{storeId}={}){
   if(!db?.prepare)throw new TypeError('db is required');
+  ensureShadowSchema(db);
   const id=requiredText(storeId,'storeId');
   const row=db.prepare('SELECT store_id,requested_frontier_date,completed_frontier_date,active_job_id,updated_at FROM shadow_refresh_state WHERE store_id=?').get(id);
   if(!row)return null;
@@ -19,6 +31,7 @@ export function getShadowRefreshState(db,{storeId}={}){
 }
 
 function ensureState(db,{storeId,frontierDate,nowIso}){
+  ensureShadowSchema(db);
   db.prepare(`INSERT INTO shadow_refresh_state(store_id,requested_frontier_date,completed_frontier_date,active_job_id,updated_at)
     VALUES(?,?,NULL,NULL,?) ON CONFLICT(store_id) DO NOTHING`).run(storeId,frontierDate,nowIso);
   return getShadowRefreshState(db,{storeId});
@@ -64,4 +77,4 @@ export function completeShadowPrediction(db,{storeId,jobId,completedFrontierDate
   return {state:next,job:null};
 }
 
-export const __test={ACTIVE_JOB_STATES,newerDate};
+export const __test={ACTIVE_JOB_STATES,newerDate,ensureShadowSchema};
