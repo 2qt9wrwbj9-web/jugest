@@ -3,13 +3,17 @@ import {classifyPressure} from './memory.mjs';
 import {canAdmit,deriveHeapLimitMiB,estimateLeaseMiB,selectEmergencyVictims,updateEwmaPeakMiB} from './scheduler-policy.mjs';
 import {claimNextJob,completeJob,deferJob,failJob,getJob,heartbeatJob,markJobRunning,peekNextJob} from './queue.mjs';
 import {spawnJobChild} from './child-runner.mjs';
+import {persistTaskMetric} from './analysis/task-metrics.mjs';
 
 const SYNTHETIC_WORKER=new URL('./jobs/synthetic.mjs',import.meta.url);
 const DAILY_ANALYSIS_WORKER=new URL('./jobs/daily-analysis.mjs',import.meta.url);
+const FEATURE_BUILD_WORKER=new URL('./jobs/feature-build.mjs',import.meta.url);
+const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH']);
 
 function iso(clock){return clock().toISOString();}
 function plusMs(isoText,ms){return new Date(new Date(isoText).getTime()+ms).toISOString();}
 function queueDepth(db,at){return db.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE state='queued' OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))`).get(at).n;}
+function finiteOrNull(value){const n=Number(value);return Number.isFinite(n)&&n>=0?n:null}
 
 function projectedAfterLease(snapshot,leaseMiB){
   const effectiveAvailableMiB=Math.max(0,snapshot.effectiveAvailableMiB-leaseMiB);
@@ -27,7 +31,7 @@ function projectedAfterOutstandingLeases(snapshot,runningEntries){
 }
 
 export class Coordinator{
-  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=null,workerPathForJob=null,maxDailyAnalysisChildren=1}={}){
+  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=null,workerPathForJob=null,maxDailyAnalysisChildren=1,maxResearchChildren=1}={}){
     if(!db)throw new TypeError('db is required');
     if(typeof memoryReader!=='function')throw new TypeError('memoryReader is required');
     if(typeof spawnChild!=='function')throw new TypeError('spawnChild is required');
@@ -35,6 +39,7 @@ export class Coordinator{
     if(typeof clock!=='function')throw new TypeError('clock is required');
     if(workerPathForJob!==null&&typeof workerPathForJob!=='function')throw new TypeError('workerPathForJob must be a function');
     if(!Number.isInteger(maxDailyAnalysisChildren)||maxDailyAnalysisChildren<1)throw new TypeError('maxDailyAnalysisChildren must be a positive integer');
+    if(!Number.isInteger(maxResearchChildren)||maxResearchChildren<1)throw new TypeError('maxResearchChildren must be a positive integer');
     this.db=db;
     this.memoryReader=memoryReader;
     this.spawnChild=spawnChild;
@@ -42,8 +47,9 @@ export class Coordinator{
     this.policy=policy;
     this.clock=clock;
     this.workerPath=workerPath??SYNTHETIC_WORKER;
-    this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):(job=>job.type==='DAILY_ANALYSIS'?DAILY_ANALYSIS_WORKER:SYNTHETIC_WORKER));
+    this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):(job=>job.type==='DAILY_ANALYSIS'?DAILY_ANALYSIS_WORKER:job.type==='FEATURE_BUILD'?FEATURE_BUILD_WORKER:SYNTHETIC_WORKER));
     this.maxDailyAnalysisChildren=maxDailyAnalysisChildren;
+    this.maxResearchChildren=maxResearchChildren;
     this.running=new Map();
     this._tickChain=Promise.resolve();
     this._emergencyLatched=false;
@@ -82,12 +88,51 @@ export class Coordinator{
     return plusMs(at,base+spread);
   }
 
+  _persistMetric(entry,{status,errorClass=null,taskMetrics=null,at=iso(this.clock)}={}){
+    if(entry.metricPersisted||!entry.taskMeta)return null;
+    const meta=entry.taskMeta;
+    const endedAt=String(taskMetrics?.endedAt||at);
+    const startedAt=String(meta.startedAt||entry.startedAt||at);
+    const computedDuration=Math.max(0,Date.parse(endedAt)-Date.parse(startedAt));
+    const peak=Math.max(entry.peakRssMiB||0,Number(taskMetrics?.peakRssMiB)||0);
+    try{
+      const id=persistTaskMetric(this.db,{
+        jobId:entry.job.id,
+        storeId:meta.storeId||entry.job.payload?.storeId,
+        phase:meta.phase??1,
+        taskKind:meta.taskKind||String(entry.job.type||'').toLowerCase(),
+        taskVersion:meta.taskVersion||'v1',
+        modelFingerprint:meta.modelFingerprint??null,
+        storeMachineCount:Number(meta.storeMachineCount)||0,
+        dayCount:Number(meta.dayCount)||0,
+        rowCount:Number(meta.rowCount)||0,
+        workloadUnits:Number(meta.workloadUnits??meta.rowCount)||0,
+        startedAt,
+        endedAt,
+        durationMs:Number.isFinite(Number(taskMetrics?.durationMs))?Math.max(0,Math.trunc(Number(taskMetrics.durationMs))):computedDuration,
+        startRssMiB:finiteOrNull(meta.startRssMiB),
+        endRssMiB:finiteOrNull(taskMetrics?.endRssMiB),
+        peakRssMiB:peak>0?peak:null,
+        cpuMs:finiteOrNull(taskMetrics?.cpuMs),
+        status,
+        errorClass,
+        details:{...(meta.details&&typeof meta.details==='object'?meta.details:{}),...(taskMetrics?.details&&typeof taskMetrics.details==='object'?taskMetrics.details:{})}
+      });
+      entry.metricPersisted=true;
+      return id;
+    }catch(error){
+      console.error('[jugest-coordinator] task metric persistence failed',error);
+      return null;
+    }
+  }
+
   async _finishComplete(entry,message){
     if(entry.finished)return;
     entry.finished=true;
     const at=iso(this.clock);
-    const peak=Math.max(entry.peakRssMiB,Number(message.peakRssMiB)||0);
+    const peak=Math.max(entry.peakRssMiB,Number(message.peakRssMiB)||0,Number(message.taskMetrics?.peakRssMiB)||0);
     this._learn(entry.job,peak,at);
+    this._persistMetric(entry,{status:'succeeded',taskMetrics:message.taskMetrics,at});
     completeJob(this.db,{jobId:entry.job.id,owner:this.owner,nowIso:at,peakRssMiB:peak||null,resultHash:message.resultHash??null});
     this.running.delete(entry.job.id);
     await this.tick();
@@ -97,8 +142,9 @@ export class Coordinator{
     if(entry.finished)return;
     entry.finished=true;
     const at=iso(this.clock);
-    const peak=Math.max(entry.peakRssMiB,Number(message.peakRssMiB)||0);
+    const peak=Math.max(entry.peakRssMiB,Number(message.peakRssMiB)||0,Number(message.taskMetrics?.peakRssMiB)||0);
     this._learn(entry.job,peak,at);
+    this._persistMetric(entry,{status:'failed',errorClass:message.errorClass??'child_error',taskMetrics:message.taskMetrics,at});
     const current=getJob(this.db,entry.job.id)??entry.job;
     failJob(this.db,{
       jobId:entry.job.id,
@@ -127,6 +173,10 @@ export class Coordinator{
     if(entry.finished||entry.cancelled||!message||typeof message!=='object')return;
     if(Number.isFinite(message.rssMiB))entry.peakRssMiB=Math.max(entry.peakRssMiB,message.rssMiB);
     if(Number.isFinite(message.peakRssMiB))entry.peakRssMiB=Math.max(entry.peakRssMiB,message.peakRssMiB);
+    if(message.type==='task_start'){
+      entry.taskMeta=Object.freeze({...entry.taskMeta,...message.taskMeta});
+      return;
+    }
     if(message.type==='heartbeat'){
       heartbeatJob(this.db,{jobId:entry.job.id,owner:this.owner,nowIso:iso(this.clock)});
       return;
@@ -146,6 +196,7 @@ export class Coordinator{
     for(const entry of selectEmergencyVictims([...this.running.values()])){
       if(entry.finished||entry.cancelled)continue;
       entry.cancelled=true;
+      this._persistMetric(entry,{status:'cancelled',errorClass:'memory_emergency',taskMetrics:{endedAt:at,peakRssMiB:entry.peakRssMiB},at});
       deferJob(this.db,{
         jobId:entry.job.id,
         owner:this.owner,
@@ -172,7 +223,7 @@ export class Coordinator{
       return null;
     }
     const runningJob=markJobRunning(this.db,{jobId:claimed.id,owner:this.owner,nowIso:at});
-    const entry={id:runningJob.id,type:runningJob.type,job:runningJob,leaseMiB,heapMiB,peakRssMiB:0,finished:false,cancelled:false,handle:null};
+    const entry={id:runningJob.id,type:runningJob.type,job:runningJob,leaseMiB,heapMiB,peakRssMiB:0,finished:false,cancelled:false,handle:null,taskMeta:null,metricPersisted:false,startedAt:at};
     try{
       entry.handle=this.spawnChild({
         job:runningJob,leaseMiB,heapMiB,workerPath:this.workerPathForJob(runningJob),
@@ -186,6 +237,14 @@ export class Coordinator{
       failJob(this.db,{jobId:runningJob.id,owner:this.owner,nowIso:at,retryAtIso:this._retryAt(runningJob,at),errorClass:'spawn_error',message:String(error?.message??error)});
       return null;
     }
+  }
+
+  _runningResearchCount(){return [...this.running.values()].filter(entry=>RESEARCH_JOB_TYPES.has(entry.job?.type)&&!entry.finished&&!entry.cancelled).length}
+  _hasDailyActivity(at){
+    const row=this.db.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS' AND (
+      state IN ('queued','leased','running') OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))
+    )`).get(at);
+    return Number(row?.n)||0;
   }
 
   async _tick(){
@@ -227,6 +286,10 @@ export class Coordinator{
         const runningDaily=[...this.running.values()].filter(entry=>entry.job?.type==='DAILY_ANALYSIS'&&!entry.finished&&!entry.cancelled).length;
         if(runningDaily>=this.maxDailyAnalysisChildren)break;
       }
+      if(RESEARCH_JOB_TYPES.has(next.type)){
+        if(this._hasDailyActivity(at)>0)break;
+        if(this._runningResearchCount()>=this.maxResearchChildren)break;
+      }
       const profile=this._profile(next);
       const leaseMiB=estimateLeaseMiB({persistedEwmaMiB:profile?.ewma_peak_mib??null,configuredFloorMiB:next.estimatedLeaseMiB});
       const decision=canAdmit({snapshot:projected,policy:this.policy,runningCount:this.runningCount,leaseMiB,priority:next.priority});
@@ -241,4 +304,4 @@ export class Coordinator{
   }
 }
 
-export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER};
+export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER,FEATURE_BUILD_WORKER,RESEARCH_JOB_TYPES};
