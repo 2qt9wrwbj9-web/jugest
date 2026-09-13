@@ -57,36 +57,15 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
   if(!latest)throw Object.assign(new Error('canonical store has no valid days'),{code:'no_canonical_days'});
   const rowCount=loaded.days.reduce((sum,day)=>sum+(Array.isArray(day.machines)?day.machines.length:0),0);
   const machineScale=deriveStoreMachineCount(loaded.days);
-  onWorkload?.({
-    storeId,
-    storeMachineCount:machineScale.count,
-    machineCountMethod:machineScale.method,
-    dayCount:loaded.days.length,
-    rowCount,
-    businessDate:latest
-  });
-  const dataSummary={
-    storeId,
-    shop:loaded.store.name,
-    from:loaded.days[0]?.date??latest,
-    latest,
-    dayCount:loaded.days.length,
-    rowCount,
-    analyzedGeneration:targetGeneration
-  };
+  onWorkload?.({storeId,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,dayCount:loaded.days.length,rowCount,businessDate:latest});
+  const dataSummary={storeId,shop:loaded.store.name,from:loaded.days[0]?.date??latest,latest,dayCount:loaded.days.length,rowCount,analyzedGeneration:targetGeneration};
   const inputDescriptor={storeId,analysisVersion,options:DEFAULT_OPTIONS,days:loaded.days};
   const inputHash=hashCanonical(inputDescriptor);
 
   let status='insufficient_data';
   let result=null;
   if(loaded.days.length>=3){
-    result=await analysisRunner({
-      rootDir,
-      shop:loaded.store.name,
-      sourceStoreId:storeId,
-      days:loaded.days,
-      options:{...DEFAULT_OPTIONS}
-    });
+    result=await analysisRunner({rootDir,shop:loaded.store.name,sourceStoreId:storeId,days:loaded.days,options:{...DEFAULT_OPTIONS}});
     if(!result||typeof result!=='object')throw new Error('analysis runner returned no result');
     status='analyzed';
   }
@@ -105,11 +84,7 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     if(status==='analyzed'){
       db.prepare(`INSERT INTO analysis_state(store_id,component,version,frontier_date,state_json,input_hash,updated_at)
         VALUES(?,?,?,?,?,?,?)
-        ON CONFLICT(store_id,component,version) DO UPDATE SET
-          frontier_date=excluded.frontier_date,
-          state_json=excluded.state_json,
-          input_hash=excluded.input_hash,
-          updated_at=excluded.updated_at`)
+        ON CONFLICT(store_id,component,version) DO UPDATE SET frontier_date=excluded.frontier_date,state_json=excluded.state_json,input_hash=excluded.input_hash,updated_at=excluded.updated_at`)
         .run(storeId,COMPONENT,analysisVersion,latest,canonicalJson(result),inputHash,at);
       insertReceiptOnce(db,{storeId,targetDate:latest,component:COMPONENT,version:analysisVersion,inputHash,outputHash,nowIso:at});
       upsertSnapshot(db,{storeId,type:'store-analysis-default',version:analysisVersion,businessDate:latest,payload:result,nowIso:at});
@@ -122,33 +97,15 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
       analyzedGeneration:targetGeneration,inputHash,outputHash,updatedAt:at
     },nowIso:at});
 
-    db.prepare(`UPDATE analysis_refresh_state SET completed_generation=MAX(completed_generation,?),
-      active_job_id=CASE WHEN active_job_id=? THEN NULL ELSE active_job_id END,updated_at=?
-      WHERE store_id=? AND analysis_version=?`).run(targetGeneration,job.id,at,storeId,analysisVersion);
+    db.prepare(`UPDATE analysis_refresh_state SET completed_generation=MAX(completed_generation,?),active_job_id=CASE WHEN active_job_id=? THEN NULL ELSE active_job_id END,updated_at=? WHERE store_id=? AND analysis_version=?`)
+      .run(targetGeneration,job.id,at,storeId,analysisVersion);
 
-    const requested=requestStoreAnalysisRefresh(db,{storeId,analysisVersion,nowIso:at,dirty:false});
-    followupJob=requested.job;
-    featureJob=requestStoreFeatureRefresh(db,{storeId,featureVersion:FEATURE_VERSION,nowIso:at,dirty:true}).job;
+    followupJob=requestStoreAnalysisRefresh(db,{storeId,analysisVersion,nowIso:at,dirty:false}).job;
+    featureJob=requestStoreFeatureRefresh(db,{storeId,featureVersion:FEATURE_VERSION,frontierDate:latest,nowIso:at,dirty:true}).job;
     db.exec('COMMIT');
-  }catch(error){
-    try{db.exec('ROLLBACK')}catch{}
-    throw error;
-  }
+  }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
 
-  return {
-    status,
-    storeId,
-    businessDate:latest,
-    dayCount:loaded.days.length,
-    rowCount,
-    storeMachineCount:machineScale.count,
-    machineCountMethod:machineScale.method,
-    targetGeneration,
-    inputHash,
-    outputHash,
-    followupJobId:followupJob?.id??null,
-    featureJobId:featureJob?.id??null
-  };
+  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null};
 }
 
 export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION};
