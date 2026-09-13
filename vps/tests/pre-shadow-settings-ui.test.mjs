@@ -46,8 +46,9 @@ test('analysis completion chip visibility remains owned by the core timer',()=>{
   const end=coreSource.indexOf('\n}\n\nfunction backfillCardHtml',start);
   assert.ok(start>=0&&end>start,'reconcileFailureChip must exist');
   const fn=coreSource.slice(start,end+2);
-  assert.match(fn,/if\(!text\.includes\('解析失敗'\)\)/);
-  assert.match(fn,/text\.includes\('店舗解析中'\)\|\|text\.includes\('解析完了'\)/);
-  assert.match(fn,/chip\.style\.removeProperty\('display'\);return/);
-  assert.doesNotMatch(fn,/解析完了[^\n]*style\.display='none'/);
+  const nonFailure=fn.match(/if\(!text\.includes\('解析失敗'\)\)\{([^}]*)\}/)?.[1]||'';
+  assert.match(nonFailure,/text\.includes\('店舗解析中'\)\|\|text\.includes\('解析完了'\)/);
+  assert.match(nonFailure,/setFailureAck\(''\);return/);
+  assert.doesNotMatch(nonFailure,/chip\.style\./,'non-failure completion visibility must stay owned by the core timer');
+  assert.match(fn,/if\(getFailureAck\(\)===fingerprint\)chip\.style\.display='none';else chip\.style\.removeProperty\('display'\)/);
 });
