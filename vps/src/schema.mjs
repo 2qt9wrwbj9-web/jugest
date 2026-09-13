@@ -100,6 +100,37 @@ export function migrate(db){
       FOREIGN KEY (active_job_id) REFERENCES jobs(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS feature_refresh_state (
+      store_id TEXT NOT NULL,
+      feature_version TEXT NOT NULL,
+      generation INTEGER NOT NULL DEFAULT 0,
+      completed_generation INTEGER NOT NULL DEFAULT 0,
+      active_job_id INTEGER,
+      frontier_date TEXT,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (store_id,feature_version),
+      FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+      FOREIGN KEY (active_job_id) REFERENCES jobs(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS store_feature_snapshots (
+      store_id TEXT NOT NULL,
+      feature_version TEXT NOT NULL,
+      as_of_date TEXT NOT NULL,
+      dimension_key TEXT NOT NULL,
+      dimension_value TEXT NOT NULL,
+      window_days INTEGER NOT NULL,
+      day_count INTEGER NOT NULL,
+      machine_count INTEGER NOT NULL,
+      row_count INTEGER NOT NULL,
+      metrics_json TEXT NOT NULL,
+      input_hash TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (store_id,feature_version,as_of_date,dimension_key,dimension_value,window_days),
+      FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS store_feature_snapshots_store_asof_idx ON store_feature_snapshots(store_id,feature_version,as_of_date DESC);
+
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
