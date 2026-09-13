@@ -2,9 +2,12 @@ import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {loadStoreDays} from './store-data.mjs';
 import {runExistingStoreAnalysis} from './runtime-adapter.mjs';
 import {getAnalysisRefreshState,requestStoreAnalysisRefresh} from './refresh-state.mjs';
+import {requestStoreFeatureRefresh} from './feature-refresh-state.mjs';
+import {deriveStoreMachineCount} from './task-metrics.mjs';
 
 const DEFAULT_OPTIONS=Object.freeze({period:'180',minG:'2000',maxDims:'1',minDays:'4'});
 const COMPONENT='store-analysis-default';
+const FEATURE_VERSION='store-features-v1';
 
 function requiredText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
 function isoTime(value){const text=requiredText(value,'nowIso');if(!Number.isFinite(Date.parse(text)))throw new TypeError('nowIso must be ISO date-time');return text}
@@ -39,9 +42,10 @@ function insertReceiptOnce(db,{storeId,targetDate,component,version,inputHash,ou
   return Number(inserted.lastInsertRowid);
 }
 
-export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExistingStoreAnalysis,nowIso=new Date().toISOString()}={}){
+export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExistingStoreAnalysis,nowIso=new Date().toISOString(),onWorkload=null}={}){
   if(!db?.prepare||!db?.exec)throw new TypeError('db is required');
   if(typeof analysisRunner!=='function')throw new TypeError('analysisRunner is required');
+  if(onWorkload!==null&&typeof onWorkload!=='function')throw new TypeError('onWorkload must be a function');
   const at=isoTime(nowIso);
   const {storeId,analysisVersion}=requireDailyJob(job);
   const refresh=getAnalysisRefreshState(db,{storeId,analysisVersion});
@@ -52,6 +56,15 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
   const latest=loaded.days.at(-1)?.date??'';
   if(!latest)throw Object.assign(new Error('canonical store has no valid days'),{code:'no_canonical_days'});
   const rowCount=loaded.days.reduce((sum,day)=>sum+(Array.isArray(day.machines)?day.machines.length:0),0);
+  const machineScale=deriveStoreMachineCount(loaded.days);
+  onWorkload?.({
+    storeId,
+    storeMachineCount:machineScale.count,
+    machineCountMethod:machineScale.method,
+    dayCount:loaded.days.length,
+    rowCount,
+    businessDate:latest
+  });
   const dataSummary={
     storeId,
     shop:loaded.store.name,
@@ -81,6 +94,7 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
   const outputPayload=status==='analyzed'?result:{status,storeId,shop:loaded.store.name,latest,dayCount:loaded.days.length,rowCount};
   const outputHash=hashCanonical(outputPayload);
   let followupJob=null;
+  let featureJob=null;
 
   db.exec('BEGIN IMMEDIATE');
   try{
@@ -114,6 +128,7 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
 
     const requested=requestStoreAnalysisRefresh(db,{storeId,analysisVersion,nowIso:at,dirty:false});
     followupJob=requested.job;
+    featureJob=requestStoreFeatureRefresh(db,{storeId,featureVersion:FEATURE_VERSION,nowIso:at,dirty:true}).job;
     db.exec('COMMIT');
   }catch(error){
     try{db.exec('ROLLBACK')}catch{}
@@ -126,11 +141,14 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     businessDate:latest,
     dayCount:loaded.days.length,
     rowCount,
+    storeMachineCount:machineScale.count,
+    machineCountMethod:machineScale.method,
     targetGeneration,
     inputHash,
     outputHash,
-    followupJobId:followupJob?.id??null
+    followupJobId:followupJob?.id??null,
+    featureJobId:featureJob?.id??null
   };
 }
 
-export const __test={DEFAULT_OPTIONS,COMPONENT};
+export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION};
