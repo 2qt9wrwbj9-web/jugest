@@ -100,7 +100,7 @@ test('Coordinator routes one FEATURE_BUILD child when ordinary analysis is idle'
   const f=seedDb();
   try{
     requestStoreFeatureRefresh(f.db,{storeId:'s1',featureVersion:FEATURE_VERSION,nowIso:NOW,dirty:true});
-    db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('s2','研究店2','{}',NOW,NOW);
+    f.db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('s2','研究店2','{}',NOW,NOW);
     requestStoreFeatureRefresh(f.db,{storeId:'s2',featureVersion:FEATURE_VERSION,nowIso:NOW,dirty:true});
     const calls=[];
     const coordinator=new Coordinator({db:f.db,memoryReader:async()=>memory(),spawnChild:options=>{calls.push(options);return {kill(){}}},owner:'research-one',policy:loadResourcePolicy({maxAnalysisChildren:3}),clock:()=>new Date('2026-09-13T00:00:02.000Z')});
