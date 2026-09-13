@@ -40,3 +40,11 @@ test('LIVE pending copy names the exact target date and actual-data wait conditi
   assert.match(historicalSource,/の実績データ待ち/);
   assert.match(historicalSource,/live\?\.rows/);
 });
+
+test('analysis completion chip visibility remains owned by the core timer',()=>{
+  const start=coreSource.indexOf('function reconcileFailureChip(){');
+  const end=coreSource.indexOf('\n}\n\nfunction backfillCardHtml',start);
+  assert.ok(start>=0&&end>start,'reconcileFailureChip must exist');
+  const fn=coreSource.slice(start,end+2);
+  assert.match(fn,/if\(!text\.includes\('解析失敗'\)\)\{if\(text\.includes\('店舗解析中'\)\|\|text\.includes\('解析完了'\)\)setFailureAck\(''\);return\}/);
+});
