@@ -133,3 +133,32 @@ test('real FEATURE_BUILD child persists snapshots and reports one-store task tel
     assert.equal(state.activeJobId,null);
   }finally{f.cleanup()}
 });
+
+test('Coordinator persists exactly one per-store metric row from task_start through completion',async()=>{
+  const f=seedDb();
+  try{
+    requestStoreFeatureRefresh(f.db,{storeId:'s1',featureVersion:FEATURE_VERSION,nowIso:NOW,dirty:true});
+    const calls=[];
+    const coordinator=new Coordinator({
+      db:f.db,
+      memoryReader:async()=>memory(),
+      spawnChild:options=>{calls.push(options);return {kill(){}}},
+      owner:'metric-persist',
+      policy:loadResourcePolicy({maxAnalysisChildren:1}),
+      clock:(()=>{let i=0;const values=['2026-09-13T00:00:02.000Z','2026-09-13T00:00:03.500Z','2026-09-13T00:00:04.000Z'];return ()=>new Date(values[Math.min(i++,values.length-1)])})()
+    });
+    await coordinator.tick();
+    assert.equal(calls.length,1);
+    await calls[0].onMessage({type:'task_start',taskMeta:{phase:1,taskKind:'feature_build',taskVersion:FEATURE_VERSION,modelFingerprint:null,storeId:'s1',storeMachineCount:241,dayCount:180,rowCount:42000,workloadUnits:42000,startedAt:'2026-09-13T00:00:02.000Z',startRssMiB:80,details:{machineCountMethod:'latest'}}});
+    await calls[0].onMessage({type:'complete',peakRssMiB:333,taskMetrics:{endedAt:'2026-09-13T00:00:03.500Z',durationMs:1500,endRssMiB:92,peakRssMiB:333,cpuMs:77},resultHash:'metric-hash'});
+    const rows=f.db.prepare('SELECT * FROM analysis_task_metrics WHERE store_id=? ORDER BY id').all('s1');
+    assert.equal(rows.length,1);
+    assert.equal(rows[0].task_kind,'feature_build');
+    assert.equal(rows[0].store_machine_count,241);
+    assert.equal(rows[0].store_size_bucket,'201-300');
+    assert.equal(rows[0].row_count,42000);
+    assert.equal(rows[0].peak_rss_mib,333);
+    assert.equal(rows[0].cpu_ms,77);
+    assert.equal(rows[0].status,'succeeded');
+  }finally{f.cleanup()}
+});
