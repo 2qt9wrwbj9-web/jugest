@@ -1,6 +1,9 @@
 const RECEIVER_STORAGE_KEY='jugglerRelayReceiver:v1';
 let diagnostics=null;
 let loading=false;
+let app=null;
+let root=null;
+let observer=null;
 
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function receiver(){try{const v=JSON.parse(localStorage.getItem(RECEIVER_STORAGE_KEY)||'null');const channelId=String(v?.channelId||'').trim(),receiverToken=String(v?.receiverToken||'').trim();return v?.linked&&channelId&&receiverToken?{channelId,receiverToken}:null}catch{return null}}
@@ -32,11 +35,11 @@ function contentHtml(){
   const a=latestAnalysis(r),q=r.analysis?.queue||{},peak=maxPeak(r),used=r.system?.usedMemoryBytes,total=r.system?.totalMemoryBytes;
   return `<section class="vps-resource-card"><h2>VPS全体</h2><div class="vps-resource-grid"><div class="vps-resource-metric"><small>RAM使用</small><b>${fmtBytes(used)} / ${fmtBytes(total)}</b></div><div class="vps-resource-metric"><small>使用率</small><b>${Number.isFinite(r.system?.usedRatio)?(r.system.usedRatio*100).toFixed(1)+'%':'—'}</b></div><div class="vps-resource-metric"><small>Load avg</small><b>${(r.system?.loadAverage||[]).map(x=>Number(x).toFixed(2)).join(' / ')||'—'}</b></div><div class="vps-resource-metric"><small>CPU</small><b>${r.system?.cpuCount??'—'} cores</b></div></div></section>
 <section class="vps-resource-card"><h2>JUGEST Node</h2><div class="vps-resource-grid"><div class="vps-resource-metric"><small>RSS</small><b>${fmtBytes(r.process?.rssBytes)}</b></div><div class="vps-resource-metric"><small>Heap</small><b>${fmtBytes(r.process?.heapUsedBytes)} / ${fmtBytes(r.process?.heapTotalBytes)}</b></div></div></section>
-<section class="vps-resource-card"><h2>解析</h2><div class="vps-resource-grid"><div class="vps-resource-metric"><small>実行中 / 待機</small><b>${q.running??0} / ${q.queued??0}</b></div><div class="vps-resource-metric"><small>直近ピーク</small><b>${fmtBytes(a?.observedPeakRssBytes||peak)}</b></div><div class="vps-resource-metric"><small>直近解析時間</small><b>${fmtMs(a?.durationMs)}</b></div><div class="vps-resource-metric"><small>直近結果</small><b>${a? (a.success===true?'成功':a.success===false?'失敗':'実行中'):'—'}</b></div></div><p class="vps-resource-note">ピークRSSは解析childが報告した観測値。開始時との差分を「解析が消費した正確なRAM」とは扱わない。</p></section>`;
+<section class="vps-resource-card"><h2>解析</h2><div class="vps-resource-grid"><div class="vps-resource-metric"><small>実行中 / 待機</small><b>${q.running??0} / ${q.queued??0}</b></div><div class="vps-resource-metric"><small>直近ピーク</small><b>${fmtBytes(a?.observedPeakRssBytes||peak)}</b></div><div class="vps-resource-metric"><small>直近解析時間</small><b>${fmtMs(a?.durationMs)}</b></div><div class="vps-resource-metric"><small>直近結果</small><b>${a?(a.success===true?'成功':a.success===false?'失敗':'実行中'):'—'}</b></div></div><p class="vps-resource-note">ピークRSSは解析childが報告した観測値。開始時との差分を「解析が消費した正確なRAM」とは扱わない。</p></section>`;
 }
 
 function render(){
-  let ov=document.querySelector('.vps-resource-overlay');if(!ov)return;
+  const ov=document.querySelector('.vps-resource-overlay');if(!ov)return;
   ov.innerHTML=`<div class="vps-resource-wrap"><button class="vps-resource-back" type="button" data-vps-resource-close>‹ 設定へ戻る</button><div class="vps-resource-kicker">DIAGNOSTICS</div><h1>VPSリソース</h1>${contentHtml()}<div class="vps-resource-actions"><button type="button" data-vps-resource-refresh ${loading?'disabled':''}>更新</button></div></div>`;
 }
 
@@ -45,15 +48,37 @@ function open(){style();if(document.querySelector('.vps-resource-overlay'))retur
 function close(){document.querySelector('.vps-resource-overlay')?.remove()}
 
 function reconcileSettings(){
-  const wrap=document.querySelector('.vps-settings-overlay .vps-settings-wrap');if(!wrap)return;
+  const wrap=root?.querySelector('.vps-settings-overlay .vps-settings-wrap');if(!wrap)return;
   const h1=wrap.querySelector('h1');if(h1?.textContent?.trim()!=='設定')return;
   if(wrap.querySelector('[data-vps-resource-open]'))return;
   const card=document.createElement('section');card.className='vps-settings-card vps-resource-settings-row';card.innerHTML='<button type="button" class="vps-settings-row" data-vps-resource-open><span><b>VPSリソース</b><small>RAM・Node・解析負荷を確認</small></span><span class="vps-chev">›</span></button>';
   wrap.append(card)
 }
 
-document.addEventListener('click',e=>{if(e.target.closest('[data-vps-resource-open]'))open();if(e.target.closest('[data-vps-resource-close]'))close();if(e.target.closest('[data-vps-resource-refresh]'))refresh()});
-new MutationObserver(reconcileSettings).observe(document.documentElement,{childList:true,subtree:true});
-reconcileSettings();
+function onRootClick(event){
+  const target=event.target?.closest?.('[data-vps-resource-open]');if(!target)return;
+  event.preventDefault();event.stopPropagation();open();
+}
+
+function attach(candidate){
+  if(app===candidate&&root===candidate?.shadowRoot)return true;
+  observer?.disconnect();
+  if(root)root.removeEventListener('click',onRootClick,true);
+  app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
+  root.addEventListener('click',onRootClick,true);
+  observer=new MutationObserver(reconcileSettings);observer.observe(root,{childList:true,subtree:true});reconcileSettings();return true;
+}
+
+function boot(){
+  const candidate=document.querySelector('jugest-app');
+  if(attach(candidate))return;
+  globalThis.setTimeout(boot,50);
+}
+
+document.addEventListener('click',event=>{
+  if(event.target.closest('[data-vps-resource-close]'))close();
+  if(event.target.closest('[data-vps-resource-refresh]'))refresh();
+});
+boot();
 
 export const __test={fmtBytes,fmtMs};
