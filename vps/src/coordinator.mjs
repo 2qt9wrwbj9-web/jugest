@@ -4,6 +4,7 @@ import {canAdmit,deriveHeapLimitMiB,estimateLeaseMiB,selectEmergencyVictims,upda
 import {claimNextJob,completeJob,deferJob,failJob,getJob,heartbeatJob,markJobRunning,peekNextJob} from './queue.mjs';
 import {spawnJobChild} from './child-runner.mjs';
 import {persistTaskMetric} from './analysis/task-metrics.mjs';
+import {bootstrapHistoricalComparisonRuns} from './analysis/historical-refresh-state.mjs';
 
 const SYNTHETIC_WORKER=new URL('./jobs/synthetic.mjs',import.meta.url);
 const DAILY_ANALYSIS_WORKER=new URL('./jobs/daily-analysis.mjs',import.meta.url);
@@ -11,7 +12,8 @@ const FEATURE_BUILD_WORKER=new URL('./jobs/feature-build.mjs',import.meta.url);
 const BACKTEST_WORKER=new URL('./jobs/backtest.mjs',import.meta.url);
 const MODEL_SEARCH_WORKER=new URL('./jobs/model-search.mjs',import.meta.url);
 const SHADOW_PREDICT_WORKER=new URL('./jobs/shadow-predict.mjs',import.meta.url);
-const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH','SHADOW_PREDICT']);
+const HISTORICAL_COMPARE_WORKER=new URL('./jobs/historical-compare.mjs',import.meta.url);
+const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH','SHADOW_PREDICT','HISTORICAL_COMPARE']);
 
 function defaultWorkerPathForJob(job){
   if(job?.type==='DAILY_ANALYSIS')return DAILY_ANALYSIS_WORKER;
@@ -19,6 +21,7 @@ function defaultWorkerPathForJob(job){
   if(job?.type==='BACKTEST')return BACKTEST_WORKER;
   if(job?.type==='MODEL_SEARCH')return MODEL_SEARCH_WORKER;
   if(job?.type==='SHADOW_PREDICT')return SHADOW_PREDICT_WORKER;
+  if(job?.type==='HISTORICAL_COMPARE')return HISTORICAL_COMPARE_WORKER;
   return SYNTHETIC_WORKER;
 }
 function iso(clock){return clock().toISOString();}
@@ -65,6 +68,7 @@ export class Coordinator{
     this._tickChain=Promise.resolve();
     this._emergencyLatched=false;
     this._belowPauseSinceMs=null;
+    this._historicalBootstrapped=false;
   }
 
   get runningCount(){return this.running.size;}
@@ -258,8 +262,19 @@ export class Coordinator{
     return Number(row?.n)||0;
   }
 
+  _bootstrapHistorical(at){
+    if(this._historicalBootstrapped)return;
+    try{
+      bootstrapHistoricalComparisonRuns(this.db,{nowIso:at});
+      this._historicalBootstrapped=true;
+    }catch(error){
+      console.error('[jugest-coordinator] historical comparison bootstrap failed',error);
+    }
+  }
+
   async _tick(){
     const at=iso(this.clock);
+    this._bootstrapHistorical(at);
     const nowMs=Date.parse(at);
     const snapshot=await this.memoryReader();
     const pressure=classifyPressure(snapshot,this.policy);
@@ -315,4 +330,4 @@ export class Coordinator{
   }
 }
 
-export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER,FEATURE_BUILD_WORKER,BACKTEST_WORKER,MODEL_SEARCH_WORKER,SHADOW_PREDICT_WORKER,RESEARCH_JOB_TYPES,defaultWorkerPathForJob};
+export const __test={SYNTHETIC_WORKER,DAILY_ANALYSIS_WORKER,FEATURE_BUILD_WORKER,BACKTEST_WORKER,MODEL_SEARCH_WORKER,SHADOW_PREDICT_WORKER,HISTORICAL_COMPARE_WORKER,RESEARCH_JOB_TYPES,defaultWorkerPathForJob};
