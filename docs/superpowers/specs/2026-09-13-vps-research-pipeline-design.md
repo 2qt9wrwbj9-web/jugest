@@ -1,67 +1,61 @@
-# VPS Research Pipeline Design
+# VPS Self-Improving Store Analysis Pipeline Design
 
 ## Goal
 
-JUGESTのVPSを、通常の店舗解析を最優先で処理しつつ、空きCPU/RAMを使って店舗ビッグデータの事前集計、自動バックテスト、候補モデル比較を継続実行する研究基盤へ拡張する。
+JUGESTのVPSを、通常の収集・設定判別・店舗解析を最優先で処理しつつ、空きCPU/RAMを使って店舗読みモデルを継続的に改善する研究基盤へ拡張する。
 
-実装順は固定する。
+中核は次の閉ループである。
 
-1. 既存店舗解析の計測強化 + 拡張解析（事前集計）
-2. 未来情報を遮断した自動バックテスト
-3. 候補モデルの大量比較
+1. **① 解析**: 現在の研究Championを使って店舗特徴量・評価軸を構築し、店舗読みを実行する。
+2. **② バックテスト**: 対象日より未来を完全に遮断したwalk-forward検証で、そのモデルが過去に本当に通用したかを測る。
+3. **③ 探索**: 新しい評価軸、複合条件、参照期間、重みを自動生成し、②で候補を競わせる。
+4. ③で現Championより強い候補が見つかれば、それを次世代の研究Championとして①へ自動反映する。
+5. ①→②→③を繰り返し、循環または改善停止を検知したらその探索cycleを収束させる。
+6. cycle中の全世代から、未使用holdoutでも最も優秀だったモデルをcycle winnerとする。
 
-各段階は単独で完成・検証可能にし、次段階は前段階の保存データと共通実行基盤を利用する。
-
-## Non-negotiable constraints
-
-- 既存のJuggler/HANA確率テーブル、`externalJudge`、単一根拠数学、strict Champion、Calibration、store-share constraint、HANA hard constraints、既存ランキング/判定結果を変更しない。
-- 研究結果は本番ロジックへ自動昇格させない。候補の採用はヒロの明示判断を必要とする。
-- 通常の収集・保存・`DAILY_ANALYSIS`を研究処理より常に優先する。
-- バックテストでは対象日より後の情報を特徴量・予測入力へ絶対に混入させない。
-- 同じ根拠を異なる特徴量名で二重計上しない。
-- immutable raw retentionは変更しない。
-- iPhoneは取得・送信のみ、VPSが解析・記憶・研究を担当する。
-- Production deployは実装完了後もヒロの明示許可直前確認を必要とする。
-
-## Current baseline
-
-現行VPSはcanonical SQLiteから最大180日の店舗データを読み、既存JUGEST店舗分析をheadless runtimeで実行し、`analysis_state`、`analysis_receipts`、`client_snapshots`へ結果を保存する。
-
-Schedulerはメモリ圧を監視し、子プロセス単位で解析を実行する。`job_runs`にはピークRSS等の基礎実績があり、`resource_samples`にはSchedulerの時系列状態がある。
-
-本設計はこの基盤を置き換えず、低優先度の研究ジョブと詳細な1店舗単位メトリクスを追加する。
+このループは店舗ごとに独立して回せる。十分な履歴がない店舗は共通base modelを使い、データが蓄積してから店舗固有モデルへ移行する。
 
 ---
 
-# 1. 通常解析の計測強化 + 拡張解析
+## Non-negotiable constraints
 
-## 1.1 Common per-store task metrics
+- 既存のJuggler/HANA確率テーブル、`externalJudge`、単一根拠数学、strict Champion、Calibration、store-share constraint、HANA hard constraintsを変更しない。
+- 自己改善の対象は**店舗読み・投入傾向予測レイヤー**とし、既存の設定判別数学を探索対象にしない。
+- canonical ingest、保存、通常 `DAILY_ANALYSIS` は研究処理より常に優先する。
+- バックテストでは対象日より後の情報を特徴量・予測入力へ絶対に混入させない。
+- 同じ根拠を別名の特徴量として二重計上しない。
+- immutable raw retentionは変更しない。
+- iPhoneは取得・送信のみ、VPSが解析・記憶・研究を担当する。
+- Production deployは実装完了後もヒロの明示許可を必要とする。
+- 研究Championの自動更新は許可するが、protectedな設定判別数学や確率テーブルへの自動書換えは禁止する。
 
-通常解析・拡張解析・バックテスト・候補モデル比較のすべてで、**1店舗の1回の処理単位**ごとに共通形式の実績を保存する。
+---
 
-新しい永続テーブル `analysis_task_metrics` を設ける。
+# A. 共通実行基盤と負荷計測
 
-必須フィールド:
+## A.1 1店舗1処理単位の計測
+
+①②③すべてで、**1店舗の1回の処理単位**ごとに負荷を永続保存する。
+
+`analysis_task_metrics` を追加し、最低限以下を記録する。
 
 - `id`
-- `job_id` nullable（手動/内部処理も記録可能）
+- `job_id` nullable
 - `store_id`
+- `phase` (`1` / `2` / `3`)
 - `task_kind`
   - `daily_analysis`
   - `feature_build`
+  - `axis_discovery`
   - `backtest`
   - `model_search`
 - `task_version`
+- `model_fingerprint` nullable
 - `store_machine_count`
-- `store_size_bucket`
-  - `1-100`
-  - `101-200`
-  - `201-300`
-  - `301-500`
-  - `501+`
+- `store_size_bucket` (`1-100` / `101-200` / `201-300` / `301-500` / `501+`)
 - `day_count`
 - `row_count`（台×日レコード数）
-- `workload_units`（処理種類固有の比較用整数）
+- `workload_units`
 - `started_at`
 - `ended_at`
 - `duration_ms`
@@ -71,324 +65,438 @@ Schedulerはメモリ圧を監視し、子プロセス単位で解析を実行�
 - `cpu_ms`
 - `status` (`succeeded` / `failed` / `cancelled`)
 - `error_class` nullable
-- `details_json`（種類固有の補助情報）
+- `details_json`
 
-店舗台数は対象期間内の最大同時台数ではなく、処理対象データから算出した**最新有効日のユニーク台数**を基本値とする。最新日に台データが欠落している場合のみ、直近7有効日の中央値へフォールバックし、その算出方式を `details_json` に残す。
+店舗台数は最新有効日のユニーク台数を基本とし、最新日が欠落している場合のみ直近7有効日の中央値を使う。算出方法は `details_json` に残す。
 
-## 1.2 Memory measurement
+## A.2 Peak RAM
 
-各重処理は子プロセスで実行する。
+各重処理は子プロセスで実行する。Peak RAMは次の最大値を保存する。
 
-ピークRAMはLinux上のプロセス最大RSSを主値とし、以下の最大値を保存する。
-
-1. 子プロセス自身が終了時に報告する `process.resourceUsage().maxRSS`
-2. 既存heartbeatで観測したRSSピーク
+1. `process.resourceUsage().maxRSS`
+2. heartbeatで観測したRSSピーク
 3. 終了時 `process.memoryUsage().rss`
 
-開始RSS・終了RSSも保存する。CPU時間は `process.cpuUsage()` 差分から算出する。
+CPU時間は `process.cpuUsage()` 差分で記録する。
 
-これにより「241台・180日・feature_build・Peak 380 MiB・14.2秒」のように店舗規模と負荷を直接比較できる。
+これにより、例えば「241台・180日・model_search・Peak 812 MiB・92.4秒」のように店舗規模と負荷を比較できる。
 
-## 1.3 Existing daily analysis instrumentation
+## A.3 VPSリソース画面
 
-既存 `DAILY_ANALYSIS` の数学・出力契約は変更しない。
+既存「VPSリソース」に「処理実績」を追加し、直近履歴として以下を表示する。
 
-追加するのは計測のみで、1店舗処理終了時に `analysis_task_metrics` へ `daily_analysis` として記録する。既存 `job_runs.peak_rss_mib` も維持し、互換性を壊さない。
+- 処理種類 / ①②③
+- 店舗名
+- 台数
+- 対象日数
+- 台×日件数
+- Peak RAM
+- CPU時間
+- 処理時間
+- 成否
+- 使用モデルfingerprintの短縮表示
 
-## 1.4 Feature build job
+既存 `/api/vps/system/resources` にread-onlyのbounded履歴を追加する。書込APIは増やさない。
 
-新しい低優先度ジョブ `FEATURE_BUILD` を追加する。
+---
 
-目的は店舗ごとの研究用「特徴量倉庫」を作ること。canonical dataから再生成可能な派生集計だけを保存し、raw/canonicalを真実の源泉として維持する。
+# 1. ① 解析: 通常解析 + 特徴量倉庫 + 現Championによる店舗読み
 
-初期特徴量:
+## 1.1 通常解析
 
-- 期間窓: 30日 / 90日 / 180日
+既存 `DAILY_ANALYSIS` の数学・出力契約は変更しない。追加するのは負荷計測と研究パイプラインへの入力連携のみ。
+
+通常解析終了後、研究用特徴量が古い場合にだけ低優先度 `FEATURE_BUILD` をcoalesceして予約する。
+
+## 1.2 特徴量倉庫
+
+`store_feature_snapshots` を追加し、canonical dataから再生成可能な派生特徴量を保存する。
+
+初期の単独特徴群:
+
+- 直近 1 / 3 / 7 / 14 / 30 / 90 / 180日の履歴要約
 - 曜日
 - 営業日の日付末尾
 - 機種
 - 台番
 - 台番末尾
-- 上記のうち研究価値が高い限定的な組み合わせ
-  - 期間窓 × 曜日
-  - 期間窓 × 日付末尾
-  - 期間窓 × 機種
-  - 期間窓 × 台番
-  - 期間窓 × 台番末尾
-  - 曜日 × 機種
-  - 日付末尾 × 機種
+- 直近の強弱トレンド
+- 前回強かったと判定された日からの経過日数
+- 同一店舗・同一機種内での相対順位履歴
+- 店舗全体の直近配分傾向
+- 利用可能な場合のみ近接台・隣接台の履歴
 
-全次元の完全Cartesian productは作らない。組合せ爆発と重複根拠を避ける。
+未来データは絶対に使わない。`as_of_date=D` の特徴量は `business_date <= D` のデータだけから作る。
 
-保存先は専用テーブル `store_feature_snapshots` とする。
+## 1.3 現Champion
 
-キー:
+各店舗は `research_model_registry` に1つの `research_champion` を持つ。
 
-- `store_id`
-- `feature_version`
-- `as_of_date`
-- `dimension_key`
-- `dimension_value`
-- `window_days`
+①の研究用店舗読みは現在の `research_champion` を使う。③でより強い候補が昇格した場合、次回①から自動的に新Championを使う。
 
-値:
-
-- 対象日数
-- 対象台数
-- 対象レコード数
-- 既存JUGEST判定から安全に派生できる集計値
-- 入力hash
-- 更新時刻
-
-特徴量生成は既存判別式を変更せず、既存出力/canonical dataの統計的要約だけを行う。
-
-## 1.5 Incremental refresh
-
-canonical data更新後、通常 `DAILY_ANALYSIS` を先に実行する。
-
-その店舗のfeature frontierが古い場合のみ `FEATURE_BUILD` を1件coalesceして予約する。同一店舗・同一feature versionで複数の重複ジョブを作らない。
-
-可能な集計は前回frontierから増分更新し、履歴修正で入力hashが変わった場合だけ必要範囲を再生成する。
-
-## 1.6 Priority and admission
-
-優先順位は以下の順序を保証する。
-
-1. canonical ingest / 通常運用
-2. `DAILY_ANALYSIS`
-3. `FEATURE_BUILD`
-4. `BACKTEST`
-5. `MODEL_SEARCH`
-
-研究ジョブは通常解析がqueued/runningの間は新規開始しない。
-
-実行中の研究ジョブは1店舗/1チャンクを短く区切り、通常解析が到着したら次チャンクを開始せず譲る。通常到着だけを理由にDB transaction途中の研究子プロセスを強制killしない。既存のメモリ緊急停止規則は研究ジョブにも適用する。
-
-初期状態では研究系全体の同時実行数を1に固定する。実測メトリクスが十分蓄積した後、Schedulerが安全な並列数を学習する拡張は別変更とする。
-
-## 1.7 Resource UI
-
-既存「VPSリソース」画面に「処理実績」を追加する。
-
-直近の `analysis_task_metrics` を表示し、少なくとも以下を見せる。
-
-- 処理種類
-- 店舗名
-- 台数
-- 日数
-- Peak RAM
-- 処理時間
-- 成否
-
-既存 `/api/vps/system/resources` のread-only authenticated responseへ bounded な直近履歴を追加し、新しい書込APIは作らない。
+ただし既存の設定判別数学は別レイヤーとして固定する。
 
 ---
 
-# 2. 自動バックテスト
+# 2. ② 自動バックテスト
 
-## 2.1 Purpose
+## 2.1 Walk-forward原則
 
-現在または将来の「店読み予測」が過去データでどの程度通用したかを、未来情報混入なしで自動採点する。
-
-## 2.2 Walk-forward rule
-
-対象日 `D` を評価するとき、予測入力には **`D` より前の日付だけ**を使う。
+対象日 `D` の予測では **`D` より前だけ**を使う。
 
 - feature `as_of_date <= D-1`
 - canonical input `business_date < D`
-- 対象日 `D` のデータは予測生成完了後の採点にのみ使う
+- `D` のデータは予測確定後の採点にのみ使う
 - `D+1` 以降は一切参照しない
 
-コード上でprediction phaseとscoring phaseを別関数・別データ取得境界に分離し、同じ配列を使い回して未来情報を誤参照できない構造にする。
+prediction phaseとscoring phaseは別関数・別データ取得境界にする。同じ配列を使い回して未来情報を参照できる構造にしない。
 
-## 2.3 Ground-truth / scoring adapter
+## 2.2 答えラベル
 
-実際の設定が公式確定していない日が多いため、「真の設定」とは呼ばない。
+実際の設定が公式確定していない日は「真の設定」と呼ばない。
 
-初期スコアリングは `observed outcome` として、対象日canonical dataと既存JUGESTの日別判定から得られるversioned proxyを使う。既存判別数学は変更しない。
+初期は対象日canonical dataと既存JUGESTの日別判定から得られるversioned `observed outcome proxy` を使う。将来確定設定ラベルが得られた場合は別adapterとして追加し、proxyと混同しない。
 
-将来、確定設定ラベルを取得できた場合は別adapterとして追加し、proxyと確定ラベルを混同しない。
+## 2.3 保存
 
-## 2.4 Stored outputs
+- `backtest_runs`
+- `backtest_predictions`
+- `backtest_scores`
 
-専用テーブルを追加する。
+を追加する。
 
-`backtest_runs`
-- run/version/store/range/config hash/status/start/end
-
-`backtest_predictions`
-- run/store/target_date/machine_key/predicted_score/predicted_rank/input_cutoff/input_hash
-
-`backtest_scores`
-- run/store/target_date/metric/value/denominator/details
-
-初期指標:
+最低限の評価指標:
 
 - Top 1 / 3 / 5 overlap
-- ranking correlation（対象台数不足時は記録しない）
-- 上位分位のlift
+- Top 3 / 5 lift
+- ranking correlation（対象台数不足時は無効）
 - 店舗別
 - 曜日別
 - 日付末尾別
 - 機種別
+- 評価対象件数 / 日数
 
-バックテスト結果はprediction config hashとfeature versionを必ず保持し、後から再現可能にする。
-
-## 2.5 Job shape
-
-`BACKTEST` は1店舗の有限期間チャンク単位で実行する。
-
-1チャンクは対象日を順番にwalk-forward評価し、通常解析が待っている場合はチャンク終了後に停止して残りを再queueする。
-
-`analysis_task_metrics.task_kind='backtest'` として、台数規模・対象日数・評価日数・Peak RAM・CPU・時間を記録する。
+予測ごとにconfig hash、feature version、model fingerprint、input cutoff、input hashを保存し、再現可能にする。
 
 ---
 
-# 3. 候補モデル大量比較
+# 3. ③ 新評価軸発掘 + モデル探索
 
-## 3.1 Purpose
+## 3.1 新しい評価軸の生成
 
-②のバックテストを試験装置として、店読み予測の候補設定を大量に比較する。
+新評価軸は「強かった台の過去条件」だけを見るのではなく、**強かった台と同条件の外れ台を比較**して生成する。
 
-対象は新しい研究用予測レイヤーのみ。既存の設定判別式そのものを探索対象にしない。
+対象日 `D` について、まず `D` の結果を答えとして隔離する。そのうえで `D-1` 以前だけを使って各台の過去条件を生成する。
 
-## 3.2 Candidate space
+例:
 
-初期候補はversioned configで表現する。
+- 過去7日で弱い日が何日あったか
+- 過去14日の同機種内順位
+- 前回強かった日から何日空いたか
+- 台番末尾
+- 曜日
+- 日付末尾
+- 同曜日での過去成績
+- 同じ日付末尾での過去成績
+- 店舗内でその機種が最近どれくらい扱われていたか
+- 隣接情報が存在する場合の近接台履歴
 
-探索可能項目:
+### 比較方法
 
-- 参照期間 30 / 90 / 180日
-- 曜日特徴の重み
-- 日付末尾特徴の重み
-- 機種特徴の重み
-- 台番特徴の重み
-- 台番末尾特徴の重み
-- 直近性の減衰強度
+強かった台群と、同じ店舗・同じ対象日の他台を比較する。機種差が大きい特徴では同一機種のmatched controlも併用する。
 
-同一根拠由来の特徴量はグループ化し、重み合計の上限を設定して二重計上を抑える。
+例えば、
 
-最初は決定論的なbounded grid searchを使う。候補数に上限を設け、config hash順で再現可能にする。ランダム探索を追加する場合はseedを保存する。
+- 強かった台の72%が「過去7日で3日以上弱い」
+- controlでは38%
 
-## 3.3 Evaluation protocol
+なら、その条件を評価軸候補にする。
 
-候補比較は時系列順に train / validation / final test を分離する。
+単に強い台だけに多い条件ではなく、**controlとの差・support・別期間での再現性**を必須とする。
 
-- train: 候補生成・粗い絞り込み
-- validation: 上位候補の順位決定
-- final test: 最終比較専用。候補調整には使わない
+## 3.2 複合条件の生成
 
-店舗数が少ない初期段階では、利用可能日数に応じてwalk-forward foldsを使い、分割条件をrun metadataへ保存する。
+単独軸から2軸、3軸へ段階的に組み合わせる。
 
-1店舗だけで勝った候補を全体Champion扱いしない。店舗横断・期間横断の安定性を別指標で表示する。
+例:
 
-## 3.4 No automatic promotion
+- `土曜日`
+- `台番末尾7`
+- `直近7日で弱い日が3日以上`
 
-`MODEL_SEARCH` はランキングを生成するだけで、本番設定を変更しない。
+から、
 
-出力例:
+- `土曜日 × 末尾7`
+- `末尾7 × 直近7日弱い`
+- `土曜日 × 末尾7 × 直近7日弱い`
 
-- candidate A: validation +12.4%, final test +8.1%
-- candidate B: validation +14.0%, final test +1.2%
-- current research baseline: 0%
+を生成できる。
 
-採用操作は本設計の範囲外とし、ヒロの明示判断を必要とする。
+完全Cartesian productは禁止する。
 
-## 3.5 Stored outputs
+探索予算は以下に分ける。
 
-`model_search_runs`
-- search version / feature version / backtest version / split spec / status
+- 90%: 単独または親条件に一定の信号があるhierarchical探索
+- 10%: 単独では弱いが組合せで効く条件を拾うための、seed固定・再現可能なexploration枠
 
-`model_candidates`
-- run / candidate hash / config JSON / stage / aggregate metrics / rank
+最大interaction orderは初期状態で3とする。
 
-必要に応じて候補別の日別詳細は既存backtest tablesを参照し、巨大な重複保存を避ける。
+## 3.3 過学習対策: candidate gate
 
-`analysis_task_metrics.task_kind='model_search'` として、店舗、台数、候補数、評価回数、Peak RAM、CPU、時間を記録する。
+新しい軸は、過去データにたまたまハマっただけでは採用しない。
+
+最低条件:
+
+- 該当row-dayが100以上
+- 10営業日以上に分散している
+- observed-positiveが20件以上
+- train内でcontrolとの差が同方向
+- 複数testingを考慮し、単独のp値だけで採用しない
+
+候補数が多い探索ではBenjamini-Hochberg法によるFDR 5%をscreening補助として使う。ただし統計的有意だけでは採用せず、必ずout-of-sample性能を要求する。
+
+## 3.4 時系列分離
+
+1つの探索cycleでは履歴を時系列順に3領域へ分離する。
+
+- **Discovery/Train 60%**: 新評価軸発掘と候補生成だけに使用
+- **Validation 20%**: 世代ごとの候補選抜・研究Champion更新に使用
+- **Sealed Holdout 20%**: 探索中は一切見ない。cycle収束後の最終選抜だけに使用
+
+日数が少なく3領域を安定して作れない店舗では自動探索を開始せず、base modelのままデータ蓄積を待つ。
+
+探索中にSealed Holdoutの結果を候補生成・重み変更へフィードバックしてはならない。
+
+## 3.5 安定性検査
+
+Validationでは単一期間だけでなく時間順の複数foldを使う。
+
+候補軸は少なくとも以下を満たす必要がある。
+
+- 4つの時系列foldのうち3つ以上で効果方向が一致
+- 近い条件へ少しずらしても効果が完全崩壊しない
+- 特定の1日や少数台を除外しただけで優位性が消えない
+- 単純な既存軸で説明できる場合、重複特徴として新規採用しない
+
+「第2土曜 × 末尾7 × 直近14日下位40%」のような奇妙な条件でも、このgateを通れば候補として扱う。意味が人間に直感的かどうかは採否条件にしない。
+
+## 3.6 モデル表現
+
+モデルは評価軸と重みを完全にversioned config化する。
+
+各モデルは最低限以下を持つ。
+
+- feature IDs
+- 各featureの条件・期間・変換
+- interaction定義
+- 方向（positive / negative）
+- 重み
+- recency decay
+- source-group
+- parent model fingerprint
+- generation
+
+重みは浮動小数点を直接比較せず、**basis point整数**で正規化し合計10000とする。
+
+## 3.7 Model fingerprint
+
+モデルの完全構成をcanonical JSON化しhashする。
+
+fingerprintには以下を含む。
+
+- 評価軸の集合
+- 各軸の条件
+- 参照期間
+- interaction
+- 各軸のbasis-point重み
+- recency decay
+- model/search version
+
+したがって「同じ評価軸＋同じ条件＋同じ重み」の組合せが再登場すれば、同じfingerprintになる。
+
+## 3.8 世代更新
+
+各世代で現在の研究Championを親にして候補を作る。
+
+候補操作:
+
+- 軸追加
+- 軸削除
+- 軸入替
+- interaction追加/削除
+- 参照期間変更
+- 重み変更
+- recency decay変更
+
+②を使ってValidation成績を比較し、現在の研究Championを上回る候補だけ次世代Championへ自動昇格する。
+
+昇格したChampionは次の①へ自動反映され、その条件下で再び②③を回す。
 
 ---
 
-# Shared scheduling and failure semantics
+# 4. 自己改善ループと収束
 
-- すべての研究ジョブはidempotency keyを持つ。
-- 同一入力hash・versionの成功済み結果は再計算しない。
-- failure retryは既存queueのfailure budgetを使う。
-- メモリ都合のdefer/cancelは研究結果の失敗評価に含めない。
-- 子プロセス異常終了時も部分保存を「成功」と扱わない。
-- 永続化はtransactionで完了してからjob successfulとする。
-- retry時は完成済みチャンクを再利用し、最初から全期間をやり直さない。
+## 4.1 ループ
 
-# Versioning and reproducibility
+店舗ごとに以下を繰り返す。
 
-以下を独立versionとして結果へ刻む。
+`① 現Championで解析`
+→ `② walk-forward評価`
+→ `③ 新軸発掘・候補探索`
+→ `Validationで新Champion選抜`
+→ `①へ自動反映`
+→ repeat
 
-- canonical parser version
-- existing analysis version
-- feature version
-- backtest version
-- scoring adapter version
-- model-search version
-- candidate config hash
+## 4.2 循環検知
 
-同じversion/hash/inputから同じ研究結果を再現できることをテストする。
+同一店舗・同一探索cycle内で、**同じmodel fingerprintが2回出現したら循環検知**する。
 
-# API and UI scope
+これは単に同じ軸名ではなく、同じ評価軸・条件・期間・重み・interactionまで一致した場合を指す。
 
-初期UIは診断・研究状況の可視化に限定する。
+## 4.3 改善停止
 
-表示対象:
+循環が起きなくても、5世代連続で研究Championを更新できなければ探索cycleを収束させる。
 
-- 通常解析/研究ジョブのqueue状態
-- 直近処理実績
-- 店舗台数規模
-- Peak RAM / CPU / duration
-- feature frontier
-- backtest進捗と概要スコア
-- model search進捗と候補上位
+## 4.4 Cycle winner
 
-研究設定をブラウザから自由編集する高度なUIは初期実装に含めない。初期configはversioned code/configで管理し、再現性を優先する。
+収束後、cycle内で記録した歴代ChampionをSealed Holdoutで一度だけ評価する。
 
-# Testing strategy
+最後の世代を自動的に勝者にはしない。
 
-各段階をTDDで実装する。
+Sealed Holdoutで最も高いout-of-sample性能を示し、かつbase modelを上回った歴代Championを `cycle_winner` とする。改善が確認できなければbase/current active modelを維持する。
 
-## Phase 1 acceptance
+## 4.5 Active store model
 
-- existing `DAILY_ANALYSIS` output hash/判定結果が変更されない
-- daily analysis 1店舗処理で詳細メトリクスが1件保存される
-- machine count/bucket/day count/row count/Peak RSS/durationが記録される
-- feature buildが30/90/180日と指定次元を生成する
-- 同一入力のfeature buildがidempotent
-- daily analysis待機中はfeature buildを新規開始しない
-- resource UI/APIで直近処理実績を読める
+`cycle_winner` は店舗読みレイヤーの `active_store_model` へ自動昇格できる。
 
-## Phase 2 acceptance
+ただし昇格対象は新しい店舗読み予測レイヤーだけであり、Juggler/HANAの設定判別数学、確率テーブル、strict Champion等のprotected領域を書き換えない。
 
-- target date以降をprediction inputへ渡せないテストがある
-- 同一as-of/input/configでprediction hashが安定する
-- scoringはprediction保存後のtarget-day dataだけを読む
-- backtest中に新しいdaily analysisが来ても次チャンクでdailyへ譲る
-- 1店舗単位のresource metricsが保存される
+新しい実データが蓄積したら次のcycleを開始し、旧Holdoutを学習側へ解放しつつ、より新しい期間を新しいSealed Holdoutとして確保する。
 
-## Phase 3 acceptance
+これにより同じ固定holdoutへ永遠に最適化することを防ぐ。
 
-- candidate config生成が決定論的
-- train/validation/final test境界が固定・記録される
-- final testをcandidate tuningへ利用しない構造テストがある
-- model search結果だけではproduction configが変更されない
-- candidate count/evaluation count/resource metricsが保存される
+---
 
-# Delivery sequence
+# 5. Model registry / audit trail
 
-1. Phase 1をfeature branchで実装・全テスト
-2. ヒロ確認
-3. 明示許可後に`deploy/vps`へfast-forward deploy
-4. 実測メトリクスを確認
-5. Phase 2を別feature branchで実装・全テスト
-6. ヒロ確認・明示許可後deploy
-7. 実測バックテスト結果と負荷を確認
-8. Phase 3を別feature branchで実装・全テスト
-9. ヒロ確認・明示許可後deploy
-10. 研究結果を見て本番予測ロジックへの採用可否を別途判断
+`research_model_registry` を追加する。
 
-この分割により、①で基盤障害があれば②③へ波及させず、②の未来情報遮断が検証できるまで③を開始しない。
+最低限:
+
+- `store_id`
+- `model_fingerprint`
+- `parent_fingerprint`
+- `cycle_id`
+- `generation`
+- `status`
+  - `candidate`
+  - `research_champion`
+  - `cycle_winner`
+  - `active_store_model`
+  - `rejected`
+- `config_json`
+- `discovery_score`
+- `validation_score`
+- `holdout_score` nullable
+- `created_at`
+- `promoted_at` nullable
+
+全昇格・棄却を残し、「なぜこのモデルが現行最優秀なのか」を後から追跡できるようにする。
+
+---
+
+# 6. Job priority / Scheduler
+
+優先順位は固定する。
+
+1. canonical ingest / 通常運用
+2. `DAILY_ANALYSIS`
+3. `FEATURE_BUILD`
+4. `AXIS_DISCOVERY`
+5. `BACKTEST`
+6. `MODEL_SEARCH`
+
+研究ジョブは通常解析がqueued/runningの間は新規開始しない。
+
+研究処理は1店舗・有限チャンク単位にし、通常解析が到着したらチャンク終了後に譲る。DB transaction途中を通常到着だけで強制killしない。既存のメモリ緊急停止規則は研究ジョブにも適用する。
+
+初期は研究系全体で同時実行1。`analysis_task_metrics` が十分蓄積してから、店舗規模・task_kind・実測Peak RAMを使った安全な並列化を別変更で検討する。
+
+---
+
+# 7. Safety against false discoveries
+
+JUGESTが発見した「変な条件」は、以下の理由で即採用しない。
+
+- 過去データを大量探索した結果の偶然一致
+- 特定日だけのイベント
+- 機種構成の偏り
+- 店全体が強い日の影響を台固有の規則と誤認
+- 同じ根拠の二重計上
+- thresholdを微妙に変えると消える脆い規則
+
+対策として、candidate gate、matched control、時系列分離、FDR screening、複数fold安定性、Sealed Holdout、feature source-group重複制御を必須にする。
+
+人間に意味が分からない条件でもout-of-sampleで安定して再現するなら残す。一方、人間にもっともらしく見えても再現しない条件は捨てる。
+
+---
+
+# 8. Implementation order
+
+実装は安全のため段階的に行う。
+
+### Phase 1
+
+- 共通 `analysis_task_metrics`
+- 既存 `DAILY_ANALYSIS` の詳細計測
+- `FEATURE_BUILD`
+- `store_feature_snapshots`
+- VPSリソース画面の処理実績
+
+### Phase 2
+
+- `BACKTEST`
+- walk-forward leakage barrier
+- observed outcome proxy adapter
+- `backtest_runs / predictions / scores`
+
+### Phase 3
+
+- `AXIS_DISCOVERY`
+- matched control
+- candidate gate
+- 複合条件生成
+- `MODEL_SEARCH`
+- model fingerprint / registry
+- 研究Champion世代更新
+
+### Phase 4
+
+- ①→②→③→①の自動閉ループ
+- 循環検知
+- 5世代改善なし停止
+- Sealed Holdoutによるcycle winner選出
+- `active_store_model` 自動昇格
+
+各PhaseはTDDし、前Phaseの保存形式を明示的なversion契約として使用する。Phase 4が完成するまで、研究結果は既存店舗解析の表示・判定結果を変更しない。
+
+---
+
+# 9. Success criteria
+
+完成条件:
+
+1. iPhone/JUGEST画面を開いていなくてもVPS単独で研究ループが進む。
+2. 通常収集・通常解析が研究処理より常に優先される。
+3. ①②③それぞれで店舗台数規模とPeak RAM/CPU/時間が残る。
+4. 過去日予測へ未来情報を混入できないテストがある。
+5. 新評価軸は強い台だけでなくcontrolとの比較から作られる。
+6. 複合条件はboundedに探索され、組合せ爆発しない。
+7. train/validation/sealed holdoutが時系列分離される。
+8. 同じ重み付き評価軸構成は同じmodel fingerprintになる。
+9. 同じfingerprintが2回出たらcycleを収束できる。
+10. 5世代改善なしでもcycleを収束できる。
+11. 最終winnerは最後の世代ではなく、Sealed Holdoutで歴代Championから選ばれる。
+12. winnerが次の店舗読みactive modelへ自動反映される。
+13. protectedな設定判別数学は一切変更されない。
+14. 全モデル・昇格・棄却・負荷実績を後から再現・監査できる。
