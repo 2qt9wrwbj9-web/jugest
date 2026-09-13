@@ -10,13 +10,15 @@ import {createRelayStore} from '../src/relay-store.mjs';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {canonicalJson} from '../src/canonical-json.mjs';
-import {persistLivePrediction,scoreLiveComparisonDay} from '../src/research/live-comparison.mjs';
+import {persistLivePrediction,scoreLiveComparisonDay,SCORER_VERSION} from '../src/research/live-comparison.mjs';
+import {ensureHistoricalComparisonRun,persistHistoricalComparisonDay} from '../src/research/historical-comparison.mjs';
 
 const CHANNEL='channel_comparison_api_123';
 const OTHER='channel_comparison_other';
 const TOKEN='receiver-token-comparison-api-1234567890';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
 const NOW='2026-09-15T09:00:00.000Z';
+const histDate=index=>new Date(Date.UTC(2026,0,1)+index*86400000).toISOString().slice(0,10);
 
 async function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-comparison-api-')),root=join(dir,'web'),relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
@@ -30,6 +32,10 @@ async function fixture(){
   persistLivePrediction(db,{...shared,engine:'pre_research',engineVersion:'store-read-v1',modelFingerprint:'fp-pre',featureVersion:'store-features-v1',inputHash:'pre-input',rankings:[{machineKey:'101',tableNo:'101',machineName:'my',rank:1,score:.9},{machineKey:'102',tableNo:'102',machineName:'my',rank:2,score:.2}]});
   persistLivePrediction(db,{...shared,engine:'current_shadow',engineVersion:'current-v5',modelFingerprint:'',featureVersion:null,inputHash:'shadow-input',rankings:[{machineKey:'102',tableNo:'102',machineName:'my',rank:1,score:90},{machineKey:'101',tableNo:'101',machineName:'my',rank:2,score:20}]});
   scoreLiveComparisonDay(db,{storeId:'store-a',targetDate:'2026-09-14',outcomeRows:[{machineKey:'101',outcomeScore:1000},{machineKey:'102',outcomeScore:-500}],outcomeInputHash:'outcome-hash-1',nowIso:NOW});
+  const historicalDays=Array.from({length:9},(_,i)=>({date:histDate(i),machines:[{tableNo:'101',diff:i*10}]}));
+  const run=ensureHistoricalComparisonRun(db,{storeId:'store-a',days:historicalDays,nowIso:NOW});
+  const metric=quality=>({machineCount:2,coverage:1,rankCorrelation:.5,quality,top1:{rate:.5,lift:1},top3:{rate:1,lift:1},top5:{rate:1,lift:1}});
+  persistHistoricalComparisonDay(db,{runId:run.id,storeId:'store-a',targetDate:histDate(7),preMetrics:metric(120),currentMetrics:metric(100),winner:'pre_research',outcomeInputHash:'hist-outcome',preState:{fingerprint:'hist-fp'},scorerVersion:SCORER_VERSION,createdAt:NOW});
   db.close();
   const server=createWebServer({rootDir:root,relayDbPath,canonicalDbPath,rawRoot});server.listen(0,'127.0.0.1');await once(server,'listening');
   return {base:`http://127.0.0.1:${server.address().port}`,auth:{authorization:`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL},async close(){server.closeAllConnections?.();await new Promise(r=>server.close(r));rmSync(dir,{recursive:true,force:true})}};
@@ -48,7 +54,9 @@ test('PRE shadow comparison endpoint is authenticated, store-scoped and bounded'
     assert.equal(body.store.id,'store-a');
     assert.equal(body.comparison.live.days,1);
     assert.equal(body.comparison.live.newWins,1);
-    assert.equal(body.comparison.historical,null);
+    assert.equal(body.comparison.historical.scored,1);
+    assert.equal(body.comparison.historical.newWins,1);
+    assert.equal(body.comparison.historical.rows[0].preFingerprint,'hist-fp');
     assert.equal(body.limit,366);
     assert.equal(body.comparison.live.rows[0].predictions.pre_research.modelFingerprint,'fp-pre');
     assert.equal(body.comparison.live.rows[0].predictions.current_shadow.engineVersion,'current-v5');
