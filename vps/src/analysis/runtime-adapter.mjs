@@ -13,7 +13,8 @@ function makeElement(){
 }
 
 function plain(value){return JSON.parse(JSON.stringify(value))}
-function mustFunction(value,name){if(typeof value!=='function')throw new Error(`JUGEST runtime missing ${name}`);return value}
+function mustFunction(value,name){if(typeof value!=="function")throw new Error(`JUGEST runtime missing ${name}`);return value}
+function validTargetDate(value){const text=String(value??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError('targetDate must be YYYY-MM-DD');return text}
 
 async function bootRuntime(rootDir){
   const root=path.resolve(rootDir);
@@ -49,7 +50,7 @@ async function bootRuntime(rootDir){
   return {ctx,bridge};
 }
 
-export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,options={}}={}){
+function validateImportArgs({rootDir,shop,sourceStoreId,days}){
   const name=String(shop??'').trim();
   const storeId=String(sourceStoreId??name).trim();
   if(!rootDir)throw new TypeError('rootDir is required');
@@ -57,11 +58,14 @@ export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,
   if(!storeId)throw new TypeError('sourceStoreId is required');
   if(!Array.isArray(days)||!days.length)throw new TypeError('days are required');
   if(days.length>400)throw new RangeError('headless import supports at most 400 days');
+  return {name,storeId};
+}
 
+async function bootImportedRuntime({rootDir,shop,sourceStoreId,days}){
+  const {name,storeId}=validateImportArgs({rootDir,shop,sourceStoreId,days});
   const {bridge}=await bootRuntime(rootDir);
   const previewExternalJson=mustFunction(bridge.previewExternalJson,'previewExternalJson');
   const saveExternalJsonPreview=mustFunction(bridge.saveExternalJsonPreview,'saveExternalJsonPreview');
-  const runStoreAnalysis=mustFunction(bridge.runStoreAnalysis,'runStoreAnalysis');
   const payload={
     format:'juggler-external-import-bulk',version:7,source:'ana-slo',sourceStoreId:storeId,shop:name,
     requestedDays:days.length,capturedAt:new Date().toISOString(),days:plain(days)
@@ -69,7 +73,35 @@ export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,
   const checked=await previewExternalJson(JSON.stringify(payload));
   if(!checked?.preview)throw new Error('JUGEST runtime rejected canonical store payload');
   await saveExternalJsonPreview(checked.preview);
+  return {bridge,name,storeId};
+}
+
+export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,options={}}={}){
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});
+  const runStoreAnalysis=mustFunction(bridge.runStoreAnalysis,'runStoreAnalysis');
   const result=await runStoreAnalysis(name,options);
   if(!result||result.error)throw new Error(result?.error||'JUGEST store analysis returned no result');
   return plain(result);
 }
+
+export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days))throw new TypeError('days are required');
+  const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!history.length)throw new TypeError('history before targetDate is required');
+  const sourceFrontierDate=String(history.at(-1)?.date||'');
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
+  const getTodayPlan=mustFunction(bridge.getTodayPlan,'getTodayPlan');
+  const result=await getTodayPlan(name,target,{});
+  if(!result||result.error)throw new Error(result?.error||'JUGEST current store plan returned no result');
+  const candidates=Array.isArray(result.candidates)?result.candidates:[];
+  const rankings=candidates.map((row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)return null;
+    const rank=index+1,aimScore=Number(row?.aimScore);
+    return Object.freeze({machineKey:tableNo,tableNo,machineName:String(row?.machineName||row?.machine||'unknown'),rank,score:Number.isFinite(aimScore)?aimScore:-rank});
+  }).filter(Boolean);
+  return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:result.available!==false&&rankings.length>0,rankings:Object.freeze(rankings)});
+}
+
+export const __test={validTargetDate,bootImportedRuntime};
