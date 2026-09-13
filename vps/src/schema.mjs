@@ -244,6 +244,55 @@ export function migrate(db){
     );
     CREATE INDEX IF NOT EXISTS store_prediction_scores_store_target_idx ON store_prediction_scores(store_id,target_date,engine);
 
+    CREATE TABLE IF NOT EXISTS historical_comparison_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id TEXT NOT NULL,
+      replay_version TEXT NOT NULL,
+      history_identity TEXT NOT NULL,
+      snapshot_first_date TEXT,
+      snapshot_last_date TEXT,
+      next_target_date TEXT,
+      state TEXT NOT NULL CHECK(state IN ('queued','running','complete','failed','stale')),
+      total_candidates INTEGER NOT NULL DEFAULT 0,
+      processed_count INTEGER NOT NULL DEFAULT 0,
+      scored_count INTEGER NOT NULL DEFAULT 0,
+      excluded_count INTEGER NOT NULL DEFAULT 0,
+      pre_state_json TEXT NOT NULL,
+      pre_fingerprint TEXT NOT NULL DEFAULT '',
+      pre_frontier_date TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      UNIQUE(store_id,replay_version,history_identity),
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS historical_comparison_runs_store_state_idx ON historical_comparison_runs(store_id,state,updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS historical_comparison_days (
+      run_id INTEGER NOT NULL,
+      store_id TEXT NOT NULL,
+      target_date TEXT NOT NULL,
+      pre_prediction_json TEXT,
+      current_prediction_json TEXT,
+      pre_prediction_hash TEXT,
+      current_prediction_hash TEXT,
+      outcome_input_hash TEXT,
+      pre_metrics_json TEXT,
+      current_metrics_json TEXT,
+      winner TEXT CHECK(winner IN ('pre_research','current_shadow','tie') OR winner IS NULL),
+      excluded_reason TEXT,
+      pre_fingerprint TEXT,
+      pre_feature_version TEXT,
+      pre_frontier_date TEXT,
+      scorer_version TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(run_id,target_date),
+      FOREIGN KEY(run_id) REFERENCES historical_comparison_runs(id) ON DELETE CASCADE,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS historical_comparison_days_store_date_idx ON historical_comparison_days(store_id,target_date DESC);
+
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
