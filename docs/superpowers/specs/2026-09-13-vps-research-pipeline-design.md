@@ -157,7 +157,7 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 
 初期は対象日canonical dataと既存JUGESTの日別判定から得られるversioned `observed outcome proxy` を使う。将来確定設定ラベルが得られた場合は別adapterとして追加し、proxyと混同しない。
 
-## 2.3 保存
+## 2.3 保存と評価指標
 
 - `backtest_runs`
 - `backtest_predictions`
@@ -177,6 +177,21 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 - 評価対象件数 / 日数
 
 予測ごとにconfig hash、feature version、model fingerprint、input cutoff、input hashを保存し、再現可能にする。
+
+## 2.4 Promotion comparator v1
+
+「より強いモデル」の判定を曖昧にしないため、初期版は次の決定論的比較を使う。
+
+- primary: 4つのValidation時系列foldにおける **Top 3 liftの中央値**
+- guardrail 1: Top 5 lift中央値が現Championより `0.02` を超えて悪化しない
+- guardrail 2: ranking correlation中央値が現Championより `0.02` を超えて悪化しない
+- candidateはprimaryが現Championを上回る場合だけ昇格可能
+- primary差が `0.01` 未満ならTop 5 lift中央値が高い方を優先
+- Top 5 lift差も `0.01` 未満ならranking correlation中央値が高い方を優先
+- それも同等なら、評価軸数→interaction数が少ない方を優先
+- それも同等ならmodel fingerprintの辞書順で決め、再現性を保証する
+
+この比較規則自体を `promotion-comparator-v1` としてversion管理する。将来変更する場合は別versionとし、過去結果を上書きしない。
 
 ---
 
@@ -214,7 +229,17 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 
 単に強い台だけに多い条件ではなく、**controlとの差・support・別期間での再現性**を必須とする。
 
-## 3.2 複合条件の生成
+## 3.2 条件・閾値の生成範囲
+
+閾値を無制限に試して偶然当たりを作らない。
+
+- 時間窓は初期状態で `1 / 3 / 7 / 14 / 30 / 90 / 180日` に限定
+- 数値特徴の閾値候補は、Discovery/Trainだけから計算した `10 / 20 / ... / 90` percentileと、意味が固定されたdomain cutoffだけを使用
+- Validation / Sealed Holdoutを見て閾値を新規生成してはならない
+- categorical特徴はminimum supportを満たすカテゴリだけ候補化
+- 条件定義そのものをfeature IDへ含め、後から完全再現できるようにする
+
+## 3.3 複合条件の生成
 
 単独軸から2軸、3軸へ段階的に組み合わせる。
 
@@ -241,7 +266,7 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 
 最大interaction orderは初期状態で3とする。
 
-## 3.3 過学習対策: candidate gate
+## 3.4 過学習対策: candidate gate
 
 新しい軸は、過去データにたまたまハマっただけでは採用しない。
 
@@ -255,7 +280,7 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 
 候補数が多い探索ではBenjamini-Hochberg法によるFDR 5%をscreening補助として使う。ただし統計的有意だけでは採用せず、必ずout-of-sample性能を要求する。
 
-## 3.4 時系列分離
+## 3.5 時系列分離
 
 1つの探索cycleでは履歴を時系列順に3領域へ分離する。
 
@@ -267,20 +292,20 @@ prediction phaseとscoring phaseは別関数・別データ取得境界にする
 
 探索中にSealed Holdoutの結果を候補生成・重み変更へフィードバックしてはならない。
 
-## 3.5 安定性検査
+## 3.6 安定性検査
 
-Validationでは単一期間だけでなく時間順の複数foldを使う。
+Validationでは単一期間だけでなく時間順の4foldを使う。
 
 候補軸は少なくとも以下を満たす必要がある。
 
-- 4つの時系列foldのうち3つ以上で効果方向が一致
+- 4foldのうち3つ以上で効果方向が一致
 - 近い条件へ少しずらしても効果が完全崩壊しない
 - 特定の1日や少数台を除外しただけで優位性が消えない
 - 単純な既存軸で説明できる場合、重複特徴として新規採用しない
 
 「第2土曜 × 末尾7 × 直近14日下位40%」のような奇妙な条件でも、このgateを通れば候補として扱う。意味が人間に直感的かどうかは採否条件にしない。
 
-## 3.6 モデル表現
+## 3.7 モデル表現
 
 モデルは評価軸と重みを完全にversioned config化する。
 
@@ -298,7 +323,7 @@ Validationでは単一期間だけでなく時間順の複数foldを使う。
 
 重みは浮動小数点を直接比較せず、**basis point整数**で正規化し合計10000とする。
 
-## 3.7 Model fingerprint
+## 3.8 Model fingerprint
 
 モデルの完全構成をcanonical JSON化しhashする。
 
@@ -314,7 +339,7 @@ fingerprintには以下を含む。
 
 したがって「同じ評価軸＋同じ条件＋同じ重み」の組合せが再登場すれば、同じfingerprintになる。
 
-## 3.8 世代更新
+## 3.9 世代更新
 
 各世代で現在の研究Championを親にして候補を作る。
 
@@ -328,7 +353,7 @@ fingerprintには以下を含む。
 - 重み変更
 - recency decay変更
 
-②を使ってValidation成績を比較し、現在の研究Championを上回る候補だけ次世代Championへ自動昇格する。
+②の `promotion-comparator-v1` でValidation成績を比較し、現在の研究Championを上回る候補だけ次世代Championへ自動昇格する。
 
 昇格したChampionは次の①へ自動反映され、その条件下で再び②③を回す。
 
@@ -359,15 +384,15 @@ fingerprintには以下を含む。
 
 ## 4.4 Cycle winner
 
-収束後、cycle内で記録した歴代ChampionをSealed Holdoutで一度だけ評価する。
+収束後、cycle内で記録した歴代Championとcycle開始時base modelをSealed Holdoutで一度だけ評価する。
 
 最後の世代を自動的に勝者にはしない。
 
-Sealed Holdoutで最も高いout-of-sample性能を示し、かつbase modelを上回った歴代Championを `cycle_winner` とする。改善が確認できなければbase/current active modelを維持する。
+`promotion-comparator-v1` と同じ順序でSealed Holdout成績を比較し、base modelを上回った最良の歴代Championを `cycle_winner` とする。改善が確認できなければcurrent active modelを維持する。
 
 ## 4.5 Active store model
 
-`cycle_winner` は店舗読みレイヤーの `active_store_model` へ自動昇格できる。
+`cycle_winner` は店舗読みレイヤーの `active_store_model` へ自動昇格する。
 
 ただし昇格対象は新しい店舗読み予測レイヤーだけであり、Juggler/HANAの設定判別数学、確率テーブル、strict Champion等のprotected領域を書き換えない。
 
@@ -398,6 +423,7 @@ Sealed Holdoutで最も高いout-of-sample性能を示し、かつbase modelを�
 - `discovery_score`
 - `validation_score`
 - `holdout_score` nullable
+- `comparator_version`
 - `created_at`
 - `promoted_at` nullable
 
@@ -435,7 +461,7 @@ JUGESTが発見した「変な条件」は、以下の理由で即採用しな�
 - 同じ根拠の二重計上
 - thresholdを微妙に変えると消える脆い規則
 
-対策として、candidate gate、matched control、時系列分離、FDR screening、複数fold安定性、Sealed Holdout、feature source-group重複制御を必須にする。
+対策として、candidate gate、matched control、Train-only threshold generation、時系列分離、FDR screening、複数fold安定性、Sealed Holdout、feature source-group重複制御を必須にする。
 
 人間に意味が分からない条件でもout-of-sampleで安定して再現するなら残す。一方、人間にもっともらしく見えても再現しない条件は捨てる。
 
@@ -459,11 +485,13 @@ JUGESTが発見した「変な条件」は、以下の理由で即採用しな�
 - walk-forward leakage barrier
 - observed outcome proxy adapter
 - `backtest_runs / predictions / scores`
+- `promotion-comparator-v1`
 
 ### Phase 3
 
 - `AXIS_DISCOVERY`
 - matched control
+- Train-only threshold generation
 - candidate gate
 - 複合条件生成
 - `MODEL_SEARCH`
@@ -491,12 +519,14 @@ JUGESTが発見した「変な条件」は、以下の理由で即採用しな�
 3. ①②③それぞれで店舗台数規模とPeak RAM/CPU/時間が残る。
 4. 過去日予測へ未来情報を混入できないテストがある。
 5. 新評価軸は強い台だけでなくcontrolとの比較から作られる。
-6. 複合条件はboundedに探索され、組合せ爆発しない。
-7. train/validation/sealed holdoutが時系列分離される。
-8. 同じ重み付き評価軸構成は同じmodel fingerprintになる。
-9. 同じfingerprintが2回出たらcycleを収束できる。
-10. 5世代改善なしでもcycleを収束できる。
-11. 最終winnerは最後の世代ではなく、Sealed Holdoutで歴代Championから選ばれる。
-12. winnerが次の店舗読みactive modelへ自動反映される。
-13. protectedな設定判別数学は一切変更されない。
-14. 全モデル・昇格・棄却・負荷実績を後から再現・監査できる。
+6. 数値閾値はTrainだけからboundedに生成される。
+7. 複合条件はboundedに探索され、組合せ爆発しない。
+8. train/validation/sealed holdoutが時系列分離される。
+9. Champion昇格判定がversionedで決定論的である。
+10. 同じ重み付き評価軸構成は同じmodel fingerprintになる。
+11. 同じfingerprintが2回出たらcycleを収束できる。
+12. 5世代改善なしでもcycleを収束できる。
+13. 最終winnerは最後の世代ではなく、Sealed Holdoutで歴代Championから選ばれる。
+14. winnerが次の店舗読みactive modelへ自動反映される。
+15. protectedな設定判別数学は一切変更されない。
+16. 全モデル・昇格・棄却・負荷実績を後から再現・監査できる。
