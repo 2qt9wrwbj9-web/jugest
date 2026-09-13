@@ -37,113 +37,46 @@
 - Produces: `scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows,outcomeInputHash,nowIso}) -> comparison|null`
 - Produces: `buildComparisonSummary(db,{storeId,limit=90}) -> payload`
 
-- [ ] **Step 1: Write failing schema/persistence tests**
+- [ ] **Step 1: Write the failing persistence test**
 
-Add tests that migrate an in-memory DB, insert the same `pre_research` live prediction twice, then attempt to insert a different payload for the same `(store, targetDate, engine, engineVersion, modelFingerprint)` identity. Assert the identical insert is idempotent and the conflicting insert preserves the first payload rather than overwriting it.
+Create an in-memory DB, insert one `pre_research` live prediction, repeat the same insert, then attempt a conflicting insert for the same live identity. Assert identical writes are idempotent and the first payload is preserved.
 
 ```js
 const first=persistLivePrediction(db,{storeId:'s1',targetDate:'2026-09-14',engine:'pre_research',engineVersion:'store-read-v1',modelFingerprint:'fp-a',featureVersion:'store-features-v1',sourceFrontierDate:'2026-09-13',inputHash:'in-a',rankings:[{machineKey:'107',tableNo:'107',machineName:'マイジャグラーV',score:1,rank:1}],createdAt:'2026-09-13T12:00:00.000Z'});
-const second=persistLivePrediction(db,{...same});
 assert.equal(first.inserted,true);
-assert.equal(second.inserted,false);
-assert.equal(listLivePredictions(db,{storeId:'s1',targetDate:'2026-09-14'}).length,1);
+assert.equal(persistLivePrediction(db,{...first.input}).inserted,false);
 ```
 
 Run: `cd vps && node --test tests/live-comparison.test.mjs`
-Expected: FAIL because the tables/module do not exist.
+Expected: FAIL because the schema/module are missing.
 
-- [ ] **Step 2: Add durable tables**
+- [ ] **Step 2: Add prediction/score tables**
 
-Extend `migrate()` with:
+Add `store_prediction_snapshots` with a unique live identity and immutable payload/hash/frontier fields, plus `store_prediction_scores` keyed by `prediction_id`. Use `ON CONFLICT DO NOTHING`, never update an existing live prediction.
 
-```sql
-CREATE TABLE IF NOT EXISTS store_prediction_snapshots (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  store_id TEXT NOT NULL,
-  target_date TEXT NOT NULL,
-  engine TEXT NOT NULL CHECK(engine IN ('pre_research','current_shadow')),
-  engine_version TEXT NOT NULL,
-  model_fingerprint TEXT NOT NULL DEFAULT '',
-  feature_version TEXT,
-  source_frontier_date TEXT NOT NULL,
-  input_hash TEXT NOT NULL,
-  payload_json TEXT NOT NULL,
-  payload_hash TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  UNIQUE(store_id,target_date,engine,engine_version,model_fingerprint),
-  FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS store_prediction_snapshots_store_target_idx ON store_prediction_snapshots(store_id,target_date,engine);
+- [ ] **Step 3: Implement persistence helpers**
 
-CREATE TABLE IF NOT EXISTS store_prediction_scores (
-  prediction_id INTEGER PRIMARY KEY,
-  store_id TEXT NOT NULL,
-  target_date TEXT NOT NULL,
-  engine TEXT NOT NULL,
-  scorer_version TEXT NOT NULL,
-  outcome_proxy_version TEXT NOT NULL,
-  outcome_input_hash TEXT NOT NULL,
-  metrics_json TEXT NOT NULL,
-  score_hash TEXT NOT NULL,
-  scored_at TEXT NOT NULL,
-  FOREIGN KEY(prediction_id) REFERENCES store_prediction_snapshots(id) ON DELETE CASCADE,
-  FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS store_prediction_scores_store_target_idx ON store_prediction_scores(store_id,target_date,engine);
-```
-
-- [ ] **Step 3: Implement minimal persistence helpers**
-
-In `live-comparison.mjs`, use `canonicalJson/hashCanonical`, validate `YYYY-MM-DD`, and use `INSERT ... ON CONFLICT DO NOTHING`. On conflict, read and return the original row. Never update `payload_json`, `payload_hash`, `source_frontier_date`, or `created_at`.
-
-Normalize ranking rows to:
-
-```js
-{machineKey:String,tableNo:String,machineName:String,rank:Number,score:Number}
-```
+Use `canonicalJson/hashCanonical`, validate dates, normalize rankings to `{machineKey,tableNo,machineName,rank,score}`, and return the original row on a duplicate identity.
 
 - [ ] **Step 4: Write failing metric tests**
 
-Use three deterministic machine lists to assert exact Top1/3/5 overlap, lift, Spearman, and coverage. Add a future-leak guard by changing days after the target date and asserting the score for the earlier target is unchanged.
+Assert exact Top1/3/5 overlap, lift, Spearman, coverage, and that changing later-day data cannot change an already-targeted day.
 
 - [ ] **Step 5: Implement scoring**
 
-Reuse the same ranking definitions as `vps/src/research/model-search.mjs` but keep comparison-specific public helpers in `live-comparison.mjs`. Required metric shape:
+Return:
 
 ```js
-{
-  machineCount,
-  coverage,
-  top1:{overlap,rate,lift},
-  top3:{overlap,rate,lift},
-  top5:{overlap,rate,lift},
-  rankCorrelation,
-  quality
-}
+{machineCount,coverage,top1:{overlap,rate,lift},top3:{overlap,rate,lift},top5:{overlap,rate,lift},rankCorrelation,quality}
 ```
 
-with:
-
-```js
-quality = top3.lift*100 + top5.lift*10 + rankCorrelation;
-```
-
-Use `WIN_EPSILON=1e-6`. Store score rows idempotently by `prediction_id`; if `outcome_input_hash` changes, keep the original scored row and surface the mismatch as an exclusion reason rather than silently rescoring live history.
+with `quality = top3.lift*100 + top5.lift*10 + rankCorrelation` and `WIN_EPSILON=1e-6`. If an existing score has a different `outcome_input_hash`, keep the first score and expose `outcome_hash_conflict`.
 
 - [ ] **Step 6: Implement aggregate summary**
 
-`buildComparisonSummary()` returns:
+`buildComparisonSummary()` returns live totals, recent-30 metrics, per-day rows, exclusions, and `historical:null`. Win/tie counts require both valid engines for the same date.
 
-```js
-{
-  live:{days,newWins,currentWins,ties,excluded,newEngine,currentEngine,recent30,rows},
-  historical:null
-}
-```
-
-Only count a win/tie when both engines have valid scored rows for the same target date. `rows` include reason codes for missing/fallback/hash-conflict days.
-
-- [ ] **Step 7: Run tests and commit**
+- [ ] **Step 7: Verify and commit**
 
 Run: `cd vps && node --test tests/live-comparison.test.mjs`
 Expected: PASS.
@@ -156,47 +89,27 @@ Commit: `feat: persist and score PRE shadow predictions`
 
 **Files:**
 - Modify: `vps/src/research/store-read-output.mjs`
-- Modify: `vps/src/jobs/feature-build.mjs`
-- Modify: `vps/tests/store-read-output.test.mjs` if present; otherwise create `vps/tests/store-read-live.test.mjs`
+- Create: `vps/tests/store-read-live.test.mjs`
 
 **Interfaces:**
 - Consumes: `persistLivePrediction()` from Task 1.
-- Produces: every valid `store-read-v1` refresh also records the first immutable `pre_research` prediction for that target date.
+- Produces: every valid `store-read-v1` refresh records the first immutable `pre_research` prediction for the target date.
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Write the failing capture test**
 
-Activate/refresh an active research model for frontier `2026-09-13`; assert the mutable client snapshot still targets `2026-09-14` and `store_prediction_snapshots` contains exactly one `pre_research` prediction with the same ranking hash.
+Activate/refresh an active research model for frontier `2026-09-13`; assert the client snapshot targets `2026-09-14` and exactly one `pre_research` live prediction is stored. Refresh the same target with changed scores and assert the live evaluation row remains the first one.
 
-Then refresh the same target using a different in-memory model score and assert the client snapshot may refresh but the live evaluation row remains the original first prediction.
+- [ ] **Step 2: Implement capture**
 
-- [ ] **Step 2: Implement prediction capture**
+After the existing `client_snapshots` upsert in `persistStoreReadSnapshot()`, call `persistLivePrediction()` with `engine:'pre_research'`, `engineVersion:STORE_READ_VERSION`, the model fingerprint, feature version, frontier, deterministic input hash, and rankings. Do not change the existing client snapshot contract.
 
-In `persistStoreReadSnapshot()`, after the normal `client_snapshots` upsert, call:
+- [ ] **Step 3: Verify research/feature flow**
 
-```js
-persistLivePrediction(db,{
-  storeId:id,
-  targetDate,
-  engine:'pre_research',
-  engineVersion:STORE_READ_VERSION,
-  modelFingerprint:fingerprint,
-  featureVersion:version,
-  sourceFrontierDate:frontier,
-  inputHash:hashCanonical({storeId:id,frontier,featureVersion:version,days}),
-  rankings,
-  createdAt:at
-});
-```
+Run:
 
-Do not alter the public `store-read-v1` payload shape except for metadata already present.
+`cd vps && node --test tests/store-read-live.test.mjs tests/research-loop.test.mjs`
 
-- [ ] **Step 3: Verify feature-build semantics stay unchanged**
-
-Run focused store-read/feature-build tests plus:
-
-`cd vps && node --test tests/feature-build*.test.mjs tests/research-loop.test.mjs`
-
-Expected: PASS with existing research scheduling unchanged.
+Expected: PASS.
 
 - [ ] **Step 4: Commit**
 
@@ -214,74 +127,56 @@ Commit: `feat: capture live PRE research predictions`
 - Modify: `vps/src/coordinator.mjs`
 - Modify: `vps/src/schema.mjs`
 - Create: `vps/tests/shadow-predict.test.mjs`
+- Modify: `vps/tests/analysis-runtime.test.mjs`
 - Modify: `vps/tests/coordinator.test.mjs`
+- Modify: `vps/tests/daily-analysis-worker.test.mjs`
 
 **Interfaces:**
-- Produces: `runExistingStorePlan({rootDir,shop,sourceStoreId,days,targetDate}) -> normalized current ranking`
+- Produces: `runExistingStorePlan({rootDir,shop,sourceStoreId,days,targetDate}) -> normalized ranking`
 - Produces: `requestShadowPrediction(db,{storeId,frontierDate,nowIso}) -> {state,job}`
 - New job type: `SHADOW_PREDICT`, priority `70`, size class `medium`, estimated lease `512 MiB`, max attempts `3`.
 
 - [ ] **Step 1: Write failing runtime-adapter test**
 
-Boot the real current runtime with canonical days ending `2026-09-13`, call `runExistingStorePlan(... targetDate:'2026-09-14')`, and assert every imported day is `< targetDate` and the returned payload contains ordered `{machineKey,tableNo,machineName,rank,score}` rows.
+Boot the real current runtime with canonical days ending `2026-09-13`, call `runExistingStorePlan(... targetDate:'2026-09-14')`, and assert imported days are strictly earlier than target and output rows are ordered `{machineKey,tableNo,machineName,rank,score}`.
 
-The adapter must call the current bridge path that feeds Today Plan (`getTodayPlan` / existing current plan logic) rather than a new approximation.
+- [ ] **Step 2: Extend runtime adapter**
 
-- [ ] **Step 2: Extend the runtime adapter**
+Extract shared boot/import internals while preserving the public `runExistingStoreAnalysis()` output. `runExistingStorePlan()` calls the current bridge Today Plan path. Use current `aimScore` as score when available; otherwise use `-rank` only as an ordering value.
 
-Refactor the shared boot/import portion into an internal helper while preserving `runExistingStoreAnalysis()` behavior byte-for-byte at its public boundary. `runExistingStorePlan()` must import only `days.filter(day=>day.date<targetDate)`.
+- [ ] **Step 3: Write failing coalescing test and add `shadow_refresh_state`**
 
-Normalize current ranking score using its own existing ordered output. If the current engine exposes `aimScore`, use it as `score`; otherwise preserve rank and use `score = -rank` only as a stable ordering value. Do not invent PRE probability values.
-
-- [ ] **Step 3: Write failing shadow scheduling tests**
-
-Add `shadow_refresh_state`:
-
-```sql
-CREATE TABLE IF NOT EXISTS shadow_refresh_state (
-  store_id TEXT PRIMARY KEY,
-  requested_frontier_date TEXT,
-  completed_frontier_date TEXT,
-  active_job_id INTEGER,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE,
-  FOREIGN KEY(active_job_id) REFERENCES jobs(id) ON DELETE SET NULL
-);
-```
-
-Test coalescing so one active `SHADOW_PREDICT` exists per store and the newest requested frontier wins.
+Use one row per store with `requested_frontier_date`, `completed_frontier_date`, `active_job_id`, and `updated_at`. Assert one active job per store and newest frontier wins.
 
 - [ ] **Step 4: Implement `shadow-refresh-state.mjs`**
 
-Follow `feature-refresh-state.mjs` patterns. Use idempotency key:
+Follow `feature-refresh-state.mjs`. Enqueue:
 
 ```js
-`shadow:${storeId}:current-v5:${frontierDate}`
+{type:'SHADOW_PREDICT',priority:70,idempotencyKey:`shadow:${storeId}:current-v5:${frontierDate}`,payload:{storeId,targetFrontierDate:frontierDate,engineVersion:'current-v5'},sizeClass:'medium',estimatedLeaseMiB:512,maxAttempts:3}
 ```
-
-and payload `{storeId,targetFrontierDate,engineVersion:'current-v5'}`.
 
 - [ ] **Step 5: Write failing worker test**
 
-Seed canonical data through frontier `2026-09-13`, execute a `SHADOW_PREDICT` descriptor, and assert it persists a `current_shadow` prediction targeting `2026-09-14` using `sourceFrontierDate='2026-09-13'`.
+Seed canonical data through `2026-09-13`, execute a shadow descriptor, and assert a `current_shadow` prediction for `2026-09-14` with frontier `2026-09-13`.
 
 - [ ] **Step 6: Implement `shadow-predict.mjs`**
 
-Copy the child-process telemetry/heartbeat pattern from `feature-build.mjs`. Load at most 180 valid canonical days, trim to requested frontier, run `runExistingStorePlan()`, call `persistLivePrediction()`, complete shadow refresh state, and emit `task_start` / `complete` messages.
+Copy the child telemetry/heartbeat pattern from `feature-build.mjs`, load max 180 valid days, trim to requested frontier, run `runExistingStorePlan()`, persist the live prediction, complete shadow refresh state, and emit task metrics.
 
-- [ ] **Step 7: Schedule shadow work after operational analysis**
+- [ ] **Step 7: Schedule after operational analysis**
 
-At the end of successful `executeDailyAnalysis()`, request shadow prediction for the latest canonical frontier after the existing feature refresh request. Return `shadowJobId` as additive metadata only; do not change the analysis result snapshot.
+At successful `executeDailyAnalysis()` completion, request shadow work after the existing feature refresh request. Return additive `shadowJobId` only; do not change analysis snapshot semantics.
 
-- [ ] **Step 8: Wire coordinator resource controls**
+- [ ] **Step 8: Wire coordinator**
 
-Add `SHADOW_PREDICT_WORKER` and include `SHADOW_PREDICT` in the bounded low-priority research/auxiliary concurrency set. Preserve `DAILY_ANALYSIS` precedence. A queued/running daily-analysis job must prevent shadow work from taking the only research slot.
+Add the worker mapping and include `SHADOW_PREDICT` in the bounded low-priority auxiliary/research concurrency set. A pending `DAILY_ANALYSIS` keeps precedence.
 
-- [ ] **Step 9: Run focused tests and commit**
+- [ ] **Step 9: Verify and commit**
 
 Run:
 
-`cd vps && node --test tests/shadow-predict.test.mjs tests/coordinator.test.mjs tests/daily-analysis-worker.test.mjs`
+`cd vps && node --test tests/analysis-runtime.test.mjs tests/shadow-predict.test.mjs tests/coordinator.test.mjs tests/daily-analysis-worker.test.mjs`
 
 Expected: PASS.
 
@@ -295,49 +190,30 @@ Commit: `feat: run current store reading as PRE shadow`
 - Create: `vps/src/analysis/comparison-refresh.mjs`
 - Modify: `vps/src/analysis/daily-analysis.mjs`
 - Modify: `vps/src/analytics-handler.mjs`
-- Modify: `vps/tests/analytics-api.test.mjs`
 - Create: `vps/tests/comparison-refresh.test.mjs`
+- Modify: `vps/tests/analytics-api.test.mjs`
 
 **Interfaces:**
-- Consumes: Task 1 scorer and summary builder.
 - Produces: `scoreAvailableComparisonDays(db,{storeId,throughDate,nowIso}) -> {scored,excluded}`
 - API: `GET /api/vps/stores/:storeId/research/comparison?limit=90`
 
 - [ ] **Step 1: Write failing comparison-refresh test**
 
-Persist PRE/current predictions for `2026-09-14`, then seed canonical target-day rows. Assert `scoreAvailableComparisonDays()` gives both engines the exact same `outcomeInputHash`, does nothing for a future target without canonical data, and remains idempotent on rerun.
+Persist both engine predictions for `2026-09-14`, seed the canonical target day, and assert both scores use the exact same `outcomeInputHash`, future targets are untouched, and rerun is idempotent.
 
 - [ ] **Step 2: Implement scoring refresh**
 
-For each unscored prediction with `target_date <= throughDate`, load exactly that target day from canonical storage. Convert machines to `{machineKey,tableNo,machineName,outcomeScore:diff}` and hash the canonical scoring input. Score both engines independently against that exact input object.
-
-Call the scorer after canonical data/DAILY_ANALYSIS completion; it is lightweight DB/CPU work and must not alter analysis output semantics.
+For each unscored prediction with `target_date <= throughDate`, load exactly that canonical target day, normalize `diff` into `outcomeScore`, hash one canonical scoring input, and score all available engines against that same object.
 
 - [ ] **Step 3: Write failing API tests**
 
-In `analytics-api.test.mjs`, verify:
-
-- unauthorized request => `401`,
-- another Collector channel's store => `403`,
-- valid owner => `200`,
-- `limit` is bounded `1..366`,
-- response separates `live` from `historical`,
-- model fingerprint/current version and per-day reason codes are returned.
+Assert unauthorized `401`, foreign store `403`, owner `200`, bounded `limit` 1..366, separate live/historical fields, model/version metadata, and per-day reason codes.
 
 - [ ] **Step 4: Implement route**
 
-In `analytics-handler.mjs` add:
+Add the authenticated `research/comparison` handler using `buildComparisonSummary(db,{storeId,limit})`.
 
-```js
-if(parts.length===6&&parts[4]==='research'&&parts[5]==='comparison'){
-  const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||90)));
-  const comparison=buildComparisonSummary(db,{storeId,limit});
-  sendJson(req,res,200,{ok:true,store:access.store,comparison});
-  return;
-}
-```
-
-- [ ] **Step 5: Run tests and commit**
+- [ ] **Step 5: Verify and commit**
 
 Run: `cd vps && node --test tests/comparison-refresh.test.mjs tests/analytics-api.test.mjs`
 Expected: PASS.
@@ -352,71 +228,42 @@ Commit: `feat: expose PRE shadow accuracy comparison`
 - Modify: `vps-browser-analytics.mjs`
 - Modify: `app-v510.js`
 - Modify: `app-v510.css`
-- Create: `tests/v512-pre-shadow-ui.mjs`
-- Modify: `tests/run-regressions.mjs` to include the new regression file if the runner uses an explicit list.
+- Create: `tests/ui-v512-pre-shadow.mjs`
+- Modify: `tests/commands.json`
 
 **Interfaces:**
 - Browser client: `getStoreRead(shop)` and `getResearchComparison(shop,{limit=90})`.
 - UI state: `settingsOpen`, `settingsScreen`, `comparisonResult`, `comparisonLoading`, `comparisonScope`.
-- Action: top-left settings button -> settings sheet/page -> `PRE版 精度比較`.
+- UI route: top-left settings button -> `PRE版 精度比較`.
 
-- [ ] **Step 1: Write failing browser-client tests**
+- [ ] **Step 1: Write failing browser-client test inside `tests/ui-v512-pre-shadow.mjs`**
 
-Assert `getStoreRead('店A')` calls `/stores/:id/research/store-read`; `getResearchComparison('店A',{limit:30})` calls `/stores/:id/research/comparison?limit=30`, both with existing Collector auth headers.
+Assert `getStoreRead()` requests `/stores/:id/research/store-read` and `getResearchComparison(...,{limit:30})` requests `/stores/:id/research/comparison?limit=30` with existing auth headers.
 
-- [ ] **Step 2: Implement browser client methods**
+- [ ] **Step 2: Implement client methods**
 
-Return normalized objects without changing `resolveStore()` authentication behavior.
+Reuse `resolveStore()` and `request()`; do not change authentication behavior.
 
-- [ ] **Step 3: Write failing UI structure regression**
+- [ ] **Step 3: Write failing UI structure test**
 
-Read `app-v510.js` as text or boot the existing UI test harness. Assert:
+Assert top-left settings exists without a sixth bottom-nav item, settings contains `PRE版 精度比較`, PRE marker is present, comparison contains summary/Top1/3/5/Spearman/recent30/loss/exclusion/debug sections, and Today Plan has research-primary/current-fallback labels.
 
-- `.topbar-side` is replaced/wired as a settings button, not a sixth bottom-nav item,
-- settings contains a `PRE版 精度比較` action,
-- the comparison screen has summary, Top1/3/5, rank-correlation, recent-30, lost-days, exclusions, and collapsed debug sections,
-- PRE marker appears in the version area,
-- Today Plan has explicit research-first and current-fallback labels.
+- [ ] **Step 4: Implement Settings entry and comparison screen**
 
-- [ ] **Step 4: Implement top-left Settings entry**
+Wire the existing top-left slot as a gear button and add the settings comparison route. Render live scored days, side-by-side quality, wins/losses/ties, recent-30 delta, Top1/3/5, Spearman, biggest PRE losses, excluded days, and collapsed fingerprint/frontier/hash diagnostics.
 
-Replace the inert top-left placeholder with an `.icon-btn` gear button preserving the existing three-column topbar. Add a settings sheet/page with one new row `PRE版 精度比較`; do not create another bottom-nav workspace.
+- [ ] **Step 5: Make Today Plan research-first**
 
-- [ ] **Step 5: Implement comparison loading/rendering**
+`runTodayPlan()` first calls `getStoreRead(activeStore)`. Use it only when `status==='ready'` and `targetDate===planDate`; render rank/table/machine/research score without mapping score into P4+/expected-setting. Otherwise call the existing bridge `getTodayPlan()` and label `source:'current_fallback'`.
 
-On opening the comparison screen call `getResearchComparison(activeStore,{limit:90})`. Render:
+- [ ] **Step 6: Add CSS and regression command**
 
-- live scored day count,
-- PRE/current quality side-by-side,
-- PRE wins/current wins/ties,
-- recent-30 delta,
-- Top1/Top3/Top5 lift/rate,
-- Spearman,
-- biggest PRE loss days,
-- excluded/fallback rows,
-- collapsed fingerprint/frontier/hash diagnostics.
+Reuse existing panel/grid tokens, add only settings/comparison/PRE classes, keep `repeat(5,1fr)`, and append `node tests/ui-v512-pre-shadow.mjs` to `tests/commands.json`.
 
-Historical/backfill, when absent, is labeled separately and never merged into live totals.
-
-- [ ] **Step 6: Make Today Plan research-first**
-
-Change `runTodayPlan()` to:
-
-1. call authenticated `getStoreRead(activeStore)`,
-2. accept it only when `storeRead.status==='ready'` and `storeRead.targetDate===planDate`,
-3. render PRE ranked candidates with rank/table/machine/research score and PRE metadata,
-4. otherwise call the existing bridge `getTodayPlan()` and mark the result `{source:'current_fallback'}`.
-
-Never map research `score` into `predP4`, `predES`, or protected setting probabilities.
-
-- [ ] **Step 7: Add CSS without disturbing protected navigation**
-
-Reuse existing panel/grid tokens. Add only settings/comparison/PRE-badge classes. Keep bottom-nav layout `repeat(5,1fr)` unchanged.
-
-- [ ] **Step 8: Run root tests and commit**
+- [ ] **Step 7: Verify and commit**
 
 Run: `npm test`
-Expected: PASS including the new PRE UI regression.
+Expected: PASS including the new UI regression.
 
 Commit: `feat: add PRE primary read and shadow comparison UI`
 
@@ -425,11 +272,11 @@ Commit: `feat: add PRE primary read and shadow comparison UI`
 ### Task 6: Full regression, protection audit, and deployment checkpoint
 
 **Files:**
-- Create or update: `docs/vps/PRE-SHADOW-ACCURACY-VERIFICATION.md`
-- Update: `WORK-CHECKPOINT.md` if present.
+- Create: `docs/vps/PRE-SHADOW-ACCURACY-VERIFICATION.md`
+- Modify: `WORK-CHECKPOINT.md`
 
 **Interfaces:**
-- Produces: a reproducible verification report and deployment candidate SHA. Does not deploy.
+- Produces: reproducible verification report and deployment-candidate SHA. Does not deploy.
 
 - [ ] **Step 1: Run full VPS suite**
 
@@ -439,30 +286,17 @@ Expected: all tests pass.
 - [ ] **Step 2: Run full root suite**
 
 Run: `npm test`
-Expected: all regressions pass.
+Expected: all commands in `tests/commands.json` pass.
 
-- [ ] **Step 3: Run Collector/preservation suites explicitly if they are not already covered by `npm test`**
+- [ ] **Step 3: Compare protected behavior/files with the pre-feature checkpoint**
 
-Run the repository's existing Collector and production-preservation commands/files from `tests/run-regressions.mjs`; record exact pass counts in the report.
+Compare implementation HEAD with `17520e29d7460ffeef3ccd7e4273c5f4aba68cb5`. Verify no changes to protected probability tables/judgment math. Intentional client changes are limited to PRE UI/routing plus the new VPS research/shadow infrastructure.
 
-- [ ] **Step 4: Compare protected files against the pre-feature checkpoint**
+- [ ] **Step 4: Write verification report**
 
-Compare the implementation HEAD with `17520e29d7460ffeef3ccd7e4273c5f4aba68cb5` and verify no unintended changes to protected probability tables/judgment math. Expected intentional client changes are limited to PRE UI and research-first Today Plan routing; protected math remains unchanged.
+Record implementation SHA, exact test counts, schema additions, shadow priority/resource limits, future-leak/immutability proof, fallback behavior, protected audit, and `Production not deployed; awaiting Hiro approval`.
 
-- [ ] **Step 5: Write verification report**
-
-Document:
-
-- implementation SHA,
-- all test counts,
-- schema additions,
-- shadow scheduling priority/resource limits,
-- future-leak/immutability tests,
-- PRE fallback behavior,
-- protected-file audit,
-- explicit statement: `Production not deployed; awaiting Hiro approval`.
-
-- [ ] **Step 6: Commit checkpoint**
+- [ ] **Step 5: Update checkpoint and commit**
 
 Commit: `docs: verify PRE shadow accuracy candidate`
 
