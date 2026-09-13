@@ -107,6 +107,8 @@ export function migrate(db){
       completed_generation INTEGER NOT NULL DEFAULT 0,
       active_job_id INTEGER,
       frontier_date TEXT,
+      requested_frontier_date TEXT,
+      completed_frontier_date TEXT,
       updated_at TEXT NOT NULL,
       PRIMARY KEY (store_id,feature_version),
       FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
@@ -130,6 +132,67 @@ export function migrate(db){
       FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS store_feature_snapshots_store_asof_idx ON store_feature_snapshots(store_id,feature_version,as_of_date DESC);
+
+    CREATE TABLE IF NOT EXISTS backtest_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id TEXT NOT NULL,
+      model_fingerprint TEXT NOT NULL,
+      model_json TEXT NOT NULL,
+      feature_version TEXT NOT NULL,
+      split_kind TEXT NOT NULL CHECK(split_kind IN ('train','validation','holdout')),
+      from_date TEXT,
+      to_date TEXT,
+      prediction_count INTEGER NOT NULL DEFAULT 0,
+      score_json TEXT NOT NULL DEFAULT '{}',
+      input_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS backtest_runs_store_model_idx ON backtest_runs(store_id,model_fingerprint,created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS backtest_predictions (
+      run_id INTEGER NOT NULL,
+      target_date TEXT NOT NULL,
+      machine_key TEXT NOT NULL,
+      rank INTEGER NOT NULL,
+      score REAL NOT NULL,
+      outcome_score REAL,
+      details_json TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY(run_id,target_date,machine_key),
+      FOREIGN KEY(run_id) REFERENCES backtest_runs(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS backtest_predictions_run_date_idx ON backtest_predictions(run_id,target_date,rank);
+
+    CREATE TABLE IF NOT EXISTS research_model_registry (
+      store_id TEXT NOT NULL,
+      fingerprint TEXT NOT NULL,
+      model_json TEXT NOT NULL,
+      parent_fingerprint TEXT,
+      generation INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL CHECK(status IN ('candidate','research_champion','historical','rejected')),
+      validation_score REAL,
+      holdout_score REAL,
+      score_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(store_id,fingerprint),
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS research_model_registry_store_status_idx ON research_model_registry(store_id,status,validation_score DESC);
+
+    CREATE TABLE IF NOT EXISTS research_loops (
+      store_id TEXT PRIMARY KEY,
+      feature_version TEXT NOT NULL,
+      current_fingerprint TEXT,
+      best_fingerprint TEXT,
+      generation INTEGER NOT NULL DEFAULT 0,
+      no_improve_count INTEGER NOT NULL DEFAULT 0,
+      repeated_fingerprint TEXT,
+      state TEXT NOT NULL CHECK(state IN ('idle','running','converged','failed')),
+      last_error TEXT,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
 
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,4 +263,7 @@ export function migrate(db){
   `);
   const jobColumns=db.prepare('PRAGMA table_info(jobs)').all().map(row=>row.name);
   if(!jobColumns.includes('failure_count'))db.exec('ALTER TABLE jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0;');
+  const featureColumns=db.prepare('PRAGMA table_info(feature_refresh_state)').all().map(row=>row.name);
+  if(!featureColumns.includes('requested_frontier_date'))db.exec('ALTER TABLE feature_refresh_state ADD COLUMN requested_frontier_date TEXT;');
+  if(!featureColumns.includes('completed_frontier_date'))db.exec('ALTER TABLE feature_refresh_state ADD COLUMN completed_frontier_date TEXT;');
 }
