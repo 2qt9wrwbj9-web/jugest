@@ -2,8 +2,10 @@ import os from 'node:os';
 import {readMemorySnapshot} from './memory.mjs';
 
 const MIB=1024*1024;
+const INGEST_HISTORY_LIMIT=50;
 const toBytes=value=>Number.isFinite(value)?Math.max(0,Math.round(value)):0;
 const mibToBytes=value=>toBytes(Number(value)*MIB);
+const ingestState={running:0,recent:[]};
 
 function processSnapshot(memoryUsage=process.memoryUsage(),now=new Date()){
   return Object.freeze({timestamp:now.toISOString(),pid:process.pid,nodeVersion:process.version,uptimeSeconds:Math.max(0,process.uptime()),rssBytes:toBytes(memoryUsage.rss),heapUsedBytes:toBytes(memoryUsage.heapUsed),heapTotalBytes:toBytes(memoryUsage.heapTotal),externalBytes:toBytes(memoryUsage.external),arrayBuffersBytes:toBytes(memoryUsage.arrayBuffers)});
@@ -18,6 +20,30 @@ export async function captureResourceSnapshot({memoryReader=readMemorySnapshot,o
 function safeJson(text,fallback={}){try{return JSON.parse(text)}catch{return fallback}}
 function durationMs(start,end){const a=Date.parse(start||''),b=Date.parse(end||'');return Number.isFinite(a)&&Number.isFinite(b)?Math.max(0,b-a):null}
 
+export async function measureIngest(operation,{storeId='',date='',memoryUsage=()=>process.memoryUsage(),clock=()=>new Date()}={}){
+  if(typeof operation!=='function')throw new TypeError('operation must be a function');
+  const startedAt=clock().toISOString(),start=memoryUsage();
+  ingestState.running+=1;
+  let success=false,errorClass=null;
+  try{
+    const result=await operation();
+    success=true;
+    return result;
+  }catch(error){
+    errorClass=String(error?.code||error?.name||'ingest_error');
+    throw error;
+  }finally{
+    const endedAt=clock().toISOString(),end=memoryUsage();
+    ingestState.running=Math.max(0,ingestState.running-1);
+    try{
+      ingestState.recent.unshift(Object.freeze({storeId:String(storeId||''),date:String(date||''),startedAt,endedAt,durationMs:durationMs(startedAt,endedAt),startRssBytes:toBytes(start?.rss),endRssBytes:toBytes(end?.rss),rssDeltaBytes:toBytes(end?.rss)-toBytes(start?.rss),startHeapUsedBytes:toBytes(start?.heapUsed),endHeapUsedBytes:toBytes(end?.heapUsed),heapDeltaBytes:toBytes(end?.heapUsed)-toBytes(start?.heapUsed),success,errorClass}));
+      if(ingestState.recent.length>INGEST_HISTORY_LIMIT)ingestState.recent.length=INGEST_HISTORY_LIMIT;
+    }catch{/* telemetry must never break ingest */}
+  }
+}
+
+export function readIngestTelemetry(){return Object.freeze({running:ingestState.running,recent:[...ingestState.recent]})}
+
 export function readRuntimeTelemetry(db,{historyLimit=50}={}){
   const limit=Math.min(100,Math.max(1,Math.trunc(Number(historyLimit)||50))),counts={queued:0,running:0,succeeded:0,failed:0};
   for(const row of db.prepare('SELECT state,COUNT(*) AS n FROM jobs GROUP BY state').all()){
@@ -30,5 +56,5 @@ export function readRuntimeTelemetry(db,{historyLimit=50}={}){
   return Object.freeze({queue:Object.freeze(counts),recentRuns,latestSchedulerSample:latest?{capturedAt:latest.captured_at,effectiveAvailableBytes:mibToBytes(latest.effective_available_mib),usedRatio:Number(latest.used_ratio)||0,swapUsedBytes:mibToBytes(latest.swap_used_mib),runningChildren:Number(latest.running_children)||0,queueDepth:Number(latest.queue_depth)||0,decision:safeJson(latest.decision_json,{})}:null,memoryProfiles});
 }
 
-export async function buildResourceStatus(db,options={}){return Object.freeze({...await captureResourceSnapshot(options),analysis:readRuntimeTelemetry(db,options)});}
-export const __test={mibToBytes,processSnapshot,durationMs};
+export async function buildResourceStatus(db,options={}){return Object.freeze({...await captureResourceSnapshot(options),analysis:readRuntimeTelemetry(db,options),ingest:readIngestTelemetry()});}
+export const __test={mibToBytes,processSnapshot,durationMs,ingestState};
