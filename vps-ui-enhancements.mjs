@@ -148,15 +148,29 @@ function prePlanHtml(state){
   return `<section class="vps-pre-plan" data-vps-pre-plan><div class="vps-pre-hero"><div class="vps-pre-hero-head"><div><span class="vps-pre-badge">PRE版 PRIMARY</span><h2>新版JUGEST予測</h2><p>${esc(storeRead.targetDate||state?.targetDate||'')} の狙い台ランキング。現在は実運用で現行版と並走検証中。</p></div></div><div class="vps-pre-meta"><div><small>学習frontier</small><b>${esc(storeRead.asOfDate||'—')}</b></div><div><small>Holdout</small><b>${fmtNumber(storeRead.holdoutScore,3)}</b></div><div><small>Model</small><b title="${esc(fp)}">${esc(fp?fp.slice(0,12):'—')}</b></div></div></div><div class="section-label">PRE 狙い候補</div><div class="vps-pre-list">${rows||'<div class="vps-pre-loading">候補を表示できるデータがありません。</div>'}</div></section>`;
 }
 
+function currentPlanButton(){return root?.querySelector('.workspace.intelligence-screen .plan-controls [data-plan-run]')||null}
+function currentPlanTargetDate(){return String(root?.querySelector('.workspace.intelligence-screen .plan-controls [data-plan-date]')?.value||'').trim()}
+function restorePlanButton(){
+  const currentButton=currentPlanButton();
+  if(currentButton?.hasAttribute('data-vps-pre-busy')){
+    currentButton.removeAttribute('data-vps-pre-busy');
+    currentButton.disabled=false;
+    currentButton.textContent='作戦を計算';
+  }
+  return currentButton;
+}
+function requestStillCurrent(shop,targetDate){return activeShop()===shop&&currentPlanTargetDate()===targetDate}
+
 function ensurePrePlanUi(){
   const controls=root?.querySelector('.workspace.intelligence-screen .plan-controls');
   if(!controls)return;
   const workspace=controls.closest('.workspace');if(!workspace)return;
   workspace.querySelector('[data-vps-pre-plan]')?.remove();workspace.querySelector('[data-vps-plan-fallback]')?.remove();workspace.removeAttribute('data-vps-pre-active');
   const currentShop=activeShop(),targetDate=String(controls.querySelector('[data-plan-date]')?.value||'').trim();
-  if(prePlanState&&(prePlanState.shop!==currentShop||prePlanState.targetDate!==targetDate))prePlanState=null;
+  if(prePlanState&&(prePlanState.shop!==currentShop||prePlanState.targetDate!==targetDate)){prePlanState=null;restorePlanButton()}
   const button=controls.querySelector('[data-plan-run]');
-  if(prePlanState?.busy){if(button){button.disabled=true;button.textContent='取得中…'}workspace.setAttribute('data-vps-pre-active','');controls.insertAdjacentHTML('afterend',prePlanHtml(prePlanState));return}
+  if(prePlanState?.busy){if(button){button.setAttribute('data-vps-pre-busy','');button.textContent='取得中…'}workspace.setAttribute('data-vps-pre-active','');controls.insertAdjacentHTML('afterend',prePlanHtml(prePlanState));return}
+  restorePlanButton();
   if(prePlanState?.engine==='pre_research'){
     workspace.setAttribute('data-vps-pre-active','');controls.insertAdjacentHTML('afterend',prePlanHtml(prePlanState));return;
   }
@@ -173,15 +187,17 @@ async function runPrePrimaryPlan(button){
   let reason='';
   try{
     const payload=await getAnalyticsClient().getStoreRead(shop),storeRead=payload?.storeRead;
+    if(!requestStillCurrent(shop,targetDate)){prePlanState=null;restorePlanButton();schedule();return true}
     if(storeRead?.status==='ready'&&storeRead.targetDate===targetDate&&Array.isArray(storeRead.rankings)&&storeRead.rankings.length){
-      prePlanState={engine:'pre_research',mode:'pre',busy:false,shop,targetDate,storeRead,updatedAt:payload?.updatedAt||null};schedule();return true;
+      restorePlanButton();prePlanState={engine:'pre_research',mode:'pre',busy:false,shop,targetDate,storeRead,updatedAt:payload?.updatedAt||null};schedule();return true;
     }
     if(!storeRead)reason='新版予測がまだ生成されていません。';
     else if(storeRead.targetDate!==targetDate)reason=`新版の対象日は ${storeRead.targetDate||'未生成'} です。`;
     else reason='新版予測の学習データが不足しています。';
   }catch(error){reason=String(error?.message||error||'新版予測を取得できませんでした。')}
-  prePlanState={mode:'fallback',busy:false,shop,targetDate,reason};schedule();
-  const currentButton=root?.querySelector('.workspace.intelligence-screen .plan-controls [data-plan-run]');
+  if(!requestStillCurrent(shop,targetDate)){prePlanState=null;restorePlanButton();schedule();return true}
+  prePlanState={mode:'fallback',busy:false,shop,targetDate,reason};
+  const currentButton=restorePlanButton();schedule();
   if(currentButton){planBypassOnce=true;currentButton.click()}
   return true;
 }
@@ -247,6 +263,7 @@ function onClick(event){
   const target=event.target?.closest?.('button,[data-vps-settings-gear]');if(!target)return;
   if(target.matches('[data-plan-run]')){
     if(planBypassOnce){planBypassOnce=false;return}
+    if(prePlanState?.busy){event.preventDefault();event.stopImmediatePropagation();return}
     event.preventDefault();event.stopImmediatePropagation();void runPrePrimaryPlan(target);return;
   }
   if(target.matches('[data-vps-settings-gear]')){event.preventDefault();event.stopPropagation();settingsOpen=true;settingsPage='hub';schedule();return}
@@ -269,7 +286,7 @@ function attach(candidate){
   root.addEventListener('click',onClick,true);
   const unsubscribe=bridge()?.subscribe?.(()=>{
     root?.querySelector('[data-vps-backfill-card]')?.remove();const shop=activeShop();
-    if(prePlanState&&prePlanState.shop!==shop)prePlanState=null;
+    if(prePlanState&&prePlanState.shop!==shop){prePlanState=null;restorePlanButton()}
     if(settingsPage==='comparison'&&shop&&shop!==comparisonShop){comparisonData=null;comparisonError='';void loadComparison()}
     schedule();
   });
