@@ -1,6 +1,6 @@
 import {enqueueJob} from '../queue.mjs';
 import {loadStoreDays} from './store-data.mjs';
-import {ensureHistoricalComparisonRun,getHistoricalComparisonRun} from '../research/historical-comparison.mjs';
+import {ensureHistoricalComparisonRun} from '../research/historical-comparison.mjs';
 
 export const HISTORICAL_JOB_PRIORITY=80;
 export const HISTORICAL_JOB_LEASE_MIB=768;
@@ -22,8 +22,6 @@ export function requestHistoricalComparisonRefresh(db,{storeId,nowIso}={}){
 export function bootstrapHistoricalComparisonRuns(db,{nowIso}={}){
   if(!db?.prepare)throw new TypeError('db is required');const at=validIso(nowIso),stores=db.prepare('SELECT id FROM stores ORDER BY id').all();let requested=0,skipped=0;
   for(const row of stores){
-    const existing=getHistoricalComparisonRun(db,{storeId:row.id});
-    if(existing?.state==='complete'){skipped+=1;continue}
     try{const result=requestHistoricalComparisonRefresh(db,{storeId:row.id,nowIso:at});if(result.job)requested+=1;else skipped+=1}catch{skipped+=1}
   }
   return Object.freeze({requested,skipped});
