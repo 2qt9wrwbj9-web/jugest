@@ -2,6 +2,7 @@ import path from 'node:path';
 import {once} from 'node:events';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createWebServer} from './web-server.mjs';
+import {startCoordinatorProcess} from './coordinator-supervisor.mjs';
 
 const DEFAULT_WEB_ROOT=fileURLToPath(new URL('../..',import.meta.url));
 const DEFAULT_RELAY_DB='/var/lib/jugest/relay.sqlite';
@@ -21,12 +22,33 @@ export function readWebConfig(env=process.env){
   return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot};
 }
 
-export async function runWebServer({config=readWebConfig(),logger=message=>console.log(message)}={}){
+export async function runWebServer({
+  config=readWebConfig(),
+  logger=message=>console.log(message),
+  startCoordinator=options=>startCoordinatorProcess({...options,logger})
+}={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
+  if(typeof startCoordinator!=='function')throw new TypeError('startCoordinator must be a function');
   const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot}=config;
   const server=createWebServer({rootDir,relayDbPath,canonicalDbPath,rawRoot});
   server.listen(port,host);
   await once(server,'listening');
+
+  let coordinatorRuntime=null;
+  if(canonicalDbPath){
+    try{
+      coordinatorRuntime=await startCoordinator({dbPath:canonicalDbPath,installSignalHandlers:false});
+    }catch(error){
+      await new Promise(resolve=>server.close(()=>resolve()));
+      throw error;
+    }
+    server.once('close',()=>{
+      Promise.resolve(coordinatorRuntime?.stop?.()).catch(error=>{
+        try{logger(JSON.stringify({level:'error',event:'coordinator_stop_failed',message:String(error?.message??error)}))}catch{}
+      });
+    });
+  }
+
   const address=server.address();
   logger(JSON.stringify({
     level:'info',
@@ -36,7 +58,8 @@ export async function runWebServer({config=readWebConfig(),logger=message=>conso
     rootDir:path.resolve(rootDir),
     relayDbPath:path.resolve(relayDbPath),
     canonicalDbPath:canonicalDbPath?path.resolve(canonicalDbPath):null,
-    rawRoot:rawRoot?path.resolve(rawRoot):null
+    rawRoot:rawRoot?path.resolve(rawRoot):null,
+    coordinatorMode:canonicalDbPath?'web-supervised':'disabled'
   }));
   return server;
 }
