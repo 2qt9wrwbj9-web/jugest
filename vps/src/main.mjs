@@ -4,7 +4,8 @@ import {migrate} from './schema.mjs';
 import {recoverStaleJobs} from './queue.mjs';
 import {readMemorySnapshot} from './memory.mjs';
 import {DEFAULT_RESOURCE_POLICY} from './config.mjs';
-import {Coordinator} from './coordinator.mjs';
+import {CollectorAwareCoordinator} from './collector-aware-coordinator.mjs';
+import {isCollectorActivityRecent} from './collector-activity.mjs';
 
 export function recoverStartupState({db,now=new Date(),staleAfterMs=5*60*1000}={}){
   if(!db)throw new TypeError('db is required');
@@ -18,12 +19,13 @@ export async function runCoordinator({
   dbPath=process.env.JUGEST_DB_PATH||'/var/lib/jugest/jugest.sqlite',
   policy=DEFAULT_RESOURCE_POLICY,
   staleAfterMs=5*60*1000,
-  owner=`coord-${process.pid}`
+  owner=`coord-${process.pid}`,
+  collectorActivityReader=()=>isCollectorActivityRecent({dbPath})
 }={}){
   const db=openDatabase(dbPath);
   migrate(db);
   recoverStartupState({db,staleAfterMs});
-  const coordinator=new Coordinator({db,memoryReader:()=>readMemorySnapshot(),policy,owner});
+  const coordinator=new CollectorAwareCoordinator({db,memoryReader:()=>readMemorySnapshot(),policy,owner,collectorActivityReader});
   let stopping=false;
   const tick=()=>coordinator.tick().catch(error=>{
     console.error(JSON.stringify({level:'error',event:'coordinator_tick_failed',message:String(error?.message??error)}));
