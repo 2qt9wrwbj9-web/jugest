@@ -192,6 +192,8 @@ export function migrate(db){
       last_error TEXT,
       frontier_date TEXT,
       search_round INTEGER NOT NULL DEFAULT 0,
+      holdout_finalized_at TEXT,
+      holdout_winner_fingerprint TEXT,
       updated_at TEXT NOT NULL,
       FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
@@ -271,4 +273,6 @@ export function migrate(db){
   const researchColumns=db.prepare('PRAGMA table_info(research_loops)').all().map(row=>row.name);
   if(!researchColumns.includes('frontier_date'))db.exec('ALTER TABLE research_loops ADD COLUMN frontier_date TEXT;');
   if(!researchColumns.includes('search_round'))db.exec('ALTER TABLE research_loops ADD COLUMN search_round INTEGER NOT NULL DEFAULT 0;');
+  if(!researchColumns.includes('holdout_finalized_at'))db.exec('ALTER TABLE research_loops ADD COLUMN holdout_finalized_at TEXT;');
+  if(!researchColumns.includes('holdout_winner_fingerprint'))db.exec('ALTER TABLE research_loops ADD COLUMN holdout_winner_fingerprint TEXT;');
 }
