@@ -4,6 +4,7 @@ import {migrate} from '../schema.mjs';
 import {loadStoreDays} from '../analysis/store-data.mjs';
 import {deriveStoreMachineCount} from '../analysis/task-metrics.mjs';
 import {getFeatureRefreshState,completeFeatureRefresh} from '../analysis/feature-refresh-state.mjs';
+import {ensureResearchCycle} from '../analysis/research-cycle.mjs';
 import {buildStoreFeatureRows,persistStoreFeatureRows} from '../research/feature-builder.mjs';
 import {hashCanonical} from '../canonical-json.mjs';
 
@@ -44,9 +45,12 @@ async function main(){
     announce({phase:1,taskKind:'feature_build',taskVersion:featureVersion,modelFingerprint:null,storeId,storeMachineCount:scale.count,dayCount:eligible.length,rowCount,workloadUnits:rowCount,startedAt,startRssMiB,details:{machineCountMethod:scale.method,asOfDate}});
     const rows=buildStoreFeatureRows({storeId,days:eligible,featureVersion,asOfDate});
     persistStoreFeatureRows(db,rows,{updatedAt:new Date().toISOString()});
+    const resultHash=hashCanonical({storeId,featureVersion,asOfDate,rows});
     const completion=completeFeatureRefresh(db,{storeId,featureVersion,jobId:descriptor.id,completedFrontierDate:asOfDate,nowIso:new Date().toISOString()});
+    // Research begins only when this is the newest requested feature frontier. A stale build first yields to its follow-up.
+    const research=completion.job?null:ensureResearchCycle(db,{storeId,featureVersion,frontierDate:asOfDate,nowIso:new Date().toISOString()});
     sample();
-    process.send?.({type:'complete',status:'built',peakRssMiB,taskMetrics:finishMetrics(),featureRowCount:rows.length,rowCount:rows.length,resultHash:hashCanonical({storeId,featureVersion,asOfDate,rows}),followupJobId:completion.job?.id??null});
+    process.send?.({type:'complete',status:'built',peakRssMiB,taskMetrics:finishMetrics(),featureRowCount:rows.length,rowCount:rows.length,resultHash,followupJobId:completion.job?.id??null,researchJobId:research?.job?.id??null});
   }finally{if(heartbeat)clearInterval(heartbeat);try{db.close()}catch{}}
 }
 
