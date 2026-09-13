@@ -1,5 +1,6 @@
 import {buildWalkForwardDataset,splitChronologicalSamples} from './backtest.mjs';
 import {evaluateModel,scoreSample} from './model-search.mjs';
+import {activateStoreModel} from './store-read-output.mjs';
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 
 function required(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
@@ -35,6 +36,7 @@ export function finalizeSealedHoldout(db,{storeId,days,frontierDate,nowIso=new D
   if(!models.length)throw Object.assign(new Error('no historical champions to evaluate'),{code:'holdout_models_missing'});
   const evaluations=models.map(row=>{const model=safeJson(row.model_json,null);if(!model)throw new Error(`invalid model json: ${row.fingerprint}`);return {fingerprint:row.fingerprint,model,previousScores:safeJson(row.score_json,{}),score:evaluateModel(split.holdout,model)}});
   let winner=null;for(const evaluation of evaluations)if(better(evaluation,winner))winner=evaluation;
+  let activation=null;
   db.exec('BEGIN IMMEDIATE');
   try{
     for(const evaluation of evaluations){
@@ -44,9 +46,10 @@ export function finalizeSealedHoldout(db,{storeId,days,frontierDate,nowIso=new D
     db.prepare("UPDATE research_model_registry SET status='historical',updated_at=? WHERE store_id=? AND status='research_champion'").run(at,id);
     db.prepare("UPDATE research_model_registry SET status='research_champion',updated_at=? WHERE store_id=? AND fingerprint=?").run(at,id,winner.fingerprint);
     db.prepare(`UPDATE research_loops SET current_fingerprint=?,best_fingerprint=?,holdout_finalized_at=?,holdout_winner_fingerprint=?,updated_at=? WHERE store_id=?`).run(winner.fingerprint,winner.fingerprint,at,winner.fingerprint,at,id);
+    activation=activateStoreModel(db,{storeId:id,fingerprint:winner.fingerprint,model:winner.model,featureVersion:loop.feature_version,frontierDate:frontier,days:eligible,holdoutScore:winner.score.top3Lift,nowIso:at});
     db.exec('COMMIT');
   }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
-  return Object.freeze({winnerFingerprint:winner.fingerprint,modelsEvaluated:evaluations.length,holdoutDates:Object.freeze([...split.holdoutDates]),alreadyFinalized:false,scores:Object.freeze(evaluations.map(row=>Object.freeze({fingerprint:row.fingerprint,score:row.score})))});
+  return Object.freeze({winnerFingerprint:winner.fingerprint,modelsEvaluated:evaluations.length,holdoutDates:Object.freeze([...split.holdoutDates]),alreadyFinalized:false,activeFingerprint:activation?.active?.fingerprint??winner.fingerprint,snapshotTargetDate:activation?.snapshot?.targetDate??null,scores:Object.freeze(evaluations.map(row=>Object.freeze({fingerprint:row.fingerprint,score:row.score})))});
 }
 
 export const __test={better,persistHoldoutRun,rankRows};
