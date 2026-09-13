@@ -52,4 +52,4 @@ test('seven days is only a warmup floor and does not force an invalid current pr
   assert.ok(early.excludedReason,'the warmup floor alone must not guarantee a scored comparison');
   const mature=await compareHistoricalTarget({rootDir:ROOT,storeId:'store-a',shop:'解析テスト店',days,targetDate:days[55].date,preState:state});
   assert.equal(mature.excludedReason,null,'the fixture should become valid once both engines have enough history');
-}
+});
