@@ -10,6 +10,8 @@ import {ensureResearchCycle,getResearchChampion,getResearchLoop} from '../src/an
 import {requestFeatureRefresh} from '../src/analysis/feature-refresh-state.mjs';
 import {Coordinator} from '../src/coordinator.mjs';
 import {loadResourcePolicy} from '../src/config.mjs';
+import {canonicalJson} from '../src/canonical-json.mjs';
+import {fingerprintModel} from '../src/research/model-search.mjs';
 
 const NOW='2026-09-13T00:00:00.000Z';
 const FEATURE_VERSION='store-features-v1';
@@ -35,6 +37,19 @@ test('FEATURE_BUILD completion starts the self-improvement loop with a BACKTEST 
     const research=f.db.prepare('SELECT * FROM jobs WHERE id=?').get(done.researchJobId);
     assert.equal(research.type,'BACKTEST');assert.equal(research.priority,50);
     assert.ok(getResearchChampion(f.db,{storeId:'s1'}));
+  }finally{f.cleanup()}
+});
+
+test('FEATURE_BUILD refreshes tomorrow store-read snapshot with the retained active model',async()=>{
+  const f=seed();try{
+    const model={version:'store-read-model-v1',axes:[{id:'tail7',predicates:[{field:'table_last_digit',op:'eq',value:'7'}],weight:1}]},fingerprint=fingerprintModel(model);
+    f.db.prepare(`INSERT INTO active_store_models(store_id,fingerprint,model_json,feature_version,source_frontier_date,holdout_score,activated_at,updated_at) VALUES(?,?,?,?,?,?,?,?)`).run('s1',fingerprint,canonicalJson(model),FEATURE_VERSION,'2026-08-23',2,NOW,NOW);
+    const requested=requestFeatureRefresh(f.db,{storeId:'s1',featureVersion:FEATURE_VERSION,frontierDate:'2026-08-24',nowIso:NOW,dirty:true});
+    const messages=await spawnAndWait({job:requested.job,workerPath:new URL('../src/jobs/feature-build.mjs',import.meta.url),dbPath:f.dbPath});
+    const done=messages.find(x=>x.type==='complete');assert.equal(done.storeReadTargetDate,'2026-08-25');
+    const snapshot=f.db.prepare("SELECT business_date,payload_json FROM client_snapshots WHERE store_id='s1' AND snapshot_type='store-read-active' AND version='store-read-v1'").get();
+    assert.equal(snapshot.business_date,'2026-08-25');
+    const payload=JSON.parse(snapshot.payload_json);assert.equal(payload.asOfDate,'2026-08-24');assert.equal(payload.modelFingerprint,fingerprint);assert.equal(payload.rankings[0].tableNo,'107');
   }finally{f.cleanup()}
 });
 
