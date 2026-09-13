@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {ensureHistoricalComparisonRun,persistHistoricalComparisonDay} from '../src/research/historical-comparison.mjs';
-import {buildHistoricalComparisonSummary,SCORER_VERSION} from '../src/research/live-comparison.mjs';
+import {buildHistoricalComparisonSummary} from '../src/research/historical-summary.mjs';
+import {SCORER_VERSION} from '../src/research/live-comparison.mjs';
 
 const NOW='2026-09-13T12:00:00.000Z';
 function date(index){return new Date(Date.UTC(2026,0,1)+index*86400000).toISOString().slice(0,10)}
