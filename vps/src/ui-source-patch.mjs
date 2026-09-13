@@ -4,6 +4,7 @@ const BACKFILL_BRIDGE=' getVpsBackfillDays:()=>JSON.parse(JSON.stringify(externa
 const STORE_RESET_BRIDGE=' resetStoreAcquiredData:(name)=>vpsResetStoreAcquiredData(name),';
 const MODULE_TAG='<script type="module" src="./vps-ui-enhancements.mjs"></script>';
 const STORE_RESET_MODULE_TAG='<script type="module" src="./vps-store-reset.mjs"></script>';
+const RESOURCE_UI_MODULE_TAG='<script type="module" src="./vps-resource-ui.mjs"></script>';
 const STORE_RESET_HELPER=`async function vpsResetStoreAcquiredData(name){
  name=String(name||"").trim();if(!name)throw new Error("店舗名がありません");
  if(!storeAnalysisHistoryReady)await storeAnalysisLoadIndex();
@@ -40,15 +41,12 @@ export function patchJugestIndexSource(input){
     const additions=[BACKFILL_BRIDGE,STORE_RESET_BRIDGE].filter(token=>!source.includes(token)).join('\n');
     source=source.replace(BRIDGE_ANCHOR,`${BRIDGE_ANCHOR}\n${additions}`);
   }
-  if(!source.includes(MODULE_TAG)){
+  for(const tag of [MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG]){
+    if(source.includes(tag))continue;
     if(!/<\/body>/i.test(source))throw new Error('JUGEST body anchor not found');
-    source=source.replace(/<\/body>/i,`${MODULE_TAG}\n</body>`);
-  }
-  if(!source.includes(STORE_RESET_MODULE_TAG)){
-    if(!/<\/body>/i.test(source))throw new Error('JUGEST body anchor not found');
-    source=source.replace(/<\/body>/i,`${STORE_RESET_MODULE_TAG}\n</body>`);
+    source=source.replace(/<\/body>/i,`${tag}\n</body>`);
   }
   return source;
 }
 
-export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,STORE_RESET_MODULE_TAG,STORE_RESET_HELPER};
+export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,STORE_RESET_HELPER};
