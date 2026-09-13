@@ -76,6 +76,8 @@ Each stored prediction includes at least:
 
 A prediction for the same store / target date / engine must not silently mutate after target-day data arrives. New engine/model revisions require a distinct engine-version/fingerprint identity, while the first live prediction used for evaluation remains preserved.
 
+If more than one valid prediction exists before the target result becomes available, the official scored prediction is the most recent prediction whose `source_frontier_date < target_date` and whose `created_at` is earlier than the first valid canonical ingest timestamp for that target date. The selected prediction ID/hash is pinned into the score record so later model refreshes cannot change an already-scored day.
+
 Backfilled walk-forward experiments and real PRE shadow predictions are stored and reported separately. They MUST NOT be pooled into one accuracy number.
 
 ## 5. Current-version shadow engine
@@ -128,7 +130,7 @@ For the simple `新版勝ち / 現行版勝ち / 引き分け` counter, compare 
 
 `quality = top3Lift * 100 + top5Lift * 10 + rankCorrelation`
 
-Use a small deterministic epsilon for ties. A fallback day, missing prediction, or invalid comparison is excluded from win/loss counts and reported separately.
+Use `1e-9` as the deterministic equality epsilon. A fallback day, missing prediction, or invalid comparison is excluded from win/loss counts and reported separately.
 
 The UI must still show the underlying metrics so the win counter is never the only evidence.
 
@@ -148,7 +150,7 @@ Stores one pre-outcome ranked prediction per engine identity / store / target da
 
 Stores deterministic scored metrics for an immutable prediction against a specific canonical target-day input hash / outcome-proxy version. Re-scoring the same inputs is idempotent.
 
-The schema must make future leakage auditable: source frontier, target date, prediction hash, outcome input hash, and scorer version are explicit.
+The schema must make future leakage auditable: source frontier, target date, prediction hash, outcome input hash, first-valid-ingest timestamp, selected prediction ID, and scorer version are explicit.
 
 ## 9. Scheduling and resource safety
 
@@ -241,10 +243,11 @@ Other store-analysis pages remain unchanged unless they explicitly consume store
 Implementation must add tests for:
 
 - immutable prediction persistence and no silent overwrite after outcome arrival.
+- official-prediction selection freezes at the first valid target-day ingest boundary.
 - current-version shadow adapter uses only history before target date.
 - new/current predictions receive identical target-day scoring inputs.
 - no future leakage when later days are mutated.
-- deterministic Top1/3/5, lift, Spearman, and winner calculation.
+- deterministic Top1/3/5, lift, Spearman, quality score, and winner calculation.
 - fallback days excluded from wins/losses.
 - comparison API authentication and store isolation.
 - settings route/render and PRE comparison loading states.
