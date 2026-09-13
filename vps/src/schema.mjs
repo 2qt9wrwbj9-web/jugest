@@ -210,6 +210,40 @@ export function migrate(db){
       FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS store_prediction_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      store_id TEXT NOT NULL,
+      target_date TEXT NOT NULL,
+      engine TEXT NOT NULL CHECK(engine IN ('pre_research','current_shadow')),
+      engine_version TEXT NOT NULL,
+      model_fingerprint TEXT NOT NULL DEFAULT '',
+      feature_version TEXT,
+      source_frontier_date TEXT NOT NULL,
+      input_hash TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(store_id,target_date,engine,engine_version,model_fingerprint),
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS store_prediction_snapshots_store_target_idx ON store_prediction_snapshots(store_id,target_date,engine);
+
+    CREATE TABLE IF NOT EXISTS store_prediction_scores (
+      prediction_id INTEGER PRIMARY KEY,
+      store_id TEXT NOT NULL,
+      target_date TEXT NOT NULL,
+      engine TEXT NOT NULL,
+      scorer_version TEXT NOT NULL,
+      outcome_proxy_version TEXT NOT NULL,
+      outcome_input_hash TEXT NOT NULL,
+      metrics_json TEXT NOT NULL,
+      score_hash TEXT NOT NULL,
+      scored_at TEXT NOT NULL,
+      FOREIGN KEY(prediction_id) REFERENCES store_prediction_snapshots(id) ON DELETE CASCADE,
+      FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS store_prediction_scores_store_target_idx ON store_prediction_scores(store_id,target_date,engine);
+
     CREATE TABLE IF NOT EXISTS job_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id INTEGER NOT NULL,
