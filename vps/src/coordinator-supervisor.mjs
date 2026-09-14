@@ -81,6 +81,7 @@ export function startCoordinatorProcess({
     const requestId=`collector-${process.pid}-${Date.now()}-${++barrierRequestSeq}`;
     barrierInFlight=new Promise((resolve,reject)=>{
       let settled=false;
+      let timer=null;
       const cleanup=()=>{
         try{active.removeListener?.('message',onMessage)}catch{}
         try{active.removeListener?.('exit',onExit)}catch{}
@@ -100,7 +101,7 @@ export function startCoordinatorProcess({
       const onExit=()=>finish(new Error('Collector barrier coordinator exited before acknowledgement'));
       active.on?.('message',onMessage);
       active.once?.('exit',onExit);
-      const timer=setTimer(()=>finish(new Error('Collector barrier acknowledgement timeout')),barrierTimeoutMs);
+      timer=setTimer(()=>finish(new Error('Collector barrier acknowledgement timeout')),barrierTimeoutMs);
       timer?.unref?.();
       try{active.send({type:'collector_barrier_enter',requestId})}
       catch(error){finish(error)}
