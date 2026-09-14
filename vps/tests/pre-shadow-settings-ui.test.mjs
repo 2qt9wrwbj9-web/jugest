@@ -5,7 +5,6 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
-const appSource=readFileSync(resolve(ROOT,'app-v510.js'),'utf8');
 const coreSource=readFileSync(resolve(ROOT,'vps-ui-enhancements.mjs'),'utf8');
 const historicalSource=readFileSync(resolve(ROOT,'vps-ui-historical-comparison.mjs'),'utf8');
 const source=`${coreSource}\n${historicalSource}`;
@@ -42,15 +41,13 @@ test('LIVE pending copy names the exact target date and actual-data wait conditi
   assert.match(historicalSource,/live\?\.rows/);
 });
 
-test('analysis chip is running-only and never renders completion or failure notifications',()=>{
-  const start=appSource.indexOf('renderAnalysisChip(){');
-  const end=appSource.indexOf('\n\n  async runReplay()',start);
-  assert.ok(start>=0&&end>start,'renderAnalysisChip must exist');
-  const fn=appSource.slice(start,end);
-  assert.match(fn,/j\.status!=='running'/);
-  assert.match(fn,/店舗解析中/);
-  assert.doesNotMatch(fn,/解析完了 \/ 結果を見る/);
-  assert.doesNotMatch(fn,/解析失敗 \/ 詳細を見る/);
+test('analysis chip stays visible only while analysis is running',()=>{
+  const start=historicalSource.indexOf('function reconcileAnalysisChip(){');
+  const end=historicalSource.indexOf('\n}\nfunction storeSelectorHtml',start);
+  assert.ok(start>=0&&end>start,'reconcileAnalysisChip must exist');
+  const fn=historicalSource.slice(start,end+2);
+  assert.match(fn,/includes\('店舗解析中'\)/);
+  assert.match(fn,/if\(running\)chip\.style\.removeProperty\('display'\);else chip\.style\.display='none'/);
 });
 
 test('comparison overlay exposes an in-page store selector backed by bridge stores',()=>{
@@ -64,4 +61,5 @@ test('comparison overlay redraw preserves scroll and skips identical markup',()=
   assert.match(historicalSource,/host\.innerHTML===nextHost\.innerHTML/);
   assert.match(historicalSource,/const scrollTop=host\.scrollTop/);
   assert.match(historicalSource,/nextHost\.scrollTop=scrollTop/);
+  assert.match(historicalSource,/touch-action:pan-y/);
 });
