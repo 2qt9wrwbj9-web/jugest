@@ -4,6 +4,7 @@ import {axisMatches} from './axis-discovery.mjs';
 export const MODEL_VERSION='store-read-model-v1';
 
 function finite(value,fallback=0){const n=Number(value);return Number.isFinite(n)?n:fallback}
+function clamp(value,min,max){return Math.min(max,Math.max(min,value))}
 function normalizePredicate(predicate){return {field:String(predicate?.field||''),op:String(predicate?.op||''),value:predicate?.value}}
 function normalizeAxis(axis){
   return {
@@ -66,6 +67,33 @@ function modelFromAxes(axes){
   const model={version:MODEL_VERSION,axes:normalized.map(axis=>({...axis,weight:axis.weight/total}))};
   return Object.freeze({...model,fingerprint:fingerprintModel(model)});
 }
+
+function axisStrength(axis){
+  const lift=Math.max(0,finite(axis?.lift)),contrast=Math.max(0,finite(axis?.contrast));
+  if(!(lift>0)||!(contrast>0))return 0;
+  const effect=Math.sqrt(lift*contrast);
+  const support=Math.max(0,finite(axis?.support)),sampleConfidence=support/(support+20);
+  const pValue=clamp(finite(axis?.pValue,.05),0,.05),significanceConfidence=clamp(1-(pValue/.05),.05,1);
+  const temporalConfidence=clamp(finite(axis?.foldPassRate),0,1)*clamp(finite(axis?.robustness),0,1);
+  return effect*sampleConfidence*significanceConfidence*temporalConfidence;
+}
+
+function pairWeightPlans(leftAxis,rightAxis){
+  let left=Math.sqrt(axisStrength(leftAxis)),right=Math.sqrt(axisStrength(rightAxis));
+  const fixed=[
+    {weights:[1,1],ratio:.5},
+    {weights:[2,1],ratio:2/3},
+    {weights:[1,2],ratio:1/3}
+  ];
+  if(!(left>0)&&!(right>0))return fixed.map(row=>row.weights);
+  const peak=Math.max(left,right),floor=peak*.05;
+  left=Math.max(left,floor);right=Math.max(right,floor);
+  const ratio=left/(left+right);
+  if(fixed.some(row=>Math.abs(row.ratio-ratio)<1e-9))return fixed.map(row=>row.weights);
+  const exploration=[...fixed].sort((a,b)=>Math.abs(b.ratio-ratio)-Math.abs(a.ratio-ratio)||a.ratio-b.ratio).slice(0,2);
+  return [[left,right],...exploration.map(row=>row.weights)];
+}
+
 function promotionDelta(score,base){
   return (score.top3Lift-base.top3Lift)*100+(score.top5Lift-base.top5Lift)*10+(score.rankCorrelation-base.rankCorrelation);
 }
@@ -80,7 +108,7 @@ export function searchModels({champion=baselineModel(),axes=[],train=[],validati
   for(const axis of sorted)add(modelFromAxes([{...axis,weight:1}]));
   const seeds=sorted.slice(0,Math.min(8,sorted.length));
   for(let i=0;i<seeds.length;i+=1)for(let j=i+1;j<seeds.length&&candidates.length<maxCandidates;j+=1){
-    for(const weights of [[1,1],[2,1],[1,2]])add(modelFromAxes([{...seeds[i],weight:weights[0]},{...seeds[j],weight:weights[1]}]));
+    for(const weights of pairWeightPlans(seeds[i],seeds[j]))add(modelFromAxes([{...seeds[i],weight:weights[0]},{...seeds[j],weight:weights[1]}]));
   }
   const championAxes=canonicalModel(champion).axes;
   if(championAxes.length){
@@ -101,4 +129,4 @@ export function shouldConverge({seenFingerprints=new Set(),proposedFingerprint,n
   return null;
 }
 
-export const __test={normalizeAxis,rankRows,topOverlap,spearman,modelFromAxes,promotionDelta,passesPromotion};
+export const __test={normalizeAxis,rankRows,topOverlap,spearman,modelFromAxes,axisStrength,pairWeightPlans,promotionDelta,passesPromotion};
