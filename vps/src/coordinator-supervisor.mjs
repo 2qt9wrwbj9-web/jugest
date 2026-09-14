@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 const COORDINATOR_MAIN=fileURLToPath(new URL('./main.mjs',import.meta.url));
 const DEFAULT_RESTART_DELAY_MS=5000;
 const DEFAULT_STOP_TIMEOUT_MS=3000;
+const DEFAULT_BARRIER_TIMEOUT_MS=3000;
 
 function requiredText(value,name){
   const text=String(value??'').trim();
@@ -17,6 +18,7 @@ export function startCoordinatorProcess({
   spawnProcess=spawn,
   restartDelayMs=DEFAULT_RESTART_DELAY_MS,
   stopTimeoutMs=DEFAULT_STOP_TIMEOUT_MS,
+  barrierTimeoutMs=DEFAULT_BARRIER_TIMEOUT_MS,
   setTimer=setTimeout,
   clearTimer=clearTimeout
 }={}){
@@ -25,10 +27,13 @@ export function startCoordinatorProcess({
   if(typeof logger!=='function')throw new TypeError('logger must be a function');
   if(!Number.isFinite(restartDelayMs)||restartDelayMs<0)throw new TypeError('restartDelayMs must be non-negative');
   if(!Number.isFinite(stopTimeoutMs)||stopTimeoutMs<0)throw new TypeError('stopTimeoutMs must be non-negative');
+  if(!Number.isFinite(barrierTimeoutMs)||barrierTimeoutMs<1)throw new TypeError('barrierTimeoutMs must be positive');
 
   let child=null;
   let restartTimer=null;
   let stopping=false;
+  let barrierInFlight=null;
+  let barrierRequestSeq=0;
 
   const log=(event,extra={})=>{
     try{logger(JSON.stringify({level:'info',event,...extra}))}catch{}
@@ -47,7 +52,7 @@ export function startCoordinatorProcess({
     if(stopping||child)return child;
     const handle=spawnProcess(process.execPath,[COORDINATOR_MAIN],{
       env:{...process.env,JUGEST_DB_PATH:databasePath},
-      stdio:['ignore','inherit','inherit']
+      stdio:['ignore','inherit','inherit','ipc']
     });
     child=handle;
     let settled=false;
@@ -67,13 +72,49 @@ export function startCoordinatorProcess({
 
   launch();
 
+  const enterCollectorBarrier=()=>{
+    if(barrierInFlight)return barrierInFlight;
+    const active=child;
+    if(!active||active.exitCode!==null||active.signalCode!==null||active.connected===false||typeof active.send!=='function'){
+      return Promise.resolve({ok:true,noCoordinator:true});
+    }
+    const requestId=`collector-${process.pid}-${Date.now()}-${++barrierRequestSeq}`;
+    barrierInFlight=new Promise((resolve,reject)=>{
+      let settled=false;
+      const cleanup=()=>{
+        try{active.removeListener?.('message',onMessage)}catch{}
+        try{active.removeListener?.('exit',onExit)}catch{}
+        if(timer)clearTimer(timer);
+      };
+      const finish=(error,result=null)=>{
+        if(settled)return;
+        settled=true;
+        cleanup();
+        if(error)reject(error);else resolve(result);
+      };
+      const onMessage=message=>{
+        if(message?.type!=='collector_barrier_ack'||message.requestId!==requestId)return;
+        if(message.ok===false)return finish(new Error(String(message.error||'Collector barrier failed')));
+        finish(null,{ok:true,noCoordinator:false});
+      };
+      const onExit=()=>finish(new Error('Collector barrier coordinator exited before acknowledgement'));
+      active.on?.('message',onMessage);
+      active.once?.('exit',onExit);
+      const timer=setTimer(()=>finish(new Error('Collector barrier acknowledgement timeout')),barrierTimeoutMs);
+      timer?.unref?.();
+      try{active.send({type:'collector_barrier_enter',requestId})}
+      catch(error){finish(error)}
+    }).finally(()=>{barrierInFlight=null});
+    return barrierInFlight;
+  };
+
   const stop=async()=>{
     if(stopping)return;
     stopping=true;
     if(restartTimer){clearTimer(restartTimer);restartTimer=null;}
     const active=child;
-    if(!active)return;
     child=null;
+    if(!active)return;
     if(active.exitCode!==null||active.signalCode!==null)return;
     await new Promise(resolve=>{
       let done=false;
@@ -89,7 +130,7 @@ export function startCoordinatorProcess({
     });
   };
 
-  return Object.freeze({stop,get child(){return child;}});
+  return Object.freeze({stop,enterCollectorBarrier,get child(){return child;}});
 }
 
-export const __test={COORDINATOR_MAIN,DEFAULT_RESTART_DELAY_MS,DEFAULT_STOP_TIMEOUT_MS};
+export const __test={COORDINATOR_MAIN,DEFAULT_RESTART_DELAY_MS,DEFAULT_STOP_TIMEOUT_MS,DEFAULT_BARRIER_TIMEOUT_MS};
