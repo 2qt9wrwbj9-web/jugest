@@ -15,7 +15,7 @@ const MIME_TYPES=new Map([
   ['.js','text/javascript; charset=utf-8'],
   ['.mjs','text/javascript; charset=utf-8'],
   ['.json','application/json; charset=utf-8'],
-  ['.webmanifest','application/manifest+json; charset=utf-8'],
+  ['.webmanifest','application/manifest+json'],
   ['.svg','image/svg+xml'],
   ['.png','image/png'],
   ['.jpg','image/jpeg'],
@@ -67,10 +67,11 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
+  if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
-  const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot}):null;
+  const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
     :null;
