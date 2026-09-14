@@ -37,15 +37,17 @@ test('comparison page separates LIVE from historical walk-forward mode',()=>{
 
 test('comparison page shows direct Top1 Top3 Top5 hit rates with hit-day counts in both modes',()=>{
   assert.match(historicalSource,/実的中率/);
-  assert.match(historicalSource,/hitRates\?\.top1|hitRates\.top1/);
-  assert.match(historicalSource,/hitRates\?\.top3|hitRates\.top3/);
-  assert.match(historicalSource,/hitRates\?\.top5|hitRates\.top5/);
-  assert.match(historicalSource,/\/\$\{Number\(item\?\.days\)\|\|0\}日|日.*fmtPct/);
+  assert.match(historicalSource,/newEngine\?\.hitRates/);
+  assert.match(historicalSource,/currentEngine\?\.hitRates/);
+  assert.match(historicalSource,/fmtHit\(pre\.top1\)/);
+  assert.match(historicalSource,/fmtHit\(pre\.top3\)/);
+  assert.match(historicalSource,/fmtHit\(pre\.top5\)/);
+  assert.match(historicalSource,/`\$\{hits\}\/\$\{days\}日 \$\{fmtPct\(rate\)\}`/);
   const liveStart=historicalSource.indexOf('function liveHtml(){');
   const historicalStart=historicalSource.indexOf('function historicalHtml(){');
   assert.ok(liveStart>=0&&historicalStart>liveStart);
-  assert.match(historicalSource.slice(liveStart,historicalStart),/hitRateRows\(/);
-  assert.match(historicalSource.slice(historicalStart),/hitRateRows\(/);
+  assert.match(historicalSource.slice(liveStart,historicalStart),/hitRateRows\(live\)/);
+  assert.match(historicalSource.slice(historicalStart),/hitRateRows\(historical\)/);
 });
 
 test('historical mode can explain pending refresh without implying progress reset',()=>{
