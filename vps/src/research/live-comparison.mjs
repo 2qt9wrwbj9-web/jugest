@@ -145,6 +145,10 @@ export function scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows,outcom
   return Object.freeze({storeId:id,targetDate:target,winner:winnerFromScores(scores.pre_research,scores.current_shadow),scores:Object.freeze(scores),excludedReason:missing});
 }
 
+function hitRate(values,key){
+  const days=values.length,hits=values.reduce((sum,value)=>sum+(Number(value?.[key]?.overlap)>0?1:0),0);
+  return Object.freeze({hits,days,rate:days?hits/days:0});
+}
 function averageMetric(rows,engine){
   const values=rows.map(row=>row.scores?.[engine]?.metrics).filter(Boolean);
   const avg=selector=>values.length?values.reduce((sum,value)=>sum+Number(selector(value)||0),0)/values.length:0;
@@ -152,7 +156,8 @@ function averageMetric(rows,engine){
     days:values.length,quality:avg(value=>value.quality),coverage:avg(value=>value.coverage),rankCorrelation:avg(value=>value.rankCorrelation),
     top1:Object.freeze({rate:avg(value=>value.top1?.rate),lift:avg(value=>value.top1?.lift)}),
     top3:Object.freeze({rate:avg(value=>value.top3?.rate),lift:avg(value=>value.top3?.lift)}),
-    top5:Object.freeze({rate:avg(value=>value.top5?.rate),lift:avg(value=>value.top5?.lift)})
+    top5:Object.freeze({rate:avg(value=>value.top5?.rate),lift:avg(value=>value.top5?.lift)}),
+    hitRates:Object.freeze({top1:hitRate(values,'top1'),top3:hitRate(values,'top3'),top5:hitRate(values,'top5')})
   });
 }
 
@@ -193,4 +198,4 @@ export function buildComparisonSummary(db,{storeId,limit=90}={}){
   });
 }
 
-export const __test={normalizeRanking,normalizeRankings,rowFromDb,scoreRowFromDb,topOverlap,spearmanCommon,winnerFromScores,averageMetric};
+export const __test={normalizeRanking,normalizeRankings,rowFromDb,scoreRowFromDb,topOverlap,spearmanCommon,winnerFromScores,averageMetric,hitRate};
