@@ -105,7 +105,6 @@ test('explicit Collector barrier does not preempt DAILY_ANALYSIS',async()=>{
     assert.equal(getJob(f.db,daily.id).state,'running');
     assert.deepEqual(sp.killed,[]);
     assert.deepEqual(result.cancelled,[]);
-    sp.calls[0].handle.finish(0,null);
   }finally{f.cleanup()}
 });
 
