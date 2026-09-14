@@ -14,6 +14,11 @@ let analyticsClient=null;
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
 function activeShop(){return String(bridge()?.getActiveStore?.()||'').trim()}
+function storeNames(){
+  const stores=bridge()?.getStores?.();
+  const names=(Array.isArray(stores)?stores:[]).map(store=>String(store?.name??store??'').trim()).filter(Boolean);
+  return [...new Set(names)];
+}
 function getAnalyticsClient(){return analyticsClient||(analyticsClient=createVpsAnalyticsClient())}
 function fmtNumber(value,digits=2){const n=Number(value);return Number.isFinite(n)?n.toLocaleString('ja-JP',{maximumFractionDigits:digits,minimumFractionDigits:digits}):'—'}
 function fmtPct(value,digits=1){const n=Number(value);return Number.isFinite(n)?`${(n*100).toFixed(digits)}%`:'—'}
@@ -22,10 +27,21 @@ function winnerLabel(value){return value==='pre_research'?'新版':value==='curr
 function schedule(){if(scheduled)return;scheduled=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{scheduled=false;reconcile()},0)}
 
 function styleText(){return `
-.vps-historical-shell{position:fixed;z-index:9999;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 58px);bottom:0;background:#f7f9ff;overflow:auto;-webkit-overflow-scrolling:touch;padding:20px 20px calc(36px + env(safe-area-inset-bottom,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#101a38}.vps-historical-wrap{max-width:720px;margin:0 auto}.vps-historical-back{appearance:none;border:0;background:transparent;color:#315fd5;font:inherit;font-weight:700;padding:8px 0 18px;min-height:44px}.vps-historical-kicker{font-size:12px;font-weight:800;letter-spacing:.24em;color:#315fd5;margin:4px 0 10px}.vps-historical-shell h1{margin:0 0 18px;font-size:34px;line-height:1.1}.vps-historical-card{background:#fff;border:1px solid #dfe5f3;border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(33,55,110,.05);margin:0 0 16px}.vps-historical-card h2{font-size:20px;margin:0 0 8px}.vps-historical-card p{font-size:14px;line-height:1.6;color:#5f687e;margin:8px 0 14px}.vps-compare-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 16px}.vps-compare-tab{min-height:44px;border:1px solid #d9e0ee;border-radius:13px;background:#fff;color:#52617d;font:inherit;font-weight:800}.vps-compare-tab[aria-selected="true"]{background:#245fe7;color:#fff;border-color:#245fe7}.vps-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#eef3ff;color:#315fd5;font-size:11px;font-weight:900;letter-spacing:.08em;margin-bottom:10px}.vps-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.vps-compare-kpi{background:#f7f9ff;border:1px solid #e0e6f4;border-radius:14px;padding:12px}.vps-compare-kpi small{display:block;color:#74809a;font-size:11px;margin-bottom:5px}.vps-compare-kpi strong{display:block;font-size:20px;color:#152142}.vps-compare-delta{font-weight:800;color:#315fd5}.vps-message{font-size:13px;line-height:1.55;color:#40506e;margin:12px 0}.vps-compare-table{width:100%;border-collapse:collapse;font-size:13px}.vps-compare-table th,.vps-compare-table td{border-bottom:1px solid #edf0f6;padding:9px 6px;text-align:right}.vps-compare-table th:first-child,.vps-compare-table td:first-child{text-align:left}.vps-compare-days{display:grid;gap:9px}.vps-compare-day{border:1px solid #e2e7f1;border-radius:14px;padding:12px}.vps-compare-day-head{display:flex;justify-content:space-between;gap:10px;font-weight:800}.vps-compare-day-meta{font-size:12px;color:#69758e;margin-top:6px;line-height:1.5}.vps-compare-debug{margin-top:10px;font-size:12px;color:#52617d}.vps-compare-debug summary{cursor:pointer;font-weight:700}.vps-compare-debug code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:7px;background:#f7f9ff;border-radius:10px;padding:9px}.vps-compare-empty{text-align:center;padding:18px 8px;color:#667189}.vps-compare-empty b{display:block;color:#172342;font-size:18px;margin-bottom:6px}.vps-historical-progress{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;color:#52617d;font-size:12px}.vps-historical-progress progress{flex:1;min-width:80px}.vps-actions{display:grid;gap:10px;margin-top:12px}.vps-actions button{min-height:48px;border-radius:14px;border:1px solid #d9e0ee;background:#fff;color:#142041;font:inherit;font-weight:800;padding:10px 14px}.vps-error{color:#b72d3b}.vps-walk-forward-note{font-size:12px!important}@media(max-width:560px){.vps-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vps-historical-shell h1{font-size:29px}}
+.vps-historical-shell{position:fixed;z-index:9999;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 58px);bottom:0;background:#f7f9ff;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:20px 20px calc(36px + env(safe-area-inset-bottom,0px));box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#101a38}.vps-historical-wrap{max-width:720px;margin:0 auto}.vps-historical-back{appearance:none;border:0;background:transparent;color:#315fd5;font:inherit;font-weight:700;padding:8px 0 18px;min-height:44px}.vps-historical-kicker{font-size:12px;font-weight:800;letter-spacing:.24em;color:#315fd5;margin:4px 0 10px}.vps-historical-shell h1{margin:0 0 18px;font-size:34px;line-height:1.1}.vps-historical-card{background:#fff;border:1px solid #dfe5f3;border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(33,55,110,.05);margin:0 0 16px}.vps-historical-card h2{font-size:20px;margin:0 0 8px}.vps-historical-card p{font-size:14px;line-height:1.6;color:#5f687e;margin:8px 0 14px}.vps-compare-store{display:grid;gap:7px;margin:0 0 14px}.vps-compare-store span{font-size:12px;font-weight:800;color:#52617d}.vps-compare-store select{width:100%;min-height:46px;box-sizing:border-box;border:1px solid #d9e0ee;border-radius:13px;background:#fff;color:#142041;font:inherit;font-weight:700;padding:0 12px}.vps-compare-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 16px}.vps-compare-tab{min-height:44px;border:1px solid #d9e0ee;border-radius:13px;background:#fff;color:#52617d;font:inherit;font-weight:800}.vps-compare-tab[aria-selected="true"]{background:#245fe7;color:#fff;border-color:#245fe7}.vps-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#eef3ff;color:#315fd5;font-size:11px;font-weight:900;letter-spacing:.08em;margin-bottom:10px}.vps-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.vps-compare-kpi{background:#f7f9ff;border:1px solid #e0e6f4;border-radius:14px;padding:12px}.vps-compare-kpi small{display:block;color:#74809a;font-size:11px;margin-bottom:5px}.vps-compare-kpi strong{display:block;font-size:20px;color:#152142}.vps-compare-delta{font-weight:800;color:#315fd5}.vps-message{font-size:13px;line-height:1.55;color:#40506e;margin:12px 0}.vps-compare-table{width:100%;border-collapse:collapse;font-size:13px}.vps-compare-table th,.vps-compare-table td{border-bottom:1px solid #edf0f6;padding:9px 6px;text-align:right}.vps-compare-table th:first-child,.vps-compare-table td:first-child{text-align:left}.vps-compare-days{display:grid;gap:9px}.vps-compare-day{border:1px solid #e2e7f1;border-radius:14px;padding:12px}.vps-compare-day-head{display:flex;justify-content:space-between;gap:10px;font-weight:800}.vps-compare-day-meta{font-size:12px;color:#69758e;margin-top:6px;line-height:1.5}.vps-compare-debug{margin-top:10px;font-size:12px;color:#52617d}.vps-compare-debug summary{cursor:pointer;font-weight:700}.vps-compare-debug code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:7px;background:#f7f9ff;border-radius:10px;padding:9px}.vps-compare-empty{text-align:center;padding:18px 8px;color:#667189}.vps-compare-empty b{display:block;color:#172342;font-size:18px;margin-bottom:6px}.vps-historical-progress{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;color:#52617d;font-size:12px}.vps-historical-progress progress{flex:1;min-width:80px}.vps-actions{display:grid;gap:10px;margin-top:12px}.vps-actions button{min-height:48px;border-radius:14px;border:1px solid #d9e0ee;background:#fff;color:#142041;font:inherit;font-weight:800;padding:10px 14px}.vps-error{color:#b72d3b}.vps-walk-forward-note{font-size:12px!important}@media(max-width:560px){.vps-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vps-historical-shell h1{font-size:29px}}
 `}
 function ensureStyle(){if(document.querySelector('style[data-vps-historical-comparison]'))return;const style=document.createElement('style');style.dataset.vpsHistoricalComparison='';style.textContent=styleText();document.head.append(style)}
 function comparisonOpen(){const wrap=root?.querySelector('.vps-settings-overlay .vps-settings-wrap');return !!wrap&&wrap.querySelector('h1')?.textContent?.trim()==='PRE版 精度比較'}
+function reconcileAnalysisChip(){
+  const chip=root?.querySelector('.analysis-chip');if(!chip)return;
+  const running=(chip.textContent||'').includes('店舗解析中');
+  if(running)chip.style.removeProperty('display');else chip.style.display='none';
+}
+function storeSelectorHtml(){
+  const current=activeShop(),names=storeNames();
+  if(current&&!names.includes(current))names.unshift(current);
+  if(!names.length)return '<div class="vps-message">店舗を登録するとここで切り替えられます。</div>';
+  return `<label class="vps-compare-store"><span>比較する店舗</span><select data-vps-comparison-store>${names.map(name=>`<option value="${esc(name)}" ${name===current?'selected':''}>${esc(name)}</option>`).join('')}</select></label>`;
+}
 function tabsHtml(){return `<div class="vps-compare-tabs"><button type="button" class="vps-compare-tab" data-vps-comparison-mode="live" aria-selected="${comparisonMode==='live'}">LIVE</button><button type="button" class="vps-compare-tab" data-vps-comparison-mode="historical" aria-selected="${comparisonMode==='historical'}">過去検証</button></div>`}
 function metricRows(summary){const pre=summary?.newEngine||{},cur=summary?.currentEngine||{};return `<tr><td>Top1 lift</td><td>${fmtNumber(pre.top1?.lift)}</td><td>${fmtNumber(cur.top1?.lift)}</td></tr><tr><td>Top3 lift</td><td>${fmtNumber(pre.top3?.lift)}</td><td>${fmtNumber(cur.top3?.lift)}</td></tr><tr><td>Top5 lift</td><td>${fmtNumber(pre.top5?.lift)}</td><td>${fmtNumber(cur.top5?.lift)}</td></tr><tr><td>順位相関</td><td>${fmtNumber(pre.rankCorrelation,3)}</td><td>${fmtNumber(cur.rankCorrelation,3)}</td></tr><tr><td>Coverage</td><td>${fmtPct(pre.coverage)}</td><td>${fmtPct(cur.coverage)}</td></tr>`}
 function pendingTarget(live){return (Array.isArray(live?.rows)?live.rows:[]).find(row=>row?.excludedReason==='unscored'&&row?.predictions?.pre_research&&row?.predictions?.current_shadow)?.targetDate||''}
@@ -55,9 +71,15 @@ function historicalHtml(){
 }
 function overlayHtml(){
   const body=comparisonBusy?'<section class="vps-historical-card"><div class="vps-compare-empty"><b>比較データを読み込み中…</b><span>VPSから比較結果を取得しています。</span></div></section>':comparisonError?`<section class="vps-historical-card"><h2 class="vps-error">読み込みエラー</h2><p>${esc(comparisonError)}</p><div class="vps-actions"><button type="button" data-vps-historical-refresh>再読み込み</button></div></section>`:comparisonMode==='historical'?historicalHtml():liveHtml();
-  return `<div class="vps-historical-shell" data-vps-historical-shell><div class="vps-historical-wrap"><button type="button" class="vps-historical-back" data-vps-historical-back>‹ 設定</button><div class="vps-historical-kicker">PRE VALIDATION</div><h1>PRE版 精度比較</h1>${tabsHtml()}${body}</div></div>`;
+  return `<div class="vps-historical-shell" data-vps-historical-shell><div class="vps-historical-wrap"><button type="button" class="vps-historical-back" data-vps-historical-back>‹ 設定</button><div class="vps-historical-kicker">PRE VALIDATION</div><h1>PRE版 精度比較</h1>${storeSelectorHtml()}${tabsHtml()}${body}</div></div>`;
 }
-function renderOverlay(){ensureStyle();let host=document.querySelector('[data-vps-historical-shell]');const html=overlayHtml();if(!host){document.body.insertAdjacentHTML('beforeend',html);return}const next=document.createElement('div');next.innerHTML=html;host.replaceWith(next.firstElementChild)}
+function renderOverlay(){
+  ensureStyle();let host=document.querySelector('[data-vps-historical-shell]');const html=overlayHtml();
+  if(!host){document.body.insertAdjacentHTML('beforeend',html);return}
+  const next=document.createElement('div');next.innerHTML=html;const nextHost=next.firstElementChild;
+  if(host.innerHTML===nextHost.innerHTML)return;
+  const scrollTop=host.scrollTop;host.replaceWith(nextHost);nextHost.scrollTop=scrollTop;
+}
 function removeOverlay(){document.querySelector('[data-vps-historical-shell]')?.remove()}
 async function loadComparison(force=false){
   const shop=activeShop();if(!shop){comparisonShop='';comparisonData=null;comparisonError='店舗を選択してから精度比較を開いてね。';comparisonBusy=false;renderOverlay();return}
@@ -69,6 +91,7 @@ async function loadComparison(force=false){
   finally{if(comparisonShop===shop){comparisonBusy=false;if(comparisonOpen())renderOverlay()}}
 }
 function reconcile(){
+  reconcileAnalysisChip();
   if(!comparisonOpen()){removeOverlay();return}
   const shop=activeShop();if(shop!==comparisonShop){comparisonData=null;comparisonError=''}
   renderOverlay();void loadComparison(false);
@@ -79,12 +102,18 @@ function onDocumentClick(event){
   if(button.matches('[data-vps-historical-refresh]')){comparisonData=null;void loadComparison(true);return}
   if(button.matches('[data-vps-historical-back]')){root?.querySelector('[data-vps-settings-back]')?.click();removeOverlay()}
 }
+function onDocumentChange(event){
+  const select=event.target?.closest?.('[data-vps-comparison-store]');if(!select)return;
+  const shop=String(select.value||'').trim();if(!shop||shop===activeShop())return;
+  comparisonData=null;comparisonError='';comparisonBusy=false;comparisonShop='';
+  bridge()?.setActiveStore?.(shop);renderOverlay();void loadComparison(true);
+}
 function attach(candidate){
   if(app===candidate&&root===candidate?.shadowRoot)return true;
   observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
   observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});schedule();return true;
 }
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
-document.addEventListener('click',onDocumentClick,true);boot();
+document.addEventListener('click',onDocumentClick,true);document.addEventListener('change',onDocumentChange,true);boot();
 
-export const __test={pendingTarget,liveHtml,historicalHtml,comparisonMode};
+export const __test={pendingTarget,liveHtml,historicalHtml,comparisonMode,storeNames,reconcileAnalysisChip};
