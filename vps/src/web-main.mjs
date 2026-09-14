@@ -30,18 +30,29 @@ export async function runWebServer({
   if(!config||typeof config!=='object')throw new TypeError('config is required');
   if(typeof startCoordinator!=='function')throw new TypeError('startCoordinator must be a function');
   const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot}=config;
-  const server=createWebServer({rootDir,relayDbPath,canonicalDbPath,rawRoot});
-  server.listen(port,host);
-  await once(server,'listening');
 
   let coordinatorRuntime=null;
   if(canonicalDbPath){
-    try{
-      coordinatorRuntime=await startCoordinator({dbPath:canonicalDbPath,installSignalHandlers:false});
-    }catch(error){
-      await new Promise(resolve=>server.close(()=>resolve()));
-      throw error;
-    }
+    coordinatorRuntime=await startCoordinator({dbPath:canonicalDbPath,installSignalHandlers:false});
+  }
+
+  const server=createWebServer({
+    rootDir,
+    relayDbPath,
+    canonicalDbPath,
+    rawRoot,
+    enterCollectorBarrier:coordinatorRuntime?.enterCollectorBarrier??(async()=>({ok:true,noCoordinator:true}))
+  });
+
+  try{
+    server.listen(port,host);
+    await once(server,'listening');
+  }catch(error){
+    try{await coordinatorRuntime?.stop?.()}catch{}
+    throw error;
+  }
+
+  if(coordinatorRuntime){
     server.once('close',()=>{
       Promise.resolve(coordinatorRuntime?.stop?.()).catch(error=>{
         try{logger(JSON.stringify({level:'error',event:'coordinator_stop_failed',message:String(error?.message??error)}))}catch{}
