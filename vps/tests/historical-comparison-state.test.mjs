@@ -69,6 +69,21 @@ test('active immutable run keeps id and progress when old canonical history chan
   }finally{db.close()}
 });
 
+test('legacy v1 run remains auditable while first v2 refresh starts a new immutable run',()=>{
+  const db=openDatabase(':memory:');
+  try{
+    migrate(db);seedStore(db);
+    db.prepare(`INSERT INTO historical_comparison_runs(store_id,replay_version,history_identity,snapshot_first_date,snapshot_last_date,next_target_date,state,total_candidates,processed_count,scored_count,excluded_count,pre_state_json,pre_fingerprint,pre_frontier_date,refresh_pending,last_error,created_at,updated_at,completed_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run('s1','historical-shadow-v1','legacy-id','2026-01-01','2026-02-28','2026-01-20','running',53,12,8,4,'{}','legacy-fp','2026-01-19',0,null,T0,T0,null);
+    const legacy=db.prepare("SELECT * FROM historical_comparison_runs WHERE store_id='s1' AND replay_version='historical-shadow-v1'").get();
+    const v2=ensureHistoricalComparisonRun(db,{storeId:'s1',days:makeDays(60),nowIso:T1});
+    assert.equal(v2.replayVersion,HISTORICAL_REPLAY_VERSION);
+    assert.notEqual(v2.id,Number(legacy.id));
+    assert.equal(db.prepare('SELECT state FROM historical_comparison_runs WHERE id=?').get(legacy.id).state,'running','legacy audit row must remain untouched');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM historical_comparison_snapshot_days WHERE run_id=?').get(v2.id).n,60);
+  }finally{db.close()}
+});
+
 test('historical day result is append-once for run plus target date',()=>{
   const db=openDatabase(':memory:');
   try{
