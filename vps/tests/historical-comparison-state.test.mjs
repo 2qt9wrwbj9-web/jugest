@@ -37,27 +37,35 @@ function fixtureResult(runId){
   };
 }
 
-test('migration creates historical comparison tables',()=>{
+test('migration creates historical comparison tables including immutable snapshot rows',()=>{
   const db=openDatabase(':memory:');
   try{
     migrate(db);
     assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='historical_comparison_runs'").get()?.name,'historical_comparison_runs');
     assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='historical_comparison_days'").get()?.name,'historical_comparison_days');
+    assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='historical_comparison_snapshot_days'").get()?.name,'historical_comparison_snapshot_days');
   }finally{db.close()}
 });
 
-test('fixed snapshot ignores newer live tail but stale-restarts when old history changes',()=>{
+test('active immutable run keeps id and progress when old canonical history changes',()=>{
   const db=openDatabase(':memory:');
   try{
     migrate(db);seedStore(db);
     const days60=makeDays(60),newerDay=makeDays(61).at(-1);
     const first=ensureHistoricalComparisonRun(db,{storeId:'s1',days:days60,nowIso:T0});
     assert.equal(first.replayVersion,HISTORICAL_REPLAY_VERSION);
-    const same=ensureHistoricalComparisonRun(db,{storeId:'s1',days:[...days60,newerDay],nowIso:T1});
-    assert.equal(same.id,first.id,'newer live day must not restart the fixed historical snapshot');
-    const changed=ensureHistoricalComparisonRun(db,{storeId:'s1',days:replaceDay(days60,days60[10].date),nowIso:T2});
-    assert.notEqual(changed.id,first.id);
-    assert.equal(getHistoricalComparisonRun(db,{storeId:'s1',runId:first.id}).state,'stale');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM historical_comparison_snapshot_days WHERE run_id=?').get(first.id).n,60);
+
+    const sameTail=ensureHistoricalComparisonRun(db,{storeId:'s1',days:[...days60,newerDay],nowIso:T1});
+    assert.equal(sameTail.id,first.id,'newer live day must not restart or expand the active snapshot');
+    assert.equal(sameTail.totalCandidates,first.totalCandidates);
+
+    const sameChanged=ensureHistoricalComparisonRun(db,{storeId:'s1',days:replaceDay(days60,days60[10].date),nowIso:T2});
+    assert.equal(sameChanged.id,first.id,'in-range correction must be deferred until current immutable run completes');
+    assert.equal(sameChanged.state,first.state);
+    assert.equal(sameChanged.totalCandidates,first.totalCandidates);
+    assert.equal(getHistoricalComparisonRun(db,{storeId:'s1',runId:first.id}).state,'queued');
+    assert.equal(db.prepare('SELECT refresh_pending FROM historical_comparison_runs WHERE id=?').get(first.id).refresh_pending,1);
   }finally{db.close()}
 });
 
