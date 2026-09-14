@@ -88,14 +88,20 @@ function createCanonicalSavedHook({canonicalDbPath,rawRoot}){
   };
 }
 
-export function createVpsRelayHandler({dbPath,canonicalDbPath=null,rawRoot=null}={}){
+export function createVpsRelayHandler({dbPath,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
   if(typeof dbPath!=='string'||!dbPath.trim())throw new TypeError('relay dbPath is required');
+  if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const onCollectorSaved=createCanonicalSavedHook({canonicalDbPath,rawRoot});
   const runtime=installCanonicalPushHook(createRelayRuntime({createStore:(name,options={})=>createRelayStore(name,{dbPath,root:options.root||'jugest'})}),onCollectorSaved);
   return async function vpsRelayHandler(req,res){
     try{
       const body=await readNodeBody(req);
-      if(canonicalDbPath&&COLLECTOR_PUSH_ACTIONS.has(relayAction(body)))markCollectorActivity({dbPath:canonicalDbPath});
+      const action=relayAction(body);
+      if(canonicalDbPath&&COLLECTOR_PUSH_ACTIONS.has(action)){
+        markCollectorActivity({dbPath:canonicalDbPath});
+        await enterCollectorBarrier();
+        markCollectorActivity({dbPath:canonicalDbPath});
+      }
       return await runWebHandler({method:req.method,url:req.url,headers:req.headers,body},res,runtime.default);
     }catch(error){if(!res.headersSent)sendRelayError(res,error);else res.destroy(error)}
   };
