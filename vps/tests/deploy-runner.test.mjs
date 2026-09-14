@@ -23,7 +23,7 @@ async function fixture(t,{currentSha=OLD_SHA}={}) {
   return {rootDir,releasesDir,stateDir,currentPath,oldRelease};
 }
 
-function makeExec({remoteSha=NEW_SHA,checkoutSha=NEW_SHA,testCode=0,restartCode=0}={}) {
+function makeExec({remoteSha=NEW_SHA,checkoutSha=NEW_SHA,testCode=0,testStdout=null,testStderr=null,restartCode=0}={}) {
   const calls=[];
   const exec=async(command,args,{cwd}={})=>{
     calls.push({command,args:[...args],cwd});
@@ -45,7 +45,11 @@ function makeExec({remoteSha=NEW_SHA,checkoutSha=NEW_SHA,testCode=0,restartCode=
       return {code:0,stdout:await sha,stderr:''};
     }
     if (command==='npm' && args[0]==='test') {
-      return {code:testCode,stdout:testCode===0?'ok':'',stderr:testCode===0?'':'tests failed'};
+      return {
+        code:testCode,
+        stdout:testStdout??(testCode===0?'ok':''),
+        stderr:testStderr??(testCode===0?'':'tests failed')
+      };
     }
     if (command==='npm' && args[0]==='ci') {
       return {code:0,stdout:'',stderr:''};
@@ -106,6 +110,19 @@ test('npm test failure leaves current unchanged and records failed SHA',async t=
   const state=await readState(fx.stateDir);
   assert.equal(state.lastAttemptSha,NEW_SHA);
   assert.equal(state.lastResult,'failed');
+});
+
+test('npm test failure keeps stdout diagnostics even when stderr contains only npm notices',async t=>{
+  const fx=await fixture(t);
+  const {exec}=makeExec({
+    testCode:1,
+    testStdout:'not ok 42 - historical worker\n# expected 2 actual 1\n',
+    testStderr:'npm notice New major version available\n'
+  });
+  const result=await runDeployOnce(options(fx,exec));
+  assert.equal(result.status,'failed');
+  assert.match(result.error,/not ok 42 - historical worker/);
+  assert.match(result.error,/npm notice New major version available/);
 });
 
 test('successful test switches release, restarts once, and records success',async t=>{
