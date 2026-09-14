@@ -5,6 +5,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
+const appSource=readFileSync(resolve(ROOT,'app-v510.js'),'utf8');
 const coreSource=readFileSync(resolve(ROOT,'vps-ui-enhancements.mjs'),'utf8');
 const historicalSource=readFileSync(resolve(ROOT,'vps-ui-historical-comparison.mjs'),'utf8');
 const source=`${coreSource}\n${historicalSource}`;
@@ -41,14 +42,26 @@ test('LIVE pending copy names the exact target date and actual-data wait conditi
   assert.match(historicalSource,/live\?\.rows/);
 });
 
-test('analysis completion chip visibility remains owned by the core timer',()=>{
-  const start=coreSource.indexOf('function reconcileFailureChip(){');
-  const end=coreSource.indexOf('\n}\n\nfunction backfillCardHtml',start);
-  assert.ok(start>=0&&end>start,'reconcileFailureChip must exist');
-  const fn=coreSource.slice(start,end+2);
-  const nonFailure=fn.match(/if\(!text\.includes\('解析失敗'\)\)\{([^}]*)\}/)?.[1]||'';
-  assert.match(nonFailure,/text\.includes\('店舗解析中'\)\|\|text\.includes\('解析完了'\)/);
-  assert.match(nonFailure,/setFailureAck\(''\);return/);
-  assert.doesNotMatch(nonFailure,/chip\.style\./,'non-failure completion visibility must stay owned by the core timer');
-  assert.match(fn,/if\(getFailureAck\(\)===fingerprint\)chip\.style\.display='none';else chip\.style\.removeProperty\('display'\)/);
+test('analysis chip is running-only and never renders completion or failure notifications',()=>{
+  const start=appSource.indexOf('renderAnalysisChip(){');
+  const end=appSource.indexOf('\n\n  async runReplay()',start);
+  assert.ok(start>=0&&end>start,'renderAnalysisChip must exist');
+  const fn=appSource.slice(start,end);
+  assert.match(fn,/j\.status!=='running'/);
+  assert.match(fn,/店舗解析中/);
+  assert.doesNotMatch(fn,/解析完了 \/ 結果を見る/);
+  assert.doesNotMatch(fn,/解析失敗 \/ 詳細を見る/);
+});
+
+test('comparison overlay exposes an in-page store selector backed by bridge stores',()=>{
+  assert.match(historicalSource,/getStores\?\.\(\)/);
+  assert.match(historicalSource,/data-vps-comparison-store/);
+  assert.match(historicalSource,/setActiveStore\?\.\(/);
+  assert.match(historicalSource,/document\.addEventListener\('change'/);
+});
+
+test('comparison overlay redraw preserves scroll and skips identical markup',()=>{
+  assert.match(historicalSource,/host\.innerHTML===nextHost\.innerHTML/);
+  assert.match(historicalSource,/const scrollTop=host\.scrollTop/);
+  assert.match(historicalSource,/nextHost\.scrollTop=scrollTop/);
 });
