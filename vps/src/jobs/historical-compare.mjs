@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {openDatabase} from '../db.mjs';
 import {migrate} from '../schema.mjs';
-import {loadStoreDays} from '../analysis/store-data.mjs';
 import {requestHistoricalComparisonRefresh} from '../analysis/historical-refresh-state.mjs';
-import {advanceHistoricalCursor,compareHistoricalTarget,computeHistoricalSnapshotIdentity,getHistoricalComparisonRun,markHistoricalRunStale,persistHistoricalComparisonDay} from '../research/historical-comparison.mjs';
+import {advanceHistoricalCursor,compareHistoricalTarget,getHistoricalComparisonRun,loadHistoricalRunSnapshot,persistHistoricalComparisonDay} from '../research/historical-comparison.mjs';
 import {SCORER_VERSION} from '../research/live-comparison.mjs';
 import {deriveStoreMachineCount} from '../analysis/task-metrics.mjs';
 import {hashCanonical} from '../canonical-json.mjs';
@@ -27,16 +26,12 @@ export async function executeHistoricalCompare({dbPath,job,rootDir=fileURLToPath
   const db=openDatabase(dbPath);try{
     migrate(db);const run=getHistoricalComparisonRun(db,{storeId,runId});if(!run)return {status:'stale',storeId,runId,targetDate,outputHash:hashCanonical({status:'missing_run',storeId,runId,targetDate})};
     if(run.state==='stale'||run.state==='complete'||run.nextTargetDate!==targetDate)return {status:'stale',storeId,runId,targetDate,outputHash:hashCanonical({status:'cursor_moved',storeId,runId,targetDate,current:run.nextTargetDate})};
-    const loaded=loadStoreDays(db,storeId,{limit:3660}),snapshotDays=loaded.days.filter(day=>day.date<=run.snapshotLastDate);
-    const identity=computeHistoricalSnapshotIdentity(snapshotDays,{snapshotLastDate:run.snapshotLastDate}),nowIso=now().toISOString();
-    if(identity!==run.historyIdentity){
-      markHistoricalRunStale(db,{runId,nowIso,reason:'history_identity_changed'});
-      const replacement=requestHistoricalComparisonRefresh(db,{storeId,nowIso});
-      return {status:'stale_restarted',storeId,runId,targetDate,followupJobId:replacement.job?.id??null,outputHash:hashCanonical({status:'stale_restarted',storeId,runId,targetDate,newRunId:replacement.run?.id??null})};
-    }
-    const machineScale=deriveStoreMachineCount(snapshotDays),rowCount=snapshotDays.reduce((sum,day)=>sum+(Array.isArray(day.machines)?day.machines.length:0),0);
+    const snapshotDays=loadHistoricalRunSnapshot(db,{runId});
+    if(!snapshotDays.length)return {status:'stale',storeId,runId,targetDate,outputHash:hashCanonical({status:'missing_snapshot',storeId,runId,targetDate})};
+    const store=db.prepare('SELECT name FROM stores WHERE id=?').get(storeId);if(!store?.name)throw new Error(`historical store missing: ${storeId}`);
+    const nowIso=now().toISOString(),machineScale=deriveStoreMachineCount(snapshotDays),rowCount=snapshotDays.reduce((sum,day)=>sum+(Array.isArray(day.machines)?day.machines.length:0),0);
     process.send?.({type:'task_start',taskMeta:{taskKind:'HISTORICAL_COMPARE',phase:3,taskVersion:run.replayVersion,storeId,modelFingerprint:run.preFingerprint||null,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,dayCount:snapshotDays.length,rowCount,workloadUnits:rowCount,details:{runId,targetDate}}});
-    const result=await compareHistoricalTarget({rootDir,storeId,shop:loaded.store.name,days:snapshotDays,targetDate,preState:run.preState});
+    const result=await compareHistoricalTarget({rootDir,storeId,shop:store.name,days:snapshotDays,targetDate,preState:run.preState});
     const next=nextTarget(snapshotDays,targetDate,run.snapshotLastDate);
     let advanced;
     db.exec('BEGIN IMMEDIATE');
@@ -45,7 +40,7 @@ export async function executeHistoricalCompare({dbPath,job,rootDir=fileURLToPath
       advanced=advanceHistoricalCursor(db,{runId,nextTargetDate:next,processedDelta:1,scoredDelta:result.excludedReason?0:1,excludedDelta:result.excludedReason?1:0,preState:result.preState,nowIso});
       db.exec('COMMIT');
     }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
-    let followupJobId=null;if(next){const refresh=requestHistoricalComparisonRefresh(db,{storeId,nowIso});followupJobId=refresh.job?.id??null}
+    const refresh=requestHistoricalComparisonRefresh(db,{storeId,nowIso}),followupJobId=refresh.job?.id??null;
     return {status:result.excludedReason?'excluded':'scored',storeId,runId,targetDate,nextTargetDate:advanced.nextTargetDate,followupJobId,winner:result.winner,excludedReason:result.excludedReason,outputHash:hashCanonical({runId,storeId,targetDate,winner:result.winner,excludedReason:result.excludedReason,nextTargetDate:advanced.nextTargetDate})};
   }finally{db.close()}
 }
