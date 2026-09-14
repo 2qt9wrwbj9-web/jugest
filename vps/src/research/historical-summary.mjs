@@ -1,5 +1,9 @@
 function requiredText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
+function hitRate(values,key){
+  const days=values.length,hits=values.reduce((sum,value)=>sum+(Number(value?.[key]?.overlap)>0?1:0),0);
+  return Object.freeze({hits,days,rate:days?hits/days:0});
+}
 function averageMetric(rows,key){
   const values=rows.map(row=>row[key]).filter(Boolean);
   const avg=selector=>values.length?values.reduce((sum,value)=>sum+Number(selector(value)||0),0)/values.length:0;
@@ -10,7 +14,8 @@ function averageMetric(rows,key){
     rankCorrelation:avg(value=>value.rankCorrelation),
     top1:Object.freeze({rate:avg(value=>value.top1?.rate),lift:avg(value=>value.top1?.lift)}),
     top3:Object.freeze({rate:avg(value=>value.top3?.rate),lift:avg(value=>value.top3?.lift)}),
-    top5:Object.freeze({rate:avg(value=>value.top5?.rate),lift:avg(value=>value.top5?.lift)})
+    top5:Object.freeze({rate:avg(value=>value.top5?.rate),lift:avg(value=>value.top5?.lift)}),
+    hitRates:Object.freeze({top1:hitRate(values,'top1'),top3:hitRate(values,'top3'),top5:hitRate(values,'top5')})
   });
 }
 function normalizedDay(row){
@@ -41,7 +46,7 @@ export function buildHistoricalComparisonSummary(db,{storeId,limit=90}={}){
   const newEngine=averageMetric(paired,'preMetrics'),currentEngine=averageMetric(paired,'currentMetrics'),recentNew=averageMetric(recent,'preMetrics'),recentCurrent=averageMetric(recent,'currentMetrics');
   const processed=Number(run.processed_count)||0,totalCandidates=Number(run.total_candidates)||0;
   return Object.freeze({
-    runId:Number(run.id),state:run.state,replayVersion:run.replay_version,
+    runId:Number(run.id),state:run.state,replayVersion:run.replay_version,refreshPending:Boolean(Number(run.refresh_pending)||0),
     snapshotFirstDate:run.snapshot_first_date??null,snapshotLastDate:run.snapshot_last_date??null,nextTargetDate:run.next_target_date??null,
     totalCandidates,processed,progress:totalCandidates?processed/totalCandidates:1,
     scored:paired.length,excluded:rows.length-paired.length,...counts,newEngine,currentEngine,
@@ -50,4 +55,4 @@ export function buildHistoricalComparisonSummary(db,{storeId,limit=90}={}){
   });
 }
 
-export const __test={averageMetric,normalizedDay};
+export const __test={averageMetric,normalizedDay,hitRate};
