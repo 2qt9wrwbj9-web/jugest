@@ -3,7 +3,7 @@ import {runExistingStorePlan} from '../analysis/runtime-adapter.mjs';
 import {initialHistoricalPreState,evolveHistoricalPreState,predictHistoricalPre} from './historical-pre-simulator.mjs';
 import {SCORER_VERSION,OUTCOME_PROXY_VERSION,WIN_EPSILON,scorePredictionRows} from './live-comparison.mjs';
 
-export const HISTORICAL_REPLAY_VERSION='historical-shadow-v1';
+export const HISTORICAL_REPLAY_VERSION='historical-shadow-v2';
 const WARMUP_DAYS=7;
 
 function requiredText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
@@ -25,13 +25,13 @@ export function computeHistoricalSnapshotIdentity(days,{snapshotLastDate}={}){
   return hashCanonical({replayVersion:HISTORICAL_REPLAY_VERSION,snapshotLastDate:last,days:normalized});
 }
 
-function runFromDb(row){if(!row)return null;return Object.freeze({id:Number(row.id),storeId:row.store_id,replayVersion:row.replay_version,historyIdentity:row.history_identity,snapshotFirstDate:row.snapshot_first_date??null,snapshotLastDate:row.snapshot_last_date??null,nextTargetDate:row.next_target_date??null,state:row.state,totalCandidates:Number(row.total_candidates)||0,processedCount:Number(row.processed_count)||0,scoredCount:Number(row.scored_count)||0,excludedCount:Number(row.excluded_count)||0,preState:safeJson(row.pre_state_json,{})||{},preFingerprint:row.pre_fingerprint||'',preFrontierDate:row.pre_frontier_date??null,lastError:row.last_error??null,createdAt:row.created_at,updatedAt:row.updated_at,completedAt:row.completed_at??null})}
+function runFromDb(row){if(!row)return null;return Object.freeze({id:Number(row.id),storeId:row.store_id,replayVersion:row.replay_version,historyIdentity:row.history_identity,snapshotFirstDate:row.snapshot_first_date??null,snapshotLastDate:row.snapshot_last_date??null,nextTargetDate:row.next_target_date??null,state:row.state,totalCandidates:Number(row.total_candidates)||0,processedCount:Number(row.processed_count)||0,scoredCount:Number(row.scored_count)||0,excludedCount:Number(row.excluded_count)||0,preState:safeJson(row.pre_state_json,{})||{},preFingerprint:row.pre_fingerprint||'',preFrontierDate:row.pre_frontier_date??null,refreshPending:Number(row.refresh_pending)||0,lastError:row.last_error??null,createdAt:row.created_at,updatedAt:row.updated_at,completedAt:row.completed_at??null})}
 function dayFromDb(row){if(!row)return null;return Object.freeze({runId:Number(row.run_id),storeId:row.store_id,targetDate:row.target_date,prePrediction:safeJson(row.pre_prediction_json,null),currentPrediction:safeJson(row.current_prediction_json,null),prePredictionHash:row.pre_prediction_hash??null,currentPredictionHash:row.current_prediction_hash??null,outcomeInputHash:row.outcome_input_hash??null,preMetrics:safeJson(row.pre_metrics_json,null),currentMetrics:safeJson(row.current_metrics_json,null),winner:row.winner??null,excludedReason:row.excluded_reason??null,preFingerprint:row.pre_fingerprint??null,preFeatureVersion:row.pre_feature_version??null,preFrontierDate:row.pre_frontier_date??null,scorerVersion:row.scorer_version,createdAt:row.created_at})}
 
 export function getHistoricalComparisonRun(db,{storeId,runId=null}={}){
   if(!db?.prepare)throw new TypeError('db is required');const id=requiredText(storeId,'storeId');
   if(runId!=null){if(!Number.isInteger(Number(runId))||Number(runId)<1)throw new TypeError('runId must be a positive integer');return runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE store_id=? AND id=?').get(id,Number(runId)))}
-  return runFromDb(db.prepare("SELECT * FROM historical_comparison_runs WHERE store_id=? AND state<>'stale' ORDER BY id DESC LIMIT 1").get(id));
+  return runFromDb(db.prepare("SELECT * FROM historical_comparison_runs WHERE store_id=? AND replay_version=? AND state<>'stale' ORDER BY id DESC LIMIT 1").get(id,HISTORICAL_REPLAY_VERSION));
 }
 
 export function markHistoricalRunStale(db,{runId,nowIso,reason='history_identity_changed'}={}){
@@ -39,18 +39,54 @@ export function markHistoricalRunStale(db,{runId,nowIso,reason='history_identity
   db.prepare("UPDATE historical_comparison_runs SET state='stale',last_error=?,updated_at=? WHERE id=? AND state<>'stale'").run(String(reason||'history_identity_changed'),at,id);return runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE id=?').get(id));
 }
 
+export function persistHistoricalRunSnapshot(db,{runId,days}={}){
+  if(!db?.prepare)throw new TypeError('db is required');const rid=Number(runId);if(!Number.isInteger(rid)||rid<1)throw new TypeError('runId must be a positive integer');
+  const ordered=normalizeDays(days);const insert=db.prepare('INSERT OR IGNORE INTO historical_comparison_snapshot_days(run_id,business_date,payload_json,payload_hash) VALUES(?,?,?,?)');
+  for(const day of ordered){const payload=canonicalJson(day);insert.run(rid,day.date,payload,hashCanonical(day))}
+  return ordered.length;
+}
+
+export function loadHistoricalRunSnapshot(db,{runId}={}){
+  if(!db?.prepare)throw new TypeError('db is required');const rid=Number(runId);if(!Number.isInteger(rid)||rid<1)throw new TypeError('runId must be a positive integer');
+  return db.prepare('SELECT business_date,payload_json FROM historical_comparison_snapshot_days WHERE run_id=? ORDER BY business_date').all(rid).map(row=>{
+    const parsed=safeJson(row.payload_json,null);return parsed&&parsed.date?parsed:{date:row.business_date,machines:[]};
+  });
+}
+
 function createHistoricalRun(db,{storeId,days,nowIso}){
   const ordered=normalizeDays(days);if(!ordered.length)throw new TypeError('days are required');
   const first=ordered[0].date,last=ordered.at(-1).date,identity=computeHistoricalSnapshotIdentity(ordered,{snapshotLastDate:last});
   const existing=runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE store_id=? AND replay_version=? AND history_identity=?').get(storeId,HISTORICAL_REPLAY_VERSION,identity));if(existing)return existing;
   const preState=initialHistoricalPreState(),total=Math.max(0,ordered.length-WARMUP_DAYS),next=total?ordered[WARMUP_DAYS].date:null,state=total?'queued':'complete';
-  db.prepare(`INSERT INTO historical_comparison_runs(store_id,replay_version,history_identity,snapshot_first_date,snapshot_last_date,next_target_date,state,total_candidates,processed_count,scored_count,excluded_count,pre_state_json,pre_fingerprint,pre_frontier_date,last_error,created_at,updated_at,completed_at) VALUES(?,?,?,?,?,?,?,?,0,0,0,?,?,NULL,NULL,?,?,?)`).run(storeId,HISTORICAL_REPLAY_VERSION,identity,first,last,next,state,total,canonicalJson(preState),preState.fingerprint,nowIso,nowIso,state==='complete'?nowIso:null);
-  return runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE store_id=? AND replay_version=? AND history_identity=?').get(storeId,HISTORICAL_REPLAY_VERSION,identity));
+  const create=()=>{
+    db.prepare(`INSERT INTO historical_comparison_runs(store_id,replay_version,history_identity,snapshot_first_date,snapshot_last_date,next_target_date,state,total_candidates,processed_count,scored_count,excluded_count,pre_state_json,pre_fingerprint,pre_frontier_date,refresh_pending,last_error,created_at,updated_at,completed_at) VALUES(?,?,?,?,?,?,?,?,0,0,0,?,?,NULL,0,NULL,?,?,?)`).run(storeId,HISTORICAL_REPLAY_VERSION,identity,first,last,next,state,total,canonicalJson(preState),preState.fingerprint,nowIso,nowIso,state==='complete'?nowIso:null);
+    const row=db.prepare('SELECT * FROM historical_comparison_runs WHERE store_id=? AND replay_version=? AND history_identity=?').get(storeId,HISTORICAL_REPLAY_VERSION,identity);
+    persistHistoricalRunSnapshot(db,{runId:row.id,days:ordered});
+    return runFromDb(row);
+  };
+  return typeof db.transaction==='function'?db.transaction(create)():create();
+}
+
+function setRefreshPending(db,{runId,nowIso}){
+  db.prepare("UPDATE historical_comparison_runs SET refresh_pending=1,updated_at=? WHERE id=? AND state IN ('queued','running','complete')").run(nowIso,runId);
+  return runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE id=?').get(runId));
 }
 
 export function ensureHistoricalComparisonRun(db,{storeId,days,nowIso}={}){
   if(!db?.prepare)throw new TypeError('db is required');const id=requiredText(storeId,'storeId'),at=validIso(nowIso),ordered=normalizeDays(days);if(!ordered.length)throw new TypeError('days are required');
-  const active=getHistoricalComparisonRun(db,{storeId:id});if(active){const identity=computeHistoricalSnapshotIdentity(ordered,{snapshotLastDate:active.snapshotLastDate});if(identity===active.historyIdentity)return active;markHistoricalRunStale(db,{runId:active.id,nowIso:at,reason:'history_identity_changed'})}
+  const active=getHistoricalComparisonRun(db,{storeId:id});
+  if(!active)return createHistoricalRun(db,{storeId:id,days:ordered,nowIso:at});
+  const frozen=loadHistoricalRunSnapshot(db,{runId:active.id});
+  if(!frozen.length){markHistoricalRunStale(db,{runId:active.id,nowIso:at,reason:'legacy_run_without_snapshot'});return createHistoricalRun(db,{storeId:id,days:ordered,nowIso:at})}
+  const identity=computeHistoricalSnapshotIdentity(ordered,{snapshotLastDate:active.snapshotLastDate});
+  if(active.state==='queued'||active.state==='running'){
+    if(identity!==active.historyIdentity)return setRefreshPending(db,{runId:active.id,nowIso:at});
+    return active;
+  }
+  if(active.state==='complete'){
+    if(active.refreshPending||identity!==active.historyIdentity)return createHistoricalRun(db,{storeId:id,days:ordered,nowIso:at});
+    return active;
+  }
   return createHistoricalRun(db,{storeId:id,days:ordered,nowIso:at});
 }
 

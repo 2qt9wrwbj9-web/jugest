@@ -260,6 +260,7 @@ export function migrate(db){
       pre_state_json TEXT NOT NULL,
       pre_fingerprint TEXT NOT NULL DEFAULT '',
       pre_frontier_date TEXT,
+      refresh_pending INTEGER NOT NULL DEFAULT 0,
       last_error TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
@@ -268,6 +269,16 @@ export function migrate(db){
       FOREIGN KEY(store_id) REFERENCES stores(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS historical_comparison_runs_store_state_idx ON historical_comparison_runs(store_id,state,updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS historical_comparison_snapshot_days (
+      run_id INTEGER NOT NULL,
+      business_date TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      payload_hash TEXT NOT NULL,
+      PRIMARY KEY(run_id,business_date),
+      FOREIGN KEY(run_id) REFERENCES historical_comparison_runs(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS historical_comparison_snapshot_days_run_date_idx ON historical_comparison_snapshot_days(run_id,business_date);
 
     CREATE TABLE IF NOT EXISTS historical_comparison_days (
       run_id INTEGER NOT NULL,
@@ -370,4 +381,6 @@ export function migrate(db){
   if(!researchColumns.includes('search_round'))db.exec('ALTER TABLE research_loops ADD COLUMN search_round INTEGER NOT NULL DEFAULT 0;');
   if(!researchColumns.includes('holdout_finalized_at'))db.exec('ALTER TABLE research_loops ADD COLUMN holdout_finalized_at TEXT;');
   if(!researchColumns.includes('holdout_winner_fingerprint'))db.exec('ALTER TABLE research_loops ADD COLUMN holdout_winner_fingerprint TEXT;');
+  const historicalColumns=db.prepare('PRAGMA table_info(historical_comparison_runs)').all().map(row=>row.name);
+  if(!historicalColumns.includes('refresh_pending'))db.exec('ALTER TABLE historical_comparison_runs ADD COLUMN refresh_pending INTEGER NOT NULL DEFAULT 0;');
 }

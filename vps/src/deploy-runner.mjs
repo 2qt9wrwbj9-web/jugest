@@ -91,10 +91,17 @@ function errorText(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function tailText(value,limit=16000) {
+  const text=String(value??'').trim();
+  return text.length<=limit?text:text.slice(-limit);
+}
+
 async function requireCommand(exec,command,args,options) {
   const result=await exec(command,args,options);
   if (result.code!==0) {
-    const detail=String(result.stderr||result.stdout||'').trim();
+    const stdout=tailText(result.stdout);
+    const stderr=tailText(result.stderr,4000);
+    const detail=[stdout,stderr].filter(Boolean).join('\n');
     throw new Error(`${command} ${args.join(' ')} failed${detail?`: ${detail}`:''}`);
   }
   return result;
@@ -122,15 +129,16 @@ async function prepareRelease({remoteSha,releasesDir,repoUrl,exec}) {
     }
   }
 
-  if (!(await exists(path.join(releasePath,'vps','package.json')))) {
-    throw new Error('release is missing vps/package.json');
-  }
   return releasePath;
 }
 
 async function verifyRelease({releasePath,exec}) {
   const vpsDir=path.join(releasePath,'vps');
-  if (await exists(path.join(vpsDir,'package-lock.json'))) {
+  const packageJson=path.join(vpsDir,'package.json');
+  const info=await stat(packageJson).catch(()=>null);
+  if (!info?.isFile()) throw new Error(`missing VPS package.json in release ${releasePath}`);
+  const nodeModules=path.join(vpsDir,'node_modules');
+  if (!(await exists(nodeModules))) {
     await requireCommand(exec,'npm',['ci'],{cwd:vpsDir});
   }
   await requireCommand(exec,'npm',['test'],{cwd:vpsDir});
@@ -213,7 +221,7 @@ export async function runDeployOnce(options={}) {
     lastError:null
   });
 
-  let releasePath;
+  let releasePath=null;
   try {
     releasePath=await prepareRelease({remoteSha,releasesDir,repoUrl,exec});
     await verifyRelease({releasePath,exec});
@@ -279,16 +287,14 @@ export async function runDeployOnce(options={}) {
           lastResult:'failed',
           lastError:combined
         });
-        logger(`deploy: ${combined}`);
+        logger(`deploy: rollback failure for ${remoteSha}: ${combined}`);
         return {status:'failed',remoteSha,currentSha,error:combined};
       }
     }
-    await writeState(stateDir,{
-      lastAttemptSha:remoteSha,
-      lastResult:'failed',
-      lastError:message
-    });
+    await writeState(stateDir,{lastAttemptSha:remoteSha,lastResult:'failed',lastError:message});
     logger(`deploy: switch failure for ${remoteSha}: ${message}`);
     return {status:'failed',remoteSha,currentSha,error:message};
   }
 }
+
+export const __test={parseRemoteSha,waitForHealth,mandatoryHealth};

@@ -35,6 +35,27 @@ test('comparison page separates LIVE from historical walk-forward mode',()=>{
   assert.match(historicalSource,/HISTORICAL WALK-FORWARD/);
 });
 
+test('comparison page shows direct Top1 Top3 Top5 hit rates with hit-day counts in both modes',()=>{
+  assert.match(historicalSource,/実的中率/);
+  assert.match(historicalSource,/newEngine\?\.hitRates/);
+  assert.match(historicalSource,/currentEngine\?\.hitRates/);
+  assert.match(historicalSource,/fmtHit\(pre\.top1\)/);
+  assert.match(historicalSource,/fmtHit\(pre\.top3\)/);
+  assert.match(historicalSource,/fmtHit\(pre\.top5\)/);
+  assert.match(historicalSource,/`\$\{hits\}\/\$\{days\}日 \$\{fmtPct\(rate\)\}`/);
+  const liveStart=historicalSource.indexOf('function liveHtml(){');
+  const historicalStart=historicalSource.indexOf('function historicalHtml(){');
+  assert.ok(liveStart>=0&&historicalStart>liveStart);
+  assert.match(historicalSource.slice(liveStart,historicalStart),/hitRateRows\(live\)/);
+  assert.match(historicalSource.slice(historicalStart),/hitRateRows\(historical\)/);
+});
+
+test('historical mode can explain pending refresh without implying progress reset',()=>{
+  assert.match(historicalSource,/refreshPending/);
+  assert.match(historicalSource,/新しいデータあり/);
+  assert.match(historicalSource,/完了後に再検証予定/);
+});
+
 test('LIVE pending copy names the exact target date and actual-data wait condition',()=>{
   assert.match(historicalSource,/予測を固定済み/);
   assert.match(historicalSource,/の実績データ待ち/);
