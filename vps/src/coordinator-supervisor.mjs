@@ -102,7 +102,6 @@ export function startCoordinatorProcess({
       active.on?.('message',onMessage);
       active.once?.('exit',onExit);
       timer=setTimer(()=>finish(new Error('Collector barrier acknowledgement timeout')),barrierTimeoutMs);
-      timer?.unref?.();
       try{active.send({type:'collector_barrier_enter',requestId})}
       catch(error){finish(error)}
     }).finally(()=>{barrierInFlight=null});
