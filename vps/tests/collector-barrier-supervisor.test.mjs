@@ -9,11 +9,23 @@ class FakeChild extends EventEmitter{
   kill(signal='SIGTERM'){this.killCalls.push(signal);return true}
 }
 
-function noRestartTimer(){return {unref(){}}}
+function startWith(child,overrides={}){
+  return startCoordinatorProcess({
+    dbPath:'/tmp/jugest-test.sqlite',
+    spawnProcess:()=>child,
+    setTimer:setTimeout,
+    clearTimer:clearTimeout,
+    restartDelayMs:100_000,
+    stopTimeoutMs:0,
+    barrierTimeoutMs:1000,
+    logger:()=>{},
+    ...overrides
+  });
+}
 
 test('supervisor coalesces concurrent Collector barrier requests and resolves on matching ACK',async()=>{
   const child=new FakeChild();
-  const runtime=startCoordinatorProcess({dbPath:'/tmp/jugest-test.sqlite',spawnProcess:()=>child,setTimer:noRestartTimer,clearTimer:()=>{},logger:()=>{},barrierTimeoutMs:1000});
+  const runtime=startWith(child);
   const first=runtime.enterCollectorBarrier();
   const second=runtime.enterCollectorBarrier();
   assert.equal(child.sent.length,1,'concurrent Pushes should share one in-flight barrier request');
@@ -28,7 +40,7 @@ test('supervisor coalesces concurrent Collector barrier requests and resolves on
 
 test('supervisor treats missing Coordinator child as a safe barrier no-op',async()=>{
   const child=new FakeChild();
-  const runtime=startCoordinatorProcess({dbPath:'/tmp/jugest-test.sqlite',spawnProcess:()=>child,setTimer:noRestartTimer,clearTimer:()=>{},logger:()=>{},barrierTimeoutMs:1000});
+  const runtime=startWith(child);
   child.exitCode=1;child.emit('exit',1,null);
   const result=await runtime.enterCollectorBarrier();
   assert.equal(result.ok,true);
@@ -39,7 +51,7 @@ test('supervisor treats missing Coordinator child as a safe barrier no-op',async
 
 test('supervisor fails closed when a live Coordinator never acknowledges the barrier',async()=>{
   const child=new FakeChild();
-  const runtime=startCoordinatorProcess({dbPath:'/tmp/jugest-test.sqlite',spawnProcess:()=>child,setTimer:setTimeout,clearTimer:clearTimeout,logger:()=>{},barrierTimeoutMs:20});
+  const runtime=startWith(child,{barrierTimeoutMs:20});
   await assert.rejects(runtime.enterCollectorBarrier(),/collector barrier/i);
   await runtime.stop();
 });
