@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {existsSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {once} from 'node:events';
+import {EventEmitter,once} from 'node:events';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {enqueueJob,getJob} from '../src/queue.mjs';
@@ -29,11 +29,10 @@ function fakeSpawner(){
 function deferredSpawner(){
   const calls=[];const killed=[];
   const spawn=options=>{
-    const handle={
-      killed:false,
-      kill(signal='SIGTERM'){this.killed=true;killed.push({id:options.job.id,signal});return true},
-      finish(code=143,signal='SIGTERM'){options.onExit?.(code,signal)}
-    };
+    const handle=new EventEmitter();
+    handle.killed=false;handle.exitCode=null;handle.signalCode=null;
+    handle.kill=(signal='SIGTERM')=>{handle.killed=true;killed.push({id:options.job.id,signal});return true};
+    handle.finish=(code=143,signal='SIGTERM')=>{handle.exitCode=code;handle.signalCode=signal;handle.emit('exit',code,signal);options.onExit?.(code,signal)};
     calls.push({...options,handle});return handle;
   };
   return {spawn,calls,killed};
@@ -83,12 +82,14 @@ test('explicit Collector barrier waits for research exit and blocks a queued res
     assert.equal(getJob(f.db,first.id).failureCount,failuresBefore,'Collector preemption must not burn failure budget');
     assert.equal(resolved,false,'barrier must not ACK until the research child actually exits');
 
-    await coordinator.tick();
+    const tick=coordinator.tick();
+    await new Promise(resolve=>setImmediate(resolve));
     assert.equal(sp.calls.length,1,'a concurrent scheduler tick must not admit queued research while barrier is active');
 
     sp.calls[0].handle.finish();
-    const result=await barrier;
+    const [result,during]=await Promise.all([barrier,tick]);
     assert.equal(result.collectorActive,true);
+    assert.equal(during.collectorActive,true);
     assert.equal(resolved,true);
   }finally{f.cleanup()}
 });
