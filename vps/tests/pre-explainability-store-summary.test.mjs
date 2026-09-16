@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
 import {enrichStoreReadRankings} from '../src/research/store-read-explain.mjs';
 import {enrichStoredStoreReadPayload} from '../src/research/store-read-output.mjs';
 import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
@@ -42,19 +43,21 @@ test('existing PRE snapshot can gain audit fields without changing persisted sco
   assert.equal(out.rankings[0].evidenceFamilyCount,1);
 });
 
-test('store summaries use total diff over total games and group by machine',()=>{
+test('store summaries use observed total diff over total games and exclude inferred diff',()=>{
   const rows=[
-    {machine:'my',machineName:'マイV',games:3000,diff:600,expectedSetting:4},
-    {machine:'my',machineName:'マイV',games:2000,diff:-300,expectedSetting:2},
-    {machine:'im',machineName:'ネオアイム',games:5000,diff:900,expectedSetting:3}
+    {machine:'my',machineName:'マイV',games:3000,diff:600,diffSource:'observed',expectedSetting:4},
+    {machine:'my',machineName:'マイV',games:2000,diff:-300,diffSource:'observed',expectedSetting:2},
+    {machine:'im',machineName:'ネオアイム',games:5000,diff:900,diffSource:'observed',expectedSetting:3},
+    {machine:'im',machineName:'ネオアイム',games:5000,diff:3000,diffSource:'estimated',expectedSetting:5}
   ];
   const overall=aggregateStoreRows(rows);
-  assert.equal(overall.totalDiff,1200);assert.equal(overall.avgDiff,400);
+  assert.equal(overall.totalDiff,1200);assert.equal(overall.avgDiff,400);assert.equal(overall.diffCount,3);
   assert.equal(overall.actualRate,104);
   const machines=machineStoreSummaries(rows);
   assert.deepEqual(machines.map(x=>x.machine),['im','my']);
-  const my=machines.find(x=>x.machine==='my');
+  const my=machines.find(x=>x.machine==='my'),im=machines.find(x=>x.machine==='im');
   assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3);
+  assert.equal(im.totalDiff,900);assert.equal(im.diffCount,1);assert.equal(im.avgExpectedSetting,4);
 });
 
 test('exclusion reasons are readable while unknown codes remain auditable',()=>{
@@ -63,9 +66,11 @@ test('exclusion reasons are readable while unknown codes remain auditable',()=>{
   assert.equal(exclusionReasonLabel('future_new_code'),'future_new_code');
 });
 
-test('browser addon is injected by VPS-only source patch while protected core stays untouched',()=>{
+test('browser addon is injected by VPS-only source patch, parses, and protected core stays untouched',()=>{
   const core=readFileSync(resolve(ROOT,'core-v510.js'),'utf8');
   assert.doesNotMatch(core,/vps-ui-audit-store\.mjs|document\.|createElement|appendChild/);
+  const addon=resolve(ROOT,'vps-ui-audit-store.mjs'),syntax=spawnSync(process.execPath,['--check',addon],{encoding:'utf8'});
+  assert.equal(syntax.status,0,syntax.stderr||syntax.stdout);
   const source=readFileSync(resolve(ROOT,'index.html'),'utf8'),patched=patchJugestIndexSource(source),tag='vps-ui-audit-store.mjs';
   assert.equal(patched.split(tag).length-1,1);
   assert.equal(patchJugestIndexSource(patched).split(tag).length-1,1);
