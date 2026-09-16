@@ -22,67 +22,90 @@ jobs:
           curl -L --fail --retry 3 --retry-all-errors \
             -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
             "$XAPK_URL" -o pia.xapk
-          mkdir xapk
+          mkdir xapk base arm64
           unzip -q pia.xapk -d xapk
-          ls -lh xapk
-          mkdir base arm64
           unzip -q xapk/jp.co.piagroup.app.apk -d base
           unzip -q xapk/config.arm64_v8a.apk -d arm64
-          echo '=== Native libraries ==='
-          find base arm64 -type f -name '*.so' -exec ls -lh {} \;
-          echo '=== Flutter / assets candidates ==='
-          find base arm64 -type f | grep -Ei 'flutter|assets|snapshot|\.so$' | head -200 || true
+          test -f arm64/lib/arm64-v8a/libil2cpp.so
+          test -f base/assets/bin/Data/Managed/Metadata/global-metadata.dat
+          ls -lh arm64/lib/arm64-v8a/libil2cpp.so base/assets/bin/Data/Managed/Metadata/global-metadata.dat
 
-      - name: Search native binaries and assets
+      - name: Search raw IL2CPP metadata
         shell: bash
         run: |
           set -uo pipefail
-          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId'
-          : > pia-native-report.txt
+          META=base/assets/bin/Data/Managed/Metadata/global-metadata.dat
+          strings -a -n 3 -t x "$META" > metadata-strings.txt
+          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId|encrypt|decrypt'
           {
-            echo '=== PIA native/API string report ==='
-            date -u
+            echo '=== Exact / focused metadata matches ==='
+            grep -Ein -B 50 -A 50 "$PATTERN" metadata-strings.txt || true
             echo
-            echo '=== Files ==='
-            find base arm64 -type f -printf '%s %p\n' | sort -nr | head -200
-            echo
-          } >> pia-native-report.txt
+            echo '=== Nearby PIA / API / server / machine strings ==='
+            grep -Ein -B 15 -A 15 'PIA|api|server|machine|store|ranking|chart|encode|decode|crypto|cipher|base64' metadata-strings.txt | head -12000 || true
+          } | tee metadata-report.txt
 
-          while IFS= read -r f; do
-            echo "Scanning $f"
-            strings -a -n 3 -t x "$f" > /tmp/strings.txt || true
-            if grep -Eqi "$PATTERN" /tmp/strings.txt; then
-              {
-                echo
-                echo "===== MATCHES IN: $f ====="
-                grep -Ein -B 30 -A 30 "$PATTERN" /tmp/strings.txt || true
-              } >> pia-native-report.txt
+      - name: Setup .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Run Il2CppDumper
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net6-v6.7.46.zip -o dumper.zip
+          mkdir dumper il2cpp-out
+          unzip -q dumper.zip -d dumper
+          DUMPER="$(find dumper -type f -name 'Il2CppDumper.dll' | head -1)"
+          test -n "$DUMPER"
+          DUMPER="$(realpath "$DUMPER")"
+          LIB="$(realpath arm64/lib/arm64-v8a/libil2cpp.so)"
+          META="$(realpath base/assets/bin/Data/Managed/Metadata/global-metadata.dat)"
+          OUT="$(realpath il2cpp-out)"
+          cd "$(dirname "$DUMPER")"
+          dotnet "$DUMPER" "$LIB" "$META" "$OUT"
+          cd -
+          find il2cpp-out -maxdepth 2 -type f -printf '%s %p\n' | sort -nr | head -50
+
+      - name: Build recovered C# API report
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId|Encrypt|Decrypt|Base64'
+          {
+            echo '=== Raw metadata findings ==='
+            cat metadata-report.txt 2>/dev/null || true
+            echo
+            echo '=== Il2CppDumper dump.cs findings ==='
+            if test -f il2cpp-out/dump.cs; then
+              grep -Ein -B 60 -A 60 "$PATTERN" il2cpp-out/dump.cs || true
             fi
-          done < <(find base arm64 -type f \( -name '*.so' -o -name '*.dex' -o -name '*.json' -o -name '*.js' -o -name '*.txt' -o -name '*.snapshot' \))
-
-          {
             echo
-            echo '=== URLs found in native libraries ==='
-            for f in $(find base arm64 -type f -name '*.so'); do
-              echo "--- $f ---"
-              strings -a -n 6 "$f" | grep -Eo 'https?://[^[:space:]"<>]+' | sort -u || true
-            done
+            echo '=== Il2CppDumper string literals ==='
+            if test -f il2cpp-out/stringliteral.json; then
+              grep -Ein -B 20 -A 20 "$PATTERN" il2cpp-out/stringliteral.json || true
+            fi
             echo
-            echo '=== Broad API-ish strings from largest native libs ==='
-            for f in $(find base arm64 -type f -name '*.so' -printf '%s %p\n' | sort -nr | head -5 | cut -d' ' -f2-); do
-              echo "--- $f ---"
-              strings -a -n 4 "$f" | grep -Ei 'api|machine|store|encrypt|decrypt|des|base64|http|chart|ranking' | head -2000 || true
-            done
-          } >> pia-native-report.txt
+            echo '=== Il2CppDumper script symbol findings ==='
+            if test -f il2cpp-out/script.json; then
+              grep -Ein -B 10 -A 10 'StoreMachine|MachineChart|ContainAllDetail|Encrypt|Decrypt|Base64' il2cpp-out/script.json || true
+            fi
+          } | tee pia-il2cpp-report.txt
+          echo '=== Focused summary ==='
+          grep -Ein 'pia-server|heuron|StoreMachine|encodedData|AFTER DECRYPT|DESede|PKCS5|3DES|store_machine' pia-il2cpp-report.txt | head -1000 || true
+          wc -c pia-il2cpp-report.txt
 
-          echo '=== REPORT MATCH SUMMARY ==='
-          grep -Ein 'pia-server|heuron|StoreMachine|encodedData|DESede|AFTER DECRYPT|PKCS5|3DES|store_machine' pia-native-report.txt | head -500 || true
-          echo '=== REPORT SIZE ==='
-          wc -c pia-native-report.txt
-
-      - name: Upload native report
+      - name: Upload IL2CPP findings
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pia-native-report
-          path: pia-native-report.txt
+          name: pia-il2cpp-findings
+          path: |
+            pia-il2cpp-report.txt
+            metadata-report.txt
+            il2cpp-out/dump.cs
+            il2cpp-out/stringliteral.json
+            il2cpp-out/script.json
           retention-days: 3
