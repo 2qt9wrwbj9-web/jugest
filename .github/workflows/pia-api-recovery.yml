@@ -1,0 +1,92 @@
+name: PIA API recovery (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pia-api-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-pia-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download current PIA XAPK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/xapk
+          curl --fail --location --retry 2 \
+            -A 'Mozilla/5.0 (Linux; Android 13)' \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest' \
+            -o /tmp/pia/pia.xapk
+          echo '=== XAPK ==='
+          ls -lh /tmp/pia/pia.xapk
+          sha256sum /tmp/pia/pia.xapk
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/xapk
+          echo '=== XAPK entries ==='
+          find /tmp/pia/xapk -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
+          echo '=== XAPK manifest ==='
+          cat /tmp/pia/xapk/manifest.json 2>/dev/null || true
+
+      - name: Extract targeted API and crypto evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile, re
+
+          root = Path('/tmp/pia/xapk')
+          apks = sorted(root.rglob('*.apk'))
+          needles = [
+              b'pia-server', b'heuron', b'GetStoreMachineContainAllDetail',
+              b'getStoreMachine2', b'getStoreMachineChart', b'getStoresMachines',
+              b'encodedData', b'AFTER DECRYPT GET MACHINE', b'3des', b'DESede',
+              b'Cipher.getInstance', b'SecretKeySpec', b'IvParameterSpec'
+          ]
+          print('APK files:', [str(x) for x in apks])
+          for apk in apks:
+              print(f'\n===== APK {apk.name} =====')
+              try:
+                  with zipfile.ZipFile(apk) as z:
+                      names = z.namelist()
+                      candidates = [n for n in names if (
+                          n.endswith(('.js','.json','.bundle','.txt','.xml'))
+                          or 'bundle' in n.lower()
+                          or n.endswith('.dex')
+                      )]
+                      print('candidate entries:', candidates[:120])
+                      for n in candidates:
+                          try:
+                              data = z.read(n)
+                          except Exception:
+                              continue
+                          hits=[]
+                          low=data.lower()
+                          for needle in needles:
+                              start=0
+                              nl=needle.lower()
+                              while True:
+                                  p=low.find(nl,start)
+                                  if p<0: break
+                                  hits.append((p,needle.decode('utf-8','replace')))
+                                  start=p+1
+                          if not hits:
+                              continue
+                          print(f'\n--- ENTRY {n} ({len(data)} bytes), hits={len(hits)} ---')
+                          for p,label in sorted(hits)[:80]:
+                              lo=max(0,p-1800); hi=min(len(data),p+3000)
+                              chunk=data[lo:hi].decode('utf-8','replace')
+                              chunk=re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]+',' ',chunk)
+                              print(f'\n>>> HIT {label} @ {p}')
+                              print(chunk)
+              except zipfile.BadZipFile:
+                  print('BadZipFile:', apk)
+          PY
