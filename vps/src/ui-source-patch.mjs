@@ -1,6 +1,7 @@
 const BRIDGE_ANCHOR=' getCollectorKey:()=>v510GetCollectorKey(),';
 const BRIDGE_START='window.JUGEST_CORE_BRIDGE=window.JUGESTCoreV510.createBridge({';
 const BACKFILL_BRIDGE=' getVpsBackfillDays:()=>JSON.parse(JSON.stringify(externalDays)),';
+const JUDGED_STORE_DAY_BRIDGE=' getVpsJudgedStoreDay:(name,date)=>{let days=v510StoreDays(name),day=days.find(d=>d.date===date)||days[0]||null;if(day)ensureExternalJudgedSync([day],name);return v510StoreDay(name,date)},';
 const STORE_RESET_BRIDGE=' resetStoreAcquiredData:(name)=>vpsResetStoreAcquiredData(name),';
 const MODULE_TAG='<script type="module" src="./vps-ui-enhancements.mjs"></script>';
 const HISTORICAL_UI_MODULE_TAG='<script type="module" src="./vps-ui-historical-comparison.mjs"></script>';
@@ -38,9 +39,9 @@ export function patchJugestIndexSource(input){
     if(!source.includes(BRIDGE_START))throw new Error('JUGEST bridge anchor (start) not found');
     source=source.replace(BRIDGE_START,`${STORE_RESET_HELPER}\n\n${BRIDGE_START}`);
   }
-  if(!source.includes(BACKFILL_BRIDGE)||!source.includes(STORE_RESET_BRIDGE)){
+  if(!source.includes(BACKFILL_BRIDGE)||!source.includes(JUDGED_STORE_DAY_BRIDGE)||!source.includes(STORE_RESET_BRIDGE)){
     if(!source.includes(BRIDGE_ANCHOR))throw new Error('JUGEST bridge anchor not found');
-    const additions=[BACKFILL_BRIDGE,STORE_RESET_BRIDGE].filter(token=>!source.includes(token)).join('\n');
+    const additions=[BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE].filter(token=>!source.includes(token)).join('\n');
     source=source.replace(BRIDGE_ANCHOR,`${BRIDGE_ANCHOR}\n${additions}`);
   }
   for(const tag of [MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG]){
@@ -51,4 +52,4 @@ export function patchJugestIndexSource(input){
   return source;
 }
 
-export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,STORE_RESET_HELPER};
+export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,STORE_RESET_HELPER};

@@ -1,4 +1,5 @@
 function finite(value){if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null}
+export function formatExpectedSetting(value){const n=finite(value);return n===null?'—':n.toFixed(2)}
 function observedDiffRow(row){
   const games=finite(row?.games),diff=finite(row?.diff),source=String(row?.diffSource||'').toLowerCase();
   return games!==null&&games>0&&diff!==null&&source!=='estimated'&&source!=='missing';

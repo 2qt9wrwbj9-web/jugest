@@ -1,5 +1,5 @@
 import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
-import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel,normalizeMachineSelection,machineFilterStorageKey,filterMachineSummaries,mergeStoreRows} from './vps-ui-audit-utils.mjs';
+import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel,normalizeMachineSelection,machineFilterStorageKey,filterMachineSummaries,mergeStoreRows,formatExpectedSetting} from './vps-ui-audit-utils.mjs';
 
 let app=null,root=null,observer=null,scheduled=false,analyticsClient=null;
 let preKey='',preData=null,preBusy=false,preError='',rawCache={key:'',days:[]};
@@ -10,7 +10,7 @@ function activeShop(){return String(bridge()?.getActiveStore?.()||'').trim()}
 function getAnalyticsClient(){return analyticsClient||(analyticsClient=createVpsAnalyticsClient())}
 function fmtDiff(value){const n=Number(value);return Number.isFinite(n)?`${n>=0?'+':''}${Math.round(n).toLocaleString('ja-JP')}枚`:'—'}
 function fmtRate(value){const n=Number(value);return Number.isFinite(n)?`${n.toFixed(2)}%`:'—'}
-function fmtSetting(value){const n=Number(value);return Number.isFinite(n)?n.toFixed(2):'—'}
+function fmtSetting(value){return formatExpectedSetting(value)}
 function fmtRaw(value,digits=3){const n=Number(value);return Number.isFinite(n)?n.toFixed(digits):'—'}
 function schedule(){if(scheduled)return;scheduled=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{scheduled=false;reconcile()},0)}
 
@@ -44,14 +44,14 @@ function rawDays(shop){
   if(rawCache.key===key)return rawCache.days;
   const all=bridge()?.getVpsBackfillDays?.()||[];rawCache={key,days:(Array.isArray(all)?all:[]).filter(day=>day?.shop===shop)};return rawCache.days;
 }
-function storeRows(shop,date){
-  const display=bridge()?.getStoreDay?.(shop,date)?.rows||[],raw=rawDays(shop).find(day=>day?.date===date)?.machines;
+function storeRows(shop,date,judge=false){
+  const b=bridge(),day=judge?b?.getVpsJudgedStoreDay?.(shop,date):null,display=day?.rows||b?.getStoreDay?.(shop,date)?.rows||[],raw=rawDays(shop).find(day=>day?.date===date)?.machines;
   return mergeStoreRows(display,raw);
 }
 
 function reconcileStoreData(){
   const screen=root?.querySelector('.store-data-screen');if(!screen)return;
-  const shop=activeShop(),date=String(screen.querySelector('[data-store-date]')?.value||'').trim(),rows=storeRows(shop,date);
+  const shop=activeShop(),date=String(screen.querySelector('[data-store-date]')?.value||'').trim(),rows=storeRows(shop,date,true);
   const overall=aggregateStoreRows(rows),allMachines=machineStoreSummaries(rows),available=allMachines.map(row=>String(row.machine)),selected=readMachineSelection('data',shop,available),machines=filterMachineSummaries(allMachines,selected),key=`${shop}|${date}|${rows.length}|${overall.totalDiff}|${JSON.stringify(selected)}`;
   let node=screen.querySelector('[data-vps-store-data-summary]');if(node?.dataset.key===key)return;const wasOpen=preserveFilterOpen(node,'data');
   const html=`<section class="vps-audit-summary" data-vps-store-data-summary data-key="${esc(key)}"><div class="vps-audit-kpis">${kpi('総差枚',fmtDiff(overall.totalDiff))}${kpi('平均差枚',fmtDiff(overall.avgDiff))}${kpi('平均出率',fmtRate(overall.actualRate))}</div><div class="vps-audit-machine-title">機種別</div>${machineFilterHtml('data',allMachines,selected)}<div class="vps-audit-machines">${machineCards(machines)||'<div class="vps-audit-muted">選択中の機種はありません。</div>'}</div></section>`;
