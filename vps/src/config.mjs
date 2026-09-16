@@ -4,6 +4,7 @@ const BASE_POLICY={
   cautionUsedRatio:0.70,
   pauseUsedRatio:0.82,
   emergencyUsedRatio:0.88,
+  maxProjectedUsedMiB:1700,
   maxAnalysisChildren:3,
   sampleIntervalMs:2000,
   emergencyCooldownMs:10000
@@ -16,6 +17,7 @@ function finitePositive(value,name){
 function validate(policy){
   finitePositive(policy.hardReserveMiB,'hardReserveMiB');
   finitePositive(policy.emergencyReserveMiB,'emergencyReserveMiB');
+  finitePositive(policy.maxProjectedUsedMiB,'maxProjectedUsedMiB');
   if(policy.hardReserveMiB<policy.emergencyReserveMiB)throw new RangeError('reserve policy requires hardReserveMiB >= emergencyReserveMiB');
   for(const name of ['cautionUsedRatio','pauseUsedRatio','emergencyUsedRatio']){
     const value=policy[name];
