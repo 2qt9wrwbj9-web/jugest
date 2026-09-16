@@ -3,8 +3,10 @@ import {openDatabase} from './db.mjs';
 import {migrate} from './schema.mjs';
 import {createRelayStore} from './relay-store.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
+import {loadStoreDays} from './analysis/store-data.mjs';
 import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
+import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -18,6 +20,15 @@ function validChannelId(value){return /^[A-Za-z0-9_-]{12,80}$/.test(String(value
 async function authenticate(req,relayDbPath){const channelId=headerValue(req,'x-jugest-channel-id').trim();const authorization=headerValue(req,'authorization').trim();const match=authorization.match(/^Bearer\s+(.+)$/i);const receiverToken=match?.[1]?.trim()||'';if(!validChannelId(channelId)||!receiverToken)return null;const store=createRelayStore(RELAY_STORE_NAME,{dbPath:relayDbPath,root:'jugest'});const channel=await store.get(`channel/${channelId}`,{type:'json'});if(!channel||channel.revokedAt||!secureMatch(receiverToken,channel.receiverHash))return null;return {channelId}}
 function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==channelId)return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
+function auditStoreRead(db,storeId,payload){
+  if(!payload||payload.explanationVersion==='pre-audit-v1')return payload;
+  try{
+    const activeModel=getActiveStoreModel(db,{storeId});
+    if(!activeModel||String(activeModel.fingerprint||'')!==String(payload.modelFingerprint||''))return payload;
+    const {days}=loadStoreDays(db,storeId,{limit:400});
+    return enrichStoredStoreReadPayload({payload,activeModel,days});
+  }catch{return payload}
+}
 
 export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
@@ -60,7 +71,8 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
       }
       if(parts.length===6&&parts[4]==='research'&&parts[5]==='store-read'){
         const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-read-active' AND version=?`).get(storeId,STORE_READ_VERSION);
-        sendJson(req,res,200,{ok:true,store:access.store,storeRead:row?safeJson(row.payload_json,null):null,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null});return;
+        const stored=row?safeJson(row.payload_json,null):null,storeRead=auditStoreRead(db,storeId,stored),auditEnriched=Boolean(storeRead&&storeRead!==stored);
+        sendJson(req,res,200,{ok:true,store:access.store,storeRead,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null,auditEnriched});return;
       }
       if(parts.length===6&&parts[4]==='research'&&parts[5]==='comparison'){
         const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||90)));
@@ -77,4 +89,4 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
     }finally{db.close()}
   };
 }
-export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,secureMatch};
+export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,secureMatch,auditStoreRead};
