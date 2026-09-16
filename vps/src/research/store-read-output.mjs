@@ -29,6 +29,16 @@ export function getActiveStoreModel(db,{storeId}={}){
   });
 }
 
+export function enrichStoredStoreReadPayload({payload,activeModel,days}={}){
+  if(!payload||typeof payload!=='object'||payload.explanationVersion==='pre-audit-v1')return payload??null;
+  if(!activeModel?.model||String(activeModel.fingerprint||'')!==String(payload.modelFingerprint||''))return payload;
+  const storeId=required(payload.storeId??activeModel.storeId,'storeId'),targetDate=validDate(payload.targetDate,'targetDate'),rankings=Array.isArray(payload.rankings)?payload.rankings:[];
+  if(!rankings.length)return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:Object.freeze([])});
+  const featureRows=buildLivePredictionRows({storeId,days,targetDate});
+  const enriched=enrichStoreReadRankings({rankings,featureRows,model:activeModel.model});
+  return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:enriched});
+}
+
 export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null}={}){
   const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate');
   const targetDate=nextDate(frontier),featureRows=buildLivePredictionRows({storeId:id,days,targetDate});
