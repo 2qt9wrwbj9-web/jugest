@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {enrichStoreReadRankings} from '../src/research/store-read-explain.mjs';
+import {enrichStoredStoreReadPayload} from '../src/research/store-read-output.mjs';
 import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
 import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel} from '../../vps-ui-audit-utils.mjs';
 
@@ -29,6 +30,16 @@ test('PRE explanation preserves raw score/rank and collapses overlapping facts',
   assert.ok(out[0].aimScore>=0&&out[0].aimScore<=100);
   assert.ok(out[0].evidenceConfidence>=0&&out[0].evidenceConfidence<=100);
   assert.equal(out[0].evidence.length,2);
+});
+
+test('existing PRE snapshot can gain audit fields without changing persisted score/rank',()=>{
+  const model={axes:[{id:'tail1',predicates:[{field:'table_last_digit',op:'eq',value:'1'}],weight:.4,support:50,lift:.2,pValue:.01,foldPassRate:1,robustness:1}]};
+  const payload={status:'ready',storeId:'s1',modelFingerprint:'fp1',featureVersion:'v1',asOfDate:'2026-09-02',targetDate:'2026-09-03',machineCount:1,rankings:[{machineKey:'101',tableNo:'101',machineName:'A',score:.4,rank:1}]};
+  const days=[{date:'2026-09-02',machines:[{tableNo:'101',machineName:'A',diff:100,games:5000,bb:20,rb:18}]}];
+  const out=enrichStoredStoreReadPayload({payload,activeModel:{storeId:'s1',fingerprint:'fp1',model},days});
+  assert.equal(out.explanationVersion,'pre-audit-v1');
+  assert.equal(out.rankings[0].score,.4);assert.equal(out.rankings[0].rank,1);
+  assert.equal(out.rankings[0].evidenceFamilyCount,1);
 });
 
 test('store summaries use total diff over total games and group by machine',()=>{
