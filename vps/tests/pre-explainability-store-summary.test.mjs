@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {enrichStoreReadRankings} from '../src/research/store-read-explain.mjs';
+import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
 import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel} from '../../vps-ui-audit-utils.mjs';
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
@@ -51,8 +52,10 @@ test('exclusion reasons are readable while unknown codes remain auditable',()=>{
   assert.equal(exclusionReasonLabel('future_new_code'),'future_new_code');
 });
 
-test('browser addon is loaded without changing headless data runtime',()=>{
+test('browser addon is injected by VPS-only source patch while protected core stays untouched',()=>{
   const core=readFileSync(resolve(ROOT,'core-v510.js'),'utf8');
-  assert.match(core,/vps-ui-audit-store\.mjs/);
-  assert.match(core,/location[^\n]+protocol[^\n]+data:/);
+  assert.doesNotMatch(core,/vps-ui-audit-store\.mjs|document\.|createElement|appendChild/);
+  const source=readFileSync(resolve(ROOT,'index.html'),'utf8'),patched=patchJugestIndexSource(source),tag='vps-ui-audit-store.mjs';
+  assert.equal(patched.split(tag).length-1,1);
+  assert.equal(patchJugestIndexSource(patched).split(tag).length-1,1);
 });
