@@ -10,6 +10,7 @@ test('resource policy defaults match the frozen 2 GiB design',()=>{
     cautionUsedRatio:0.70,
     pauseUsedRatio:0.82,
     emergencyUsedRatio:0.88,
+    maxProjectedUsedMiB:1700,
     maxAnalysisChildren:3,
     sampleIntervalMs:2000,
     emergencyCooldownMs:10000
@@ -20,6 +21,7 @@ test('resource policy defaults match the frozen 2 GiB design',()=>{
 test('resource policy validates monotonic pressure bands and reserves',()=>{
   assert.throws(()=>loadResourcePolicy({cautionUsedRatio:.9,pauseUsedRatio:.8}),/pressure/i);
   assert.throws(()=>loadResourcePolicy({hardReserveMiB:200,emergencyReserveMiB:300}),/reserve/i);
+  assert.throws(()=>loadResourcePolicy({maxProjectedUsedMiB:0}),/maxProjectedUsedMiB/);
   assert.throws(()=>loadResourcePolicy({maxAnalysisChildren:0}),/maxAnalysisChildren/);
   assert.throws(()=>loadResourcePolicy({emergencyCooldownMs:1000}),/emergencyCooldownMs/);
 });
@@ -56,7 +58,7 @@ test('unbounded cgroup falls back to host memory',async()=>{
     ['/sys/fs/cgroup/memory.max','max\n'],
     ['/proc/meminfo','MemTotal: 2097152 kB\nMemAvailable: 1572864 kB\nSwapTotal: 0 kB\nSwapFree: 0 kB\n']
   ]);
-  const snapshot=await readMemorySnapshot({readFile:async path=>files.get(path)});
+  const snapshot=await readMemorySnapshot({readFile});
   assert.equal(snapshot.cgroupLimitMiB,null);
   assert.equal(snapshot.effectiveLimitMiB,2048);
   assert.equal(snapshot.effectiveAvailableMiB,1536);
