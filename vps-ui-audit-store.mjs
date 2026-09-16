@@ -2,7 +2,7 @@ import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
 import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel} from './vps-ui-audit-utils.mjs';
 
 let app=null,root=null,observer=null,scheduled=false,analyticsClient=null;
-let preKey='',preData=null,preBusy=false,preError='';
+let preKey='',preData=null,preBusy=false,preError='',rawCache={key:'',days:[]};
 
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
@@ -21,10 +21,21 @@ function ensureStyle(){if(!root||root.querySelector('style[data-vps-audit-store]
 
 function kpi(label,value){return `<div class="vps-audit-kpi"><small>${esc(label)}</small><b>${esc(value)}</b></div>`}
 function machineCards(rows,{trend=false}={}){return rows.map(row=>`<div class="vps-audit-machine"><b>${esc(row.machineName||row.machine)}</b><div class="vps-audit-machine-grid">${trend?`${kpi('平均設定',fmtSetting(row.avgExpectedSetting))}${kpi('平均出率',fmtRate(row.actualRate))}`:`${kpi('総差枚',fmtDiff(row.totalDiff))}${kpi('平均差枚',fmtDiff(row.avgDiff))}${kpi('平均出率',fmtRate(row.actualRate))}${kpi('平均設定',fmtSetting(row.avgExpectedSetting))}`}</div></div>`).join('')}
+function rawDays(shop){
+  const dates=bridge()?.getStoreDates?.(shop,400)||[],key=`${shop}|${dates.length}|${dates[0]||''}|${dates.at?.(-1)||''}`;
+  if(rawCache.key===key)return rawCache.days;
+  const all=bridge()?.getVpsBackfillDays?.()||[];rawCache={key,days:(Array.isArray(all)?all:[]).filter(day=>day?.shop===shop)};return rawCache.days;
+}
+function storeRows(shop,date){
+  const display=bridge()?.getStoreDay?.(shop,date)?.rows||[],raw=rawDays(shop).find(day=>day?.date===date)?.machines;
+  if(!Array.isArray(raw))return display;
+  const byKey=new Map(display.map(row=>[`${row.machine}|${row.tableNo}`,row]));
+  return raw.map(row=>{const shown=byKey.get(`${row.machine}|${row.tableNo}`)||{};return {...row,machine:row.machine??shown.machine,machineName:shown.machineName||row.machineName||row.machine,expectedSetting:Number.isFinite(Number(row.expectedSetting))?Number(row.expectedSetting):shown.expectedSetting}});
+}
 
 function reconcileStoreData(){
   const screen=root?.querySelector('.store-data-screen');if(!screen)return;
-  const shop=activeShop(),date=String(screen.querySelector('[data-store-date]')?.value||'').trim(),day=bridge()?.getStoreDay?.(shop,date)||{rows:[]},rows=Array.isArray(day.rows)?day.rows:[];
+  const shop=activeShop(),date=String(screen.querySelector('[data-store-date]')?.value||'').trim(),rows=storeRows(shop,date);
   const overall=aggregateStoreRows(rows),machines=machineStoreSummaries(rows),key=`${shop}|${date}|${rows.length}|${overall.totalDiff}`;
   let node=screen.querySelector('[data-vps-store-data-summary]');if(node?.dataset.key===key)return;
   const html=`<section class="vps-audit-summary" data-vps-store-data-summary data-key="${esc(key)}"><div class="vps-audit-kpis">${kpi('総差枚',fmtDiff(overall.totalDiff))}${kpi('平均差枚',fmtDiff(overall.avgDiff))}${kpi('平均出率',fmtRate(overall.actualRate))}</div><div class="vps-audit-machine-title">機種別</div><div class="vps-audit-machines">${machineCards(machines)||'<div class="vps-audit-muted">集計できる台データがありません。</div>'}</div></section>`;
@@ -34,7 +45,7 @@ function reconcileStoreData(){
 function trendRows(shop,screen){
   const period=String(screen.querySelector('[data-trend-period]')?.value||'30'),machine=String(screen.querySelector('[data-trend-machine]')?.value||''),all=bridge()?.getStoreDates?.(shop,400)||[];
   const dates=period==='all'?all:all.slice(0,Math.max(1,Number(period)||30)),rows=[];
-  for(const date of dates){const day=bridge()?.getStoreDay?.(shop,date);for(const row of day?.rows||[])if(!machine||String(row.machine)===machine)rows.push(row)}
+  for(const date of dates)for(const row of storeRows(shop,date))if(!machine||String(row.machine)===machine)rows.push(row);
   return {period,machine,dates,rows};
 }
 function reconcileTrend(){
@@ -47,7 +58,7 @@ function reconcileTrend(){
 
 function evidenceHtml(row){
   const evidence=Array.isArray(row?.evidence)?row.evidence:[];
-  if(!evidence.length)return '<div class="vps-pre-audit-muted">独立根拠なし</div>';
+  if(!evidence.length)return '<div class="vps-audit-muted">独立根拠なし</div>';
   return `<details class="vps-pre-evidence"><summary>根拠 ${Number(row.evidenceFamilyCount)||0}系統（該当${Number(row.evidenceMatchedCount)||0}件）</summary>${evidence.map(item=>`<span><b>${esc(item.label||item.familyKey||'根拠')}</b><br>信頼 ${Math.round(Number(item.confidence)||0)} / 母数 ${Number.isFinite(Number(item.support))?Math.round(Number(item.support)):'—'} / lift ${fmtRaw(item.lift,3)} / weight ${fmtRaw(item.weight,3)}</span>`).join('')}</details>`;
 }
 function renderPreAudit(storeRead){
