@@ -1,4 +1,4 @@
-function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
+function finite(value){if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null}
 function observedDiffRow(row){
   const games=finite(row?.games),diff=finite(row?.diff),source=String(row?.diffSource||'').toLowerCase();
   return games!==null&&games>0&&diff!==null&&source!=='estimated'&&source!=='missing';
@@ -18,6 +18,22 @@ export function machineStoreSummaries(rows=[]){
   const groups=new Map();
   for(const row of Array.isArray(rows)?rows:[]){const machine=String(row?.machine||'unknown'),name=String(row?.machineName||machine);if(!groups.has(machine))groups.set(machine,{machine,machineName:name,rows:[]});groups.get(machine).rows.push(row)}
   return Object.freeze([...groups.values()].sort((a,b)=>a.machine.localeCompare(b.machine,'ja')).map(group=>Object.freeze({...group,...aggregateStoreRows(group.rows),rows:undefined})));
+}
+export function mergeStoreRows(displayRows=[],rawRows=[]){
+  const display=Array.isArray(displayRows)?displayRows:[],raw=Array.isArray(rawRows)?rawRows:[];
+  if(!raw.length)return display.map(row=>({...row}));
+  const rawByKey=new Map(raw.map(row=>[`${row?.machine}|${row?.tableNo}`,row]));
+  return display.map(shown=>{
+    const source=rawByKey.get(`${shown?.machine}|${shown?.tableNo}`)||{};
+    const shownGames=finite(shown?.games),rawGames=finite(source?.games),shownSetting=finite(shown?.expectedSetting),rawSetting=finite(source?.expectedSetting);
+    return {...source,...shown,
+      games:shownGames!==null&&shownGames>0?shownGames:rawGames,
+      expectedSetting:shownSetting!==null?shownSetting:rawSetting,
+      diffSource:source?.diffSource??shown?.diffSource,
+      gamesSource:source?.gamesSource??shown?.gamesSource,
+      q:Array.isArray(shown?.q)?shown.q:(Array.isArray(source?.q)?source.q:null)
+    };
+  });
 }
 export function normalizeMachineSelection(available=[],saved=null){
   const ids=[...new Set((Array.isArray(available)?available:[]).map(value=>String(value)))];
