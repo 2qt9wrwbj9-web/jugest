@@ -1,0 +1,52 @@
+name: PIA live API probe
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-live-probe.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe official PIA read-only machine endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pia-live-probe
+          URL='https://pia-server.heuron.net/api/stores/getStoreMachine2'
+          probe () {
+            name="$1"; shift
+            echo "===== $name =====" | tee -a pia-live-probe/results.txt
+            code=$(curl -sS --connect-timeout 15 --max-time 30 -o /tmp/body.txt -w '%{http_code}' \
+              -X POST "$URL" \
+              -H 'Accept: application/json' \
+              -H 'User-Agent: UnityPlayer/2022 PIA/1.0.29' \
+              "$@" || true)
+            echo "HTTP $code" | tee -a pia-live-probe/results.txt
+            head -c 8000 /tmp/body.txt | tee -a pia-live-probe/results.txt || true
+            echo | tee -a pia-live-probe/results.txt
+          }
+          COMMON=(
+            -F 'date=0'
+            -F 'store_id=35'
+            -F 'device_uuid=jugest-research-probe'
+            -F 'device_type=Android'
+            -F 'app_version=1.0.29'
+            -F 'price=20'
+            -F 'is_random=1'
+            -F 'is_graph=0'
+          )
+          # Keep this deliberately low-volume and read-only.
+          probe minimal "${COMMON[@]}" -F 'sis_machine_code=' -F 'machine_name=' -F 'user_code='
+          probe gogo3-name "${COMMON[@]}" -F 'sis_machine_code=' -F 'machine_name=ゴーゴージャグラー３' -F 'user_code='
+          probe gogo3-ascii3 "${COMMON[@]}" -F 'sis_machine_code=' -F 'machine_name=ゴーゴージャグラー3' -F 'user_code='
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-live-probe
+          path: pia-live-probe
+          retention-days: 7
