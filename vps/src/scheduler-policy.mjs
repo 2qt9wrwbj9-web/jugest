@@ -24,6 +24,10 @@ export function canAdmit({snapshot,policy,runningCount,leaseMiB,priority}={}){
   if(runningCount>=policy.maxAnalysisChildren)return Object.freeze({admit:false,reason:'max_children',pressure});
   if(pressure==='EMERGENCY')return Object.freeze({admit:false,reason:'emergency_pressure',pressure});
   if(pressure==='PAUSE')return Object.freeze({admit:false,reason:'pressure_pause',pressure});
+  if(Number.isFinite(snapshot.effectiveLimitMiB)&&snapshot.effectiveLimitMiB>0&&Number.isFinite(policy.maxProjectedUsedMiB)){
+    const projectedUsedMiB=snapshot.effectiveLimitMiB-(snapshot.effectiveAvailableMiB-leaseMiB);
+    if(projectedUsedMiB>policy.maxProjectedUsedMiB)return Object.freeze({admit:false,reason:'projected_memory_cap',pressure,projectedUsedMiB});
+  }
   if(snapshot.effectiveAvailableMiB-leaseMiB<policy.hardReserveMiB)return Object.freeze({admit:false,reason:'hard_reserve',pressure});
   return Object.freeze({admit:true,reason:pressure==='CAUTION'?'fits_caution':'fits',pressure});
 }
