@@ -1,11 +1,6 @@
 name: PIA APK API Research
 
 on:
-  push:
-    branches:
-      - research/pia-api
-    paths:
-      - .github/workflows/pia-apk-research.yml
   pull_request:
     branches:
       - main
@@ -16,9 +11,9 @@ on:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
-      - name: Download PIA XAPK
+      - name: Download and extract PIA XAPK
         shell: bash
         env:
           XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTkfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
@@ -27,68 +22,67 @@ jobs:
           curl -L --fail --retry 3 --retry-all-errors \
             -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
             "$XAPK_URL" -o pia.xapk
-          ls -lh pia.xapk
-          file pia.xapk
-          unzip -t pia.xapk | tail -5
-
-      - name: Extract XAPK and select base APK
-        id: apk
-        shell: bash
-        run: |
-          set -euxo pipefail
           mkdir xapk
           unzip -q pia.xapk -d xapk
-          find xapk -maxdepth 3 -type f -printf '%s %p\n' | sort -nr | head -30
-          APK="$(find xapk -type f -iname '*.apk' -printf '%s %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
-          test -n "$APK"
-          echo "apk=$APK" >> "$GITHUB_OUTPUT"
-          echo "Selected APK: $APK"
-          ls -lh "$APK"
+          ls -lh xapk
+          mkdir base arm64
+          unzip -q xapk/jp.co.piagroup.app.apk -d base
+          unzip -q xapk/config.arm64_v8a.apk -d arm64
+          echo '=== Native libraries ==='
+          find base arm64 -type f -name '*.so' -exec ls -lh {} \;
+          echo '=== Flutter / assets candidates ==='
+          find base arm64 -type f | grep -Ei 'flutter|assets|snapshot|\.so$' | head -200 || true
 
-      - name: Download JADX
-        shell: bash
-        run: |
-          set -euxo pipefail
-          URL="$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest | jq -r '.assets[] | select(.name | test("^jadx-[0-9].*\\.zip$")) | .browser_download_url' | head -1)"
-          test -n "$URL"
-          echo "JADX: $URL"
-          curl -L --fail "$URL" -o jadx.zip
-          mkdir jadx
-          unzip -q jadx.zip -d jadx
-          chmod +x jadx/bin/jadx
-          jadx/bin/jadx --version
-
-      - name: Decompile APK
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p jadx-out
-          jadx/bin/jadx --show-bad-code --deobf -d jadx-out '${{ steps.apk.outputs.apk }}' || true
-          find jadx-out -type f | wc -l
-
-      - name: Build focused API report
+      - name: Search native binaries and assets
         shell: bash
         run: |
           set -uo pipefail
-          PATTERN='GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|pia-server\.heuron\.net|PKCS5Padding|TripleDES|3DES'
+          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId'
+          : > pia-native-report.txt
           {
-            echo '=== PIA API focused reverse-engineering report ==='
+            echo '=== PIA native/API string report ==='
             date -u
             echo
-            echo '=== APK files ==='
-            find xapk -type f -iname '*.apk' -printf '%s %p\n' | sort -nr
+            echo '=== Files ==='
+            find base arm64 -type f -printf '%s %p\n' | sort -nr | head -200
             echo
-            echo '=== Matching source context ==='
-            rg -n -i -C 35 "$PATTERN" jadx-out 2>/dev/null || true
-            echo
-            echo '=== Retrofit / HTTP annotations near store-machine symbols ==='
-            rg -n -i -C 20 'StoreMachine|MachineChart|ContainAllDetail|heuron|encodedData' jadx-out 2>/dev/null || true
-          } | tee pia-api-report.txt
-          test -s pia-api-report.txt
+          } >> pia-native-report.txt
 
-      - name: Upload report
+          while IFS= read -r f; do
+            echo "Scanning $f"
+            strings -a -n 3 -t x "$f" > /tmp/strings.txt || true
+            if grep -Eqi "$PATTERN" /tmp/strings.txt; then
+              {
+                echo
+                echo "===== MATCHES IN: $f ====="
+                grep -Ein -B 30 -A 30 "$PATTERN" /tmp/strings.txt || true
+              } >> pia-native-report.txt
+            fi
+          done < <(find base arm64 -type f \( -name '*.so' -o -name '*.dex' -o -name '*.json' -o -name '*.js' -o -name '*.txt' -o -name '*.snapshot' \))
+
+          {
+            echo
+            echo '=== URLs found in native libraries ==='
+            for f in $(find base arm64 -type f -name '*.so'); do
+              echo "--- $f ---"
+              strings -a -n 6 "$f" | grep -Eo 'https?://[^[:space:]"<>]+' | sort -u || true
+            done
+            echo
+            echo '=== Broad API-ish strings from libapp / largest native libs ==='
+            for f in $(find base arm64 -type f -name '*.so' -printf '%s %p\n' | sort -nr | head -5 | cut -d' ' -f2-); do
+              echo "--- $f ---"
+              strings -a -n 4 "$f" | grep -Ei 'api|machine|store|encrypt|decrypt|des|base64|http|chart|ranking' | head -2000 || true
+            done
+          } >> pia-native-report.txt
+
+          echo '=== REPORT MATCH SUMMARY ==='
+          grep -Ein 'pia-server|heuron|StoreMachine|encodedData|DESede|AFTER DECRYPT|PKCS5|3DES|store_machine' pia-native-report.txt | head -500 || true
+          echo '=== REPORT SIZE ==='
+          wc -c pia-native-report.txt
+
+      - name: Upload native report
         uses: actions/upload-artifact@v4
         with:
-          name: pia-api-report
-          path: pia-api-report.txt
+          name: pia-native-report
+          path: pia-native-report.txt
           retention-days: 3
