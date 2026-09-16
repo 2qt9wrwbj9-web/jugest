@@ -45,15 +45,15 @@ function projectedAfterOutstandingLeases(snapshot,runningEntries){
 }
 
 export class Coordinator{
-  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=null,workerPathForJob=null,maxDailyAnalysisChildren=1,maxResearchChildren=1}={}){
+  constructor({db,memoryReader,spawnChild=spawnJobChild,owner=`coord-${process.pid}`,policy=DEFAULT_RESOURCE_POLICY,clock=()=>new Date(),workerPath=null,workerPathForJob=null,maxDailyAnalysisChildren=1,maxResearchChildren=null}={}){
     if(!db)throw new TypeError('db is required');
-    if(typeof memoryReader!=='function')throw new TypeError('memoryReader is required');
-    if(typeof spawnChild!=='function')throw new TypeError('spawnChild is required');
+    if(typeof memoryReader!=='function')throw new TypeError('memoryReader must be a function');
+    if(typeof spawnChild!=='function')throw new TypeError('spawnChild must be a function');
     if(typeof owner!=='string'||!owner)throw new TypeError('owner is required');
-    if(typeof clock!=='function')throw new TypeError('clock is required');
+    if(typeof clock!=='function')throw new TypeError('clock must be a function');
     if(workerPathForJob!==null&&typeof workerPathForJob!=='function')throw new TypeError('workerPathForJob must be a function');
     if(!Number.isInteger(maxDailyAnalysisChildren)||maxDailyAnalysisChildren<1)throw new TypeError('maxDailyAnalysisChildren must be a positive integer');
-    if(!Number.isInteger(maxResearchChildren)||maxResearchChildren<1)throw new TypeError('maxResearchChildren must be a positive integer');
+    if(maxResearchChildren!==null&&(!Number.isInteger(maxResearchChildren)||maxResearchChildren<1))throw new TypeError('maxResearchChildren must be null or a positive integer');
     this.db=db;
     this.memoryReader=memoryReader;
     this.spawnChild=spawnChild;
@@ -63,7 +63,7 @@ export class Coordinator{
     this.workerPath=workerPath??SYNTHETIC_WORKER;
     this.workerPathForJob=workerPathForJob??(workerPath?(()=>this.workerPath):defaultWorkerPathForJob);
     this.maxDailyAnalysisChildren=maxDailyAnalysisChildren;
-    this.maxResearchChildren=maxResearchChildren;
+    this.maxResearchChildren=maxResearchChildren??policy.maxAnalysisChildren;
     this.running=new Map();
     this._tickChain=Promise.resolve();
     this._emergencyLatched=false;
@@ -255,12 +255,6 @@ export class Coordinator{
   }
 
   _runningResearchCount(){return [...this.running.values()].filter(entry=>RESEARCH_JOB_TYPES.has(entry.job?.type)&&!entry.finished&&!entry.cancelled).length}
-  _hasDailyActivity(at){
-    const row=this.db.prepare(`SELECT COUNT(*) AS n FROM jobs WHERE type='DAILY_ANALYSIS' AND (
-      state IN ('queued','leased','running') OR (state='retry_wait' AND (available_at IS NULL OR available_at<=?))
-    )`).get(at);
-    return Number(row?.n)||0;
-  }
 
   _bootstrapHistorical(at){
     if(this._historicalBootstrapped)return;
@@ -312,10 +306,7 @@ export class Coordinator{
         const runningDaily=[...this.running.values()].filter(entry=>entry.job?.type==='DAILY_ANALYSIS'&&!entry.finished&&!entry.cancelled).length;
         if(runningDaily>=this.maxDailyAnalysisChildren)break;
       }
-      if(RESEARCH_JOB_TYPES.has(next.type)){
-        if(this._hasDailyActivity(at)>0)break;
-        if(this._runningResearchCount()>=this.maxResearchChildren)break;
-      }
+      if(RESEARCH_JOB_TYPES.has(next.type)&&this._runningResearchCount()>=this.maxResearchChildren)break;
       const profile=this._profile(next);
       const leaseMiB=estimateLeaseMiB({persistedEwmaMiB:profile?.ewma_peak_mib??null,configuredFloorMiB:next.estimatedLeaseMiB});
       const decision=canAdmit({snapshot:projected,policy:this.policy,runningCount:this.runningCount,leaseMiB,priority:next.priority});
