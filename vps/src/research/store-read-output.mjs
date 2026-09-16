@@ -2,6 +2,7 @@ import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {buildLivePredictionRows} from './backtest.mjs';
 import {persistLivePrediction} from './live-comparison.mjs';
 import {scoreSample} from './model-search.mjs';
+import {enrichStoreReadRankings} from './store-read-explain.mjs';
 
 export const STORE_READ_SNAPSHOT_TYPE='store-read-active';
 export const STORE_READ_VERSION='store-read-v1';
@@ -28,38 +29,32 @@ export function getActiveStoreModel(db,{storeId}={}){
   });
 }
 
+export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null}={}){
+  const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate');
+  const targetDate=nextDate(frontier),featureRows=buildLivePredictionRows({storeId:id,days,targetDate});
+  const coreRankings=featureRows.map(row=>({machineKey:row.machineKey,tableNo:row.tableNo,machineName:row.machineName,score:scoreSample(row,model)}))
+    .sort((a,b)=>b.score-a.score||String(a.machineKey).localeCompare(String(b.machineKey))).map((row,index)=>Object.freeze({...row,rank:index+1}));
+  const rankings=enrichStoreReadRankings({rankings:coreRankings,featureRows,model});
+  return Object.freeze({
+    status:rankings.length?'ready':'insufficient_data',storeId:id,modelFingerprint:fingerprint,featureVersion:version,asOfDate:frontier,targetDate,machineCount:rankings.length,
+    holdoutScore:holdoutScore==null?null:Number(holdoutScore),explanationVersion:'pre-audit-v1',rankings
+  });
+}
+
 export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,nowIso=new Date().toISOString()}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate'),at=required(nowIso,'nowIso');
-  const targetDate=nextDate(frontier);
-  const rows=buildLivePredictionRows({storeId:id,days,targetDate});
-  const rankings=rows.map(row=>({
-    machineKey:row.machineKey,
-    tableNo:row.tableNo,
-    machineName:row.machineName,
-    score:scoreSample(row,model)
-  })).sort((a,b)=>b.score-a.score||String(a.machineKey).localeCompare(String(b.machineKey))).map((row,index)=>Object.freeze({...row,rank:index+1}));
-  const payload=Object.freeze({
-    status:rankings.length?'ready':'insufficient_data',
-    storeId:id,
-    modelFingerprint:fingerprint,
-    featureVersion:version,
-    asOfDate:frontier,
-    targetDate,
-    machineCount:rankings.length,
-    holdoutScore:holdoutScore==null?null:Number(holdoutScore),
-    rankings:Object.freeze(rankings)
-  });
-  const payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
+  const payload=buildStoreReadPayload({storeId:id,modelFingerprint:fingerprint,model,featureVersion:version,frontierDate:frontier,days,holdoutScore});
+  const targetDate=payload.targetDate,payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at)
     VALUES(?,?,?,?,?,?,?)
     ON CONFLICT(store_id,snapshot_type,version) DO UPDATE SET
       business_date=excluded.business_date,payload_json=excluded.payload_json,payload_hash=excluded.payload_hash,updated_at=excluded.updated_at`)
     .run(id,STORE_READ_SNAPSHOT_TYPE,STORE_READ_VERSION,targetDate,payloadJson,payloadHash,at);
-  if(rankings.length){
+  if(payload.rankings.length){
     persistLivePrediction(db,{
       storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
-      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days}),rankings,createdAt:at
+      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days}),rankings:payload.rankings,createdAt:at
     });
   }
   return Object.freeze({payload,payloadHash,targetDate});
