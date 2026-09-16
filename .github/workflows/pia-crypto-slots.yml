@@ -1,0 +1,53 @@
+name: PIA decrypt constant map
+
+on:
+  push:
+    branches:
+      - research/pia-api-recovery
+    paths:
+      - '.github/workflows/pia-crypto-slots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract relocation targets for decrypt path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-crypto-slots
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          readelf -rW "$LIB" > /tmp/pia/relocs.txt
+          OUT=pia-crypto-slots/crypto-slots.txt
+          : > "$OUT"
+          for slot in \
+            2c71ff8 \
+            2c69e20 2c69e50 2c6b0a8 \
+            2c6b0e0 2c6b088 \
+            2c6ab20 2c72078 \
+            2c6b608 2c72980 \
+            2c6a020 2c72988 \
+            2c6a628; do
+            echo "--- slot $slot ---" >> "$OUT"
+            grep -i "^000000000$slot" /tmp/pia/relocs.txt >> "$OUT" || echo 'NO_RELOC' >> "$OUT"
+          done
+          cat "$OUT"
+      - name: Upload map
+        uses: actions/upload-artifact@v4
+        with:
+          name: pia-crypto-slots
+          path: pia-crypto-slots
+          retention-days: 7
