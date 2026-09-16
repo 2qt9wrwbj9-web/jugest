@@ -68,43 +68,62 @@ jobs:
       - name: Decompile base APK and extract API evidence
         shell: bash
         run: |
-          set -euo pipefail
-          BASE_APK="$(find /tmp/pia/extracted -type f \( -name 'base.apk' -o -name '*base*.apk' \) | head -n1)"
+          set -u
+          BASE_APK="$(find /tmp/pia/extracted -type f \( -name 'base.apk' -o -name '*base*.apk' \) -print -quit 2>/dev/null || true)"
           if [ -z "$BASE_APK" ]; then
-            BASE_APK="$(find /tmp/pia/extracted -type f -name '*.apk' | head -n1)"
+            BASE_APK="$(find /tmp/pia/extracted -type f -name '*.apk' -print -quit 2>/dev/null || true)"
           fi
           test -n "$BASE_APK"
           echo "Base APK: $BASE_APK"
           /tmp/pia/jadx-bin/bin/jadx -d /tmp/pia/jadx "$BASE_APK" >/tmp/pia/jadx.log 2>&1 || true
 
           OUT="$GITHUB_WORKSPACE/pia-api-recovery-report.txt"
+          : > "$OUT"
           {
             echo 'PIA API recovery report'
             echo "Generated: $(date -u +%FT%TZ)"
             echo "APK: $BASE_APK"
             echo
-            echo '=== manifest / URLs / API names ==='
-            grep -RIna -E 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|difference|store_machine_id' /tmp/pia/jadx 2>/dev/null | head -n 1200 || true
+            echo '=== raw APK strings ==='
+            strings "$BASE_APK" | grep -Ei 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|store_machine_id' | head -n 600 || true
+            echo
+            echo '=== decompiled manifest / URLs / API names ==='
+            grep -RIna -E 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|difference|store_machine_id' /tmp/pia/jadx 2>/dev/null | head -n 1600 || true
             echo
             echo '=== source context for individual machine endpoint ==='
-            grep -RIl -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData' /tmp/pia/jadx 2>/dev/null | head -n 100 | while read -r f; do
+          } >> "$OUT"
+
+          mapfile -t MATCH_FILES < <(grep -RIl -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des' /tmp/pia/jadx 2>/dev/null | head -n 120 || true)
+          for f in "${MATCH_FILES[@]}"; do
+            {
               echo
               echo "--- FILE: $f ---"
-              grep -n -C 18 -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des' "$f" || true
-            done
+              grep -n -C 24 -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des|pia-server\.heuron\.net|getStoreMachine' "$f" || true
+            } >> "$OUT"
+          done
+
+          {
+            echo
+            echo '=== likely API declarations / Retrofit annotations ==='
+            grep -RIna -C 10 -E '@(POST|GET)|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart' /tmp/pia/jadx/sources 2>/dev/null | head -n 1600 || true
+            echo
+            echo '=== crypto declarations ==='
+            grep -RIna -C 18 -E 'Cipher\.getInstance|SecretKeySpec|DESede|3DES|TripleDES|Base64\.(encode|decode)|encodedData' /tmp/pia/jadx/sources 2>/dev/null | head -n 1600 || true
             echo
             echo '=== JADX log tail ==='
-            tail -n 100 /tmp/pia/jadx.log || true
-          } > "$OUT"
+            tail -n 120 /tmp/pia/jadx.log || true
+          } >> "$OUT"
 
           mkdir -p "$GITHUB_WORKSPACE/research/pia"
           cp "$OUT" "$GITHUB_WORKSPACE/research/pia/pia-api-recovery-report.txt"
           wc -l "$OUT"
-          sed -n '1,260p' "$OUT"
+          sed -n '1,320p' "$OUT" || true
 
       - name: Upload report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pia-api-recovery-report
           path: pia-api-recovery-report.txt
+          if-no-files-found: warn
           retention-days: 7
