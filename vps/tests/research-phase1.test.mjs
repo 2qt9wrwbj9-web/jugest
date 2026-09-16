@@ -104,7 +104,7 @@ test('feature completion enqueues exactly one follow-up when requested frontier 
   }finally{f.cleanup()}
 });
 
-test('Coordinator never starts FEATURE_BUILD while any daily analysis is pending and runs only one research child',async()=>{
+test('Coordinator can overlap DAILY_ANALYSIS and FEATURE_BUILD when projected RAM stays within the cap',async()=>{
   const f=seedDb();
   try{
     requestStoreAnalysisRefresh(f.db,{storeId:'s1',analysisVersion:'vps-runtime-v1',nowIso:NOW,dirty:true});
@@ -112,22 +112,22 @@ test('Coordinator never starts FEATURE_BUILD while any daily analysis is pending
     const calls=[];
     const coordinator=new Coordinator({db:f.db,memoryReader:async()=>memory(),spawnChild:options=>{calls.push(options);return {kill(){}}},owner:'research-gate',policy:loadResourcePolicy({maxAnalysisChildren:3}),clock:()=>new Date('2026-09-13T00:00:02.000Z')});
     await coordinator.tick();
-    assert.deepEqual(calls.map(x=>x.job.type),['DAILY_ANALYSIS']);
+    assert.deepEqual(calls.map(x=>x.job.type),['DAILY_ANALYSIS','FEATURE_BUILD']);
   }finally{f.cleanup()}
 });
 
-test('Coordinator routes one FEATURE_BUILD child when ordinary analysis is idle',async()=>{
+test('Coordinator can route two FEATURE_BUILD children when projected RAM stays within the cap',async()=>{
   const f=seedDb();
   try{
     requestFeatureRefresh(f.db,{storeId:'s1',featureVersion:FEATURE_VERSION,frontierDate:'2026-09-04',nowIso:NOW,dirty:true});
     f.db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('s2','研究店2','{}',NOW,NOW);
     requestFeatureRefresh(f.db,{storeId:'s2',featureVersion:FEATURE_VERSION,frontierDate:'2026-09-04',nowIso:NOW,dirty:true});
     const calls=[];
-    const coordinator=new Coordinator({db:f.db,memoryReader:async()=>memory(),spawnChild:options=>{calls.push(options);return {kill(){}}},owner:'research-one',policy:loadResourcePolicy({maxAnalysisChildren:3}),clock:()=>new Date('2026-09-13T00:00:02.000Z')});
+    const coordinator=new Coordinator({db:f.db,memoryReader:async()=>memory(),spawnChild:options=>{calls.push(options);return {kill(){}}},owner:'research-parallel',policy:loadResourcePolicy({maxAnalysisChildren:3}),clock:()=>new Date('2026-09-13T00:00:02.000Z')});
     await coordinator.tick();
-    assert.equal(calls.length,1,'Phase 1 research concurrency must stay at one child');
-    assert.equal(calls[0].job.type,'FEATURE_BUILD');
-    assert.match(String(calls[0].workerPath),/feature-build\.mjs$/);
+    assert.equal(calls.length,2);
+    assert.deepEqual(calls.map(x=>x.job.type),['FEATURE_BUILD','FEATURE_BUILD']);
+    assert.ok(calls.every(x=>/feature-build\.mjs$/.test(String(x.workerPath))));
   }finally{f.cleanup()}
 });
 
