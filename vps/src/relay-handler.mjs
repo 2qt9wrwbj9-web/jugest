@@ -9,6 +9,7 @@ import {measureIngest} from './resource-telemetry.mjs';
 
 const MAX_RELAY_BODY_BYTES=8*1024*1024;
 const COLLECTOR_PUSH_ACTIONS=new Set(['iosCollectorPushV2','iosCollectorPushBatchV3']);
+const COLLECTOR_POST_PUSH_GRACE_MS=2_000;
 
 async function readNodeBody(req){
   const method=String(req.method||'GET').toUpperCase();
@@ -93,18 +94,27 @@ export function createVpsRelayHandler({dbPath,canonicalDbPath=null,rawRoot=null,
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const onCollectorSaved=createCanonicalSavedHook({canonicalDbPath,rawRoot});
   const runtime=installCanonicalPushHook(createRelayRuntime({createStore:(name,options={})=>createRelayStore(name,{dbPath,root:options.root||'jugest'})}),onCollectorSaved);
+  let activeCollectorPushes=0;
   return async function vpsRelayHandler(req,res){
+    let collectorScoped=false;
     try{
       const body=await readNodeBody(req);
       const action=relayAction(body);
       if(canonicalDbPath&&COLLECTOR_PUSH_ACTIONS.has(action)){
+        activeCollectorPushes++;collectorScoped=true;
         markCollectorActivity({dbPath:canonicalDbPath});
         await enterCollectorBarrier();
         markCollectorActivity({dbPath:canonicalDbPath});
       }
       return await runWebHandler({method:req.method,url:req.url,headers:req.headers,body},res,runtime.default);
     }catch(error){if(!res.headersSent)sendRelayError(res,error);else res.destroy(error)}
+    finally{
+      if(collectorScoped&&canonicalDbPath){
+        activeCollectorPushes=Math.max(0,activeCollectorPushes-1);
+        markCollectorActivity({dbPath:canonicalDbPath,ttlMs:activeCollectorPushes===0?COLLECTOR_POST_PUSH_GRACE_MS:undefined});
+      }
+    }
   };
 }
 
-export const __test={MAX_RELAY_BODY_BYTES,COLLECTOR_PUSH_ACTIONS,relayAction,findSavedCollectorDay,installCanonicalPushHook};
+export const __test={MAX_RELAY_BODY_BYTES,COLLECTOR_PUSH_ACTIONS,COLLECTOR_POST_PUSH_GRACE_MS,relayAction,findSavedCollectorDay,installCanonicalPushHook};
