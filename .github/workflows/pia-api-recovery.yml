@@ -1,8 +1,9 @@
 name: PIA API recovery (temporary)
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - 'investigation/pia-api-recovery-20260917'
     paths:
       - '.github/workflows/pia-api-recovery.yml'
   workflow_dispatch:
