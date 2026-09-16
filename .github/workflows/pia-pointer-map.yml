@@ -1,0 +1,112 @@
+name: PIA pointer map research
+
+on:
+  push:
+    branches:
+      - research/pia-api-recovery
+    paths:
+      - '.github/workflows/pia-pointer-map.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download native PIA library
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          test -f "$LIB"
+          echo "LIB=$LIB" >> "$GITHUB_ENV"
+          ls -lh "$LIB"
+
+      - name: Map global pointer slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pia-pointer-map
+          python -m pip install --quiet pyelftools
+          python - <<'PY' > pia-pointer-map/pointer-map.txt
+          from elftools.elf.elffile import ELFFile
+          import struct
+
+          path = '/tmp/pia/arm64/lib/arm64-v8a/libil2cpp.so'
+          slots = {
+              'field_1_HIJONNNAGFP': 0x2c6ad38,
+              'field_2_PIAKCAGHKFG': 0x2c6a8c0,
+              'field_3_FIKPFLIMGBE': 0x2c6a2c8,
+              'field_4_OJEGGPJFEMN': 0x2c6b2f0,
+              'field_5_KLMMDGEOLAO': 0x2c6a2d8,
+              'field_device_uuid': 0x2c6a968,
+              'field_os_family': 0x2c72528,
+              'field_os_name_or_type': 0x2c69f28,
+              'field_app_version': 0x2c6a078,
+              'field_JLOONFALAKI_float': 0x2c6b388,
+              'field_IFFEHPLOIKE': 0x2c72488,
+              'field_LIEIMIHPBIE': 0x2c72930,
+              'endpoint_or_request_type': 0x2c6a818,
+          }
+
+          with open(path, 'rb') as f:
+              elf = ELFFile(f)
+              loads = [s for s in elf.iter_segments() if s['p_type'] == 'PT_LOAD']
+              def vaddr_to_offset(addr):
+                  for s in loads:
+                      start = int(s['p_vaddr']); filesz = int(s['p_filesz'])
+                      if start <= addr < start + filesz:
+                          return int(s['p_offset']) + (addr - start)
+                  return None
+              def read_u64(addr):
+                  off = vaddr_to_offset(addr)
+                  if off is None: return None
+                  f.seek(off); b=f.read(8)
+                  return struct.unpack('<Q', b)[0] if len(b)==8 else None
+
+              print('PIA libil2cpp pointer-slot map')
+              print('ELF entry:', hex(int(elf.header['e_entry'])))
+              print('LOAD segments:')
+              for s in loads:
+                  print(' ', hex(int(s['p_vaddr'])), '->', hex(int(s['p_offset'])), 'filesz', hex(int(s['p_filesz'])), 'memsz', hex(int(s['p_memsz'])))
+              print('\nSlots:')
+              for name, addr in slots.items():
+                  raw = read_u64(addr)
+                  print(f'{name:28s} slot={addr:#x} file_off={vaddr_to_offset(addr)!r} raw={None if raw is None else hex(raw)}')
+                  if raw:
+                      raw2 = read_u64(raw)
+                      print(f'  deref1 address={raw:#x} file_off={vaddr_to_offset(raw)!r} raw2={None if raw2 is None else hex(raw2)}')
+                      if raw2:
+                          raw3 = read_u64(raw2)
+                          print(f'  deref2 address={raw2:#x} file_off={vaddr_to_offset(raw2)!r} raw3={None if raw3 is None else hex(raw3)}')
+          PY
+
+          echo '=== dynamic section ===' >> pia-pointer-map/pointer-map.txt
+          readelf -dW "$LIB" >> pia-pointer-map/pointer-map.txt || true
+          echo '=== relocation hits near pointer slots ===' >> pia-pointer-map/pointer-map.txt
+          (readelf -rW "$LIB" || true) > /tmp/pia/relocs.txt
+          for h in 2c6ad38 2c6a8c0 2c6a2c8 2c6b2f0 2c6a2d8 2c6a968 2c72528 2c69f28 2c6a078 2c6b388 2c72488 2c72930 2c6a818; do
+            echo "--- $h ---" >> pia-pointer-map/pointer-map.txt
+            grep -i -C 2 "$h" /tmp/pia/relocs.txt >> pia-pointer-map/pointer-map.txt || true
+          done
+          cat pia-pointer-map/pointer-map.txt
+
+      - name: Upload pointer map
+        uses: actions/upload-artifact@v4
+        with:
+          name: pia-pointer-map
+          path: pia-pointer-map
+          retention-days: 7
