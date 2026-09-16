@@ -5,12 +5,13 @@ function observedDiffRow(row){
 }
 export function aggregateStoreRows(rows=[]){
   const list=Array.isArray(rows)?rows:[],diffRows=list.filter(observedDiffRow),totalGames=diffRows.reduce((sum,row)=>sum+Number(row.games),0),totalDiff=diffRows.reduce((sum,row)=>sum+Number(row.diff),0);
-  const settings=list.map(row=>finite(row?.expectedSetting)).filter(value=>value!==null);
+  const settingRows=list.map(row=>({games:finite(row?.games),setting:finite(row?.expectedSetting)})).filter(row=>row.games!==null&&row.games>0&&row.setting!==null);
+  const settingGames=settingRows.reduce((sum,row)=>sum+row.games,0),weightedSetting=settingRows.reduce((sum,row)=>sum+row.games*row.setting,0);
   return Object.freeze({
     rowCount:list.length,diffCount:diffRows.length,totalGames,totalDiff:diffRows.length?totalDiff:null,
     avgDiff:diffRows.length?totalDiff/diffRows.length:null,
     actualRate:totalGames>0?100*(1+totalDiff/(3*totalGames)):null,
-    avgExpectedSetting:settings.length?settings.reduce((a,b)=>a+b,0)/settings.length:null
+    avgExpectedSetting:settingGames>0?weightedSetting/settingGames:null
   });
 }
 export function machineStoreSummaries(rows=[]){
