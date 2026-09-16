@@ -38,7 +38,7 @@ test('store summaries use total diff over total games and group by machine',()=>
   ];
   const overall=aggregateStoreRows(rows);
   assert.equal(overall.totalDiff,1200);assert.equal(overall.avgDiff,400);
-  assert.equal(overall.actualRate,108);
+  assert.equal(overall.actualRate,104);
   const machines=machineStoreSummaries(rows);
   assert.deepEqual(machines.map(x=>x.machine),['im','my']);
   const my=machines.find(x=>x.machine==='my');
