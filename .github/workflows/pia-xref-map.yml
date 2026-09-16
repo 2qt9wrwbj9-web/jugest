@@ -1,0 +1,141 @@
+name: PIA API string xref research
+
+on:
+  push:
+    branches:
+      - research/pia-api-recovery
+    paths:
+      - '.github/workflows/pia-xref-map.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  xref:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download native PIA library
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          test -f "$LIB"
+          echo "LIB=$LIB" >> "$GITHUB_ENV"
+          sha256sum "$LIB"
+
+      - name: Find relocations and ARM64 xrefs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet pyelftools capstone
+          mkdir -p pia-xref-map
+          cat > /tmp/pia/xref.py <<'PY'
+          from elftools.elf.elffile import ELFFile
+          from elftools.elf.relocation import RelocationSection
+          from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
+          from capstone.arm64 import ARM64_OP_REG, ARM64_OP_IMM, ARM64_OP_MEM
+          from collections import defaultdict, deque
+
+          path='/tmp/pia/arm64/lib/arm64-v8a/libil2cpp.so'
+          TARGETS={
+            0x2d521c8:'route_getStoreMachine2',
+            0x2d521d0:'route_getStoreMachineChart',
+            0x2d54138:'log_AFTER_DECRYPT_GET_MACHINE',
+            0x2d64e80:'key_encodedData',
+            0x2d52e80:'literal_3des',
+            0x2d660b8:'base_https_pia_server',
+            0x2d660c0:'base_https_pia_server_api',
+          }
+          DIRECT_SLOTS={
+            0x2c6a628:'request_config_typeinfo_slot_used_by_ALHHDIPGONH',
+          }
+
+          with open(path,'rb') as f:
+            elf=ELFFile(f)
+            rel_by_target=defaultdict(list)
+            direct={}
+            for sec in elf.iter_sections():
+              if not isinstance(sec, RelocationSection): continue
+              for rel in sec.iter_relocations():
+                add=rel.entry.get('r_addend',None)
+                off=int(rel.entry['r_offset'])
+                if add is not None and int(add) in TARGETS:
+                  rel_by_target[int(add)].append(off)
+                if off in DIRECT_SLOTS:
+                  direct[off]=(int(add) if add is not None else None, int(rel.entry['r_info_type']))
+
+            print('=== Target string -> relocation slots ===')
+            target_slots=set()
+            slot_names={}
+            for addr,name in TARGETS.items():
+              slots=sorted(rel_by_target.get(addr,[]))
+              print(f'{name}: string_object={addr:#x} slots={[hex(x) for x in slots]}')
+              for s in slots:
+                target_slots.add(s); slot_names[s]=name
+            print('\n=== Direct request config slot relocation ===')
+            for s,name in DIRECT_SLOTS.items():
+              print(f'{name}: slot={s:#x} relocation={direct.get(s)}')
+
+            md=Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
+            md.detail=True
+            # ADRP registers expire quickly; retain a few instructions per register.
+            hits=[]
+            for seg in elf.iter_segments():
+              if seg['p_type']!='PT_LOAD' or not (int(seg['p_flags']) & 1): continue
+              base=int(seg['p_vaddr']); code=seg.data()
+              recent={}
+              ring=deque(maxlen=8)
+              for ins in md.disasm(code,base):
+                # age ADRP state
+                for r in list(recent):
+                  recent[r]=(recent[r][0], recent[r][1]+1, recent[r][2])
+                  if recent[r][1]>8: del recent[r]
+                ops=ins.operands
+                if ins.mnemonic=='adrp' and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_IMM:
+                  recent[ops[0].reg]=(int(ops[1].imm),0,ins.address)
+                if ins.mnemonic.startswith('ldr') and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_MEM:
+                  b=ops[1].mem.base; disp=int(ops[1].mem.disp)
+                  if b in recent:
+                    page,age,adrp_addr=recent[b]
+                    slot=page+disp
+                    if slot in target_slots or slot in DIRECT_SLOTS:
+                      hits.append((ins.address,adrp_addr,slot,slot_names.get(slot,DIRECT_SLOTS.get(slot)),list(ring),f'{ins.mnemonic} {ins.op_str}'))
+                ring.append((ins.address,ins.mnemonic,ins.op_str))
+
+            print('\n=== ARM64 xrefs to target relocation slots ===')
+            for addr,adrp,slot,name,ctx,current in hits:
+              print(f'\nHIT {name}: adrp={adrp:#x} load={addr:#x} slot={slot:#x}')
+              for a,m,o in ctx[-6:]: print(f'  {a:#010x}: {m:7s} {o}')
+              print(f'  {addr:#010x}: {current}')
+          PY
+          python /tmp/pia/xref.py | tee pia-xref-map/xref-map.txt
+
+          echo >> pia-xref-map/xref-map.txt
+          echo '=== readelf exact target addends ===' >> pia-xref-map/xref-map.txt
+          readelf -rW "$LIB" > /tmp/pia/relocs.txt
+          for a in 2d521c8 2d521d0 2d54138 2d64e80 2d52e80 2d660b8 2d660c0; do
+            echo "--- addend $a ---" >> pia-xref-map/xref-map.txt
+            grep -i -E "[[:space:]]$a([[:space:]]|$)" /tmp/pia/relocs.txt >> pia-xref-map/xref-map.txt || true
+          done
+          echo '--- request config slot 2c6a628 ---' >> pia-xref-map/xref-map.txt
+          grep -i '^0000000002c6a628' /tmp/pia/relocs.txt >> pia-xref-map/xref-map.txt || true
+          cat pia-xref-map/xref-map.txt
+
+      - name: Upload xref map
+        uses: actions/upload-artifact@v4
+        with:
+          name: pia-xref-map
+          path: pia-xref-map
+          retention-days: 7
