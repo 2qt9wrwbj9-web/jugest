@@ -44,12 +44,9 @@ jobs:
           test -n "$LIB"
           echo "META=$META" >> "$GITHUB_ENV"
           echo "LIB=$LIB" >> "$GITHUB_ENV"
-          echo '=== Inputs ==='
           ls -lh "$BASE_APK" "$ARM_APK" "$META" "$LIB"
           file "$LIB" "$META"
-          echo '=== Metadata header ==='
           xxd -l 32 "$META"
-          echo '=== Native library hash ==='
           sha256sum "$LIB"
 
       - name: Install IL2CPP dumper
@@ -58,9 +55,8 @@ jobs:
           set -euo pipefail
           cargo install il2cpp_dumper --version 0.7.0 --locked
           il2cpp_dumper --version || true
-          il2cpp_dumper --help | head -n 100 || true
 
-      - name: Dump IL2CPP metadata and annotated ARM64 code
+      - name: Dump and preserve targeted native evidence
         shell: bash
         run: |
           set -u
@@ -84,7 +80,7 @@ jobs:
             "dumpDisassemblyFieldNames": true,
             "dumpDisassemblyAnnotations": true,
             "dumpDisassemblyCfg": true,
-            "maxDisassemblyInstructions": 450,
+            "maxDisassemblyInstructions": 650,
             "generateCppScaffold": false,
             "dumpStaticFieldMetadata": false
           }
@@ -95,43 +91,65 @@ jobs:
             > /tmp/pia/il2cpp-dumper.log 2>&1
           DUMP_RC=$?
           set -e
+          ROOT='/tmp/pia/il2cpp-out/Dump0'
           echo "IL2CPP_DUMPER_RC=$DUMP_RC"
-          tail -n 120 /tmp/pia/il2cpp-dumper.log || true
-          find /tmp/pia/il2cpp-out -maxdepth 2 -type f -printf '%p %s bytes\n' 2>/dev/null | sort | head -n 120 || true
+          test -d "$ROOT"
 
-          REPORT="$GITHUB_WORKSPACE/pia-il2cpp-target-report.txt"
-          : > "$REPORT"
+          EVID="$GITHUB_WORKSPACE/pia-il2cpp-evidence"
+          mkdir -p "$EVID/sources"
+          cp /tmp/pia/il2cpp-dumper.log "$EVID/dumper.log"
+          cp "$ROOT/script.json" "$EVID/" 2>/dev/null || true
+          cp "$ROOT/stringliteral.json" "$EVID/" 2>/dev/null || true
+          cp "$ROOT/dump.cs" "$EVID/" 2>/dev/null || true
+
+          for rel in \
+            'DiffableCs/Assembly-CSharp/UnitDataController.cs' \
+            'DiffableCs/Assembly-CSharp/PIA/UnitData__List.cs' \
+            'DiffableCs/Assembly-CSharp/PIA/UnitData__Detail.cs' \
+            'DiffableCs/Assembly-CSharp/SaveDataManager.cs' \
+            'DiffableCs/Assembly-CSharp/Model/EncyptData.cs'; do
+            src="$ROOT/$rel"
+            if [ -f "$src" ]; then
+              dst="$EVID/sources/${rel//\//__}"
+              cp "$src" "$dst"
+            fi
+          done
+
+          grep -RIl -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|StringLiteral_3des|"3des"' \
+            "$ROOT/DiffableCs/Assembly-CSharp" 2>/dev/null | head -n 80 > /tmp/pia/target-files.txt || true
+          while IFS= read -r src; do
+            [ -f "$src" ] || continue
+            rel="${src#$ROOT/}"
+            dst="$EVID/sources/${rel//\//__}"
+            cp "$src" "$dst" 2>/dev/null || true
+          done < /tmp/pia/target-files.txt
+
+          REPORT="$EVID/target-report.txt"
           {
-            echo 'PIA IL2CPP target report'
+            echo 'PIA IL2CPP focused report'
             echo "Generated: $(date -u +%FT%TZ)"
             echo "Dumper exit: $DUMP_RC"
             echo
-            echo '=== Dumper log ==='
-            cat /tmp/pia/il2cpp-dumper.log || true
+            echo '=== exact method declaration + body context ==='
+            grep -n -A 760 -B 60 -F 'GetStoreMachineContainAllDetail' "$ROOT/DiffableCs/Assembly-CSharp/UnitDataController.cs" | head -n 900 || true
             echo
-            echo '=== Target symbol hits ==='
-            grep -RIna -C 35 -E 'GetStoreMachineContainAllDetail|GetStoreMachines|GetStoreMachine\b|getStoreMachine2|getStoreMachineChart|AFTER DECRYPT GET MACHINE|encodedData|3des|DESede|TripleDES|Encrypt|Decrypt|pia-server\.heuron\.net' /tmp/pia/il2cpp-out 2>/dev/null | head -n 9000 || true
+            echo '=== GetStoreMachine body context ==='
+            grep -n -A 650 -B 40 -E 'GetStoreMachine\(' "$ROOT/DiffableCs/Assembly-CSharp/UnitDataController.cs" | head -n 780 || true
             echo
-            echo '=== Likely crypto/API type declarations ==='
-            grep -RIna -C 45 -E 'class .*Crypt|class .*Encrypt|class .*Decrypt|class .*Api|class .*Store|class .*Machine|3des|encodedData' /tmp/pia/il2cpp-out 2>/dev/null | head -n 9000 || true
-          } >> "$REPORT"
+            echo '=== target call sites ==='
+            grep -RIna -C 70 -F 'GetStoreMachineContainAllDetail' "$ROOT/DiffableCs/Assembly-CSharp/PIA" | head -n 1200 || true
+            echo
+            echo '=== encodedData / 3des / decrypt-log references in Assembly-CSharp ==='
+            grep -RIna -C 90 -E 'encodedData|StringLiteral_3des|"3des"|AFTER DECRYPT GET MACHINE|TripleDES|Encrypt|Decrypt' "$ROOT/DiffableCs/Assembly-CSharp" | head -n 5000 || true
+            echo
+            echo '=== relevant literal entries ==='
+            grep -n -C 4 -Ei 'encodedData|3des|AFTER DECRYPT GET MACHINE|getStoreMachine2|getStoreMachineChart|pia-server\.heuron\.net' "$ROOT/stringliteral.json" | head -n 1600 || true
+          } > "$REPORT"
 
-          if [ -f /tmp/pia/il2cpp-out/stringliteral.json ]; then
-            {
-              echo
-              echo '=== Relevant string literals ==='
-              grep -n -C 3 -Ei '3des|encodedData|AFTER DECRYPT GET MACHINE|pia-server|StoreMachine|getStoreMachine|encrypt|decrypt' /tmp/pia/il2cpp-out/stringliteral.json | head -n 5000 || true
-            } >> "$REPORT"
-          fi
-
-          mkdir -p "$GITHUB_WORKSPACE/pia-il2cpp-evidence"
-          cp "$REPORT" "$GITHUB_WORKSPACE/pia-il2cpp-evidence/target-report.txt"
-          cp /tmp/pia/il2cpp-dumper.log "$GITHUB_WORKSPACE/pia-il2cpp-evidence/dumper.log"
-          cp /tmp/pia/il2cpp-out/script.json "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
-          cp /tmp/pia/il2cpp-out/stringliteral.json "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
-          cp /tmp/pia/il2cpp-out/dump.cs "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
-          wc -l "$REPORT" || true
-          sed -n '1,420p' "$REPORT" || true
+          echo '=== preserved sources ==='
+          find "$EVID" -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
+          echo '=== focused report preview ==='
+          sed -n '1,520p' "$REPORT" || true
 
       - name: Upload IL2CPP evidence
         if: always()
