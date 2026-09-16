@@ -1,0 +1,105 @@
+name: PIA string slot decoder
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-string-slots.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  decode:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download current PIA arm64 binary and decode known string objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-string-slots
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          python3 - "$LIB" <<'PY' | tee pia-string-slots/decoded.txt
+          import sys,struct,subprocess,re
+          path=sys.argv[1]
+          data=open(path,'rb').read()
+          out=subprocess.check_output(['readelf','-lW',path],text=True)
+          segs=[]
+          for line in out.splitlines():
+              if line.strip().startswith('LOAD'):
+                  p=line.split()
+                  # LOAD Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+                  off=int(p[1],16); va=int(p[2],16); fs=int(p[4],16); ms=int(p[5],16)
+                  segs.append((va,off,fs,ms))
+          def voff(va):
+              for base,off,fs,ms in segs:
+                  if base <= va < base+fs:
+                      return off+(va-base)
+              return None
+          # target addends from relocation slots used by KHFHCFDEBLH.ALHHDIPGONH
+          targets={
+            'key_day_or_history':0x2d646d0,
+            'key_store_id':0x2d69278,
+            'key_sis_machine_code':0x2d68e78,
+            'key_machine_name':0x2d67120,
+            'key_max_machine':0x2d6a180,
+            'key_device_uuid':0x2d64960,
+            'key_os_family':0x2d64958,
+            'key_app_version':0x2d631a0,
+            'key_float':0x2d682b0,
+            'key_flag_1':0x2d66758,
+            'key_flag_2':0x2d66748,
+            'endpoint_or_request_type':0x2d22168,
+            'route_getStoreMachine2':0x2d521c8,
+            'route_getStoreMachineChart':0x2d521d0,
+            'log_after_decrypt':0x2d54138,
+            'literal_encodedData':0x2d64e80,
+            'literal_3des':0x2d52e80,
+            'base_server':0x2d660b8,
+            'base_server_api':0x2d660c0,
+          }
+          print('LOADS',segs)
+          for name,va in targets.items():
+              o=voff(va)
+              print(f'\n=== {name} va=0x{va:x} off={None if o is None else hex(o)} ===')
+              if o is None: continue
+              b=data[o:o+160]
+              print('hex',b[:96].hex(' '))
+              # Common IL2CPP string layouts: object header then int32 length and UTF16 chars.
+              for lo in (0,8,12,16,20,24,32):
+                  if lo+4<=len(b):
+                      n=struct.unpack_from('<i',b,lo)[0]
+                      if 0 <= n <= 100 and lo+4+2*n <= len(b):
+                          raw=b[lo+4:lo+4+2*n]
+                          try:
+                              s=raw.decode('utf-16le')
+                          except Exception:
+                              continue
+                          printable=sum(c.isprintable() for c in s)
+                          if n==0 or printable >= max(1,int(n*.8)):
+                              print(f'utf16@+{lo} len={n}: {s!r}')
+              # Also scan the chunk for printable UTF16LE runs.
+              for start in range(0,min(80,len(b)-4),2):
+                  chars=[]
+                  pos=start
+                  while pos+1<len(b):
+                      u=struct.unpack_from('<H',b,pos)[0]
+                      c=chr(u)
+                      if 32 <= u < 127 or 0x3000 <= u <= 0x30ff or 0x4e00 <= u <= 0x9fff:
+                          chars.append(c); pos+=2
+                      else: break
+                  if len(chars)>=4:
+                      print(f'run@+{start}: {"".join(chars)!r}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-string-slots
+          path: pia-string-slots
+          retention-days: 7
