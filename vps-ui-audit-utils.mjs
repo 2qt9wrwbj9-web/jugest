@@ -18,6 +18,21 @@ export function machineStoreSummaries(rows=[]){
   for(const row of Array.isArray(rows)?rows:[]){const machine=String(row?.machine||'unknown'),name=String(row?.machineName||machine);if(!groups.has(machine))groups.set(machine,{machine,machineName:name,rows:[]});groups.get(machine).rows.push(row)}
   return Object.freeze([...groups.values()].sort((a,b)=>a.machine.localeCompare(b.machine,'ja')).map(group=>Object.freeze({...group,...aggregateStoreRows(group.rows),rows:undefined})));
 }
+export function normalizeMachineSelection(available=[],saved=null){
+  const ids=[...new Set((Array.isArray(available)?available:[]).map(value=>String(value)))];
+  if(!Array.isArray(saved))return ids;
+  const selected=new Set(saved.map(value=>String(value)));
+  return ids.filter(id=>selected.has(id));
+}
+export function machineFilterStorageKey(scope,shop){
+  return `jugest:vps-machine-filter:v1:${String(scope||'data')}:${encodeURIComponent(String(shop||''))}`;
+}
+export function filterMachineSummaries(rows=[],selected=null){
+  const list=Array.isArray(rows)?rows:[];
+  if(!Array.isArray(selected))return list.slice();
+  const allowed=new Set(selected.map(value=>String(value)));
+  return list.filter(row=>allowed.has(String(row?.machine)));
+}
 const EXCLUSION_LABELS=Object.freeze({
   insufficient_history:'履歴が7日未満（ウォームアップ）',
   pre_insufficient_research_data:'PREの学習・検証データ不足',
