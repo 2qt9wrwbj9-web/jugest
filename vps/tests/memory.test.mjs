@@ -58,6 +58,7 @@ test('unbounded cgroup falls back to host memory',async()=>{
     ['/sys/fs/cgroup/memory.max','max\n'],
     ['/proc/meminfo','MemTotal: 2097152 kB\nMemAvailable: 1572864 kB\nSwapTotal: 0 kB\nSwapFree: 0 kB\n']
   ]);
+  const readFile=async path=>files.get(path);
   const snapshot=await readMemorySnapshot({readFile});
   assert.equal(snapshot.cgroupLimitMiB,null);
   assert.equal(snapshot.effectiveLimitMiB,2048);
