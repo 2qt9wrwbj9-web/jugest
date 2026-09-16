@@ -43,7 +43,7 @@ test('existing PRE snapshot can gain audit fields without changing persisted sco
   assert.equal(out.rankings[0].evidenceFamilyCount,1);
 });
 
-test('store summaries use observed total diff over total games and exclude inferred diff',()=>{
+test('store summaries use observed diff metrics and game-weighted expected setting',()=>{
   const rows=[
     {machine:'my',machineName:'マイV',games:3000,diff:600,diffSource:'observed',expectedSetting:4},
     {machine:'my',machineName:'マイV',games:2000,diff:-300,diffSource:'observed',expectedSetting:2},
@@ -56,7 +56,7 @@ test('store summaries use observed total diff over total games and exclude infer
   const machines=machineStoreSummaries(rows);
   assert.deepEqual(machines.map(x=>x.machine),['im','my']);
   const my=machines.find(x=>x.machine==='my'),im=machines.find(x=>x.machine==='im');
-  assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3);
+  assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3.2);
   assert.equal(im.totalDiff,900);assert.equal(im.diffCount,1);assert.equal(im.avgExpectedSetting,4);
 });
 
