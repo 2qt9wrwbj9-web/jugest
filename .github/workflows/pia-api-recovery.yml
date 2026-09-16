@@ -15,115 +15,129 @@ permissions:
 jobs:
   recover:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download PIA XAPK
-        shell: bash
-        run: |
-          set -u
-          mkdir -p /tmp/pia /tmp/pia/extracted /tmp/pia/jadx
-          URLS=(
-            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
-            'https://d.apkpure.com/b/XAPK/jp.co.piagroup.app?version=latest'
-          )
-          ok=0
-          for url in "${URLS[@]}"; do
-            echo "Trying: $url"
-            rm -f /tmp/pia/pia.xapk
-            if curl -fL --retry 2 --retry-delay 2 \
-              -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
-              -e 'https://apkpure.net/' \
-              --connect-timeout 15 --max-time 180 \
-              -o /tmp/pia/pia.xapk "$url"; then
-              if unzip -t /tmp/pia/pia.xapk >/dev/null 2>&1; then
-                ok=1
-                break
-              fi
-            fi
-          done
-          if [ "$ok" -ne 1 ]; then
-            echo 'Could not download a valid XAPK.' >&2
-            exit 2
-          fi
-          file /tmp/pia/pia.xapk
-          sha256sum /tmp/pia/pia.xapk
-          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/extracted
-          find /tmp/pia/extracted -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
-
-      - name: Install latest JADX
+      - name: Download and unpack PIA XAPK
         shell: bash
         run: |
           set -euo pipefail
-          asset_url="$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest \
-            | jq -r '.assets[] | select(.name | test("^jadx-[0-9.]+\\.zip$")) | .browser_download_url' \
-            | head -n1)"
-          test -n "$asset_url"
-          echo "JADX: $asset_url"
-          curl -fL -o /tmp/pia/jadx.zip "$asset_url"
-          unzip -q /tmp/pia/jadx.zip -d /tmp/pia/jadx-bin
-          /tmp/pia/jadx-bin/bin/jadx --version
+          mkdir -p /tmp/pia/extracted /tmp/pia/base /tmp/pia/arm64 /tmp/pia/out
+          URL='https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk "$URL"
+          unzip -t /tmp/pia/pia.xapk >/dev/null
+          sha256sum /tmp/pia/pia.xapk
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/extracted
+          BASE_APK='/tmp/pia/extracted/jp.co.piagroup.app.apk'
+          ARM_APK='/tmp/pia/extracted/config.arm64_v8a.apk'
+          test -f "$BASE_APK"
+          test -f "$ARM_APK"
+          unzip -q "$BASE_APK" -d /tmp/pia/base
+          unzip -q "$ARM_APK" -d /tmp/pia/arm64
+          META="$(find /tmp/pia/base -path '*/Managed/Metadata/global-metadata.dat' -print -quit)"
+          LIB="$(find /tmp/pia/arm64 -name 'libil2cpp.so' -print -quit)"
+          test -n "$META"
+          test -n "$LIB"
+          echo "META=$META" >> "$GITHUB_ENV"
+          echo "LIB=$LIB" >> "$GITHUB_ENV"
+          echo '=== Inputs ==='
+          ls -lh "$BASE_APK" "$ARM_APK" "$META" "$LIB"
+          file "$LIB" "$META"
+          echo '=== Metadata header ==='
+          xxd -l 32 "$META"
+          echo '=== Native library hash ==='
+          sha256sum "$LIB"
 
-      - name: Decompile base APK and extract API evidence
+      - name: Install IL2CPP dumper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install il2cpp_dumper --version 0.7.0 --locked
+          il2cpp_dumper --version || true
+          il2cpp_dumper --help | head -n 100 || true
+
+      - name: Dump IL2CPP metadata and annotated ARM64 code
         shell: bash
         run: |
           set -u
-          BASE_APK="$(find /tmp/pia/extracted -type f \( -name 'base.apk' -o -name '*base*.apk' \) -print -quit 2>/dev/null || true)"
-          if [ -z "$BASE_APK" ]; then
-            BASE_APK="$(find /tmp/pia/extracted -type f -name '*.apk' -print -quit 2>/dev/null || true)"
-          fi
-          test -n "$BASE_APK"
-          echo "Base APK: $BASE_APK"
-          /tmp/pia/jadx-bin/bin/jadx -d /tmp/pia/jadx "$BASE_APK" >/tmp/pia/jadx.log 2>&1 || true
-
-          OUT="$GITHUB_WORKSPACE/pia-api-recovery-report.txt"
-          : > "$OUT"
+          cat >/tmp/pia/config.json <<'JSON'
           {
-            echo 'PIA API recovery report'
-            echo "Generated: $(date -u +%FT%TZ)"
-            echo "APK: $BASE_APK"
-            echo
-            echo '=== raw APK strings ==='
-            strings "$BASE_APK" | grep -Ei 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|store_machine_id' | head -n 600 || true
-            echo
-            echo '=== decompiled manifest / URLs / API names ==='
-            grep -RIna -E 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|difference|store_machine_id' /tmp/pia/jadx 2>/dev/null | head -n 1600 || true
-            echo
-            echo '=== source context for individual machine endpoint ==='
-          } >> "$OUT"
+            "dumpMethod": true,
+            "dumpField": true,
+            "dumpProperty": true,
+            "dumpAttribute": true,
+            "dumpMethodOffset": true,
+            "dumpFieldOffset": true,
+            "dumpTypeDefIndex": true,
+            "dumpAssemblyName": true,
+            "splitDumpPerType": true,
+            "generateStruct": true,
+            "generateDummyDll": false,
+            "requireAnyKey": false,
+            "dumpDisassembly": true,
+            "dumpDisassemblyTarget": 0,
+            "dumpDisassemblyHexBytes": false,
+            "dumpDisassemblyFieldNames": true,
+            "dumpDisassemblyAnnotations": true,
+            "dumpDisassemblyCfg": true,
+            "maxDisassemblyInstructions": 450,
+            "generateCppScaffold": false,
+            "dumpStaticFieldMetadata": false
+          }
+          JSON
 
-          mapfile -t MATCH_FILES < <(grep -RIl -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des' /tmp/pia/jadx 2>/dev/null | head -n 120 || true)
-          for f in "${MATCH_FILES[@]}"; do
+          set +e
+          il2cpp_dumper --config /tmp/pia/config.json "$LIB" "$META" /tmp/pia/il2cpp-out \
+            > /tmp/pia/il2cpp-dumper.log 2>&1
+          DUMP_RC=$?
+          set -e
+          echo "IL2CPP_DUMPER_RC=$DUMP_RC"
+          tail -n 120 /tmp/pia/il2cpp-dumper.log || true
+          find /tmp/pia/il2cpp-out -maxdepth 2 -type f -printf '%p %s bytes\n' 2>/dev/null | sort | head -n 120 || true
+
+          REPORT="$GITHUB_WORKSPACE/pia-il2cpp-target-report.txt"
+          : > "$REPORT"
+          {
+            echo 'PIA IL2CPP target report'
+            echo "Generated: $(date -u +%FT%TZ)"
+            echo "Dumper exit: $DUMP_RC"
+            echo
+            echo '=== Dumper log ==='
+            cat /tmp/pia/il2cpp-dumper.log || true
+            echo
+            echo '=== Target symbol hits ==='
+            grep -RIna -C 35 -E 'GetStoreMachineContainAllDetail|GetStoreMachines|GetStoreMachine\b|getStoreMachine2|getStoreMachineChart|AFTER DECRYPT GET MACHINE|encodedData|3des|DESede|TripleDES|Encrypt|Decrypt|pia-server\.heuron\.net' /tmp/pia/il2cpp-out 2>/dev/null | head -n 9000 || true
+            echo
+            echo '=== Likely crypto/API type declarations ==='
+            grep -RIna -C 45 -E 'class .*Crypt|class .*Encrypt|class .*Decrypt|class .*Api|class .*Store|class .*Machine|3des|encodedData' /tmp/pia/il2cpp-out 2>/dev/null | head -n 9000 || true
+          } >> "$REPORT"
+
+          if [ -f /tmp/pia/il2cpp-out/stringliteral.json ]; then
             {
               echo
-              echo "--- FILE: $f ---"
-              grep -n -C 24 -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des|pia-server\.heuron\.net|getStoreMachine' "$f" || true
-            } >> "$OUT"
-          done
+              echo '=== Relevant string literals ==='
+              grep -n -C 3 -Ei '3des|encodedData|AFTER DECRYPT GET MACHINE|pia-server|StoreMachine|getStoreMachine|encrypt|decrypt' /tmp/pia/il2cpp-out/stringliteral.json | head -n 5000 || true
+            } >> "$REPORT"
+          fi
 
-          {
-            echo
-            echo '=== likely API declarations / Retrofit annotations ==='
-            grep -RIna -C 10 -E '@(POST|GET)|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart' /tmp/pia/jadx/sources 2>/dev/null | head -n 1600 || true
-            echo
-            echo '=== crypto declarations ==='
-            grep -RIna -C 18 -E 'Cipher\.getInstance|SecretKeySpec|DESede|3DES|TripleDES|Base64\.(encode|decode)|encodedData' /tmp/pia/jadx/sources 2>/dev/null | head -n 1600 || true
-            echo
-            echo '=== JADX log tail ==='
-            tail -n 120 /tmp/pia/jadx.log || true
-          } >> "$OUT"
+          mkdir -p "$GITHUB_WORKSPACE/pia-il2cpp-evidence"
+          cp "$REPORT" "$GITHUB_WORKSPACE/pia-il2cpp-evidence/target-report.txt"
+          cp /tmp/pia/il2cpp-dumper.log "$GITHUB_WORKSPACE/pia-il2cpp-evidence/dumper.log"
+          cp /tmp/pia/il2cpp-out/script.json "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
+          cp /tmp/pia/il2cpp-out/stringliteral.json "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
+          cp /tmp/pia/il2cpp-out/dump.cs "$GITHUB_WORKSPACE/pia-il2cpp-evidence/" 2>/dev/null || true
+          wc -l "$REPORT" || true
+          sed -n '1,420p' "$REPORT" || true
 
-          mkdir -p "$GITHUB_WORKSPACE/research/pia"
-          cp "$OUT" "$GITHUB_WORKSPACE/research/pia/pia-api-recovery-report.txt"
-          wc -l "$OUT"
-          sed -n '1,320p' "$OUT" || true
-
-      - name: Upload report
+      - name: Upload IL2CPP evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pia-api-recovery-report
-          path: pia-api-recovery-report.txt
+          name: pia-il2cpp-evidence
+          path: pia-il2cpp-evidence
           if-no-files-found: warn
           retention-days: 7
