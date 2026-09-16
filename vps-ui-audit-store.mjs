@@ -1,5 +1,5 @@
 import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
-import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel,normalizeMachineSelection,machineFilterStorageKey,filterMachineSummaries} from './vps-ui-audit-utils.mjs';
+import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel,normalizeMachineSelection,machineFilterStorageKey,filterMachineSummaries,mergeStoreRows} from './vps-ui-audit-utils.mjs';
 
 let app=null,root=null,observer=null,scheduled=false,analyticsClient=null;
 let preKey='',preData=null,preBusy=false,preError='',rawCache={key:'',days:[]};
@@ -46,9 +46,7 @@ function rawDays(shop){
 }
 function storeRows(shop,date){
   const display=bridge()?.getStoreDay?.(shop,date)?.rows||[],raw=rawDays(shop).find(day=>day?.date===date)?.machines;
-  if(!Array.isArray(raw))return display;
-  const byKey=new Map(display.map(row=>[`${row.machine}|${row.tableNo}`,row]));
-  return raw.map(row=>{const shown=byKey.get(`${row.machine}|${row.tableNo}`)||{};return {...row,machine:row.machine??shown.machine,machineName:shown.machineName||row.machineName||row.machine,expectedSetting:Number.isFinite(Number(row.expectedSetting))?Number(row.expectedSetting):shown.expectedSetting}});
+  return mergeStoreRows(display,raw);
 }
 
 function reconcileStoreData(){
