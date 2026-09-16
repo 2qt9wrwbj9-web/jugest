@@ -1,0 +1,110 @@
+name: PIA API recovery research
+
+on:
+  push:
+    branches:
+      - research/pia-api-recovery
+    paths:
+      - '.github/workflows/pia-api-recovery.yml'
+      - 'research/pia/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download PIA XAPK
+        shell: bash
+        run: |
+          set -u
+          mkdir -p /tmp/pia /tmp/pia/extracted /tmp/pia/jadx
+          URLS=(
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+            'https://d.apkpure.com/b/XAPK/jp.co.piagroup.app?version=latest'
+          )
+          ok=0
+          for url in "${URLS[@]}"; do
+            echo "Trying: $url"
+            rm -f /tmp/pia/pia.xapk
+            if curl -fL --retry 2 --retry-delay 2 \
+              -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+              -e 'https://apkpure.net/' \
+              --connect-timeout 15 --max-time 180 \
+              -o /tmp/pia/pia.xapk "$url"; then
+              if unzip -t /tmp/pia/pia.xapk >/dev/null 2>&1; then
+                ok=1
+                break
+              fi
+            fi
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo 'Could not download a valid XAPK.' >&2
+            exit 2
+          fi
+          file /tmp/pia/pia.xapk
+          sha256sum /tmp/pia/pia.xapk
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/extracted
+          find /tmp/pia/extracted -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
+
+      - name: Install latest JADX
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset_url="$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^jadx-[0-9.]+\\.zip$")) | .browser_download_url' \
+            | head -n1)"
+          test -n "$asset_url"
+          echo "JADX: $asset_url"
+          curl -fL -o /tmp/pia/jadx.zip "$asset_url"
+          unzip -q /tmp/pia/jadx.zip -d /tmp/pia/jadx-bin
+          /tmp/pia/jadx-bin/bin/jadx --version
+
+      - name: Decompile base APK and extract API evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_APK="$(find /tmp/pia/extracted -type f \( -name 'base.apk' -o -name '*base*.apk' \) | head -n1)"
+          if [ -z "$BASE_APK" ]; then
+            BASE_APK="$(find /tmp/pia/extracted -type f -name '*.apk' | head -n1)"
+          fi
+          test -n "$BASE_APK"
+          echo "Base APK: $BASE_APK"
+          /tmp/pia/jadx-bin/bin/jadx -d /tmp/pia/jadx "$BASE_APK" >/tmp/pia/jadx.log 2>&1 || true
+
+          OUT="$GITHUB_WORKSPACE/pia-api-recovery-report.txt"
+          {
+            echo 'PIA API recovery report'
+            echo "Generated: $(date -u +%FT%TZ)"
+            echo "APK: $BASE_APK"
+            echo
+            echo '=== manifest / URLs / API names ==='
+            grep -RIna -E 'pia-server\.heuron\.net|GetStoreMachine|getStoreMachine|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|TripleDES|difference|store_machine_id' /tmp/pia/jadx 2>/dev/null | head -n 1200 || true
+            echo
+            echo '=== source context for individual machine endpoint ==='
+            grep -RIl -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData' /tmp/pia/jadx 2>/dev/null | head -n 100 | while read -r f; do
+              echo
+              echo "--- FILE: $f ---"
+              grep -n -C 18 -E 'GetStoreMachineContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|3des' "$f" || true
+            done
+            echo
+            echo '=== JADX log tail ==='
+            tail -n 100 /tmp/pia/jadx.log || true
+          } > "$OUT"
+
+          mkdir -p "$GITHUB_WORKSPACE/research/pia"
+          cp "$OUT" "$GITHUB_WORKSPACE/research/pia/pia-api-recovery-report.txt"
+          wc -l "$OUT"
+          sed -n '1,260p' "$OUT"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pia-api-recovery-report
+          path: pia-api-recovery-report.txt
+          retention-days: 7
