@@ -1,0 +1,44 @@
+name: PIA machine list route and field map
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-route-field-map.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download PIA binary and map relocation slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-route-field-map
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          readelf -rW "$LIB" > /tmp/rel.txt
+          {
+            echo '=== exact slots ==='
+            for s in 2c6a300 2c6b380 2c6a680 2c6a6a0 2c6a6b0 2c6a640 2c6a6f8; do
+              grep -i "^0*${s}[[:space:]]" /tmp/rel.txt || true
+            done
+            echo '=== route-slot neighborhood ==='
+            grep -Ei '^0*2c6a6(40|48|50|58|60|68|70|78|80|88|90|98|a0|a8|b0|b8|c0|c8|d0|d8|e0|e8|f0|f8)[[:space:]]' /tmp/rel.txt || true
+            echo '=== machine-list form neighborhood ==='
+            grep -Ei '^0*2c6(a2f0|a2f8|a300|a308|a310|a318|b370|b378|b380|b388|b390)[[:space:]]' /tmp/rel.txt || true
+          } | tee pia-route-field-map/map.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-route-field-map
+          path: pia-route-field-map
+          retention-days: 7
