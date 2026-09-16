@@ -1,0 +1,111 @@
+name: PIA API recovery (temporary)
+
+on:
+  push:
+    branches:
+      - 'investigation/pia-api-recovery-20260917'
+    paths:
+      - '.github/workflows/pia-api-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-pia-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and unpack current PIA XAPK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/xapk /tmp/pia/unpacked
+          curl --fail --location --retry 2 \
+            -A 'Mozilla/5.0 (Linux; Android 13)' \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest' \
+            -o /tmp/pia/pia.xapk
+          echo '=== XAPK ==='
+          ls -lh /tmp/pia/pia.xapk
+          sha256sum /tmp/pia/pia.xapk
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/xapk
+          cat /tmp/pia/xapk/manifest.json 2>/dev/null || true
+          for apk in /tmp/pia/xapk/*.apk; do
+            d="/tmp/pia/unpacked/$(basename "$apk" .apk)"
+            mkdir -p "$d"
+            unzip -q "$apk" -d "$d"
+          done
+          echo '=== likely Unity/IL2CPP files ==='
+          find /tmp/pia/unpacked -type f \( \
+            -iname 'global-metadata.dat' -o \
+            -iname 'libil2cpp.so' -o \
+            -iname 'Assembly-CSharp.dll' -o \
+            -iname '*ScriptingAssemblies*' -o \
+            -iname '*.js' \
+          \) -printf '%p %s bytes\n' | sort
+
+      - name: Search all unpacked files for API and crypto strings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('/tmp/pia/unpacked')
+          needles = [
+              b'pia-server', b'heuron', b'GetStoreMachineContainAllDetail',
+              b'getStoreMachine2', b'getStoreMachineChart', b'getStoresMachines',
+              b'encodedData', b'AFTER DECRYPT GET MACHINE', b'3des', b'DESede',
+              b'GetStoreMachine', b'StoreMachine', b'Decrypt', b'Encrypt'
+          ]
+          wide_needles=[]
+          for n in needles:
+              try: wide_needles.append((n.decode().encode('utf-16le'), n + b' [utf16le]'))
+              except: pass
+          found=0
+          for p in root.rglob('*'):
+              if not p.is_file(): continue
+              try: data=p.read_bytes()
+              except Exception: continue
+              low=data.lower()
+              hits=[]
+              for n in needles:
+                  q=low.find(n.lower())
+                  if q>=0: hits.append((q,n.decode('utf-8','replace')))
+              for wn,label in wide_needles:
+                  q=low.find(wn.lower())
+                  if q>=0: hits.append((q,label.decode('utf-8','replace')))
+              if not hits: continue
+              found += 1
+              print(f'\n===== RAW HIT FILE {p} ({len(data)} bytes) =====')
+              for q,label in sorted(hits)[:40]:
+                  lo=max(0,q-1200); hi=min(len(data),q+3000)
+                  chunk=data[lo:hi]
+                  print(f'\n>>> {label} @ {q}')
+                  print(chunk.decode('utf-8','replace'))
+          print(f'\nRAW HIT FILE COUNT={found}')
+          PY
+
+          echo '=== printable string context from metadata/native code ==='
+          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|getStoresMachines|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|GetStoreMachine|StoreMachine|Decrypt|Encrypt'
+          while IFS= read -r -d '' f; do
+            tmp="/tmp/$(echo -n "$f" | sha256sum | cut -d' ' -f1).strings"
+            strings -a -n 4 "$f" > "$tmp" || true
+            if grep -Eqi "$PATTERN" "$tmp"; then
+              echo "===== ASCII STRINGS: $f ====="
+              grep -Ein -C 35 "$PATTERN" "$tmp" | head -n 2000
+            fi
+            strings -a -el -n 4 "$f" > "${tmp}.wide" || true
+            if grep -Eqi "$PATTERN" "${tmp}.wide"; then
+              echo "===== UTF16LE STRINGS: $f ====="
+              grep -Ein -C 35 "$PATTERN" "${tmp}.wide" | head -n 2000
+            fi
+          done < <(find /tmp/pia/unpacked -type f \( -name 'global-metadata.dat' -o -name 'libil2cpp.so' -o -name '*.dll' \) -print0)
+
+          echo '=== API-like URLs in Unity metadata/native code ==='
+          while IFS= read -r -d '' f; do
+            strings -a -n 6 "$f" | grep -Eio 'https?://[^[:space:]"<>]+' | grep -Ei 'pia|heuron|api' | sort -u | head -n 200 || true
+          done < <(find /tmp/pia/unpacked -type f \( -name 'global-metadata.dat' -o -name 'libil2cpp.so' -o -name '*.dll' \) -print0)
