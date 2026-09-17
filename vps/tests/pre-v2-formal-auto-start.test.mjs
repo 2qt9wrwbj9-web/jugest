@@ -10,6 +10,7 @@ import {claimNextJob,markJobRunning} from '../src/queue.mjs';
 import {baselineModel,fingerprintModel} from '../src/research/model-search.mjs';
 import {finalizeSealedHoldout} from '../src/research/holdout.mjs';
 import {activateStoreModel} from '../src/research/store-read-output.mjs';
+import {maybeStartFinalizedFormalTrial} from '../src/research/pre-v2/formal-auto-start.mjs';
 import {migratePreV2TrialStore} from '../src/research/pre-v2/trial-store.mjs';
 
 const NOW='2026-09-17T08:00:00.000Z';
@@ -108,5 +109,18 @@ test('daily analysis automatically starts one formal trial from a finalized dist
     assert.equal(trial.champion_fingerprint,f.champion.fingerprint);
     assert.equal(trial.challenger_fingerprint,f.candidate.fingerprint);
     assert.equal(trial.status,'running');
+  }finally{f.db.close()}
+});
+
+test('formal auto-start never consumes another trial number for the same Champion/Challenger pair',()=>{
+  const f=setup();
+  try{
+    installFinalizedCandidate(f.db,{candidate:f.candidate});
+    const args={storeId:'s1',lineageId:'pre-v2-live',featureVersion:FEATURE_VERSION,days:f.days,frontierDate:'2026-08-30',nowIso:NOW};
+    const first=maybeStartFinalizedFormalTrial(f.db,args);
+    assert.equal(first.reason,'started');
+    const second=maybeStartFinalizedFormalTrial(f.db,{...args,nowIso:'2026-09-17T08:05:00.000Z'});
+    assert.equal(second.reason,'candidate_already_trialed');
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trials').get().n,1);
   }finally{f.db.close()}
 });
