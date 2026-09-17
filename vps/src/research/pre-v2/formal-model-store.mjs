@@ -22,7 +22,8 @@ function rowToSnapshot(row){
   if(!row)return null;
   return Object.freeze({
     storeId:row.store_id,lineageId:row.lineage_id,trialNumber:Number(row.trial_number),role:row.role,
-    modelFingerprint:row.model_fingerprint,model:Object.freeze(JSON.parse(row.model_json)),modelHash:row.model_hash,createdAt:row.created_at,
+    modelFingerprint:row.model_fingerprint,featureVersion:row.feature_version,
+    model:Object.freeze(JSON.parse(row.model_json)),modelHash:row.model_hash,createdAt:row.created_at,
   });
 }
 
@@ -34,6 +35,7 @@ export function migrateFormalModelStore(db){
       trial_number INTEGER NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('champion','challenger')),
       model_fingerprint TEXT NOT NULL,
+      feature_version TEXT NOT NULL,
       model_json TEXT NOT NULL,
       model_hash TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -55,9 +57,9 @@ export function loadFormalModelSnapshot(db,{storeId,lineageId,trialNumber,role}=
   `).get(store,lineage,number,kind));
 }
 
-export function persistFormalModelSnapshot(db,{trial,role,model,nowIso}={}){
+export function persistFormalModelSnapshot(db,{trial,role,model,featureVersion,nowIso}={}){
   requireDb(db);
-  const key=trialKey(trial),kind=requireRole(role),createdAt=requireIso(nowIso);
+  const key=trialKey(trial),kind=requireRole(role),version=requireText(featureVersion,'featureVersion'),createdAt=requireIso(nowIso);
   if(!model||typeof model!=='object'||Array.isArray(model))throw new TypeError('model must be an object');
   const expectedFingerprint=kind==='champion'?key.championFingerprint:key.challengerFingerprint;
   const actualFingerprint=fingerprintModel(model);
@@ -65,12 +67,12 @@ export function persistFormalModelSnapshot(db,{trial,role,model,nowIso}={}){
   const modelJson=canonicalJson(model),modelHash=hashCanonical(model);
   const result=db.prepare(`
     INSERT OR IGNORE INTO pre_v2_formal_models(
-      store_id,lineage_id,trial_number,role,model_fingerprint,model_json,model_hash,created_at
-    ) VALUES(?,?,?,?,?,?,?,?)
-  `).run(key.storeId,key.lineageId,key.trialNumber,kind,expectedFingerprint,modelJson,modelHash,createdAt);
+      store_id,lineage_id,trial_number,role,model_fingerprint,feature_version,model_json,model_hash,created_at
+    ) VALUES(?,?,?,?,?,?,?,?,?)
+  `).run(key.storeId,key.lineageId,key.trialNumber,kind,expectedFingerprint,version,modelJson,modelHash,createdAt);
   const loaded=loadFormalModelSnapshot(db,{...key,role:kind});
   if(Number(result.changes)===1)return Object.freeze({inserted:true,row:loaded});
-  if(loaded?.modelFingerprint===expectedFingerprint&&loaded?.modelHash===modelHash)return Object.freeze({inserted:false,row:loaded});
+  if(loaded?.modelFingerprint===expectedFingerprint&&loaded?.featureVersion===version&&loaded?.modelHash===modelHash)return Object.freeze({inserted:false,row:loaded});
   throw new Error(`formal model snapshot conflict: ${key.storeId}/${key.lineageId}/${key.trialNumber}/${kind}`);
 }
 
