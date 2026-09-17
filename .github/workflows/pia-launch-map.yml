@@ -1,0 +1,92 @@
+name: PIA launch API map
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-launch-map.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace launch route initialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-launch-map
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          python -m pip install --quiet pyelftools capstone
+          cat > /tmp/pia/trace.py <<'PY'
+          from collections import defaultdict, deque
+          from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
+          from capstone.arm64 import ARM64_OP_IMM, ARM64_OP_MEM, ARM64_OP_REG
+          from elftools.elf.elffile import ELFFile
+          from elftools.elf.relocation import RelocationSection
+
+          targets={
+            0x2d52280:'launchApp',
+            0x2d52218:'doRegisterUserDevice',
+            0x2d64948:'device_key',
+            0x2d64950:'device_name',
+            0x2d64958:'device_type',
+            0x2d64960:'device_uuid',
+            0x2d67e88:'os_type',
+            0x2d67e98:'os_version',
+            0x2d631a0:'app_version',
+          }
+          path='/tmp/pia/arm64/lib/arm64-v8a/libil2cpp.so'
+          with open(path,'rb') as f:
+            elf=ELFFile(f)
+            rel=defaultdict(list)
+            for sec in elf.iter_sections():
+              if not isinstance(sec,RelocationSection): continue
+              for item in sec.iter_relocations():
+                add=item.entry.get('r_addend')
+                if add is not None and int(add) in targets:
+                  rel[int(add)].append(int(item.entry['r_offset']))
+            slots={slot:name for add,name in targets.items() for slot in rel.get(add,[])}
+            print('=== relocations ===')
+            for add,name in targets.items():
+              print(name,hex(add),[hex(x) for x in rel.get(add,[])])
+
+            md=Cs(CS_ARCH_ARM64,CS_MODE_LITTLE_ENDIAN); md.detail=True
+            instructions=[]
+            for seg in elf.iter_segments():
+              if seg['p_type']=='PT_LOAD' and int(seg['p_flags'])&1:
+                instructions.extend(md.disasm(seg.data(),int(seg['p_vaddr'])))
+            hits=[]; recent={}
+            for i,ins in enumerate(instructions):
+              for reg in list(recent):
+                page,age=recent[reg]; recent[reg]=(page,age+1)
+                if age+1>8: del recent[reg]
+              ops=ins.operands
+              if ins.mnemonic=='adrp' and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_IMM:
+                recent[ops[0].reg]=(int(ops[1].imm),0)
+              if ins.mnemonic.startswith('ldr') and len(ops)>=2 and ops[1].type==ARM64_OP_MEM:
+                base=ops[1].mem.base
+                if base in recent:
+                  slot=recent[base][0]+int(ops[1].mem.disp)
+                  if slot in slots: hits.append((i,slot,slots[slot]))
+            print('\n=== xrefs with following instructions ===')
+            for i,slot,name in hits:
+              print(f'\nHIT {name} slot={slot:#x} at={instructions[i].address:#x}')
+              for ins in instructions[max(0,i-10):i+45]:
+                print(f'  {ins.address:#010x}: {ins.mnemonic:7s} {ins.op_str}')
+          PY
+          python /tmp/pia/trace.py | tee pia-launch-map/map.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-launch-map
+          path: pia-launch-map
+          retention-days: 7
