@@ -8,6 +8,7 @@ import {requestHistoricalComparisonRefresh} from './historical-refresh-state.mjs
 import {scoreAvailableComparisonDays} from './comparison-refresh.mjs';
 import {deriveStoreMachineCount} from './task-metrics.mjs';
 import {advanceFormalLiveTrialDay} from '../research/pre-v2/formal-daily-loop.mjs';
+import {maybeStartFinalizedFormalTrial} from '../research/pre-v2/formal-auto-start.mjs';
 
 const DEFAULT_OPTIONS=Object.freeze({period:'180',minG:'2000',maxDims:'1',minDays:'4'});
 const COMPONENT='store-analysis-default';
@@ -24,7 +25,16 @@ function requireDailyJob(job){
 
 async function runFormalDailyLoop(input){
   const {db,...options}=input;
-  return advanceFormalLiveTrialDay(db,options);
+  const advanced=await advanceFormalLiveTrialDay(db,options);
+  if(advanced.reason!=='no_running_trial')return advanced;
+  return maybeStartFinalizedFormalTrial(db,{
+    storeId:options.storeId,
+    lineageId:options.lineageId,
+    featureVersion:FEATURE_VERSION,
+    days:options.days,
+    frontierDate:options.throughDate,
+    nowIso:options.nowIso,
+  });
 }
 
 function upsertSnapshot(db,{storeId,type,version,businessDate,payload,nowIso}){
