@@ -33,7 +33,7 @@ function registerResearchModel(db,{storeId,model,nowIso}){
   );
 }
 
-test('formal trial freezes exact Champion and Challenger model JSON at start',()=>{
+test('formal trial freezes exact Champion and Challenger model plus feature version at start',()=>{
   const db=openDatabase(':memory:');
   try{
     migrate(db);migratePreV2TrialStore(db);
@@ -51,6 +51,8 @@ test('formal trial freezes exact Champion and Challenger model JSON at start',()
     assert.deepEqual(frozenChallenger.model,challenger);
     assert.equal(frozenChampion.modelFingerprint,champion.fingerprint);
     assert.equal(frozenChallenger.modelFingerprint,challenger.fingerprint);
+    assert.equal(frozenChampion.featureVersion,'store-feature-v1');
+    assert.equal(frozenChallenger.featureVersion,'store-feature-v1');
 
     const replacement=candidate('102');
     activateStoreModel(db,{storeId,fingerprint:replacement.fingerprint,model:replacement,featureVersion:'store-feature-v1',frontierDate:'2026-09-10',days:history,nowIso:'2026-09-10T13:00:00.000Z'});
@@ -58,6 +60,8 @@ test('formal trial freezes exact Champion and Challenger model JSON at start',()
 
     assert.deepEqual(loadFormalModelSnapshot(db,{...key,role:'champion'}).model,champion);
     assert.deepEqual(loadFormalModelSnapshot(db,{...key,role:'challenger'}).model,challenger);
+    assert.equal(loadFormalModelSnapshot(db,{...key,role:'champion'}).featureVersion,'store-feature-v1');
+    assert.equal(loadFormalModelSnapshot(db,{...key,role:'challenger'}).featureVersion,'store-feature-v1');
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_models').get().n,2);
   }finally{db.close()}
 });
