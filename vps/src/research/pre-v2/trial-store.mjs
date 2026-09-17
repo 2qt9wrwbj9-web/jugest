@@ -250,6 +250,13 @@ export function saveTrialState(db,{trial,expectedStateHash,nowIso}={}){
   requireTrialShape(trial);
   const expected=requireText(expectedStateHash,'expectedStateHash');
   const now=requireIsoTimestamp(nowIso);
+  const key=trialKey(trial);
+  const current=loadTrialRecord(db,key);
+  if(!current)throw new Error(`formal trial not found: ${key.storeId}/${key.lineageId}/${key.trialNumber}`);
+  if(current.stateHash!==expected)throw new Error('stale formal trial state writer');
+  if(hashCanonical(trial)!==current.stateHash){
+    throw new Error('formal evidence changes must be persisted through appendTrialDay');
+  }
   return updateTrialRow(db,{trial,expectedStateHash:expected,nowIso:now});
 }
 
