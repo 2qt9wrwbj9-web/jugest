@@ -1,6 +1,7 @@
 import {hashCanonical} from '../../canonical-json.mjs';
 import {fingerprintModel} from '../model-search.mjs';
 import {buildStoreReadPayload,getActiveStoreModel} from '../store-read-output.mjs';
+import {migrateFormalModelStore,persistFormalModelSnapshot} from './formal-model-store.mjs';
 import {persistFormalPrediction,loadFormalPrediction} from './formal-prediction-store.mjs';
 import {startFormalTrial} from './trial.mjs';
 import {createTrialRecord,loadTrialRecord,nextTrialNumber} from './trial-store.mjs';
@@ -83,6 +84,7 @@ export function startFormalLiveTrial(db,{
   scorerVersion=PRE_V2_SCORER_VERSION,
 }={}){
   requireDb(db);
+  migrateFormalModelStore(db);
   const store=requireText(storeId,'storeId');
   const lineage=requireText(lineageId,'lineageId');
   const challengerFp=requireText(challengerFingerprint,'challengerFingerprint');
@@ -140,6 +142,8 @@ export function startFormalLiveTrial(db,{
       machineSetHash,scorerVersion:scorer,
     });
     const created=createTrialRecord(db,{trial,nowIso:at});
+    persistFormalModelSnapshot(db,{trial,role:'champion',model:active.model,nowIso:at});
+    persistFormalModelSnapshot(db,{trial,role:'challenger',model:challenger.model,nowIso:at});
     const championSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('champion',championPayload),nowIso:at});
     const challengerSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('challenger',challengerPayload),nowIso:at});
     db.exec('COMMIT;');
