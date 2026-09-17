@@ -8,6 +8,7 @@ const HISTORICAL_UI_MODULE_TAG='<script type="module" src="./vps-ui-historical-c
 const STORE_RESET_MODULE_TAG='<script type="module" src="./vps-store-reset.mjs"></script>';
 const RESOURCE_UI_MODULE_TAG='<script type="module" src="./vps-resource-ui.mjs"></script>';
 const AUDIT_STORE_UI_MODULE_TAG='<script type="module" src="./vps-ui-audit-store.mjs"></script>';
+const RELEASE_VERSION_MODULE_TAG='<script type="module" src="./vps-release-version.mjs"></script>';
 const STORE_RESET_HELPER=`async function vpsResetStoreAcquiredData(name){
  name=String(name||"").trim();if(!name)throw new Error("店舗名がありません");
  if(!storeAnalysisHistoryReady)await storeAnalysisLoadIndex();
@@ -44,7 +45,7 @@ export function patchJugestIndexSource(input){
     const additions=[BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE].filter(token=>!source.includes(token)).join('\n');
     source=source.replace(BRIDGE_ANCHOR,`${BRIDGE_ANCHOR}\n${additions}`);
   }
-  for(const tag of [MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG]){
+  for(const tag of [MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,RELEASE_VERSION_MODULE_TAG]){
     if(source.includes(tag))continue;
     if(!/<\/body>/i.test(source))throw new Error('JUGEST body anchor not found');
     source=source.replace(/<\/body>/i,`${tag}\n</body>`);
@@ -52,4 +53,4 @@ export function patchJugestIndexSource(input){
   return source;
 }
 
-export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,STORE_RESET_HELPER};
+export const __test={BRIDGE_ANCHOR,BRIDGE_START,BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE,MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,RELEASE_VERSION_MODULE_TAG,STORE_RESET_HELPER};
