@@ -23,9 +23,9 @@ test('release overlay updates version badge inside the open JUGEST App Shell sha
   globalThis.document=shell.document;
   try{
     __test.applyReleaseVersion();
-    assert.equal(JUGEST_RELEASE_VERSION,'6.0.0');
-    assert.equal(globalThis.document.title,'JUGEST v6.0.0');
-    assert.equal(shell.badge.textContent,'6.0.0');
+    assert.equal(JUGEST_RELEASE_VERSION,'6.0.1');
+    assert.equal(globalThis.document.title,'JUGEST v6.0.1');
+    assert.equal(shell.badge.textContent,'6.0.1');
   }finally{
     if(originalDocument===undefined)delete globalThis.document;
     else globalThis.document=originalDocument;
@@ -42,11 +42,11 @@ test('release overlay observes the App Shell shadow root and restores v6 after a
   globalThis.document=shell.document;
   try{
     __test.installReleaseVersionObservers(FakeObserver,new WeakSet());
-    assert.equal(shell.badge.textContent,'6.0.0');
+    assert.equal(shell.badge.textContent,'6.0.1');
     assert.equal(callbacks.has(shell.shadowRoot),true,'open shadow root must be observed');
     shell.badge.textContent='5.1.2';
     callbacks.get(shell.shadowRoot)([]);
-    assert.equal(shell.badge.textContent,'6.0.0');
+    assert.equal(shell.badge.textContent,'6.0.1');
   }finally{
     if(originalDocument===undefined)delete globalThis.document;
     else globalThis.document=originalDocument;
@@ -66,7 +66,7 @@ test('release overlay does not observe or rescan the whole document once App She
     const scansBefore=shell.getFullScans();
     shell.badge.textContent='5.1.2';
     callbacks.get(shell.shadowRoot)([]);
-    assert.equal(shell.badge.textContent,'6.0.0');
+    assert.equal(shell.badge.textContent,'6.0.1');
     assert.equal(shell.getFullScans(),scansBefore,'shadow rerender must not trigger a full document scan');
   }finally{
     if(originalDocument===undefined)delete globalThis.document;
