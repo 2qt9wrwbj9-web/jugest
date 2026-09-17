@@ -54,12 +54,20 @@ test('formal champion prediction round-trips and identical retry is idempotent',
   }finally{db.close()}
 });
 
-test('formal prediction rejects wrong role fingerprint, wrong machine set, duplicate ranks, and conflicting replay',()=>{
+test('formal prediction allows a later-day roster change but still rejects wrong fingerprint, duplicate ranks, and conflicting replay',()=>{
   const {db,trial}=setup();
   try{
     assert.throws(()=>persistFormalPrediction(db,{trial,prediction:prediction('champion','challenger-fp'),nowIso:'2026-09-17T12:00:00.000Z'}),/fingerprint/i);
-    const missing={...prediction('champion',trial.championFingerprint),rankings:[{machineKey:'101',tableNo:'101',machineName:'マイジャグラーV',rank:1,score:2}]};
-    assert.throws(()=>persistFormalPrediction(db,{trial,prediction:missing,nowIso:'2026-09-17T12:00:00.000Z'}),/machine set/i);
+
+    const laterDay={
+      role:'champion',modelFingerprint:trial.championFingerprint,targetDate:'2026-09-19',sourceFrontierDate:'2026-09-18',
+      rankings:[{machineKey:'101',tableNo:'101',machineName:'マイジャグラーV',rank:1,score:2}],
+    };
+    const changedSet=persistFormalPrediction(db,{trial,prediction:laterDay,nowIso:'2026-09-18T12:00:00.000Z'});
+    assert.equal(changedSet.inserted,true);
+    assert.equal(changedSet.row.machineSetHash,hashCanonical(['101']));
+    assert.notEqual(changedSet.row.machineSetHash,trial.machineSetHash);
+
     const dup={...prediction('champion',trial.championFingerprint),rankings:[
       {machineKey:'101',tableNo:'101',machineName:'マイジャグラーV',rank:1,score:2},
       {machineKey:'102',tableNo:'102',machineName:'ファンキージャグラー2',rank:1,score:1},
