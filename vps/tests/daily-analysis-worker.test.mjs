@@ -111,3 +111,28 @@ test('fewer than three valid days completes as insufficient data without burning
     assert.equal(latest.status,'insufficient_data');
   }finally{f.cleanup()}
 });
+
+test('daily analysis advances PRE v2 formal live trial against the newest canonical day',async()=>{
+  const f=fixture();
+  try{
+    const seen=[];
+    const out=await executeDailyAnalysis({
+      db:f.db,job:f.job,rootDir:'/formal-root',nowIso:'2026-09-11T09:04:00.000Z',
+      analysisRunner:async()=>fakeResult(),
+      formalDailyLoopRunner:async(input)=>{
+        seen.push(input);
+        return{reason:'advanced',scoredTargetDate:'2026-09-04',nextTargetDate:'2026-09-05'};
+      }
+    });
+    assert.equal(seen.length,1);
+    assert.equal(seen[0].storeId,'store-a');
+    assert.equal(seen[0].lineageId,'pre-v2-live');
+    assert.equal(seen[0].throughDate,'2026-09-04');
+    assert.equal(seen[0].rootDir,'/formal-root');
+    assert.equal(seen[0].nowIso,'2026-09-11T09:04:00.000Z');
+    assert.equal(seen[0].days.length,4);
+    assert.equal(out.formalTrialReason,'advanced');
+    assert.equal(out.formalScoredTargetDate,'2026-09-04');
+    assert.equal(out.formalNextTargetDate,'2026-09-05');
+  }finally{f.cleanup()}
+});
