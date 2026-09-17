@@ -142,8 +142,8 @@ export function startFormalLiveTrial(db,{
       machineSetHash,scorerVersion:scorer,
     });
     const created=createTrialRecord(db,{trial,nowIso:at});
-    persistFormalModelSnapshot(db,{trial,role:'champion',model:active.model,nowIso:at});
-    persistFormalModelSnapshot(db,{trial,role:'challenger',model:challenger.model,nowIso:at});
+    persistFormalModelSnapshot(db,{trial,role:'champion',model:active.model,featureVersion:version,nowIso:at});
+    persistFormalModelSnapshot(db,{trial,role:'challenger',model:challenger.model,featureVersion:version,nowIso:at});
     const championSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('champion',championPayload),nowIso:at});
     const challengerSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('challenger',challengerPayload),nowIso:at});
     db.exec('COMMIT;');
