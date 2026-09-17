@@ -104,4 +104,23 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:result.available!==false&&rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
+export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days)||!days.some(day=>String(day?.date||'')===target))throw new TypeError('targetDate must exist in days');
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});
+  const getStoreDay=mustFunction(bridge.getStoreDay,'getStoreDay');
+  const result=plain(await getStoreDay(name,target));
+  if(!result||result.date!==target||!Array.isArray(result.rows))throw new Error('JUGEST protected day judgement returned no exact target day');
+  const rows=result.rows.map((row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)throw new Error(`JUGEST protected day judgement row ${index} is missing tableNo`);
+    const q=Array.isArray(row?.q)?row.q.map(Number):null;
+    if(!q||!q.length||q.some(value=>!Number.isFinite(value)))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing posterior q`);
+    const expectedSetting=Number(row?.expectedSetting);
+    if(!Number.isFinite(expectedSetting))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing expectedSetting`);
+    return Object.freeze({...row,tableNo,q:Object.freeze(q),expectedSetting});
+  });
+  return Object.freeze({shop:name,date:target,rows:Object.freeze(rows)});
+}
+
 export const __test={validTargetDate,bootImportedRuntime};
