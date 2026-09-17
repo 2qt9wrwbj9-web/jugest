@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {loadStoreDays} from '../src/analysis/store-data.mjs';
-import {runExistingStoreAnalysis,runExistingStorePlan} from '../src/analysis/runtime-adapter.mjs';
+import {runExistingStoreAnalysis,runExistingStorePlan,runExistingStoreDayJudgement} from '../src/analysis/runtime-adapter.mjs';
 
 const REPO_ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 
@@ -97,5 +97,28 @@ test('headless shadow plan uses the real current Today Plan path and excludes ta
     assert.ok(result.rankings.length>0);
     assert.deepEqual(Object.keys(result.rankings[0]).sort(),['machineKey','machineName','rank','score','tableNo']);
     assert.deepEqual(result.rankings.map(row=>row.rank),result.rankings.map((_,index)=>index+1));
+  }finally{f.cleanup()}
+});
+
+test('headless day judgement exposes the protected JUGEST posterior without reimplementing judgement math',async()=>{
+  const f=fixture();
+  try{
+    const loaded=loadStoreDays(f.db,'store-a',{limit:180});
+    const result=await runExistingStoreDayJudgement({
+      rootDir:REPO_ROOT,
+      shop:loaded.store.name,
+      sourceStoreId:loaded.store.id,
+      days:loaded.days,
+      targetDate:'2026-09-04'
+    });
+    assert.equal(result.shop,'解析テスト店');
+    assert.equal(result.date,'2026-09-04');
+    assert.equal(result.rows.length,2);
+    for(const row of result.rows){
+      assert.ok(Array.isArray(row.q));
+      assert.equal(row.q.length,6);
+      assert.ok(Math.abs(row.q.reduce((a,b)=>a+b,0)-1)<1e-9);
+      assert.ok(Number.isFinite(row.expectedSetting));
+    }
   }finally{f.cleanup()}
 });
