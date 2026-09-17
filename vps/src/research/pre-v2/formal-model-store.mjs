@@ -1,7 +1,7 @@
 import {canonicalJson,hashCanonical} from '../../canonical-json.mjs';
 import {fingerprintModel} from '../model-search.mjs';
 
-function requireDb(db){if(!db||typeof db.prepare!=='function')throw new TypeError('database handle is required');return db}
+function requireDb(db){if(!db||typeof db.prepare!=='function'||typeof db.exec!=='function')throw new TypeError('database handle is required');return db}
 function requireText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
 function requireTrialNumber(value){const number=Number(value);if(!Number.isInteger(number)||number<1)throw new TypeError('trialNumber must be a positive integer');return number}
 function requireIso(value){const text=requireText(value,'nowIso');if(!Number.isFinite(Date.parse(text)))throw new TypeError('nowIso must be an ISO timestamp');return text}
@@ -24,6 +24,26 @@ function rowToSnapshot(row){
     storeId:row.store_id,lineageId:row.lineage_id,trialNumber:Number(row.trial_number),role:row.role,
     modelFingerprint:row.model_fingerprint,model:Object.freeze(JSON.parse(row.model_json)),modelHash:row.model_hash,createdAt:row.created_at,
   });
+}
+
+export function migrateFormalModelStore(db){
+  requireDb(db).exec(`
+    CREATE TABLE IF NOT EXISTS pre_v2_formal_models (
+      store_id TEXT NOT NULL,
+      lineage_id TEXT NOT NULL,
+      trial_number INTEGER NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('champion','challenger')),
+      model_fingerprint TEXT NOT NULL,
+      model_json TEXT NOT NULL,
+      model_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(store_id,lineage_id,trial_number,role),
+      FOREIGN KEY(store_id,lineage_id,trial_number)
+        REFERENCES pre_v2_formal_trials(store_id,lineage_id,trial_number) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS pre_v2_formal_models_store_trial_idx
+      ON pre_v2_formal_models(store_id,lineage_id,trial_number,role);
+  `);
 }
 
 export function loadFormalModelSnapshot(db,{storeId,lineageId,trialNumber,role}={}){
