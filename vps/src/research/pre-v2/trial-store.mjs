@@ -171,6 +171,25 @@ export function migratePreV2TrialStore(db){
     CREATE INDEX IF NOT EXISTS pre_v2_formal_trials_store_status_idx
       ON pre_v2_formal_trials(store_id,status,lineage_id,trial_number DESC);
 
+    CREATE TABLE IF NOT EXISTS pre_v2_formal_predictions (
+      store_id TEXT NOT NULL,
+      lineage_id TEXT NOT NULL,
+      trial_number INTEGER NOT NULL,
+      target_date TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('champion','challenger')),
+      model_fingerprint TEXT NOT NULL,
+      source_frontier_date TEXT NOT NULL,
+      machine_set_hash TEXT NOT NULL,
+      rankings_json TEXT NOT NULL,
+      prediction_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(store_id,lineage_id,trial_number,target_date,role),
+      FOREIGN KEY(store_id,lineage_id,trial_number)
+        REFERENCES pre_v2_formal_trials(store_id,lineage_id,trial_number) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS pre_v2_formal_predictions_store_date_idx
+      ON pre_v2_formal_predictions(store_id,target_date,lineage_id,trial_number,role);
+
     CREATE TABLE IF NOT EXISTS pre_v2_formal_trial_days (
       store_id TEXT NOT NULL,
       lineage_id TEXT NOT NULL,
