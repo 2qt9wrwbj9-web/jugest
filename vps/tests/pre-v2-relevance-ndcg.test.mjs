@@ -88,3 +88,10 @@ test('paired delta is challenger minus champion on the exact same truth map', ()
   assert.ok(result.delta > 0);
   assert.equal(result.delta, result.challenger.score - result.champion.score);
 });
+
+test('formal paired NDCG fails closed when truth does not match the frozen ranked machine set',()=>{
+  const extraTruth=new Map([['a',3],['b',2],['c',1],['x',4]]);
+  const missingTruth=new Map([['a',3],['b',2]]);
+  assert.throws(()=>pairedNdcgDelta(['a','b','c'],['c','b','a'],extraTruth,3),/exact same machine set/i);
+  assert.throws(()=>pairedNdcgDelta(['a','b','c'],['c','b','a'],missingTruth,3),/exact same machine set/i);
+});
