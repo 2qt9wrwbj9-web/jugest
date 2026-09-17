@@ -45,6 +45,13 @@ function normalizeDay(day){
   return{targetDate,top10Delta,top5Delta,top10Informative,top5Informative};
 }
 
+function normalizeOutcomeRows(outcomeRows){
+  if(outcomeRows===undefined||outcomeRows===null)return null;
+  if(!Array.isArray(outcomeRows)||!outcomeRows.length)throw new TypeError('outcomeRows must be a non-empty array when supplied');
+  const judgedRowsJson=canonicalJson(outcomeRows);
+  return{judgedRowsJson,outcomeHash:hashCanonical(outcomeRows)};
+}
+
 function requireTrialShape(trial){
   if(!trial||typeof trial!=='object'||Array.isArray(trial))throw new TypeError('trial must be an object');
   for(const [field,label] of [
@@ -190,6 +197,21 @@ export function migratePreV2TrialStore(db){
     CREATE INDEX IF NOT EXISTS pre_v2_formal_predictions_store_date_idx
       ON pre_v2_formal_predictions(store_id,target_date,lineage_id,trial_number,role);
 
+    CREATE TABLE IF NOT EXISTS pre_v2_formal_outcomes (
+      store_id TEXT NOT NULL,
+      lineage_id TEXT NOT NULL,
+      trial_number INTEGER NOT NULL,
+      target_date TEXT NOT NULL,
+      judged_rows_json TEXT NOT NULL,
+      outcome_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(store_id,lineage_id,trial_number,target_date),
+      FOREIGN KEY(store_id,lineage_id,trial_number)
+        REFERENCES pre_v2_formal_trials(store_id,lineage_id,trial_number) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS pre_v2_formal_outcomes_store_date_idx
+      ON pre_v2_formal_outcomes(store_id,target_date,lineage_id,trial_number);
+
     CREATE TABLE IF NOT EXISTS pre_v2_formal_trial_days (
       store_id TEXT NOT NULL,
       lineage_id TEXT NOT NULL,
@@ -279,10 +301,11 @@ export function saveTrialState(db,{trial,expectedStateHash,nowIso}={}){
   return updateTrialRow(db,{trial,expectedStateHash:expected,nowIso:now});
 }
 
-export function appendTrialDay(db,{trial,day,nowIso}={}){
+export function appendTrialDay(db,{trial,day,outcomeRows,nowIso}={}){
   requireDb(db);
   requireTrialShape(trial);
   const normalizedDay=normalizeDay(day);
+  const outcome=normalizeOutcomeRows(outcomeRows);
   const now=requireIsoTimestamp(nowIso);
   const key=trialKey(trial);
   if(trial.lastTargetDate!==normalizedDay.targetDate)throw new Error('formal trial transition conflict: target date does not match resulting state');
@@ -301,6 +324,13 @@ export function appendTrialDay(db,{trial,day,nowIso}={}){
         &&Number(duplicate.top5_informative)===(normalizedDay.top5Informative?1:0)
         &&duplicate.state_hash_after===stateHashAfter;
       if(!exact)throw new Error(`formal trial day replay conflict: ${normalizedDay.targetDate}`);
+      if(outcome){
+        const storedOutcome=db.prepare(`
+          SELECT outcome_hash FROM pre_v2_formal_outcomes
+           WHERE store_id=? AND lineage_id=? AND trial_number=? AND target_date=?
+        `).get(key.storeId,key.lineageId,key.trialNumber,normalizedDay.targetDate);
+        if(!storedOutcome||storedOutcome.outcome_hash!==outcome.outcomeHash)throw new Error(`formal outcome conflict: ${normalizedDay.targetDate}`);
+      }
       db.exec('COMMIT;');
       return{inserted:false,row:duplicate};
     }
@@ -316,6 +346,24 @@ export function appendTrialDay(db,{trial,day,nowIso}={}){
       throw new Error(`formal trial transition conflict: ${error?.message??error}`);
     }
     if(hashCanonical(recomputed)!==stateHashAfter)throw new Error('formal trial transition conflict: supplied resulting state is not the exact next state');
+
+    if(outcome){
+      const existingOutcome=db.prepare(`
+        SELECT outcome_hash FROM pre_v2_formal_outcomes
+         WHERE store_id=? AND lineage_id=? AND trial_number=? AND target_date=?
+      `).get(key.storeId,key.lineageId,key.trialNumber,normalizedDay.targetDate);
+      if(existingOutcome&&existingOutcome.outcome_hash!==outcome.outcomeHash)throw new Error(`formal outcome conflict: ${normalizedDay.targetDate}`);
+      if(!existingOutcome){
+        db.prepare(`
+          INSERT INTO pre_v2_formal_outcomes(
+            store_id,lineage_id,trial_number,target_date,judged_rows_json,outcome_hash,created_at
+          ) VALUES(?,?,?,?,?,?,?)
+        `).run(
+          key.storeId,key.lineageId,key.trialNumber,normalizedDay.targetDate,
+          outcome.judgedRowsJson,outcome.outcomeHash,now,
+        );
+      }
+    }
 
     const evidence=evidenceForTrial(trial);
     const evidenceJson=canonicalJson(evidence);
