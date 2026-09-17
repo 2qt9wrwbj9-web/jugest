@@ -36,7 +36,7 @@ function setup({withChallenger=true}={}){
   return{db,trial,judgedRows};
 }
 
-test('formal target scoring turns protected q into paired Top10/Top5 evidence and appends exactly one day',()=>{
+test('formal target scoring turns protected q into paired Top10/Top5 evidence and atomically freezes the exact outcome',()=>{
   const {db,judgedRows}=setup();
   try{
     const scored=scoreFormalTargetDay(db,{
@@ -49,10 +49,14 @@ test('formal target scoring turns protected q into paired Top10/Top5 evidence an
     assert.equal(scored.trial.trial.daysProcessed,1);
     assert.equal(scored.trial.trial.lastTargetDate,'2026-09-18');
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trial_days').get().n,1);
+    const outcome=db.prepare('SELECT * FROM pre_v2_formal_outcomes WHERE store_id=? AND lineage_id=? AND trial_number=? AND target_date=?').get('s1','lineage-a',1,'2026-09-18');
+    assert.ok(outcome);
+    assert.deepEqual(JSON.parse(outcome.judged_rows_json),judgedRows);
+    assert.equal(outcome.outcome_hash,hashCanonical(judgedRows));
   }finally{db.close()}
 });
 
-test('formal target scoring is idempotent for an already appended target date',()=>{
+test('formal target scoring is idempotent only for the exact same frozen outcome',()=>{
   const {db,judgedRows}=setup();
   try{
     const input={storeId:'s1',lineageId:'lineage-a',trialNumber:1,targetDate:'2026-09-18',judgedRows,nowIso:'2026-09-18T23:00:00.000Z'};
@@ -62,6 +66,15 @@ test('formal target scoring is idempotent for an already appended target date',(
     assert.equal(second.inserted,false);
     assert.equal(loadTrialRecord(db,{storeId:'s1',lineageId:'lineage-a',trialNumber:1}).trial.daysProcessed,1);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trial_days').get().n,1);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_outcomes').get().n,1);
+
+    const corrected=structuredClone(judgedRows);
+    corrected[0].q=[1,0,0,0,0,0];
+    corrected[0].expectedSetting=1;
+    assert.throws(()=>scoreFormalTargetDay(db,{...input,judgedRows:corrected,nowIso:'2026-09-18T23:20:00.000Z'}),/outcome.*conflict|conflict.*outcome/i);
+    assert.equal(loadTrialRecord(db,{storeId:'s1',lineageId:'lineage-a',trialNumber:1}).trial.daysProcessed,1);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trial_days').get().n,1);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_outcomes').get().n,1);
   }finally{db.close()}
 });
 
@@ -73,6 +86,7 @@ test('formal target scoring fails closed before evidence mutation when a frozen 
       nowIso:'2026-09-18T23:00:00.000Z',
     }),/challenger.*prediction|prediction.*challenger/i);
     assert.equal(missingPrediction.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trial_days').get().n,0);
+    assert.equal(missingPrediction.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_outcomes').get().n,0);
   }finally{missingPrediction.db.close()}
 
   const missingTruth=setup();
@@ -82,5 +96,6 @@ test('formal target scoring fails closed before evidence mutation when a frozen 
       nowIso:'2026-09-18T23:00:00.000Z',
     }),/exact.*machine set|missing/i);
     assert.equal(missingTruth.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trial_days').get().n,0);
+    assert.equal(missingTruth.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_outcomes').get().n,0);
   }finally{missingTruth.db.close()}
 });
