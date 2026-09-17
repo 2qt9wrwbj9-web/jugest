@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {baselineModel,fingerprintModel} from '../src/research/model-search.mjs';
-import {activateStoreModel,registerResearchModel} from '../src/analysis/research-cycle.mjs';
+import {activateStoreModel} from '../src/research/store-read-output.mjs';
 import {migratePreV2TrialStore} from '../src/research/pre-v2/trial-store.mjs';
 import {startFormalLiveTrial} from '../src/research/pre-v2/formal-start.mjs';
 
@@ -26,13 +26,21 @@ function candidate(tableNo='103'){
   return Object.freeze({...model,fingerprint:fingerprintModel(model)});
 }
 
+function registerResearchModel(db,{storeId,model,status='research_champion',validationScore=null,nowIso}){
+  db.prepare(`INSERT INTO research_model_registry(
+    store_id,fingerprint,model_json,parent_fingerprint,generation,status,validation_score,holdout_score,score_json,created_at,updated_at
+  ) VALUES(?,?,?,NULL,1,?,?,NULL,'{}',?,?)`).run(
+    storeId,model.fingerprint,JSON.stringify(model),status,validationScore,nowIso,nowIso
+  );
+}
+
 function setup(){
   const db=openDatabase(':memory:');
   migrate(db);migratePreV2TrialStore(db);
   const now='2026-09-10T12:00:00.000Z';
   db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('s1','正式試験店','{}',now,now);
   const champion=baselineModel();
-  activateStoreModel(db,{storeId:'s1',model:champion,featureVersion:'store-feature-v1',frontierDate:'2026-09-10',holdoutScore:1,days:days(),nowIso:now});
+  activateStoreModel(db,{storeId:'s1',fingerprint:champion.fingerprint,model:champion,featureVersion:'store-feature-v1',frontierDate:'2026-09-10',holdoutScore:1,days:days(),nowIso:now});
   const challenger=candidate('103');
   registerResearchModel(db,{storeId:'s1',model:challenger,status:'research_champion',validationScore:2,nowIso:now});
   return{db,champion,challenger,days:days(),now};
@@ -79,6 +87,7 @@ test('a different Challenger cannot silently replace a running formal trial',()=
   try{
     startFormalLiveTrial(f.db,{storeId:'s1',lineageId:'pre-v2-live',challengerFingerprint:f.challenger.fingerprint,featureVersion:'store-feature-v1',days:f.days,frontierDate:'2026-09-10',nowIso:f.now});
     const other=candidate('102');
+    f.db.prepare("UPDATE research_model_registry SET status='historical' WHERE store_id=? AND status='research_champion'").run('s1');
     registerResearchModel(f.db,{storeId:'s1',model:other,status:'research_champion',validationScore:3,nowIso:'2026-09-10T12:01:00.000Z'});
     assert.throws(()=>startFormalLiveTrial(f.db,{
       storeId:'s1',lineageId:'pre-v2-live',challengerFingerprint:other.fingerprint,
