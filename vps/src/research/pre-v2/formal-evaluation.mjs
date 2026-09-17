@@ -1,3 +1,4 @@
+import {hashCanonical} from '../../canonical-json.mjs';
 import {pairedNdcgDelta} from './ndcg.mjs';
 import {buildRelevanceTruth} from './outcome.mjs';
 import {loadFormalPrediction} from './formal-prediction-store.mjs';
@@ -34,6 +35,28 @@ function existingDayRow(db,{storeId,lineageId,trialNumber,targetDate}){
   `).get(storeId,lineageId,trialNumber,targetDate)??null;
 }
 
+function existingOutcomeRow(db,{storeId,lineageId,trialNumber,targetDate}){
+  return db.prepare(`
+    SELECT * FROM pre_v2_formal_outcomes
+     WHERE store_id=? AND lineage_id=? AND trial_number=? AND target_date=?
+  `).get(storeId,lineageId,trialNumber,targetDate)??null;
+}
+
+function normalizeJudgedRows(judgedRows){
+  if(!Array.isArray(judgedRows))throw new TypeError('judgedRows must be an array');
+  return judgedRows.map((row,index)=>{
+    if(!row||typeof row!=='object'||Array.isArray(row))throw new TypeError(`judgedRows[${index}] must be an object`);
+    const tableNo=requireText(row.tableNo,`judgedRows[${index}].tableNo`);
+    const machine=requireText(row.machine,`judgedRows[${index}].machine`);
+    if(!Array.isArray(row.q))throw new TypeError(`judgedRows[${index}].q must be an array`);
+    const q=row.q.map(Number);
+    if(q.some(value=>!Number.isFinite(value)))throw new TypeError(`judgedRows[${index}].q must contain finite values`);
+    const expectedSetting=Number(row.expectedSetting);
+    if(!Number.isFinite(expectedSetting))throw new TypeError(`judgedRows[${index}].expectedSetting must be finite`);
+    return{tableNo,machine,q,expectedSetting};
+  }).sort((a,b)=>a.tableNo.localeCompare(b.tableNo,undefined,{numeric:true}));
+}
+
 function evidenceView(row){
   if(!row)return null;
   return{
@@ -55,6 +78,8 @@ export function scoreFormalTargetDay(db,{
   const lineage=requireText(lineageId,'lineageId');
   const number=requireTrialNumber(trialNumber);
   const date=requireDate(targetDate);
+  const frozenOutcomeRows=normalizeJudgedRows(judgedRows);
+  const outcomeHash=hashCanonical(frozenOutcomeRows);
 
   const key={storeId:store,lineageId:lineage,trialNumber:number};
   const current=loadTrialRecord(db,key);
@@ -62,6 +87,8 @@ export function scoreFormalTargetDay(db,{
 
   const duplicate=existingDayRow(db,{...key,targetDate:date});
   if(duplicate){
+    const storedOutcome=existingOutcomeRow(db,{...key,targetDate:date});
+    if(!storedOutcome||storedOutcome.outcome_hash!==outcomeHash)throw new Error(`formal outcome conflict: ${date}`);
     const evidence=evidenceView(duplicate);
     return Object.freeze({
       inserted:false,
@@ -79,7 +106,7 @@ export function scoreFormalTargetDay(db,{
 
   const championKeys=championPrediction.rankings.map(row=>row.machineKey);
   const challengerKeys=challengerPrediction.rankings.map(row=>row.machineKey);
-  const truth=buildRelevanceTruth({judgedRows,expectedMachineKeys:championKeys});
+  const truth=buildRelevanceTruth({judgedRows:frozenOutcomeRows,expectedMachineKeys:championKeys});
 
   const top10=pairedNdcgDelta(challengerKeys,championKeys,truth,10);
   const top5=pairedNdcgDelta(challengerKeys,championKeys,truth,5);
@@ -92,7 +119,7 @@ export function scoreFormalTargetDay(db,{
   };
 
   const nextTrial=applyFormalDay(current.trial,day);
-  const appended=appendTrialDay(db,{trial:nextTrial,day,nowIso});
+  const appended=appendTrialDay(db,{trial:nextTrial,day,outcomeRows:frozenOutcomeRows,nowIso});
   const savedTrial=appended.trial??loadTrialRecord(db,key);
 
   return Object.freeze({
@@ -105,4 +132,4 @@ export function scoreFormalTargetDay(db,{
   });
 }
 
-export const __test={existingDayRow,evidenceView};
+export const __test={existingDayRow,existingOutcomeRow,normalizeJudgedRows,evidenceView};
