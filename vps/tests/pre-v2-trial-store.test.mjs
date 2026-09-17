@@ -8,9 +8,15 @@ import {
   appendTrialDay,
   createTrialRecord,
   loadTrialRecord,
+  migratePreV2TrialStore,
   nextTrialNumber,
   saveTrialState,
 } from '../src/research/pre-v2/trial-store.mjs';
+
+function migrateDb(db){
+  migrate(db);
+  migratePreV2TrialStore(db);
+}
 
 function seedStore(db){
   const now='2026-09-17T00:00:00.000Z';
@@ -32,10 +38,10 @@ function newTrial(db,overrides={}){
   });
 }
 
-test('migration creates PRE v2 formal trial and append-only day tables',()=>{
+test('PRE v2 persistence migration creates formal trial and append-only day tables without changing production migration',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);
+    migrateDb(db);
     const trial=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='pre_v2_formal_trials'").get();
     const day=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='pre_v2_formal_trial_days'").get();
     assert.equal(trial?.name,'pre_v2_formal_trials');
@@ -46,7 +52,7 @@ test('migration creates PRE v2 formal trial and append-only day tables',()=>{
 test('creating a formal trial consumes its lineage trial number and round-trips exact state',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     assert.equal(nextTrialNumber(db,{storeId:'store-a',lineageId:'lineage-a'}),1);
     const trial=newTrial(db);
     const created=createTrialRecord(db,{trial,nowIso:'2026-09-17T01:00:00.000Z'});
@@ -66,7 +72,7 @@ test('creating a formal trial consumes its lineage trial number and round-trips 
 test('same trial identity with different frozen metadata fails closed',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     const trial=newTrial(db);
     createTrialRecord(db,{trial,nowIso:'2026-09-17T01:00:00.000Z'});
     const conflict={...trial,challengerFingerprint:'different-challenger'};
@@ -77,7 +83,7 @@ test('same trial identity with different frozen metadata fails closed',()=>{
 test('appendTrialDay atomically appends evidence and advances persisted current state',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     const before=newTrial(db);
     createTrialRecord(db,{trial:before,nowIso:'2026-09-17T01:00:00.000Z'});
     const day={targetDate:'2026-10-01',top10Delta:0.2,top5Delta:0.1,top10Informative:true,top5Informative:true};
@@ -97,7 +103,7 @@ test('appendTrialDay atomically appends evidence and advances persisted current 
 test('identical append retry is idempotent while conflicting replay fails closed',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     const before=newTrial(db);
     createTrialRecord(db,{trial:before,nowIso:'2026-09-17T01:00:00.000Z'});
     const day={targetDate:'2026-10-01',top10Delta:0.2,top5Delta:0.1};
@@ -112,7 +118,7 @@ test('identical append retry is idempotent while conflicting replay fails closed
 test('append refuses skipped/stale state transitions instead of silently losing evidence',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     const before=newTrial(db);
     createTrialRecord(db,{trial:before,nowIso:'2026-09-17T01:00:00.000Z'});
     const day1={targetDate:'2026-10-01',top10Delta:0.1,top5Delta:0};
@@ -126,7 +132,7 @@ test('append refuses skipped/stale state transitions instead of silently losing 
 test('saveTrialState uses optimistic state hash and rejects stale writers',()=>{
   const db=openDatabase(':memory:');
   try{
-    migrate(db);seedStore(db);
+    migrateDb(db);seedStore(db);
     const trial=newTrial(db);
     const created=createTrialRecord(db,{trial,nowIso:'2026-09-17T01:00:00.000Z'});
     const saved=saveTrialState(db,{trial,expectedStateHash:created.row.stateHash,nowIso:'2026-09-17T01:05:00.000Z'});
