@@ -1,0 +1,45 @@
+name: PIA ranking request map
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-ranking-map.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Map ranking request string slots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-ranking-map
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          readelf -rW "$LIB" > /tmp/rel.txt
+          {
+            echo '=== GetRankingHome request field slots ==='
+            for slot in 2c6a8c0 2c6aad8 2c6a950; do
+              grep -i "^0*${slot}[[:space:]]" /tmp/rel.txt || true
+            done
+            echo '=== Ranking configuration and route slots ==='
+            for slot in 2c6a628 2c6a640 2c6a648 2c6a650 2c6a658 2c6a660 2c6a668 2c6a670 2c6a678 2c6a680 2c6a688 2c6a690 2c6a698 2c6a6a0 2c6a6a8 2c6a6b0 2c6a6b8 2c6a6c0 2c6a6c8 2c6a6d0 2c6a6d8 2c6a6e0 2c6a6e8 2c6a6f0 2c6a6f8; do
+              grep -i "^0*${slot}[[:space:]]" /tmp/rel.txt || true
+            done
+          } | tee pia-ranking-map/map.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-ranking-map
+          path: pia-ranking-map
+          retention-days: 7
