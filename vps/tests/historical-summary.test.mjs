@@ -35,6 +35,22 @@ test('historical summary aggregates only scored walk-forward rows and keeps excl
   db.close();
 });
 
+test('historical summary aggregates the full run while limiting returned day rows',()=>{
+  const db=openDatabase(':memory:');migrate(db);
+  db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('long','長期店','{}',NOW,NOW);
+  const days=Array.from({length:107},(_,i)=>({date:date(i),machines:[{tableNo:'101',diff:i*10}]}));
+  const run=ensureHistoricalComparisonRun(db,{storeId:'long',days,nowIso:NOW});
+  for(let i=7;i<107;i++)persistHistoricalComparisonDay(db,{runId:run.id,storeId:'long',targetDate:date(i),preMetrics:metric(110),currentMetrics:metric(100),winner:'pre_research',outcomeInputHash:`o${i}`,preState:{fingerprint:`fp${i}`},scorerVersion:SCORER_VERSION,createdAt:NOW});
+  const summary=buildHistoricalComparisonSummary(db,{storeId:'long',limit:90});
+  assert.equal(summary.rows.length,90);
+  assert.equal(summary.scored,100);
+  assert.equal(summary.newWins,100);
+  assert.equal(summary.newEngine.days,100);
+  assert.equal(summary.currentEngine.days,100);
+  assert.equal(summary.recent30.days,30);
+  db.close();
+});
+
 test('historical summary never falls back to LIVE rows and returns null with no historical run',()=>{
   const db=openDatabase(':memory:');migrate(db);
   db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('empty','空店','{}',NOW,NOW);
