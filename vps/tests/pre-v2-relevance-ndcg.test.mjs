@@ -42,8 +42,8 @@ test('New King V uses its dedicated five-stage relevance scale', () => {
 });
 
 test('expected relevance uses the full posterior without rounding an expected setting', () => {
-  assert.equal(expectedRelevance({1: 0.5, 6: 0.5}, 'juggler'), 11.27125 / 2);
-  assert.equal(expectedRelevance({1: 0.25, 2: 0.25, 3: 0.25, V: 0.25}, 'new_king_v'), 4.25);
+  assert.ok(Math.abs(expectedRelevance({1: 0.5, 6: 0.5}, 'juggler') - 11.27125 / 2) < 1e-12);
+  assert.ok(Math.abs(expectedRelevance({1: 0.25, 2: 0.25, 3: 0.25, V: 0.25}, 'new_king_v') - 4.25) < 1e-12);
 });
 
 test('posterior probabilities must be finite, nonnegative, and sum to one within tolerance', () => {
