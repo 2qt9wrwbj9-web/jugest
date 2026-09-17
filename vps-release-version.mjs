@@ -1,5 +1,7 @@
 export const JUGEST_RELEASE_VERSION='6.0.0';
 
+const observedReleaseTargets=new WeakSet();
+
 function collectOpenRoots(root){
   const roots=[],stack=[root],seen=new Set();
   while(stack.length){
@@ -22,13 +24,25 @@ function applyReleaseVersion(){
   }
 }
 
-if(typeof document!=='undefined'){
-  applyReleaseVersion();
-  const root=document.documentElement;
-  if(root&&typeof MutationObserver!=='undefined'){
-    new MutationObserver(applyReleaseVersion).observe(root,{childList:true,subtree:true});
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyReleaseVersion,{once:true});
+function installReleaseVersionObservers(Observer=MutationObserver,observedTargets=observedReleaseTargets){
+  const sync=()=>{
+    applyReleaseVersion();
+    for(const root of collectOpenRoots(document)){
+      const target=root===document?document.documentElement:root;
+      if(!target||observedTargets.has(target))continue;
+      observedTargets.add(target);
+      new Observer(sync).observe(target,{childList:true,subtree:true});
+    }
+  };
+  sync();
+  return sync;
 }
 
-export const __test={applyReleaseVersion,collectOpenRoots};
+if(typeof document!=='undefined'){
+  const sync=typeof MutationObserver!=='undefined'
+    ?installReleaseVersionObservers(MutationObserver,observedReleaseTargets)
+    :applyReleaseVersion;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
+}
+
+export const __test={applyReleaseVersion,collectOpenRoots,installReleaseVersionObservers};
