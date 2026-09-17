@@ -97,3 +97,20 @@ test('research cycle persists a champion and schedules BACKTEST -> MODEL_SEARCH 
   assert.equal(active.fingerprint,fingerprintModel(nextModel));
   db.close();
 });
+
+test('walk-forward training treats missing diff as missing, never as zero outcome or zero history',async()=>{
+  const {__test}=await import('../src/research/backtest.mjs');
+  const days=[
+    {date:'2026-01-01',machines:[{tableNo:'101',sourceMachineName:'A',games:5000,bb:20,rb:18,diff:null}]},
+    {date:'2026-01-02',machines:[{tableNo:'101',sourceMachineName:'A',games:5100,bb:21,rb:19,diff:300}]},
+    {date:'2026-01-03',machines:[{tableNo:'101',sourceMachineName:'A',games:5200,bb:22,rb:20,diff:null}]},
+    {date:'2026-01-04',machines:[{tableNo:'101',sourceMachineName:'A',games:5300,bb:23,rb:21,diff:100}]},
+    {date:'2026-01-05',machines:[{tableNo:'101',sourceMachineName:'A',games:5400,bb:24,rb:22,diff:null}]}
+  ];
+  const dataset=buildWalkForwardDataset({storeId:'s-null',days,minHistoryDays:1});
+  assert.deepEqual([...new Set(dataset.samples.map(row=>row.targetDate))],['2026-01-02','2026-01-04']);
+  const normalized=__test.normalizeDays(days);
+  const feature=__test.historicalMachineFeatures(normalized.slice(0,3),normalized[3].machines[0]);
+  assert.equal(feature.hist_3_diff_mean,300);
+  assert.equal(feature.hist_3_positive_diff_rate,1);
+});

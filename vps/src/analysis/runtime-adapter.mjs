@@ -63,7 +63,7 @@ function validateImportArgs({rootDir,shop,sourceStoreId,days}){
 
 async function bootImportedRuntime({rootDir,shop,sourceStoreId,days}){
   const {name,storeId}=validateImportArgs({rootDir,shop,sourceStoreId,days});
-  const {bridge}=await bootRuntime(rootDir);
+  const {ctx,bridge}=await bootRuntime(rootDir);
   const previewExternalJson=mustFunction(bridge.previewExternalJson,'previewExternalJson');
   const saveExternalJsonPreview=mustFunction(bridge.saveExternalJsonPreview,'saveExternalJsonPreview');
   const payload={
@@ -73,7 +73,7 @@ async function bootImportedRuntime({rootDir,shop,sourceStoreId,days}){
   const checked=await previewExternalJson(JSON.stringify(payload));
   if(!checked?.preview)throw new Error('JUGEST runtime rejected canonical store payload');
   await saveExternalJsonPreview(checked.preview);
-  return {bridge,name,storeId};
+  return {ctx,bridge,name,storeId};
 }
 
 export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,options={}}={}){
@@ -90,18 +90,17 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   if(!history.length)throw new TypeError('history before targetDate is required');
   const sourceFrontierDate=String(history.at(-1)?.date||'');
-  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
-  const getTodayPlan=mustFunction(bridge.getTodayPlan,'getTodayPlan');
-  const result=await getTodayPlan(name,target,{});
-  if(!result||result.error)throw new Error(result?.error||'JUGEST current store plan returned no result');
-  const candidates=Array.isArray(result.candidates)?result.candidates:[];
-  const rankings=candidates.map((row,index)=>{
+  const {ctx,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
+  const analyzeStore=mustFunction(ctx.V5_TEST?.analyzeStore,'V5_TEST.analyzeStore');
+  const result=await analyzeStore(name,target);
+  if(!result?.prediction||!Array.isArray(result.prediction.rows))throw new Error('JUGEST current store ranking returned no result');
+  const rankings=Array.from(result.prediction.rows,(row,index)=>{
     const tableNo=String(row?.tableNo??'').trim();
     if(!tableNo)return null;
     const rank=index+1,aimScore=Number(row?.aimScore);
     return Object.freeze({machineKey:tableNo,tableNo,machineName:String(row?.machineName||row?.machine||'unknown'),rank,score:Number.isFinite(aimScore)?aimScore:-rank});
   }).filter(Boolean);
-  return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:result.available!==false&&rankings.length>0,rankings:Object.freeze(rankings)});
+  return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
 export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){

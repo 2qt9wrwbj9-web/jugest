@@ -1,4 +1,4 @@
-export const JUGEST_RELEASE_VERSION='6.0.1';
+export const JUGEST_RELEASE_VERSION='6.0.2';
 
 const observedReleaseTargets=new WeakSet();
 

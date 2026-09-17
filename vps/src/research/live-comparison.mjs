@@ -1,7 +1,7 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 
-export const SCORER_VERSION='pre-shadow-scorer-v1';
-export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v1';
+export const SCORER_VERSION='pre-shadow-scorer-v2';
+export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v2';
 export const WIN_EPSILON=1e-6;
 
 const ENGINES=new Set(['pre_research','current_shadow']);
@@ -69,7 +69,9 @@ export function listLivePredictions(db,{storeId,targetDate=null,engine=null}={})
 
 function normalizeOutcome(row,index){
   const machineKey=requiredText(row?.machineKey??row?.machine_key??row?.tableNo??row?.table_no??index,'outcomeRows.machineKey');
-  const outcomeScore=Number(row?.outcomeScore??row?.outcome_score??row?.diff);
+  const raw=row?.outcomeScore??row?.outcome_score??row?.diff;
+  if(raw===null||raw===undefined||raw==='')return null;
+  const outcomeScore=Number(raw);
   return Number.isFinite(outcomeScore)?Object.freeze({machineKey,outcomeScore}):null;
 }
 function topOverlap(predicted,actual,k){

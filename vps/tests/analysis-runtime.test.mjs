@@ -72,7 +72,7 @@ test('headless adapter runs the existing JUGEST store-analysis bridge over VPS c
   }finally{f.cleanup()}
 });
 
-test('headless shadow plan uses the real current Today Plan path and excludes target-day data',async()=>{
+test('headless shadow plan uses the real current full ranking path and excludes target-day data',async()=>{
   const f=fixture();
   try{
     const base=Date.UTC(2026,8,1);
@@ -121,4 +121,19 @@ test('headless day judgement exposes the protected JUGEST posterior without reim
       assert.ok(Number.isFinite(row.expectedSetting));
     }
   }finally{f.cleanup()}
+});
+
+test('headless current shadow exposes the full machine ranking, not only Today Plan candidates',async()=>{
+  const days=Array.from({length:50},(_,dayIndex)=>({
+    date:isoDay(new Date(Date.UTC(2026,0,1)+dayIndex*86400000)),
+    machines:Array.from({length:12},(_,machineIndex)=>({
+      machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:String(100+machineIndex),
+      games:5000+dayIndex*7+machineIndex,bb:18+((dayIndex+machineIndex)%7),rb:16+((dayIndex*2+machineIndex)%6),
+      diff:((dayIndex+machineIndex)%5===0?1200:-300)+machineIndex*11
+    }))
+  }));
+  const targetDate=days.at(-1).date;
+  const result=await runExistingStorePlan({rootDir:REPO_ROOT,shop:'12台テスト店',sourceStoreId:'store-12',days,targetDate});
+  assert.equal(result.rankings.length,12);
+  assert.deepEqual(result.rankings.map(row=>row.rank),Array.from({length:12},(_,i)=>i+1));
 });

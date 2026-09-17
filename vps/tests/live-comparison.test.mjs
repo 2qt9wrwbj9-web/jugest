@@ -108,3 +108,17 @@ test('live comparison scores both engines against one immutable outcome hash and
     assert.ok(summary.live.newEngine.quality>summary.live.currentEngine.quality);
   }finally{db.close()}
 });
+
+test('scorer excludes missing diff outcomes instead of converting them to zero',async()=>{
+  const {scorePredictionRows}=await import('../src/research/live-comparison.mjs');
+  const metrics=scorePredictionRows({predictionRows:[
+    {machineKey:'101',tableNo:'101',machineName:'A',rank:1,score:2},
+    {machineKey:'102',tableNo:'102',machineName:'A',rank:2,score:1}
+  ],outcomeRows:[
+    {machineKey:'101',diff:null},
+    {machineKey:'102',diff:500}
+  ]});
+  assert.equal(metrics.machineCount,1);
+  assert.equal(metrics.coverage,1);
+  assert.equal(metrics.top1.overlap,1);
+});

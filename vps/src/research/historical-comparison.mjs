@@ -3,7 +3,7 @@ import {runExistingStorePlan} from '../analysis/runtime-adapter.mjs';
 import {initialHistoricalPreState,evolveHistoricalPreState,predictHistoricalPre} from './historical-pre-simulator.mjs';
 import {SCORER_VERSION,OUTCOME_PROXY_VERSION,WIN_EPSILON,scorePredictionRows} from './live-comparison.mjs';
 
-export const HISTORICAL_REPLAY_VERSION='historical-shadow-v2';
+export const HISTORICAL_REPLAY_VERSION='historical-shadow-v3';
 const WARMUP_DAYS=7;
 
 function requiredText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
@@ -106,7 +106,7 @@ export function advanceHistoricalCursor(db,{runId,nextTargetDate=null,processedD
 
 export function markHistoricalRunComplete(db,{runId,nowIso}={}){if(!db?.prepare)throw new TypeError('db is required');const rid=Number(runId),at=validIso(nowIso);if(!Number.isInteger(rid)||rid<1)throw new TypeError('runId must be a positive integer');db.prepare("UPDATE historical_comparison_runs SET state='complete',next_target_date=NULL,updated_at=?,completed_at=? WHERE id=? AND state<>'stale'").run(at,at,rid);return runFromDb(db.prepare('SELECT * FROM historical_comparison_runs WHERE id=?').get(rid))}
 
-function normalizedOutcomeRows(targetDay){return (targetDay?.machines||[]).map((machine,index)=>({machineKey:tableKey(machine,index),outcomeScore:Number(machine?.diff)})).filter(row=>Number.isFinite(row.outcomeScore)).sort((a,b)=>a.machineKey.localeCompare(b.machineKey))}
+function normalizedOutcomeRows(targetDay){return (targetDay?.machines||[]).flatMap((machine,index)=>{const raw=machine?.diff;if(raw===null||raw===undefined||raw==='')return [];const outcomeScore=Number(raw);return Number.isFinite(outcomeScore)?[{machineKey:tableKey(machine,index),outcomeScore}]:[]}).sort((a,b)=>a.machineKey.localeCompare(b.machineKey))}
 function winnerFromMetrics(pre,current){const delta=Number(pre?.quality||0)-Number(current?.quality||0);if(Math.abs(delta)<=WIN_EPSILON)return 'tie';return delta>0?'pre_research':'current_shadow'}
 
 export async function compareHistoricalTarget({rootDir,storeId,shop,days,targetDate,preState=initialHistoricalPreState()}={}){

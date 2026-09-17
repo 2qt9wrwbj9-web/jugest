@@ -1,10 +1,10 @@
 import {hashCanonical} from '../canonical-json.mjs';
 
-export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v1';
-export const DATASET_VERSION='walk-forward-v1';
+export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v2';
+export const DATASET_VERSION='walk-forward-v2';
 
 function text(value){return String(value??'').trim()}
-function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
+function finite(value){if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null}
 function tableNo(machine,index){return text(machine?.tableNo??machine?.table_no??machine?.machineKey??machine?.machine_key??index)}
 function machineName(machine){return text(machine?.sourceMachineName??machine?.machineName??machine?.machine??machine?.category??'unknown')||'unknown'}
 function lastDigit(value){const match=String(value).match(/(\d)(?!.*\d)/);return match?match[1]:'other'}

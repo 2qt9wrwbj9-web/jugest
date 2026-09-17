@@ -43,6 +43,9 @@ test('both historical engines predict strictly before target and share one outco
   assert.ok(result.currentPrediction?.sourceFrontierDate<targetDate);
   assert.equal(result.excludedReason,null);
   assert.equal(result.preScore.outcomeInputHash,result.currentScore.outcomeInputHash);
+  assert.equal(result.preScore.metrics.coverage,1);
+  assert.equal(result.currentScore.metrics.coverage,1);
+  assert.deepEqual(result.prePrediction.rankings.map(x=>x.machineKey).sort(),result.currentPrediction.rankings.map(x=>x.machineKey).sort());
   assert.ok(['pre_research','current_shadow','tie'].includes(result.winner));
 });
 
@@ -52,4 +55,18 @@ test('seven days is only a warmup floor and does not force an invalid current pr
   assert.ok(early.excludedReason,'the warmup floor alone must not guarantee a scored comparison');
   const mature=await compareHistoricalTarget({rootDir:ROOT,storeId:'store-a',shop:'解析テスト店',days,targetDate:days[55].date,preState:state});
   assert.equal(mature.excludedReason,null,'the fixture should become valid once both engines have enough history');
+});
+
+test('historical outcomes exclude missing diff instead of coercing null to zero',async()=>{
+  const {__test}=await import('../src/research/historical-comparison.mjs');
+  const rows=__test.normalizedOutcomeRows({machines:[
+    {tableNo:'101',diff:null},
+    {tableNo:'102',diff:undefined},
+    {tableNo:'103',diff:0},
+    {tableNo:'104',diff:250}
+  ]});
+  assert.deepEqual(rows,[
+    {machineKey:'103',outcomeScore:0},
+    {machineKey:'104',outcomeScore:250}
+  ]);
 });

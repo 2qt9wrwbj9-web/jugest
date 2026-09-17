@@ -16,8 +16,10 @@ function loadCanonicalOutcome(db,{storeId,targetDate}){
   for(const row of rawRows){
     const payload=safeJson(row.payload_json);if(!payload)continue;
     const machineKey=String(payload.tableNo??payload.table_no??row.machine_key??'').trim();
-    const outcomeScore=Number(payload.diff);
-    if(!machineKey||!Number.isFinite(outcomeScore))continue;
+    const rawDiff=payload.diff;
+    if(!machineKey||rawDiff===null||rawDiff===undefined||rawDiff==='')continue;
+    const outcomeScore=Number(rawDiff);
+    if(!Number.isFinite(outcomeScore))continue;
     outcomeRows.push(Object.freeze({machineKey,outcomeScore}));
   }
   if(!outcomeRows.length)return null;

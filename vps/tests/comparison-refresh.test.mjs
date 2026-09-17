@@ -61,3 +61,17 @@ test('completed canonical target day scores both engines against one immutable o
     assert.equal(listLivePredictions(f.db,{storeId:'store-a',targetDate:'2026-09-14'}).length,2);
   }finally{f.cleanup()}
 });
+
+test('canonical comparison outcome excludes machines whose diff is missing',async()=>{
+  const {__test}=await import('../src/analysis/comparison-refresh.mjs');
+  const f=fixture();
+  try{
+    insertTargetDay(f.db);
+    const row=f.db.prepare("SELECT machine_key,payload_json FROM machine_day_data WHERE store_id='store-a' AND business_date='2026-09-14' ORDER BY machine_key LIMIT 1").get();
+    const payload=JSON.parse(row.payload_json);payload.diff=null;
+    f.db.prepare("UPDATE machine_day_data SET payload_json=? WHERE store_id='store-a' AND business_date='2026-09-14' AND machine_key=?").run(JSON.stringify(payload),row.machine_key);
+    const outcome=__test.loadCanonicalOutcome(f.db,{storeId:'store-a',targetDate:'2026-09-14'});
+    assert.equal(outcome.outcomeRows.length,2);
+    assert.ok(outcome.outcomeRows.every(x=>x.machineKey!=='101'));
+  }finally{f.cleanup()}
+});
