@@ -61,28 +61,32 @@ jobs:
               print(name,hex(add),[hex(x) for x in rel.get(add,[])])
 
             md=Cs(CS_ARCH_ARM64,CS_MODE_LITTLE_ENDIAN); md.detail=True
-            instructions=[]
-            for seg in elf.iter_segments():
-              if seg['p_type']=='PT_LOAD' and int(seg['p_flags'])&1:
-                instructions.extend(md.disasm(seg.data(),int(seg['p_vaddr'])))
-            hits=[]; recent={}
-            for i,ins in enumerate(instructions):
-              for reg in list(recent):
-                page,age=recent[reg]; recent[reg]=(page,age+1)
-                if age+1>8: del recent[reg]
-              ops=ins.operands
-              if ins.mnemonic=='adrp' and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_IMM:
-                recent[ops[0].reg]=(int(ops[1].imm),0)
-              if ins.mnemonic.startswith('ldr') and len(ops)>=2 and ops[1].type==ARM64_OP_MEM:
-                base=ops[1].mem.base
-                if base in recent:
-                  slot=recent[base][0]+int(ops[1].mem.disp)
-                  if slot in slots: hits.append((i,slot,slots[slot]))
             print('\n=== xrefs with following instructions ===')
-            for i,slot,name in hits:
-              print(f'\nHIT {name} slot={slot:#x} at={instructions[i].address:#x}')
-              for ins in instructions[max(0,i-10):i+45]:
-                print(f'  {ins.address:#010x}: {ins.mnemonic:7s} {ins.op_str}')
+            for seg in elf.iter_segments():
+              if seg['p_type']!='PT_LOAD' or not (int(seg['p_flags'])&1): continue
+              recent={}; before=deque(maxlen=10); active=[]
+              for ins in md.disasm(seg.data(),int(seg['p_vaddr'])):
+                line=f'  {ins.address:#010x}: {ins.mnemonic:7s} {ins.op_str}'
+                for hit in list(active):
+                  hit['after'].append(line); hit['left']-=1
+                  if hit['left']==0:
+                    print(f"\nHIT {hit['name']} slot={hit['slot']:#x} at={hit['addr']:#x}")
+                    print('\n'.join(hit['before']+hit['after']))
+                    active.remove(hit)
+                for reg in list(recent):
+                  page,age=recent[reg]; recent[reg]=(page,age+1)
+                  if age+1>8: del recent[reg]
+                ops=ins.operands
+                if ins.mnemonic=='adrp' and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_IMM:
+                  recent[ops[0].reg]=(int(ops[1].imm),0)
+                if ins.mnemonic.startswith('ldr') and len(ops)>=2 and ops[1].type==ARM64_OP_MEM:
+                  base=ops[1].mem.base
+                  if base in recent:
+                    slot=recent[base][0]+int(ops[1].mem.disp)
+                    if slot in slots:
+                      active.append({'slot':slot,'name':slots[slot],'addr':ins.address,
+                                     'before':list(before)+[line],'after':[],'left':45})
+                before.append(line)
           PY
           python /tmp/pia/trace.py | tee pia-launch-map/map.txt
       - uses: actions/upload-artifact@v4
