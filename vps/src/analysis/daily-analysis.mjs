@@ -7,6 +7,7 @@ import {requestShadowPrediction} from './shadow-refresh-state.mjs';
 import {requestHistoricalComparisonRefresh} from './historical-refresh-state.mjs';
 import {scoreAvailableComparisonDays} from './comparison-refresh.mjs';
 import {deriveStoreMachineCount} from './task-metrics.mjs';
+import {advanceFormalLiveTrialDay} from '../research/pre-v2/formal-daily-loop.mjs';
 
 const DEFAULT_OPTIONS=Object.freeze({period:'180',minG:'2000',maxDims:'1',minDays:'4'});
 const COMPONENT='store-analysis-default';
@@ -19,6 +20,11 @@ function requireDailyJob(job){
   const storeId=requiredText(job.payload?.storeId,'job.payload.storeId');
   const analysisVersion=requiredText(job.payload?.analysisVersion,'job.payload.analysisVersion');
   return {storeId,analysisVersion};
+}
+
+async function runFormalDailyLoop(input){
+  const {db,...options}=input;
+  return advanceFormalLiveTrialDay(db,options);
 }
 
 function upsertSnapshot(db,{storeId,type,version,businessDate,payload,nowIso}){
@@ -45,9 +51,10 @@ function insertReceiptOnce(db,{storeId,targetDate,component,version,inputHash,ou
   return Number(inserted.lastInsertRowid);
 }
 
-export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExistingStoreAnalysis,nowIso=new Date().toISOString(),onWorkload=null}={}){
+export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExistingStoreAnalysis,formalDailyLoopRunner=runFormalDailyLoop,nowIso=new Date().toISOString(),onWorkload=null}={}){
   if(!db?.prepare||!db?.exec)throw new TypeError('db is required');
   if(typeof analysisRunner!=='function')throw new TypeError('analysisRunner is required');
+  if(typeof formalDailyLoopRunner!=='function')throw new TypeError('formalDailyLoopRunner is required');
   if(onWorkload!==null&&typeof onWorkload!=='function')throw new TypeError('onWorkload must be a function');
   const at=isoTime(nowIso);
   const {storeId,analysisVersion}=requireDailyJob(job);
@@ -110,6 +117,16 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     db.exec('COMMIT');
   }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
 
+  let formalTrial={reason:'not_run',scoredTargetDate:null,nextTargetDate:null};
+  try{
+    formalTrial=await formalDailyLoopRunner({
+      db,storeId,lineageId:'pre-v2-live',days:loaded.days,throughDate:latest,rootDir,nowIso:at,
+    });
+  }catch(error){
+    console.error('[jugest-daily-analysis] PRE v2 formal trial refresh failed',error);
+    formalTrial={reason:'error',scoredTargetDate:null,nextTargetDate:null};
+  }
+
   let comparisonRefresh={scored:0,excluded:0};
   try{
     comparisonRefresh=scoreAvailableComparisonDays(db,{storeId,throughDate:latest,nowIso:at});
@@ -124,7 +141,17 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     console.error('[jugest-daily-analysis] historical comparison refresh failed',error);
   }
 
-  return {status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,targetGeneration,inputHash,outputHash,followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null,shadowJobId:shadowJob?.id??null,historicalJobId:historicalRefresh?.job?.id??null,comparisonScored:Number(comparisonRefresh?.scored)||0,comparisonExcluded:Number(comparisonRefresh?.excluded)||0};
+  return {
+    status,storeId,businessDate:latest,dayCount:loaded.days.length,rowCount,
+    storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,
+    targetGeneration,inputHash,outputHash,
+    followupJobId:followupJob?.id??null,featureJobId:featureJob?.id??null,shadowJobId:shadowJob?.id??null,
+    historicalJobId:historicalRefresh?.job?.id??null,
+    comparisonScored:Number(comparisonRefresh?.scored)||0,comparisonExcluded:Number(comparisonRefresh?.excluded)||0,
+    formalTrialReason:String(formalTrial?.reason??'not_run'),
+    formalScoredTargetDate:formalTrial?.scoredTargetDate??null,
+    formalNextTargetDate:formalTrial?.nextTargetDate??null,
+  };
 }
 
-export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION};
+export const __test={DEFAULT_OPTIONS,COMPONENT,FEATURE_VERSION,runFormalDailyLoop};
