@@ -21,6 +21,7 @@ function normalizeTruth(truth){
   for(const [rawKey,rawGain] of truth.entries()){
     const key=String(rawKey??'').trim();
     if(!key)throw new TypeError('truth keys must be non-empty');
+    if(normalized.has(key))throw new RangeError(`truth must not contain duplicate normalized machine key ${key}`);
     const gain=Number(rawGain);
     if(!Number.isFinite(gain))throw new TypeError(`truth relevance for ${key} must be finite`);
     if(gain<0)throw new RangeError(`truth relevance for ${key} must be nonnegative`);
@@ -41,9 +42,7 @@ function dcgFor(keys,truth,kEff){
   return dcg;
 }
 
-export function linearNdcg(rankedKeys,truth,k=10){
-  const keys=normalizeRanking(rankedKeys);
-  const gains=normalizeTruth(truth);
+function linearNdcgNormalized(keys,gains,k){
   const limit=requirePositiveInteger(k,'k');
   const kEff=Math.min(limit,keys.length,gains.size);
   if(kEff===0)return Object.freeze({score:null,informative:false,dcg:0,idcg:0,kEff:0});
@@ -61,19 +60,33 @@ export function linearNdcg(rankedKeys,truth,k=10){
   return Object.freeze({score,informative:true,dcg,idcg,kEff});
 }
 
+export function linearNdcg(rankedKeys,truth,k=10){
+  const keys=normalizeRanking(rankedKeys);
+  const gains=normalizeTruth(truth);
+  return linearNdcgNormalized(keys,gains,k);
+}
+
 function sameMachineSet(a,b){
   if(a.length!==b.length)return false;
   const set=new Set(a);
   return b.every(key=>set.has(key));
 }
 
+function sameTruthMachineSet(ranking,truth){
+  if(ranking.length!==truth.size)return false;
+  const set=new Set(ranking);
+  return [...truth.keys()].every(key=>set.has(key));
+}
+
 export function pairedNdcgDelta(challengerKeys,championKeys,truth,k=10){
   const challengerRanking=normalizeRanking(challengerKeys,'challengerKeys');
   const championRanking=normalizeRanking(championKeys,'championKeys');
+  const gains=normalizeTruth(truth);
   if(!sameMachineSet(challengerRanking,championRanking))throw new RangeError('challenger and champion must rank the exact same machine set');
+  if(!sameTruthMachineSet(challengerRanking,gains))throw new RangeError('challenger, champion, and truth must use the exact same machine set');
 
-  const challenger=linearNdcg(challengerRanking,truth,k);
-  const champion=linearNdcg(championRanking,truth,k);
+  const challenger=linearNdcgNormalized(challengerRanking,gains,k);
+  const champion=linearNdcgNormalized(championRanking,gains,k);
   if(!challenger.informative||!champion.informative){
     return Object.freeze({informative:false,delta:0,challenger,champion});
   }
