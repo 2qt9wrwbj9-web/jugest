@@ -39,8 +39,9 @@ export function buildHistoricalComparisonSummary(db,{storeId,limit=90}={}){
   const id=requiredText(storeId,'storeId'),bounded=Math.max(1,Math.min(366,Math.trunc(Number(limit)||90)));
   const run=db.prepare("SELECT * FROM historical_comparison_runs WHERE store_id=? AND state<>'stale' ORDER BY id DESC LIMIT 1").get(id);
   if(!run)return null;
-  const rows=db.prepare('SELECT * FROM historical_comparison_days WHERE run_id=? ORDER BY target_date DESC LIMIT ?').all(run.id,bounded).map(normalizedDay);
-  const paired=rows.filter(row=>!row.excludedReason&&row.preMetrics&&row.currentMetrics),recent=paired.slice(0,30);
+  const aggregateRows=db.prepare('SELECT * FROM historical_comparison_days WHERE run_id=? ORDER BY target_date DESC').all(run.id).map(normalizedDay);
+  const rows=aggregateRows.slice(0,bounded);
+  const paired=aggregateRows.filter(row=>!row.excludedReason&&row.preMetrics&&row.currentMetrics),recent=paired.slice(0,30);
   const counts={newWins:0,currentWins:0,ties:0};
   for(const row of paired){if(row.winner==='pre_research')counts.newWins+=1;else if(row.winner==='current_shadow')counts.currentWins+=1;else if(row.winner==='tie')counts.ties+=1}
   const newEngine=averageMetric(paired,'preMetrics'),currentEngine=averageMetric(paired,'currentMetrics'),recentNew=averageMetric(recent,'preMetrics'),recentCurrent=averageMetric(recent,'currentMetrics');
@@ -49,7 +50,7 @@ export function buildHistoricalComparisonSummary(db,{storeId,limit=90}={}){
     runId:Number(run.id),state:run.state,replayVersion:run.replay_version,refreshPending:Boolean(Number(run.refresh_pending)||0),
     snapshotFirstDate:run.snapshot_first_date??null,snapshotLastDate:run.snapshot_last_date??null,nextTargetDate:run.next_target_date??null,
     totalCandidates,processed,progress:totalCandidates?processed/totalCandidates:1,
-    scored:paired.length,excluded:rows.length-paired.length,...counts,newEngine,currentEngine,
+    scored:paired.length,excluded:aggregateRows.length-paired.length,...counts,newEngine,currentEngine,
     recent30:Object.freeze({days:recent.length,newEngine:recentNew,currentEngine:recentCurrent,delta:recentNew.quality-recentCurrent.quality}),
     rows:Object.freeze(rows)
   });
