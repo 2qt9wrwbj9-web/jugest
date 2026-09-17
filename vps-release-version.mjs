@@ -2,47 +2,43 @@ export const JUGEST_RELEASE_VERSION='6.0.0';
 
 const observedReleaseTargets=new WeakSet();
 
-function collectOpenRoots(root){
-  const roots=[],stack=[root],seen=new Set();
-  while(stack.length){
-    const current=stack.pop();
-    if(!current||seen.has(current))continue;
-    seen.add(current);roots.push(current);
-    for(const node of current.querySelectorAll?.('*')??[]){
-      if(node?.shadowRoot)stack.push(node.shadowRoot);
-    }
-  }
-  return roots;
+function findAppShell(doc=document){
+  return doc?.getElementById?.('JUGEST_APP')||doc?.querySelector?.('jugest-app')||null;
 }
 
-function applyReleaseVersion(){
-  document.title=`JUGEST v${JUGEST_RELEASE_VERSION}`;
-  for(const root of collectOpenRoots(document)){
-    for(const node of root.querySelectorAll?.('.brand small')??[]){
-      if(node.textContent!==JUGEST_RELEASE_VERSION)node.textContent=JUGEST_RELEASE_VERSION;
-    }
-  }
+function findAppShadowRoot(doc=document){
+  return findAppShell(doc)?.shadowRoot||null;
 }
 
-function installReleaseVersionObservers(Observer=MutationObserver,observedTargets=observedReleaseTargets){
-  const sync=()=>{
-    applyReleaseVersion();
-    for(const root of collectOpenRoots(document)){
-      const target=root===document?document.documentElement:root;
-      if(!target||observedTargets.has(target))continue;
-      observedTargets.add(target);
-      new Observer(sync).observe(target,{childList:true,subtree:true});
-    }
-  };
+function applyReleaseVersion(doc=document){
+  if(!doc)return false;
+  doc.title=`JUGEST v${JUGEST_RELEASE_VERSION}`;
+  const root=findAppShadowRoot(doc);
+  const node=(root?.querySelectorAll?.('.brand small')??[])[0]||null;
+  if(node&&node.textContent!==JUGEST_RELEASE_VERSION)node.textContent=JUGEST_RELEASE_VERSION;
+  return !!root;
+}
+
+function installReleaseVersionObservers(Observer=MutationObserver,observedTargets=observedReleaseTargets,doc=document){
+  const sync=()=>applyReleaseVersion(doc);
   sync();
+  const root=findAppShadowRoot(doc);
+  if(root&&!observedTargets.has(root)){
+    observedTargets.add(root);
+    new Observer(sync).observe(root,{childList:true,subtree:true});
+  }
   return sync;
 }
 
 if(typeof document!=='undefined'){
-  const sync=typeof MutationObserver!=='undefined'
-    ?installReleaseVersionObservers(MutationObserver,observedReleaseTargets)
-    :applyReleaseVersion;
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
+  const start=()=>typeof MutationObserver!=='undefined'
+    ?installReleaseVersionObservers(MutationObserver,observedReleaseTargets,document)
+    :applyReleaseVersion(document);
+  start();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  if(typeof customElements!=='undefined'&&typeof customElements.whenDefined==='function'){
+    customElements.whenDefined('jugest-app').then(start).catch(()=>{});
+  }
 }
 
-export const __test={applyReleaseVersion,collectOpenRoots,installReleaseVersionObservers};
+export const __test={applyReleaseVersion,findAppShell,findAppShadowRoot,installReleaseVersionObservers};
