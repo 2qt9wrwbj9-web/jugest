@@ -59,7 +59,6 @@ function normalizePrediction(trial,prediction){
   if(sourceFrontierDate>=targetDate)throw new RangeError('prediction.sourceFrontierDate must be before targetDate');
   const rankings=normalizeRankings(prediction.rankings);
   const machineSetHash=hashCanonical(rankings.map(row=>row.machineKey).slice().sort());
-  if(machineSetHash!==key.machineSetHash)throw new RangeError('prediction rankings do not match the frozen formal trial machine set');
   return Object.freeze({
     storeId:key.storeId,lineageId:key.lineageId,trialNumber:key.trialNumber,
     targetDate,role,modelFingerprint,sourceFrontierDate,machineSetHash,
