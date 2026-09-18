@@ -29,7 +29,7 @@ Transport is Streamable HTTP JSON-RPC. The current implementation is stateless a
 
 ## Authentication
 
-JUGEST reuses the existing receiver credentials. Do not commit real credentials to Git.
+The initial release is for Hiro's **private/single-user connection** and reuses the existing JUGEST receiver credentials. Do not commit real credentials to Git.
 
 ### Existing two-header form
 
@@ -40,7 +40,7 @@ Authorization: Bearer <receiverToken>
 
 ### Packed bearer form
 
-For a client that can provide one bearer secret:
+For a private client that can provide one bearer secret:
 
 ```text
 Authorization: Bearer <channelId>:<receiverToken>
@@ -49,6 +49,10 @@ Authorization: Bearer <channelId>:<receiverToken>
 The MCP layer expands this internally and delegates authentication/store scoping to the existing `/api/vps` analytics handler.
 
 `initialize`, `ping`, and `tools/list` do not expose private data. In a production-configured server, `judge_machines` and store tools require valid receiver authentication.
+
+### Published / multi-user Plugin auth
+
+The receiver-token scheme above is deliberately a private JUGEST shortcut, not a general public-plugin authentication design. OpenAI's Plugin authentication guidance requires the MCP authorization profile with OAuth 2.1 for authenticated user data. Before JUGEST is distributed as a published or multi-user Plugin, add OAuth 2.1, protected-resource metadata, token validation, scopes, and the authentication challenge flow. The current v1 does **not** implement that OAuth layer.
 
 ## Tools
 
@@ -204,6 +208,8 @@ The Skill should explicitly enforce:
 - store/PRE tools are separate contextual reads,
 - do not reproduce JUGEST probability math in the model,
 - prefer one batch call instead of one tool call per machine.
+
+For Hiro's private connection, use the supported private Bearer/header configuration available in the target ChatGPT/Codex MCP connection surface. If the Plugin is later published or shared with multiple users, replace that shortcut with the OAuth 2.1 flow described above.
 
 ## Production boundary
 
