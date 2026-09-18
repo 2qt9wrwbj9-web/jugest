@@ -67,6 +67,28 @@ test('GET /api/health returns a small JSON health response',async t=>{
   });
 });
 
+test('POST /mcp mounts the JUGEST Streamable HTTP endpoint before static method restrictions',async t=>{
+  await withServer(t,async base=>{
+    const response=await fetch(`${base}/mcp`,{
+      method:'POST',
+      headers:{'content-type':'application/json','accept':'application/json, text/event-stream'},
+      body:JSON.stringify({
+        jsonrpc:'2.0',id:1,method:'initialize',
+        params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'web-test',version:'1'}}
+      })
+    });
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.result.serverInfo.name,'jugest');
+    assert.equal(body.result.serverInfo.version,'6.0.2');
+    assert.equal(body.result.protocolVersion,'2025-06-18');
+
+    const ordinaryPost=await fetch(`${base}/`,{method:'POST'});
+    assert.equal(ordinaryPost.status,405);
+    assert.equal(ordinaryPost.headers.get('allow'),'GET, HEAD');
+  });
+});
+
 test('POST /api/relay serves Collector V2 and persists relay auth across restart',async t=>{
   const root=await mkdtemp(path.join(tmpdir(),'jugest-relay-web-'));
   const relayDbPath=path.join(root,'relay.sqlite');
