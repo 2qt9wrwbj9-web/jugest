@@ -55,7 +55,7 @@ jobs:
             0x2d69278:'key_store_id',
             0x2d68e78:'key_sis_machine_code',
             0x2d67120:'key_machine_name',
-            0x2d676d0:'key_machine_type_candidate',
+            0x2d67138:'key_machine_type',
             0x2d64960:'key_device_uuid',
             0x2d64958:'key_device_type',
             0x2d631a0:'key_app_version',
