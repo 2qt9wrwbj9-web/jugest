@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve exact form field strings
+      - name: Resolve exact live form field strings
         shell: bash
         run: |
           set -euo pipefail
@@ -29,8 +29,8 @@ jobs:
           LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
           readelf -rW "$LIB" > /tmp/rel.txt
           {
-            echo '=== FDMHENCCLHK getStoresMachines form key slots ==='
-            for slot in 2c6a360 2c69c18; do
+            echo '=== PNIPCBLFFBC live getStoresMachines form key slots ==='
+            for slot in 2c6a390 2c6ac40; do
               grep -i "^0*${slot}[[:space:]]" /tmp/rel.txt || true
             done
           } | tee pia-stores-machines-fields/fields.txt
