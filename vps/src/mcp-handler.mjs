@@ -110,7 +110,7 @@ function auditStoreRead(db,storeId,payload){
 }
 
 function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
-function judgeRow(raw,index){
+async function judgeRow(raw,index,rootDir){
   const tableNo=String(raw?.tableNo??'').trim().slice(0,80),base={ok:false,index,tableNo};
   if(!raw||typeof raw!=='object'||Array.isArray(raw))return {...base,code:'bad_machine_row'};
   const machine=String(raw.machine??'').trim();if(!MACHINE_KEYS.has(machine))return {...base,machine,code:'unsupported_machine'};
@@ -120,7 +120,7 @@ function judgeRow(raw,index){
   if(bb+rb>games)return {...base,machine,code:'bonus_exceeds_games'};
   const hasDiff=raw.diff!==null&&raw.diff!==undefined&&raw.diff!=='';
   const diff=hasDiff?finite(raw.diff):null;if(hasDiff&&diff==null)return {...base,machine,code:'bad_diff'};
-  const judged=judgeJugglerExternal({machine,games,bb,rb,diff});if(!judged)return {...base,machine,code:'judge_unavailable'};
+  const judged=await judgeJugglerExternal({machine,games,bb,rb,diff},{rootDir});if(!judged)return {...base,machine,code:'judge_unavailable'};
   return {ok:true,index,tableNo,...judged};
 }
 
@@ -129,11 +129,13 @@ function listStores(db,channelId){
   return rows.flatMap(row=>{const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==channelId)return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at}]});
 }
 
-async function runTool(name,args,{channelId,canonicalDbPath,modern}){
+async function runTool(name,args,{rootDir,channelId,canonicalDbPath,modern}){
   if(name==='judge_machines'){
     if(!Array.isArray(args?.machines))return toolError('machines must be an array',{modern,code:'bad_machines'});
     if(args.machines.length>MAX_BATCH)return toolError(`at most ${MAX_BATCH} machines are allowed`,{modern,code:'batch_too_large'});
-    return toolResult({ok:true,judgeVersion:JUDGE_VERSION,machines:args.machines.map(judgeRow)},{modern});
+    if(!rootDir)return toolError('JUGEST judgement runtime is unavailable',{modern,code:'judge_runtime_unavailable'});
+    const machines=await Promise.all(args.machines.map((row,index)=>judgeRow(row,index,rootDir)));
+    return toolResult({ok:true,judgeVersion:JUDGE_VERSION,machines},{modern});
   }
   const db=openDatabase(canonicalDbPath);
   try{
@@ -184,7 +186,7 @@ function validateModernRouting(req,body){
 
 function isModern(req,body){return headerValue(req,'mcp-protocol-version').trim()===MCP_VERSION||body?.params?._meta?.['io.modelcontextprotocol/protocolVersion']===MCP_VERSION}
 
-export function createMcpHandler({relayDbPath,canonicalDbPath}={}){
+export function createMcpHandler({rootDir,relayDbPath,canonicalDbPath}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
   if(typeof canonicalDbPath!=='string'||!canonicalDbPath.trim())throw new TypeError('canonicalDbPath is required');
   return async function jugestMcpHandler(req,res){
@@ -217,7 +219,7 @@ export function createMcpHandler({relayDbPath,canonicalDbPath}={}){
     if(body.method==='tools/call'){
       const name=String(body?.params?.name||''),args=body?.params?.arguments??{};
       if(!TOOL_DEFS.some(tool=>tool.name===name)){sendJson(res,200,jsonRpcError(id,-32602,`Unknown tool: ${name}`));return}
-      const result=await runTool(name,args,{channelId:auth.channelId,canonicalDbPath,modern});
+      const result=await runTool(name,args,{rootDir,channelId:auth.channelId,canonicalDbPath,modern});
       if(!result){sendJson(res,200,jsonRpcError(id,-32603,'Internal error'));return}
       sendJson(res,200,{jsonrpc:'2.0',id,result});return;
     }
