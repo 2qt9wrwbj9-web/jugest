@@ -5,7 +5,7 @@ const MACHINE_ROW_SCHEMA=Object.freeze({
   additionalProperties:false,
   required:['machine','games','bb','rb'],
   properties:{
-    tableNo:{type:'string'},
+    tableNo:{anyOf:[{type:'string'},{type:'number'}]},
     machine:{type:'string',minLength:1},
     games:{type:'number',exclusiveMinimum:0},
     bb:{type:'number',minimum:0},
