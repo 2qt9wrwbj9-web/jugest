@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from '../src/judge/juggler-external-judge.mjs';
 
+const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const close=(actual,expected,eps=1e-11)=>assert.ok(Math.abs(actual-expected)<=eps,`expected ${expected}, got ${actual}`);
 const closeArray=(actual,expected,eps=1e-11)=>{
   assert.equal(actual.length,expected.length);
@@ -60,9 +62,9 @@ test('server external judge keeps all eight Juggler machine keys',()=>{
   assert.deepEqual(JUGGLER_MACHINE_KEYS,['my','im','go','fk','hp','gg','mr','um']);
 });
 
-test('server external judge matches protected browser reference vectors',()=>{
+test('server external judge matches protected browser reference vectors',async()=>{
   for(const vector of vectors){
-    const result=judgeJugglerExternal(vector.input);
+    const result=await judgeJugglerExternal(vector.input,{rootDir:ROOT});
     assert.equal(result.method,vector.method,vector.input.machine);
     closeArray(result.q,vector.q);
     close(result.expectedSetting,vector.expectedSetting);
@@ -82,7 +84,7 @@ test('server external judge matches protected browser reference vectors',()=>{
   }
 });
 
-test('zero/invalid G and unknown machines do not produce a posterior',()=>{
-  assert.equal(judgeJugglerExternal({machine:'my',games:0,bb:0,rb:0,diff:0}),null);
-  assert.equal(judgeJugglerExternal({machine:'not-a-machine',games:5000,bb:20,rb:20,diff:0}),null);
+test('zero/invalid G and unknown machines do not produce a posterior',async()=>{
+  assert.equal(await judgeJugglerExternal({machine:'my',games:0,bb:0,rb:0,diff:0},{rootDir:ROOT}),null);
+  assert.equal(await judgeJugglerExternal({machine:'not-a-machine',games:5000,bb:20,rb:20,diff:0},{rootDir:ROOT}),null);
 });
