@@ -127,7 +127,7 @@ test('authorization code + S256 PKCE issues tokens, makes codes single-use, and 
   }finally{await f.close()}
 });
 
-test('authorization rejects bad Collector credentials and token exchange rejects the wrong PKCE verifier',async()=>{
+test('authorization rejects bad Collector credentials and a bad PKCE verifier does not burn the valid code',async()=>{
   const f=await fixture();
   try{
     const client=await (await register(f.base)).json();
@@ -143,5 +143,10 @@ test('authorization rejects bad Collector credentials and token exchange rejects
     const tokenResponse=await fetch(`${f.base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:wrong});
     assert.equal(tokenResponse.status,400);
     assert.equal((await tokenResponse.json()).error,'invalid_grant');
+
+    const correct=new URLSearchParams({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:REDIRECT,code_verifier:flow.verifier,resource:RESOURCE});
+    const recovered=await fetch(`${f.base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:correct});
+    assert.equal(recovered.status,200);
+    assert.ok((await recovered.json()).access_token);
   }finally{await f.close()}
 });
