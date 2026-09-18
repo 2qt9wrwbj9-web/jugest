@@ -15,6 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install VPS dependencies
+        working-directory: vps
+        run: npm ci --no-audit --no-fund
       - name: Run VPS tests
         working-directory: vps
         run: npm test
