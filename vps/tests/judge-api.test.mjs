@@ -1,16 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
-import {mkdir} from 'node:fs/promises';
+import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {once} from 'node:events';
 import {createWebServer} from '../src/web-server.mjs';
 import {createRelayStore} from '../src/relay-store.mjs';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 
+const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const CHANNEL='channel_judge_api_123';
 const TOKEN='receiver-token-judge-api-1234567890';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
@@ -18,13 +19,11 @@ const close=(actual,expected,eps=1e-11)=>assert.ok(Math.abs(actual-expected)<=ep
 
 async function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-judge-api-'));
-  const root=join(dir,'web'),relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
-  await mkdir(root,{recursive:true});
-  writeFileSync(join(root,'index.html'),'<title>JUGEST JUDGE API TEST</title>');
+  const relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON(`channel/${CHANNEL}`,{version:1,createdAt:1,claimedAt:1,revokedAt:0,receiverHash:digest(TOKEN),senderHash:'sender'});
   const db=openDatabase(canonicalDbPath);migrate(db);db.close();
-  const server=createWebServer({rootDir:root,relayDbPath,canonicalDbPath,rawRoot});
+  const server=createWebServer({rootDir:ROOT,relayDbPath,canonicalDbPath,rawRoot});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const auth={'authorization':`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL,'content-type':'application/json'};
