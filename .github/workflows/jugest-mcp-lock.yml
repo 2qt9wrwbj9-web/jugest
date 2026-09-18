@@ -6,6 +6,7 @@ on:
       - feat/jugest-chatgpt-mcp
     paths:
       - vps/package.json
+      - .github/workflows/jugest-mcp-lock.yml
   workflow_dispatch:
 
 permissions:
@@ -27,7 +28,7 @@ jobs:
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Commit lockfile if changed
         run: |
-          if git diff --quiet -- vps/package-lock.json; then
+          if [ -z "$(git status --porcelain -- vps/package-lock.json)" ]; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
