@@ -20,7 +20,9 @@ Live judgement is based on the machine's observed data. Store name or store cont
 
 ### Exact judgement reuse
 
-`vps/src/analysis/runtime-adapter.mjs` already boots the production browser runtime in a Node VM. Add `runExistingMachineJudgement()` there. It MUST call the runtime's existing global `externalJudge()` function instead of reimplementing probability tables, reverse-difference inference, or posterior math.
+`vps/src/analysis/runtime-adapter.mjs` already boots the production browser runtime in a Node VM. Add `runExistingMachineJudgement()` there. It MUST reuse the runtime's existing protected judgement path rather than reimplement probability tables, reverse-difference inference, or posterior math.
+
+The production browser's internal `externalJudge()` function is not exported on the VM global. Therefore the server adapter constructs one synthetic in-memory store day, imports it through the existing `JUGEST_CORE_BRIDGE.previewExternalJson()` / `saveExternalJsonPreview()` path, and reads the judged rows through `JUGEST_CORE_BRIDGE.getStoreDay()`. A parity test compares the resulting posterior with the existing protected store-day judgement path.
 
 Input rows:
 
@@ -66,7 +68,7 @@ The first release supports Juggler keys only (`my`, `im`, `go`, `fk`, `hp`, `gg`
 
 Add `POST /mcp` to the existing Node HTTP server. Keep the implementation dependency-free so the current VPS deployment/install behavior is unchanged.
 
-The endpoint implements the stateless 2025-era Streamable HTTP JSON-RPC subset used by ChatGPT plugin connections:
+The endpoint implements the stateless Streamable HTTP JSON-RPC subset needed by the ChatGPT connection:
 
 - `initialize`
 - `notifications/initialized`
@@ -91,14 +93,16 @@ Store tools MUST reuse the current analytics handler contract instead of copying
 
 ### Authentication
 
-The MCP endpoint is private. It reuses the same JUGEST receiver credentials as `/api/vps`.
+The first release targets Hiro's private/single-user connection. It reuses the same JUGEST receiver credentials as `/api/vps`.
 
-Accepted credential forms:
+Accepted private credential forms:
 
 1. Existing headers: `Authorization: Bearer <receiverToken>` plus `x-jugest-channel-id: <channelId>`.
-2. Optional packed bearer form for clients that can only supply one secret: `Authorization: Bearer <channelId>:<receiverToken>`.
+2. Optional packed bearer form for a client that can supply one secret: `Authorization: Bearer <channelId>:<receiverToken>`.
 
 For packed credentials, the MCP layer reconstructs the two existing analytics headers before invoking the current analytics handler. No new credential store or database table is added.
+
+This receiver-token scheme is intentionally scoped to the private/personal deployment. It is **not** the final authentication design for a generally published or multi-user ChatGPT Plugin. Before such distribution, implement the MCP authorization profile with OAuth 2.1, protected-resource metadata, token validation, scopes, and the required authentication challenge flow.
 
 ### Store API reuse
 
@@ -111,6 +115,7 @@ The MCP handler creates/reuses `createAnalyticsHandler()` and invokes it in-proc
 - No PRE/store prior is combined into the judgement posterior.
 - Invalid machine keys, non-finite inputs, negative counts, BB+RB > games, and malformed dates produce structured tool errors.
 - Tool descriptions explicitly tell the model that screenshots are parsed by ChatGPT but probability calculation belongs to JUGEST.
+- On a production-configured server, `judge_machines` performs the same receiver-auth gate used by the existing analytics scope before running the headless judgement.
 
 ## Deployment boundary
 
