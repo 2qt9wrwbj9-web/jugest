@@ -6,6 +6,7 @@ import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
+import {createMcpHandler} from './mcp-handler.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
@@ -75,6 +76,9 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
     :null;
+  const mcpHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
+    ?createMcpHandler({relayDbPath,canonicalDbPath})
+    :null;
   const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
     ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
     :null;
@@ -100,6 +104,13 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
         return;
       }
       return await analyticsHandler(req,res);
+    }
+    if(url.pathname==='/mcp'){
+      if(!mcpHandler){
+        send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
+        return;
+      }
+      return await mcpHandler(req,res);
     }
 
     if(req.method!=='GET'&&req.method!=='HEAD'){
