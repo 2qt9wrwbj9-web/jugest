@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
-import {mkdir} from 'node:fs/promises';
+import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {once} from 'node:events';
 import {createWebServer} from '../src/web-server.mjs';
 import {createRelayStore} from '../src/relay-store.mjs';
@@ -12,6 +12,7 @@ import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {canonicalJson,hashCanonical} from '../src/canonical-json.mjs';
 
+const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const CHANNEL='channel_mcp_test_123';
 const TOKEN='receiver-token-mcp-test-1234567890';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
@@ -23,9 +24,7 @@ const modernMeta={
 
 async function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-mcp-api-'));
-  const root=join(dir,'web'),relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
-  await mkdir(root,{recursive:true});
-  writeFileSync(join(root,'index.html'),'<title>JUGEST MCP TEST</title>');
+  const relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON(`channel/${CHANNEL}`,{version:1,createdAt:1,claimedAt:1,revokedAt:0,receiverHash:digest(TOKEN),senderHash:'sender'});
 
@@ -41,7 +40,7 @@ async function fixture(){
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-read-active','store-read-v1','2026-09-19',canonicalJson(storeRead),hashCanonical(storeRead),now);
   db.close();
 
-  const server=createWebServer({rootDir:root,relayDbPath,canonicalDbPath,rawRoot});
+  const server=createWebServer({rootDir:ROOT,relayDbPath,canonicalDbPath,rawRoot});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const auth={'authorization':`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL,'content-type':'application/json'};
