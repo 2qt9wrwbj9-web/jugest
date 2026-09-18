@@ -9,6 +9,8 @@ const DEFAULT_RELAY_DB='/var/lib/jugest/relay.sqlite';
 const DEFAULT_CANONICAL_DB='/var/lib/jugest/jugest.sqlite';
 const DEFAULT_RAW_ROOT='/var/lib/jugest/raw';
 
+function envFlag(value){return ['1','true','yes','on'].includes(String(value??'').trim().toLowerCase());}
+
 export function readWebConfig(env=process.env){
   const rootDir=path.resolve(env.JUGEST_WEB_ROOT||DEFAULT_WEB_ROOT);
   const host=String(env.JUGEST_WEB_HOST||'127.0.0.1').trim();
@@ -17,9 +19,10 @@ export function readWebConfig(env=process.env){
   const relayDbPath=path.resolve(String(env.JUGEST_RELAY_DB||DEFAULT_RELAY_DB));
   const canonicalDbPath=path.resolve(String(env.JUGEST_DB_PATH||DEFAULT_CANONICAL_DB));
   const rawRoot=path.resolve(String(env.JUGEST_RAW_ROOT||DEFAULT_RAW_ROOT));
+  const mcpEnabled=envFlag(env.JUGEST_MCP_ENABLED);
   if(!host)throw new TypeError('JUGEST_WEB_HOST must not be empty');
   if(!Number.isInteger(port)||port<1||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 1 to 65535');
-  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot};
+  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,mcpEnabled};
 }
 
 export async function runWebServer({
@@ -29,7 +32,7 @@ export async function runWebServer({
 }={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
   if(typeof startCoordinator!=='function')throw new TypeError('startCoordinator must be a function');
-  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot}=config;
+  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,mcpEnabled=false}=config;
 
   let coordinatorRuntime=null;
   if(canonicalDbPath){
@@ -41,6 +44,7 @@ export async function runWebServer({
     relayDbPath,
     canonicalDbPath,
     rawRoot,
+    mcpEnabled,
     enterCollectorBarrier:coordinatorRuntime?.enterCollectorBarrier??(async()=>({ok:true,noCoordinator:true}))
   });
 
@@ -70,7 +74,8 @@ export async function runWebServer({
     relayDbPath:path.resolve(relayDbPath),
     canonicalDbPath:canonicalDbPath?path.resolve(canonicalDbPath):null,
     rawRoot:rawRoot?path.resolve(rawRoot):null,
-    coordinatorMode:canonicalDbPath?'web-supervised':'disabled'
+    coordinatorMode:canonicalDbPath?'web-supervised':'disabled',
+    mcpEnabled:!!mcpEnabled
   }));
   return server;
 }
