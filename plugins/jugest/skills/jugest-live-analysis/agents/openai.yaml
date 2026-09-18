@@ -1,0 +1,15 @@
+interface:
+  display_name: "JUGEST Live Analysis"
+  short_description: "Judge Juggler screenshots and read JUGEST store data"
+  default_prompt: "このスクショをJUGESTで全台判別して"
+
+policy:
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "jugest"
+      description: "Read authorized JUGEST data and run JUGEST Juggler judgement"
+      transport: "streamable_http"
+      url: "https://jugest.net/mcp"
