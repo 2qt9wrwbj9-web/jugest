@@ -1,0 +1,130 @@
+name: PIA stores machines xref research
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-stores-machines-xref.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download PIA binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-stores-machines-xref
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          LIB="$(find /tmp/pia/arm64 -name libil2cpp.so -print -quit)"
+          test -f "$LIB"
+          echo "LIB=$LIB" >> "$GITHUB_ENV"
+          sha256sum "$LIB"
+
+      - name: Trace route and request field xrefs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet pyelftools capstone
+          cat > /tmp/pia/trace.py <<'PY'
+          from collections import defaultdict, deque
+          from elftools.elf.elffile import ELFFile
+          from elftools.elf.relocation import RelocationSection
+          from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
+          from capstone.arm64 import ARM64_OP_REG, ARM64_OP_IMM, ARM64_OP_MEM
+
+          path='/tmp/pia/arm64/lib/arm64-v8a/libil2cpp.so'
+          # String object addresses recovered from the matching IL2CPP metadata dump.
+          TARGETS={
+            0x2d521e8:'route_getStoresMachines',
+            0x2d521c0:'route_getStoreMachiesWithHowToPlay',
+            0x2d521a8:'route_getRanking',
+            0x2d521b0:'route_getRankingTop',
+            0x2d69278:'key_store_id',
+            0x2d68e78:'key_sis_machine_code',
+            0x2d67120:'key_machine_name',
+            0x2d676d0:'key_machine_type_candidate',
+            0x2d64960:'key_device_uuid',
+            0x2d64958:'key_device_type',
+            0x2d631a0:'key_app_version',
+            0x2d646d0:'key_date',
+            0x2d682b0:'key_price',
+            0x2d66758:'key_is_random',
+            0x2d66748:'key_is_graph',
+            0x2d6a180:'key_user_code',
+          }
+
+          with open(path,'rb') as f:
+            elf=ELFFile(f)
+            rel_by_target=defaultdict(list)
+            for sec in elf.iter_sections():
+              if not isinstance(sec, RelocationSection):
+                continue
+              for rel in sec.iter_relocations():
+                add=rel.entry.get('r_addend')
+                if add is None:
+                  continue
+                add=int(add)
+                if add in TARGETS:
+                  rel_by_target[add].append(int(rel.entry['r_offset']))
+
+            slot_names={}
+            print('=== string object -> relocation slots ===')
+            for addr,name in TARGETS.items():
+              slots=sorted(rel_by_target.get(addr,[]))
+              print(f'{name}: object={addr:#x} slots={[hex(s) for s in slots]}')
+              for s in slots:
+                slot_names[s]=name
+
+            md=Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
+            md.detail=True
+            hits=[]
+            for seg in elf.iter_segments():
+              if seg['p_type']!='PT_LOAD' or not (int(seg['p_flags']) & 1):
+                continue
+              recent={}
+              ring=deque(maxlen=10)
+              for ins in md.disasm(seg.data(),int(seg['p_vaddr'])):
+                for r in list(recent):
+                  page,age,where=recent[r]
+                  age+=1
+                  if age>8: del recent[r]
+                  else: recent[r]=(page,age,where)
+                ops=ins.operands
+                if ins.mnemonic=='adrp' and len(ops)>=2 and ops[0].type==ARM64_OP_REG and ops[1].type==ARM64_OP_IMM:
+                  recent[ops[0].reg]=(int(ops[1].imm),0,ins.address)
+                if ins.mnemonic.startswith('ldr') and len(ops)>=2 and ops[1].type==ARM64_OP_MEM:
+                  base=ops[1].mem.base
+                  if base in recent:
+                    page,_,adrp=recent[base]
+                    slot=page+int(ops[1].mem.disp)
+                    if slot in slot_names:
+                      hits.append((ins.address,adrp,slot,slot_names[slot],list(ring),ins.mnemonic,ins.op_str))
+                ring.append((ins.address,ins.mnemonic,ins.op_str))
+
+            print('\n=== ARM64 xrefs ===')
+            for addr,adrp,slot,name,ctx,mn,op in hits:
+              print(f'\nHIT {name}: adrp={adrp:#x} load={addr:#x} slot={slot:#x}')
+              for a,m,o in ctx[-7:]:
+                print(f'  {a:#010x}: {m:7s} {o}')
+              print(f'  {addr:#010x}: {mn:7s} {op}')
+          PY
+          python /tmp/pia/trace.py | tee pia-stores-machines-xref/xref.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-stores-machines-xref
+          path: pia-stores-machines-xref
+          retention-days: 7
