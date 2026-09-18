@@ -4,8 +4,8 @@ import http from 'node:http';
 import {once} from 'node:events';
 import {createJugestMcpHandler} from '../src/mcp-handler.mjs';
 
-async function withMcpServer(t,{judgeMachines=async({machines})=>({machines})}={},run){
-  const handler=createJugestMcpHandler({rootDir:'/tmp/jugest-test-root',judgeMachines});
+async function withMcpServer(t,{judgeMachines=async({machines})=>({machines}),analyticsHandler=null}={},run){
+  const handler=createJugestMcpHandler({rootDir:'/tmp/jugest-test-root',judgeMachines,analyticsHandler});
   const server=http.createServer((req,res)=>{
     Promise.resolve(handler(req,res)).catch(error=>{
       if(!res.headersSent)res.writeHead(500,{'content-type':'application/json'});
@@ -64,6 +64,21 @@ test('MCP tools/list exposes observed-data-only batch judgement with read-only a
   });
 });
 
+test('MCP tools/list exposes store data and PRE as separate read-only tools',async t=>{
+  await withMcpServer(t,{},async url=>{
+    const response=await rpc(url,{jsonrpc:'2.0',id:20,method:'tools/list',params:{}});
+    const body=await response.json();
+    const names=body.result.tools.map(tool=>tool.name);
+    for(const name of ['list_stores','get_store_days','get_store_day','get_store_read','get_store_comparison']){
+      assert.ok(names.includes(name),`${name} should be listed`);
+      const tool=body.result.tools.find(item=>item.name===name);
+      assert.equal(tool.annotations.readOnlyHint,true);
+      assert.equal(tool.annotations.destructiveHint,false);
+    }
+    assert.match(body.result.tools.find(item=>item.name==='get_store_read').description,/separate/i);
+  });
+});
+
 test('MCP tools/call delegates judgement to JUGEST and returns structured content',async t=>{
   const seen=[];
   const judgeMachines=async input=>{
@@ -80,6 +95,77 @@ test('MCP tools/call delegates judgement to JUGEST and returns structured conten
     assert.deepEqual(body.result.structuredContent,{machines:[{machineNo:'101',machine:'my',expectedSetting:4.2,q:[0.01,0.04,0.15,0.35,0.3,0.15]}]});
     assert.equal(body.result.content[0].type,'text');
     assert.deepEqual(JSON.parse(body.result.content[0].text),body.result.structuredContent);
+  });
+});
+
+test('store tools reuse existing analytics routes and expand packed receiver auth',async t=>{
+  const seen=[];
+  const analyticsHandler=async(req,res)=>{
+    seen.push({method:req.method,url:req.url,headers:{...req.headers}});
+    const payload={ok:true,route:req.url};
+    const body=Buffer.from(JSON.stringify(payload));
+    res.writeHead(200,{'content-type':'application/json; charset=utf-8','content-length':String(body.length)});
+    res.end(body);
+  };
+  await withMcpServer(t,{analyticsHandler},async url=>{
+    const headers={authorization:'Bearer channel-abc123:receiver-secret'};
+    const calls=[
+      ['list_stores',{},'/api/vps/stores'],
+      ['get_store_days',{storeId:'store-1',limit:44},'/api/vps/stores/store-1/days?limit=44'],
+      ['get_store_day',{storeId:'store-1',date:'2026-09-19'},'/api/vps/stores/store-1/days/2026-09-19'],
+      ['get_store_read',{storeId:'store-1'},'/api/vps/stores/store-1/research/store-read'],
+      ['get_store_comparison',{storeId:'store-1',limit:123},'/api/vps/stores/store-1/research/comparison?limit=123']
+    ];
+    let id=30;
+    for(const [name,args,expectedPath] of calls){
+      const response=await rpc(url,{jsonrpc:'2.0',id:id++,method:'tools/call',params:{name,arguments:args}},headers);
+      assert.equal(response.status,200);
+      const body=await response.json();
+      assert.equal(body.result.isError,undefined,`${name} should succeed`);
+      assert.deepEqual(body.result.structuredContent,{ok:true,route:expectedPath});
+    }
+    assert.deepEqual(seen.map(item=>item.url),calls.map(item=>item[2]));
+    assert.ok(seen.every(item=>item.method==='GET'));
+    assert.ok(seen.every(item=>item.headers['x-jugest-channel-id']==='channel-abc123'));
+    assert.ok(seen.every(item=>item.headers.authorization==='Bearer receiver-secret'));
+  });
+});
+
+test('store tools preserve normal two-header receiver auth and bound API limits',async t=>{
+  const seen=[];
+  const analyticsHandler=async(req,res)=>{
+    seen.push({url:req.url,headers:{...req.headers}});
+    const body=Buffer.from(JSON.stringify({ok:true}));
+    res.writeHead(200,{'content-type':'application/json','content-length':String(body.length)});
+    res.end(body);
+  };
+  await withMcpServer(t,{analyticsHandler},async url=>{
+    const headers={'x-jugest-channel-id':'channel-normal','authorization':'Bearer receiver-normal'};
+    for(const [name,args,expected] of [
+      ['get_store_days',{storeId:'store-1',limit:9999},'/api/vps/stores/store-1/days?limit=366'],
+      ['get_store_comparison',{storeId:'store-1',limit:-4},'/api/vps/stores/store-1/research/comparison?limit=1']
+    ]){
+      const response=await rpc(url,{jsonrpc:'2.0',id:50,method:'tools/call',params:{name,arguments:args}},headers);
+      const body=await response.json();
+      assert.equal(body.result.isError,undefined);
+      assert.equal(seen.at(-1).url,expected);
+      assert.equal(seen.at(-1).headers['x-jugest-channel-id'],'channel-normal');
+      assert.equal(seen.at(-1).headers.authorization,'Bearer receiver-normal');
+    }
+  });
+});
+
+test('analytics API failures become MCP tool errors without leaking into judgement',async t=>{
+  const analyticsHandler=async(req,res)=>{
+    const body=Buffer.from(JSON.stringify({ok:false,code:'unauthorized'}));
+    res.writeHead(401,{'content-type':'application/json','content-length':String(body.length)});
+    res.end(body);
+  };
+  await withMcpServer(t,{analyticsHandler},async url=>{
+    const response=await rpc(url,{jsonrpc:'2.0',id:60,method:'tools/call',params:{name:'list_stores',arguments:{}}});
+    const body=await response.json();
+    assert.equal(body.result.isError,true);
+    assert.match(body.result.content[0].text,/unauthorized/i);
   });
 });
 
