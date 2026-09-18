@@ -14,7 +14,10 @@ import {canonicalJson,hashCanonical} from '../src/canonical-json.mjs';
 
 const CHANNEL='channel_mcp_test_123';
 const TOKEN='receiver-token-mcp-test-1234567890';
+const RESOURCE='https://jugest.net/mcp';
+const REDIRECT='https://chatgpt.com/connector_platform_oauth_redirect';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
+const challenge=value=>createHash('sha256').update(String(value)).digest('base64url');
 const modernMeta={
   'io.modelcontextprotocol/protocolVersion':'2026-07-28',
   'io.modelcontextprotocol/clientInfo':{name:'jugest-test-client',version:'1.0.0'},
@@ -44,30 +47,36 @@ async function fixture(){
   const server=createWebServer({rootDir:root,relayDbPath,canonicalDbPath,rawRoot});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
-  const auth={'authorization':`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL,'content-type':'application/json'};
-  const post=async(method,params={},extraHeaders={})=>{
+  const legacyAuth={'authorization':`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL};
+  const post=async(method,params={},extraHeaders={},authHeaders=legacyAuth)=>{
     const name=method==='tools/call'?String(params?.name||''):'';
     return await fetch(`${base}/mcp`,{
       method:'POST',
-      headers:{...auth,'mcp-protocol-version':'2026-07-28','mcp-method':method,...(name?{'mcp-name':name}:{}),...extraHeaders},
+      headers:{'content-type':'application/json',...authHeaders,'mcp-protocol-version':'2026-07-28','mcp-method':method,...(name?{'mcp-name':name}:{}),...extraHeaders},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method,params:{...params,_meta:params?._meta??modernMeta}})
     });
   };
-  return {base,auth,post,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
+  return {base,legacyAuth,post,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
 }
 
-test('MCP requires the existing JUGEST receiver credentials',async()=>{
-  const f=await fixture();
-  try{
-    const response=await fetch(`${f.base}/mcp`,{method:'POST',headers:{'content-type':'application/json','mcp-protocol-version':'2026-07-28','mcp-method':'server/discover'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'server/discover',params:{_meta:modernMeta}})});
-    assert.equal(response.status,401);
-  }finally{await f.close()}
-});
+async function issueOAuthToken(base){
+  const registered=await fetch(`${base}/oauth/register`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({client_name:'ChatGPT MCP Test',redirect_uris:[REDIRECT],token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code']})});
+  assert.equal(registered.status,201);
+  const client=await registered.json();
+  const verifier='m'.repeat(64);
+  const params=new URLSearchParams({response_type:'code',client_id:client.client_id,redirect_uri:REDIRECT,scope:'jugest:read',state:'mcp-oauth-state',resource:RESOURCE,code_challenge:challenge(verifier),code_challenge_method:'S256',channel_id:CHANNEL,receiver_token:TOKEN});
+  const authorized=await fetch(`${base}/oauth/authorize`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:params,redirect:'manual'});
+  assert.equal(authorized.status,302);
+  const code=new URL(authorized.headers.get('location')).searchParams.get('code');
+  const tokenResponse=await fetch(`${base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:REDIRECT,code_verifier:verifier,resource:RESOURCE})});
+  assert.equal(tokenResponse.status,200);
+  return await tokenResponse.json();
+}
 
-test('MCP modern discovery and deterministic read-only tool list are exposed',async()=>{
+test('MCP discovery and tool list are public and every tool advertises jugest:read OAuth',async()=>{
   const f=await fixture();
   try{
-    const discover=await f.post('server/discover');
+    const discover=await f.post('server/discover',{}, {}, {});
     assert.equal(discover.status,200);
     const discovery=await discover.json();
     assert.equal(discovery.result.resultType,'complete');
@@ -77,7 +86,7 @@ test('MCP modern discovery and deterministic read-only tool list are exposed',as
     assert.match(discovery.result.instructions,/setting judgement.*observed|observed.*setting judgement/i);
     assert.equal(discovery.result.cacheScope,'private');
 
-    const listed=await f.post('tools/list');
+    const listed=await f.post('tools/list',{}, {}, {});
     assert.equal(listed.status,200);
     const body=await listed.json();
     assert.equal(body.result.resultType,'complete');
@@ -88,6 +97,8 @@ test('MCP modern discovery and deterministic read-only tool list are exposed',as
     for(const tool of body.result.tools){
       assert.equal(tool.annotations.readOnlyHint,true);
       assert.equal(tool.annotations.openWorldHint,false);
+      assert.deepEqual(tool.securitySchemes,[{type:'oauth2',scopes:['jugest:read']}]);
+      assert.deepEqual(tool._meta.securitySchemes,[{type:'oauth2',scopes:['jugest:read']}]);
     }
     const judge=body.result.tools[0];
     assert.match(judge.description,/observed|current machine/i);
@@ -95,13 +106,31 @@ test('MCP modern discovery and deterministic read-only tool list are exposed',as
   }finally{await f.close()}
 });
 
-test('MCP judge_machines uses current machine data only and preserves JUGEST parity',async()=>{
+test('unauthenticated MCP tool call returns the OAuth resource challenge in tool metadata',async()=>{
   const f=await fixture();
   try{
+    const response=await f.post('tools/call',{name:'judge_machines',arguments:{machines:[{machine:'my',games:1000,bb:4,rb:3}]}}, {}, {});
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.result.isError,true);
+    const challengeHeader=body.result._meta['mcp/www_authenticate'];
+    assert.equal(Array.isArray(challengeHeader),true);
+    assert.equal(challengeHeader.length,1);
+    assert.match(challengeHeader[0],/Bearer/i);
+    assert.match(challengeHeader[0],/oauth-protected-resource/);
+    assert.match(challengeHeader[0],/error="invalid_token"/);
+    assert.match(challengeHeader[0],/error_description=/);
+  }finally{await f.close()}
+});
+
+test('OAuth bearer can call judge_machines without a Collector channel header',async()=>{
+  const f=await fixture();
+  try{
+    const token=await issueOAuthToken(f.base);
     const response=await f.post('tools/call',{name:'judge_machines',arguments:{machines:[
       {tableNo:'101',machine:'my',games:5230,bb:24,rb:18,diff:1200},
       {tableNo:'102',machine:'im',games:4100,bb:17,rb:14}
-    ]}});
+    ]}}, {}, {authorization:`Bearer ${token.access_token}`});
     assert.equal(response.status,200);
     const body=await response.json();
     assert.equal(body.result.resultType,'complete');
@@ -118,53 +147,64 @@ test('MCP judge_machines uses current machine data only and preserves JUGEST par
   }finally{await f.close()}
 });
 
-test('MCP store tools are scoped to the authenticated Collector channel and keep PRE separate',async()=>{
+test('OAuth store tools inherit the proven Collector channel and keep PRE separate',async()=>{
   const f=await fixture();
   try{
-    const stores=await (await f.post('tools/call',{name:'list_stores',arguments:{}})).json();
+    const token=await issueOAuthToken(f.base),oauth={authorization:`Bearer ${token.access_token}`};
+    const stores=await (await f.post('tools/call',{name:'list_stores',arguments:{}}, {}, oauth)).json();
     assert.deepEqual(stores.result.structuredContent.stores.map(store=>store.id),['store-a']);
 
-    const days=await (await f.post('tools/call',{name:'get_store_days',arguments:{storeId:'store-a',limit:30}})).json();
+    const days=await (await f.post('tools/call',{name:'get_store_days',arguments:{storeId:'store-a',limit:30}}, {}, oauth)).json();
     assert.deepEqual(days.result.structuredContent.days.map(day=>day.date),['2026-09-18']);
 
-    const day=await (await f.post('tools/call',{name:'get_store_day',arguments:{storeId:'store-a',date:'2026-09-18'}})).json();
+    const day=await (await f.post('tools/call',{name:'get_store_day',arguments:{storeId:'store-a',date:'2026-09-18'}}, {}, oauth)).json();
     assert.equal(day.result.structuredContent.day.machines[0].tableNo,'101');
     assert.doesNotMatch(JSON.stringify(day),/raw-secret|html\.gz/);
 
-    const prediction=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-a'}})).json();
+    const prediction=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-a'}}, {}, oauth)).json();
     assert.equal(prediction.result.structuredContent.storeRead.targetDate,'2026-09-19');
     assert.equal(prediction.result.structuredContent.storeRead.rankings[0].tableNo,'101');
 
-    const forbidden=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-b'}})).json();
+    const forbidden=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-b'}}, {}, oauth)).json();
     assert.equal(forbidden.result.isError,true);
     assert.match(forbidden.result.content[0].text,/forbidden/i);
+  }finally{await f.close()}
+});
+
+test('legacy Collector receiver credentials continue to authorize MCP tool calls',async()=>{
+  const f=await fixture();
+  try{
+    const response=await f.post('tools/call',{name:'list_stores',arguments:{}});
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.deepEqual(body.result.structuredContent.stores.map(store=>store.id),['store-a']);
   }finally{await f.close()}
 });
 
 test('MCP validates modern routing headers and rejects untrusted browser origins',async()=>{
   const f=await fixture();
   try{
-    const mismatch=await f.post('tools/list',{}, {'mcp-method':'tools/call'});
+    const mismatch=await f.post('tools/list',{}, {'mcp-method':'tools/call'}, {});
     assert.equal(mismatch.status,400);
     const mismatchBody=await mismatch.json();
     assert.equal(mismatchBody.error.code,-32600);
 
-    const origin=await f.post('server/discover',{}, {origin:'https://evil.example'});
+    const origin=await f.post('server/discover',{}, {origin:'https://evil.example'}, {});
     assert.equal(origin.status,403);
   }finally{await f.close()}
 });
 
-test('MCP keeps a legacy initialize/tools path for client fallback',async()=>{
+test('MCP keeps a legacy initialize/tools path for client fallback without requiring login for discovery',async()=>{
   const f=await fixture();
   try{
-    const initialize=await fetch(`${f.base}/mcp`,{method:'POST',headers:f.auth,body:JSON.stringify({jsonrpc:'2.0',id:7,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'legacy-test',version:'1'}}})});
+    const initialize=await fetch(`${f.base}/mcp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:7,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'legacy-test',version:'1'}}})});
     assert.equal(initialize.status,200);
     const init=await initialize.json();
     assert.equal(init.result.protocolVersion,'2025-11-25');
     assert.deepEqual(init.result.capabilities,{tools:{}});
     assert.equal(init.result.serverInfo.name,'jugest');
 
-    const list=await fetch(`${f.base}/mcp`,{method:'POST',headers:f.auth,body:JSON.stringify({jsonrpc:'2.0',id:8,method:'tools/list',params:{}})});
+    const list=await fetch(`${f.base}/mcp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:8,method:'tools/list',params:{}})});
     assert.equal(list.status,200);
     const body=await list.json();
     assert.equal(Array.isArray(body.result.tools),true);
