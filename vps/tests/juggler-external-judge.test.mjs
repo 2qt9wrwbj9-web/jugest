@@ -24,7 +24,8 @@ const vectors=[
   {
     input:{machine:'go',games:6000,bb:27,rb:25,diff:850},method:'reverse-diff',
     q:[0.24613280017616132,0.2507191785320366,0.24853114055836725,0.1623550859525854,0.07171037192710909,0.020551422853740307],
-    expectedSetting:2.6244453194836654,p4:0.2546168807334348,p5:0.0922617947808494,p6:0.020551422853740307
+    expectedSetting:2.6244453194836654,p4:0.2546168807334348,p5:0.0922617947808494,p6:0.020551422853740307,
+    estimatedGrape:6.607985949346871,estimatedGrapeCount:907.9922454425068,grapeCountLo:884.6454203480552,grapeCountHi:931.3390705369585
   },
   {
     input:{machine:'fk',games:3550,bb:12,rb:9},method:'bonus-only',
@@ -35,7 +36,7 @@ const vectors=[
     input:{machine:'hp',games:7000,bb:31,rb:30,diff:1600},method:'reverse-diff',
     q:[0.04634408021296993,0.11768595267477584,0.25169042832490607,0.1578614562383568,0.21340558441748142,0.21301249813150994],
     expectedSetting:4.013336006367133,p4:0.5842795387873482,p5:0.4264180825489914,p6:0.21301249813150994,
-    estimatedGrape:6.211006603148272,estimatedGrapeCount:1127.0314857581698
+    estimatedGrape:6.211006603148272,estimatedGrapeCount:1127.0314857581698,grapeCountLo:1100.0329243466394,grapeCountHi:1154.0300471697
   },
   {
     input:{machine:'gg',games:4800,bb:21,rb:16},method:'bonus-only',
@@ -46,7 +47,7 @@ const vectors=[
     input:{machine:'mr',games:6200,bb:28,rb:23,diff:500},method:'reverse-diff',
     q:[0.5342827282996775,0.2577286303257199,0.12118637572174015,0.06596026043975277,0.017125428989618257,0.003716576223491376],
     expectedSetting:1.7850667601643884,p4:0.0868022656528624,p5:0.020842005213109634,p6:0.003716576223491376,
-    estimatedGrape:6.94323074769272,estimatedGrapeCount:892.956064013903
+    estimatedGrape:6.94323074769272,estimatedGrapeCount:892.956064013903,grapeCountLo:866.6925451424969,grapeCountHi:919.219582885309
   },
   {
     input:{machine:'um',games:5100,bb:23,rb:19},method:'bonus-only',
@@ -71,8 +72,8 @@ test('server external judge matches protected browser reference vectors',()=>{
     if(vector.method==='reverse-diff'){
       close(result.estimatedGrape,vector.estimatedGrape);
       close(result.estimatedGrapeCount,vector.estimatedGrapeCount);
-      if(vector.grapeCountLo!=null)close(result.grapeCountLo,vector.grapeCountLo);
-      if(vector.grapeCountHi!=null)close(result.grapeCountHi,vector.grapeCountHi);
+      close(result.grapeCountLo,vector.grapeCountLo);
+      close(result.grapeCountHi,vector.grapeCountHi);
       assert.equal(result.reverseWarn,false);
     }else{
       assert.equal(Number.isNaN(result.estimatedGrape),true);
