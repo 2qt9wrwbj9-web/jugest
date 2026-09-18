@@ -8,6 +8,7 @@ import {join} from 'node:path';
 import {once} from 'node:events';
 import {createWebServer} from '../src/web-server.mjs';
 import {createRelayStore} from '../src/relay-store.mjs';
+import {authenticateOAuthAccessToken} from '../src/oauth-handler.mjs';
 
 const CHANNEL='channel_oauth_test_123';
 const RECEIVER='receiver-token-oauth-test-1234567890';
@@ -27,7 +28,7 @@ async function fixture(){
   const server=createWebServer({rootDir:root,relayDbPath,canonicalDbPath,rawRoot});
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
-  return {base,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
+  return {base,relayDbPath,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
 }
 
 async function register(base,redirectUri=REDIRECT){
@@ -74,6 +75,8 @@ test('DCR issues a public client only for trusted ChatGPT/OpenAI or loopback red
     assert.equal(client.token_endpoint_auth_method,'none');
     assert.deepEqual(client.redirect_uris,[REDIRECT]);
 
+    const loopback=await register(f.base,'http://127.0.0.1:8787/callback');
+    assert.equal(loopback.status,201);
     const bad=await register(f.base,'https://evil.example/callback');
     assert.equal(bad.status,400);
     const error=await bad.json();
@@ -127,6 +130,23 @@ test('authorization code + S256 PKCE issues tokens, makes codes single-use, and 
   }finally{await f.close()}
 });
 
+test('authorization rejects mismatched resource and redirect targets',async()=>{
+  const f=await fixture();
+  try{
+    const client=await (await register(f.base)).json();
+    const flow=authorizeParams(client.client_id);
+    const wrongResource=new URLSearchParams(flow.params);wrongResource.set('resource','https://evil.example/mcp');
+    const badResource=await fetch(`${f.base}/oauth/authorize?${wrongResource}`);
+    assert.equal(badResource.status,400);
+    assert.equal((await badResource.json()).error,'invalid_target');
+
+    const wrongRedirect=new URLSearchParams(flow.params);wrongRedirect.set('redirect_uri','https://chatgpt.com/not-the-registered-callback');
+    const badRedirect=await fetch(`${f.base}/oauth/authorize?${wrongRedirect}`);
+    assert.equal(badRedirect.status,400);
+    assert.equal((await badRedirect.json()).error,'invalid_request');
+  }finally{await f.close()}
+});
+
 test('authorization rejects bad Collector credentials and a bad PKCE verifier does not burn the valid code',async()=>{
   const f=await fixture();
   try{
@@ -148,5 +168,16 @@ test('authorization rejects bad Collector credentials and a bad PKCE verifier do
     const recovered=await fetch(`${f.base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:correct});
     assert.equal(recovered.status,200);
     assert.ok((await recovered.json()).access_token);
+  }finally{await f.close()}
+});
+
+test('invalid and expired OAuth access tokens are rejected',async()=>{
+  const f=await fixture();
+  try{
+    assert.equal(await authenticateOAuthAccessToken('not-a-real-token',{relayDbPath:f.relayDbPath}),null);
+    const oauth=createRelayStore('jugest-oauth-v1',{dbPath:f.relayDbPath,root:'jugest'}),raw='expired-access-token';
+    await oauth.setJSON(`access/${digest(raw)}`,{type:'access',issuer:ISSUER,resource:RESOURCE,scope:'jugest:read',clientId:'test-client',channelId:CHANNEL,issuedAt:Date.now()-7200000,expiresAt:Date.now()-1});
+    assert.equal(await authenticateOAuthAccessToken(raw,{relayDbPath:f.relayDbPath}),null);
+    assert.equal(await oauth.get(`access/${digest(raw)}`,{type:'json'}),null);
   }finally{await f.close()}
 });
