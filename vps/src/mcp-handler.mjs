@@ -110,7 +110,7 @@ function toolFailure(error){
 
 function initializeResult(params={}){
   const requested=String(params?.protocolVersion||'').trim();
-  return {protocolVersion:requested||PROTOCOL_VERSION,capabilities:{tools:{listChanged:false}},serverInfo:SERVER_INFO,instructions:SERVER_INSTRUCTIONS};
+  return {protocolVersion:requested===PROTOCOL_VERSION?requested:PROTOCOL_VERSION,capabilities:{tools:{listChanged:false}},serverInfo:SERVER_INFO,instructions:SERVER_INSTRUCTIONS};
 }
 
 function firstHeader(headers,name){
