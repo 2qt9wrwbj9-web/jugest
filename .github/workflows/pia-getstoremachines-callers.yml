@@ -1,0 +1,64 @@
+name: PIA GetStoreMachines callers
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-getstoremachines-callers.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download binary and trace callers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pia/x /tmp/pia/arm64 pia-getstoremachines-callers
+          curl -fL --retry 2 --retry-delay 2 \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
+            -e 'https://apkpure.net/' --connect-timeout 15 --max-time 180 \
+            -o /tmp/pia/pia.xapk \
+            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest'
+          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/x
+          unzip -q /tmp/pia/x/config.arm64_v8a.apk -d /tmp/pia/arm64
+          python -m pip install --quiet pyelftools capstone
+          cat > /tmp/pia/trace.py <<'PY'
+          from collections import deque
+          from elftools.elf.elffile import ELFFile
+          from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
+          from capstone.arm64 import ARM64_OP_IMM
+
+          path='/tmp/pia/arm64/lib/arm64-v8a/libil2cpp.so'
+          TARGETS={
+            0x14A215C:'UnitDataController.GetStoreMachines',
+            0x14623D0:'KHFHCFDEBLH.PNIPCBLFFBC',
+          }
+          with open(path,'rb') as f:
+            elf=ELFFile(f)
+            md=Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN); md.detail=True
+            for seg in elf.iter_segments():
+              if seg['p_type']!='PT_LOAD' or not (int(seg['p_flags']) & 1): continue
+              ring=deque(maxlen=14)
+              for ins in md.disasm(seg.data(), int(seg['p_vaddr'])):
+                hit=None
+                if ins.mnemonic=='bl' and ins.operands and ins.operands[0].type==ARM64_OP_IMM:
+                  tgt=int(ins.operands[0].imm)
+                  if tgt in TARGETS: hit=(tgt,TARGETS[tgt])
+                if hit:
+                  print(f'\n=== CALL {hit[1]} target={hit[0]:#x} from={ins.address:#x} ===')
+                  for a,m,o in ring: print(f'{a:#010x}: {m:8s} {o}')
+                  print(f'{ins.address:#010x}: {ins.mnemonic:8s} {ins.op_str}')
+                ring.append((ins.address,ins.mnemonic,ins.op_str))
+          PY
+          python /tmp/pia/trace.py | tee pia-getstoremachines-callers/callers.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-getstoremachines-callers
+          path: pia-getstoremachines-callers
+          retention-days: 7
