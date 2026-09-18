@@ -5,6 +5,9 @@ import {webcrypto} from 'node:crypto';
 
 const JUGGLER_MACHINE_KEYS=new Set(['my','im','go','fk','hp','gg','mr','um']);
 const MAX_MACHINE_JUDGEMENT_ROWS=200;
+const MCP_JUDGE_DATE='2000-01-01';
+const MCP_JUDGE_SHOP='JUGEST MCP判別';
+const MCP_JUDGE_STORE_ID='jugest-mcp-judge';
 
 function memoryStorage(seed={}){
   const map=new Map(Object.entries(seed));
@@ -101,30 +104,49 @@ export async function runExistingMachineJudgement({rootDir,machines}={}){
     return {machineNo,machine,games,bb,rb,diff};
   });
 
-  const {ctx}=await bootRuntime(rootDir);
-  const externalJudge=mustFunction(ctx.externalJudge,'externalJudge');
+  const tableNos=normalized.map((_,index)=>`mcp-${String(index+1).padStart(3,'0')}`);
+  const syntheticDay={
+    date:MCP_JUDGE_DATE,
+    machines:normalized.map((input,index)=>({
+      machine:input.machine,
+      category:'juggler',
+      sourceMachineName:input.machine,
+      tableNo:tableNos[index],
+      games:input.games,
+      bb:input.bb,
+      rb:input.rb,
+      ...(input.diff===null?{}:{diff:input.diff})
+    }))
+  };
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop:MCP_JUDGE_SHOP,sourceStoreId:MCP_JUDGE_STORE_ID,days:[syntheticDay]});
+  const getStoreDay=mustFunction(bridge.getStoreDay,'getStoreDay');
+  const judged=plain(await getStoreDay(name,MCP_JUDGE_DATE));
+  if(!judged||judged.date!==MCP_JUDGE_DATE||!Array.isArray(judged.rows))throw new Error('JUGEST protected machine judgement returned no exact synthetic day');
+  const byTable=new Map(judged.rows.map(row=>[String(row?.tableNo??''),row]));
+
   const rows=normalized.map((input,index)=>{
-    const raw=plain(externalJudge(input.machine,input.games,input.bb,input.rb,input.diff));
-    const q=Array.isArray(raw?.q)?raw.q.map(Number):null;
-    if(!q||q.length!==6||q.some(value=>!Number.isFinite(value)||value<0))throw new Error(`JUGEST machine judgement row ${index} returned an invalid posterior q`);
+    const protectedRow=byTable.get(tableNos[index]);
+    if(!protectedRow)throw new Error(`JUGEST protected machine judgement row ${index} is missing`);
+    const q=Array.isArray(protectedRow.q)?protectedRow.q.map(Number):null;
+    if(!q||q.length!==6||q.some(value=>!Number.isFinite(value)||value<0))throw new Error(`JUGEST protected machine judgement row ${index} returned an invalid posterior q`);
     const total=q.reduce((sum,value)=>sum+value,0);
-    if(!Number.isFinite(total)||Math.abs(total-1)>1e-6)throw new Error(`JUGEST machine judgement row ${index} returned a non-normalized posterior q`);
-    const expectedSetting=q.reduce((sum,value,settingIndex)=>sum+value*(settingIndex+1),0);
-    const machineName=String(vm.runInContext(`M[${JSON.stringify(input.machine)}]?.name||${JSON.stringify(input.machine)}`,ctx));
+    if(!Number.isFinite(total)||Math.abs(total-1)>1e-6)throw new Error(`JUGEST protected machine judgement row ${index} returned a non-normalized posterior q`);
+    const expectedSetting=Number(protectedRow.expectedSetting);
+    if(!Number.isFinite(expectedSetting))throw new Error(`JUGEST protected machine judgement row ${index} is missing expectedSetting`);
     return Object.freeze({
       ...input,
-      machineName,
+      machineName:String(protectedRow.machineName||protectedRow.sourceMachineName||protectedRow.machine||input.machine),
       q:Object.freeze(q),
       expectedSetting,
       p4:(q[3]||0)+(q[4]||0)+(q[5]||0),
       p5:(q[4]||0)+(q[5]||0),
       p6:q[5]||0,
-      method:String(raw?.method||''),
-      estimatedGrape:finiteOrNull(raw?.estimatedGrape),
-      estimatedGrapeCount:finiteOrNull(raw?.estimatedGrapeCount),
-      grapeCountLo:finiteOrNull(raw?.grapeCountLo),
-      grapeCountHi:finiteOrNull(raw?.grapeCountHi),
-      reverseWarn:Boolean(raw?.reverseWarn)
+      method:String(protectedRow.method||protectedRow.judgeMethod||(input.diff===null?'bonus-only':'protected-runtime')),
+      estimatedGrape:finiteOrNull(protectedRow.estimatedGrape),
+      estimatedGrapeCount:finiteOrNull(protectedRow.estimatedGrapeCount),
+      grapeCountLo:finiteOrNull(protectedRow.grapeCountLo),
+      grapeCountHi:finiteOrNull(protectedRow.grapeCountHi),
+      reverseWarn:Boolean(protectedRow.reverseWarn)
     });
   });
   return Object.freeze({machines:Object.freeze(rows)});
