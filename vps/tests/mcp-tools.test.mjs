@@ -19,7 +19,7 @@ test('judge_machines MCP tool exposes only observed machine inputs and delegates
   assert.equal(judge.inputSchema.additionalProperties,false);
   assert.deepEqual(Object.keys(judge.inputSchema.properties),['machines']);
   assert.match(judge.description,/observed/i);
-  assert.doesNotMatch(judge.description,/automatically.*PRE/i);
+  assert.match(judge.description,/does not automatically use PRE/i);
 
   const machines=[{tableNo:'412',machine:'マイジャグラーV',games:5230,bb:24,rb:18,diff:850}];
   const result=await service.callTool('judge_machines',{machines});
