@@ -7,10 +7,13 @@ import {loadStoreDays} from './analysis/store-data.mjs';
 import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
+import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
+const JUDGE_VERSION='external-juggler-browser-parity-v1';
 const RELAY_STORE_NAME='juggler-relay-v1';
+const JUGGLER_MACHINE_KEY_SET=new Set(JUGGLER_MACHINE_KEYS);
 function digest(value){return createHash('sha256').update(String(value||'')).digest('hex')}
 function secureMatch(raw,expectedHash){if(!raw||!/^[a-f0-9]{64}$/i.test(String(expectedHash||'')))return false;const a=Buffer.from(digest(raw),'hex'),b=Buffer.from(String(expectedHash),'hex');return a.length===b.length&&timingSafeEqual(a,b)}
 function headerValue(req,name){const value=req.headers?.[name.toLowerCase()];return Array.isArray(value)?String(value[0]||''):String(value||'')}
@@ -20,6 +23,29 @@ function validChannelId(value){return /^[A-Za-z0-9_-]{12,80}$/.test(String(value
 async function authenticate(req,relayDbPath){const channelId=headerValue(req,'x-jugest-channel-id').trim();const authorization=headerValue(req,'authorization').trim();const match=authorization.match(/^Bearer\s+(.+)$/i);const receiverToken=match?.[1]?.trim()||'';if(!validChannelId(channelId)||!receiverToken)return null;const store=createRelayStore(RELAY_STORE_NAME,{dbPath:relayDbPath,root:'jugest'});const channel=await store.get(`channel/${channelId}`,{type:'json'});if(!channel||channel.revokedAt||!secureMatch(receiverToken,channel.receiverHash))return null;return {channelId}}
 function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==channelId)return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
+function isJudgeMachinesRoute(parts){return !!parts&&parts.length===4&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='judge'&&parts[3]==='machines'}
+async function readJsonBody(req,{maxBytes=262144}={}){
+  let size=0;const chunks=[];
+  for await(const chunk of req){const data=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=data.length;if(size>maxBytes){const error=new Error('body_too_large');error.code='body_too_large';throw error}chunks.push(data)}
+  if(!chunks.length)return null;
+  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{const error=new Error('bad_json');error.code='bad_json';throw error}
+}
+function finiteNumber(value){const n=Number(value);return Number.isFinite(n)?n:null}
+function judgeInputRow(raw,index){
+  const tableNo=String(raw?.tableNo??'').trim().slice(0,80),base={ok:false,index,tableNo};
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return {...base,code:'bad_machine_row'};
+  const machine=String(raw.machine??'').trim();
+  if(!JUGGLER_MACHINE_KEY_SET.has(machine))return {...base,machine,code:'unsupported_machine'};
+  const games=finiteNumber(raw.games);if(games==null||games<=0)return {...base,machine,code:'bad_games'};
+  const bb=raw.bb==null?0:finiteNumber(raw.bb),rb=raw.rb==null?0:finiteNumber(raw.rb);
+  if(bb==null||rb==null||!Number.isInteger(bb)||!Number.isInteger(rb)||bb<0||rb<0)return {...base,machine,code:'bad_bonus_count'};
+  if(bb+rb>games)return {...base,machine,code:'bonus_exceeds_games'};
+  const hasDiff=raw.diff!==null&&raw.diff!==undefined&&raw.diff!=='';
+  const diff=hasDiff?finiteNumber(raw.diff):null;if(hasDiff&&diff==null)return {...base,machine,code:'bad_diff'};
+  const judged=judgeJugglerExternal({machine,games,bb,rb,diff});
+  if(!judged)return {...base,machine,code:'judge_unavailable'};
+  return {ok:true,index,tableNo,...judged};
+}
 function auditStoreRead(db,storeId,payload){
   if(!payload||payload.explanationVersion==='pre-audit-v1')return payload;
   try{
@@ -36,10 +62,19 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
   if(typeof resourceStatusBuilder!=='function')throw new TypeError('resourceStatusBuilder must be a function');
   return async function analyticsHandler(req,res){
     const method=String(req.method||'GET').toUpperCase();
-    if(method!=='GET'&&method!=='HEAD'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, HEAD'});return}
-    const auth=await authenticate(req,relayDbPath);if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
     const url=new URL(req.url||'/','http://127.0.0.1');const parts=parseApiPath(url.pathname);
     if(!parts||parts[0]!=='api'||parts[1]!=='vps'){sendJson(req,res,404,{ok:false,code:'not_found'});return}
+    const judgeRoute=isJudgeMachinesRoute(parts);
+    if(judgeRoute){if(method!=='POST'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'POST'});return}}
+    else if(method!=='GET'&&method!=='HEAD'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, HEAD'});return}
+    const auth=await authenticate(req,relayDbPath);if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+    if(judgeRoute){
+      let body;try{body=await readJsonBody(req)}catch(error){const tooLarge=error?.code==='body_too_large';sendJson(req,res,tooLarge?413:400,{ok:false,code:tooLarge?'body_too_large':'bad_json'});return}
+      if(!Array.isArray(body?.machines)){sendJson(req,res,400,{ok:false,code:'bad_machines'});return}
+      if(body.machines.length>200){sendJson(req,res,413,{ok:false,code:'batch_too_large',maxMachines:200});return}
+      const machines=body.machines.map(judgeInputRow);
+      sendJson(req,res,200,{ok:true,judgeVersion:JUDGE_VERSION,machines});return;
+    }
     const db=openDatabase(canonicalDbPath);
     try{
       migrate(db);
@@ -89,4 +124,4 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
     }finally{db.close()}
   };
 }
-export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,secureMatch,auditStoreRead};
+export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,JUDGE_VERSION,secureMatch,auditStoreRead,isJudgeMachinesRoute,judgeInputRow};
