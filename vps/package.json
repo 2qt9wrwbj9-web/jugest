@@ -15,5 +15,13 @@
     "web": "node src/web-main.mjs",
     "deploy": "node scripts/deploy-vps.mjs",
     "deploy:status": "node scripts/deploy-status.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0"
   }
 }
