@@ -1,0 +1,41 @@
+name: PIA all stores live probe
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-all-stores-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public all-stores endpoint once
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pia-all-stores-live
+          URL='https://pia-server.heuron.net/api/stores/getAllStores'
+          curl -sS --connect-timeout 10 --max-time 30 \
+            -A 'UnityPlayer/2022 PIA/1.0.29' \
+            -H 'Accept: application/json' \
+            -D pia-all-stores-live/headers.txt \
+            -o pia-all-stores-live/body.json \
+            -w '%{http_code}\n' "$URL" > pia-all-stores-live/http-code.txt
+          echo '=== HTTP ==='
+          cat pia-all-stores-live/http-code.txt
+          echo '=== bytes ==='
+          wc -c pia-all-stores-live/body.json
+          echo '=== preview ==='
+          head -c 12000 pia-all-stores-live/body.json || true
+          echo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-all-stores-live
+          path: pia-all-stores-live
+          retention-days: 7
