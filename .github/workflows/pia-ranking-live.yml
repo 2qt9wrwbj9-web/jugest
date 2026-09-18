@@ -1,0 +1,44 @@
+name: PIA ranking live probe
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-ranking-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public slot ranking once
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pia-ranking-live
+          URL='https://pia-server.heuron.net/api/stores/getRanking'
+          curl -sS --connect-timeout 10 --max-time 30 \
+            -A 'UnityPlayer/2022 PIA/1.0.29' \
+            -H 'Accept: application/json' \
+            -F 'store_id=35' \
+            -F 'machine_type=S' \
+            -F 'limit=10' \
+            -D pia-ranking-live/headers.txt \
+            -o pia-ranking-live/body.json \
+            -w '%{http_code}\n' "$URL" > pia-ranking-live/http-code.txt
+          echo '=== HTTP ==='
+          cat pia-ranking-live/http-code.txt
+          echo '=== bytes ==='
+          wc -c pia-ranking-live/body.json
+          echo '=== preview ==='
+          head -c 16000 pia-ranking-live/body.json || true
+          echo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-ranking-live
+          path: pia-ranking-live
+          retention-days: 7
