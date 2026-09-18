@@ -47,7 +47,7 @@ function trustedRedirectUri(raw){
   let url;try{url=new URL(String(raw||''))}catch{return false}
   if(url.username||url.password||url.hash)return false;
   if(url.protocol==='https:'&&['chatgpt.com','chat.openai.com'].includes(url.hostname))return true;
-  if(url.protocol==='http:'&&['127.0.0.1','localhost','::1'].includes(url.hostname))return true;
+  if(url.protocol==='http:'&&['127.0.0.1','localhost','::1','[::1]'].includes(url.hostname))return true;
   return false;
 }
 function normalizeScopes(raw){return [...new Set(String(raw||'').trim().split(/\s+/).filter(Boolean))]}
@@ -73,6 +73,15 @@ async function persistUnique(store,prefix,record,{tokenPrefix='jgo_',bytes=32}={
     if(saved.modified)return {token,key};
   }
   throw new Error('oauth_token_collision');
+}
+async function consumeRecord(store,key,record,etag){
+  try{
+    await store.setJSON(key,{type:'consumed',previousType:String(record?.type||''),consumedAt:Date.now(),expiresAt:Number(record?.expiresAt)||Date.now()},{ifMatch:etag});
+    return true;
+  }catch(error){
+    if(error?.code==='precondition_failed')return false;
+    throw error;
+  }
 }
 function protectedResourceMetadata(){
   return {resource:OAUTH_RESOURCE,authorization_servers:[OAUTH_ISSUER],scopes_supported:[OAUTH_SCOPE],resource_documentation:`${OAUTH_ISSUER}/`};
@@ -159,18 +168,18 @@ async function tokenEndpoint(req,res,relayDbPath){
   if(!client){oauthError(res,400,'invalid_client');return}
   if(resource!==OAUTH_RESOURCE){oauthError(res,400,'invalid_target');return}
   if(grantType==='authorization_code'){
-    const code=String(form.get('code')||''),record=await store.get(`code/${digest(code)}`,{type:'json'});
+    const code=String(form.get('code')||''),key=`code/${digest(code)}`,entry=await store.getWithMetadata(key),record=entry?.value;
     if(!record||record.type!=='authorization_code'||record.expiresAt<=Date.now()||record.clientId!==clientId||record.redirectUri!==String(form.get('redirect_uri')||'')||record.resource!==OAUTH_RESOURCE){oauthError(res,400,'invalid_grant');return}
-    await store.delete(`code/${digest(code)}`);
     const verifier=String(form.get('code_verifier')||'');
     if(verifier.length<43||verifier.length>128||!secureTextEqual(pkceChallenge(verifier),record.codeChallenge)){oauthError(res,400,'invalid_grant');return}
+    if(!await consumeRecord(store,key,record,entry.etag)){oauthError(res,400,'invalid_grant');return}
     const pair=await issueTokenPair(store,{clientId,channelId:record.channelId,scope:record.scope});
     sendJson(res,200,{access_token:pair.accessToken,token_type:'Bearer',expires_in:Math.floor(ACCESS_TTL_MS/1000),refresh_token:pair.refreshToken,scope:record.scope},{'pragma':'no-cache'});return;
   }
   if(grantType==='refresh_token'){
-    const raw=String(form.get('refresh_token')||''),key=`refresh/${digest(raw)}`,record=await store.get(key,{type:'json'});
+    const raw=String(form.get('refresh_token')||''),key=`refresh/${digest(raw)}`,entry=await store.getWithMetadata(key),record=entry?.value;
     if(!record||record.type!=='refresh'||record.expiresAt<=Date.now()||record.clientId!==clientId||record.resource!==OAUTH_RESOURCE){oauthError(res,400,'invalid_grant');return}
-    await store.delete(key);
+    if(!await consumeRecord(store,key,record,entry.etag)){oauthError(res,400,'invalid_grant');return}
     const pair=await issueTokenPair(store,{clientId,channelId:record.channelId,scope:record.scope});
     sendJson(res,200,{access_token:pair.accessToken,token_type:'Bearer',expires_in:Math.floor(ACCESS_TTL_MS/1000),refresh_token:pair.refreshToken,scope:record.scope},{'pragma':'no-cache'});return;
   }
