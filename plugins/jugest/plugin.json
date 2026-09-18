@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jugest",
+  "version": "0.1.0",
+  "description": "Use JUGEST saved store data, PRE comparisons, and current Juggler setting judgement from ChatGPT.",
+  "repository": "https://github.com/2qt9wrwbj9-web/jugest",
+  "keywords": ["jugest", "juggler", "pachislot", "analysis"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "JUGEST",
+        "shortDescription": "JUGEST store data and Juggler judgement",
+        "longDescription": "Read authorized JUGEST store data and use the protected JUGEST judgement math for current Juggler machine observations, including screenshot-driven batch workflows.",
+        "developerName": "JUGEST",
+        "category": "Productivity",
+        "capabilities": ["Read JUGEST data", "Judge Juggler machines"],
+        "websiteURL": "https://jugest.net",
+        "defaultPrompt": [
+          "このスクショの全台をJUGESTで設定判別して",
+          "JUGESTに保存してあるこの店のPREと過去比較を見せて"
+        ]
+      }
+    }
+  }
+}
