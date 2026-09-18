@@ -103,10 +103,29 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
-function normalizedMachineInput(row,index){
+function normalizeMachineToken(value){return String(value??'').normalize('NFKC').toLocaleLowerCase('ja-JP').replace(/[\s　]+/g,'').trim()}
+function machineCatalog(bridge){
+  const getJudgeState=mustFunction(bridge?.getJudgeState,'getJudgeState');
+  const machines=plain(getJudgeState())?.machines;
+  if(!Array.isArray(machines)||!machines.length)throw new Error('JUGEST runtime returned no machine catalog');
+  return machines.map((machine,index)=>{
+    const key=String(machine?.key??'').trim(),name=String(machine?.name??'').trim();
+    if(!key||!name)throw new Error(`JUGEST machine catalog row ${index} is invalid`);
+    return Object.freeze({key,name,keyToken:normalizeMachineToken(key),nameToken:normalizeMachineToken(name)});
+  });
+}
+function resolveMachine(value,catalog){
+  const raw=String(value??'').trim();
+  if(!raw)throw new TypeError('machine is required');
+  const token=normalizeMachineToken(raw);
+  const found=catalog.find(machine=>machine.key===raw||machine.keyToken===token||machine.nameToken===token);
+  if(!found)throw new TypeError(`unknown machine: ${raw}`);
+  return found;
+}
+
+function normalizedMachineInput(row,index,catalog){
   if(!row||typeof row!=='object')throw new TypeError(`machine row ${index} must be an object`);
-  const machineKey=String(row.machine??row.machineKey??'').trim();
-  if(!machineKey)throw new TypeError(`machine row ${index} is missing machine`);
+  const machine=resolveMachine(row.machine??row.machineKey,catalog);
   const games=Number(row.games),bb=Number(row.bb),rb=Number(row.rb);
   if(!Number.isFinite(games)||games<=0)throw new TypeError(`machine row ${index} games must be > 0`);
   if(!Number.isFinite(bb)||bb<0)throw new TypeError(`machine row ${index} bb must be >= 0`);
@@ -115,7 +134,7 @@ function normalizedMachineInput(row,index){
   const hasDiff=row.diff!==undefined&&row.diff!==null&&row.diff!=='';
   const diff=hasDiff?Number(row.diff):undefined;
   if(hasDiff&&!Number.isFinite(diff))throw new TypeError(`machine row ${index} diff must be finite`);
-  return {tableNo:String(row.tableNo??'').trim(),machineKey,games,bb,rb,diff,hasDiff};
+  return {tableNo:String(row.tableNo??'').trim(),machineKey:machine.key,machineName:machine.name,games,bb,rb,diff,hasDiff};
 }
 
 function protectedJudgementRow(externalJudge,input){
@@ -126,7 +145,7 @@ function protectedJudgementRow(externalJudge,input){
   if(!Number.isFinite(total)||Math.abs(total-1)>1e-6)throw new Error('JUGEST protected judgement posterior q is not normalized');
   const expectedSetting=q.reduce((sum,value,index)=>sum+value*(index+1),0);
   const result={
-    ok:true,tableNo:input.tableNo,machineKey:input.machineKey,
+    ok:true,tableNo:input.tableNo,machineKey:input.machineKey,machineName:input.machineName,
     input:input.hasDiff?{games:input.games,bb:input.bb,rb:input.rb,diff:input.diff}:{games:input.games,bb:input.bb,rb:input.rb},
     q,expectedSetting,p4:q[3]+q[4]+q[5],p5:q[4]+q[5],p6:q[5],method:String(raw?.method??'')
   };
@@ -138,10 +157,11 @@ export async function runExistingMachineJudgementBatch({rootDir,machines}={}){
   if(!rootDir)throw new TypeError('rootDir is required');
   if(!Array.isArray(machines)||machines.length<1)throw new TypeError('machines must contain at least one row');
   if(machines.length>200)throw new RangeError('machine batch supports at most 200 rows');
-  const {ctx}=await bootRuntime(rootDir);
+  const {ctx,bridge}=await bootRuntime(rootDir);
   const externalJudge=mustFunction(ctx.V4_TEST?.externalJudge,'V4_TEST.externalJudge');
+  const catalog=machineCatalog(bridge);
   const rows=machines.map((row,index)=>{
-    try{return protectedJudgementRow(externalJudge,normalizedMachineInput(row,index))}
+    try{return protectedJudgementRow(externalJudge,normalizedMachineInput(row,index,catalog))}
     catch(error){return Object.freeze({ok:false,tableNo:String(row?.tableNo??'').trim(),machineKey:String(row?.machine??row?.machineKey??'').trim(),error:String(error?.message??error)})}
   });
   const accepted=rows.reduce((count,row)=>count+(row.ok?1:0),0);
@@ -167,4 +187,4 @@ export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,d
   return Object.freeze({shop:name,date:target,rows:Object.freeze(rows)});
 }
 
-export const __test={validTargetDate,bootImportedRuntime};
+export const __test={validTargetDate,bootImportedRuntime,normalizeMachineToken,resolveMachine};
