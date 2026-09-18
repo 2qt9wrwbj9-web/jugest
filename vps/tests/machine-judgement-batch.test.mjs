@@ -42,3 +42,41 @@ test('runtime adapter resolves a public My Juggler alias to the canonical JUGEST
   assert.equal(result.rows[0].machineKey,'my');
   assert.equal(result.rows[0].machineName,'マイジャグV');
 });
+
+test('one unreadable or unknown screenshot row does not discard valid machine rows',async()=>{
+  const result=await runtime.runExistingMachineJudgementBatch({
+    rootDir:REPO_ROOT,
+    machines:[
+      {tableNo:'501',machine:'マイジャグラーV',games:3800,bb:16,rb:14},
+      {tableNo:'502',machine:'判別不能な機種名',games:3900,bb:17,rb:15},
+      {tableNo:'503',machine:'go',games:4000,bb:18,rb:16,diff:400}
+    ]
+  });
+
+  assert.equal(result.accepted,2);
+  assert.equal(result.rejected,1);
+  assert.equal(result.rows.length,3);
+  assert.equal(result.rows[0].ok,true);
+  assert.equal(result.rows[1].ok,false);
+  assert.match(result.rows[1].error,/unknown machine/i);
+  assert.equal(result.rows[2].ok,true);
+});
+
+test('machine batch is bounded at 200 rows',async()=>{
+  const machines=Array.from({length:201},(_,index)=>({tableNo:String(index+1),machine:'my',games:1000,bb:4,rb:3}));
+  await assert.rejects(
+    runtime.runExistingMachineJudgementBatch({rootDir:REPO_ROOT,machines}),
+    /at most 200 rows/i
+  );
+});
+
+test('difference is optional and the existing JUGEST engine chooses the no-diff judgement path',async()=>{
+  const result=await runtime.runExistingMachineJudgementBatch({
+    rootDir:REPO_ROOT,
+    machines:[{tableNo:'601',machine:'my',games:3000,bb:12,rb:11}]
+  });
+  assert.equal(result.accepted,1);
+  assert.equal(result.rows[0].ok,true);
+  assert.deepEqual(result.rows[0].input,{games:3000,bb:12,rb:11});
+  assert.ok(result.rows[0].method.length>0);
+});
