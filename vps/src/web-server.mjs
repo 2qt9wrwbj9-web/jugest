@@ -74,10 +74,10 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const absoluteRoot=path.resolve(rootDir);
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
-    ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
+    ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath})
     :null;
   const mcpHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
-    ?createMcpHandler({relayDbPath,canonicalDbPath})
+    ?createMcpHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath})
     :null;
   const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
     ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
