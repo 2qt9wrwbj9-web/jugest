@@ -7,6 +7,7 @@ import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
 import {createMcpHandler} from './mcp-handler.mjs';
+import {createMcpStoreService} from './mcp-store-service.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
@@ -79,7 +80,12 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
     ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
     :null;
-  const mcpHandler=mcpEnabled?createMcpHandler({storeService:mcpStoreService}):null;
+  const resolvedMcpStoreService=mcpStoreService??(
+    mcpEnabled&&typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
+      ?createMcpStoreService({relayDbPath,canonicalDbPath})
+      :null
+  );
+  const mcpHandler=mcpEnabled?createMcpHandler({storeService:resolvedMcpStoreService}):null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/mcp'){
