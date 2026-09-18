@@ -3,7 +3,7 @@ name: jugest-live-judge
 description: Use JUGEST to judge one or many Juggler machines from observed live data, including screenshots showing machine number, machine model, G, BB, RB, and optional coin difference.
 ---
 
-Use this skill when the user asks for Juggler setting judgement, sends a screenshot of a pachislot data site, asks which current machines look strongest, or provides G / BB / RB / 差枚 values.
+Use this skill when the user asks for Juggler setting judgement, sends a screenshot of a pachislot data site, asks which current machines look strongest, or provides G / BB / RB / 差枚 values. スクリーンショット・画像からの一括判別を主な利用ケースとして扱う。
 
 ## Core rule
 
