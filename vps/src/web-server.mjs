@@ -6,6 +6,7 @@ import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
+import {createMcpHandler} from './mcp-handler.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
@@ -67,7 +68,7 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,mcpEnabled=false,mcpStoreService=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
@@ -78,8 +79,16 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
     ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
     :null;
+  const mcpHandler=mcpEnabled?createMcpHandler({storeService:mcpStoreService}):null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
+    if(url.pathname==='/mcp'){
+      if(!mcpHandler){
+        send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
+        return;
+      }
+      return await mcpHandler(req,res);
+    }
     if(url.pathname==='/api/relay'){
       if(!relayHandler){
         send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
