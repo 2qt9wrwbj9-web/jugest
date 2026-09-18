@@ -7,6 +7,7 @@ import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
+import {authenticateOAuthAccessToken,OAUTH_RESOURCE_METADATA,OAUTH_SCOPE} from './oauth-handler.mjs';
 
 const MCP_VERSION='2026-07-28';
 const LEGACY_VERSION='2025-11-25';
@@ -16,46 +17,50 @@ const STORE_READ_VERSION='store-read-v1';
 const JUDGE_VERSION='external-juggler-browser-parity-v1';
 const MAX_BATCH=200;
 const MACHINE_KEYS=new Set(JUGGLER_MACHINE_KEYS);
+const OAUTH_SECURITY=Object.freeze([{type:'oauth2',scopes:[OAUTH_SCOPE]}]);
+const OAUTH_CHALLENGE=`Bearer resource_metadata="${OAUTH_RESOURCE_METADATA}", error="invalid_token", error_description="Connect your JUGEST account to continue"`;
 const INSTRUCTIONS='Use JUGEST setting judgement from observed current-machine data. judge_machines must not incorporate PRE v2, store tendencies, or store history. Store prediction/comparison tools are separate context and should only be used when the user asks for store reading, prediction, historical comparison, or an explicitly combined assessment. Screenshot extraction is performed by the model; JUGEST performs the setting probability calculation.';
 
+const securedTool=tool=>Object.freeze({...tool,securitySchemes:OAUTH_SECURITY,_meta:{securitySchemes:OAUTH_SECURITY}});
 const TOOL_DEFS=Object.freeze([
-  {
+  securedTool({
     name:'judge_machines',title:'Judge current Juggler machines',
     description:'Calculate JUGEST setting posteriors from observed current machine data only. Does not read a store, PRE v2, store tendencies, or history. Use diff when reliably visible; omit diff when it is unavailable or uncertain.',
     inputSchema:{type:'object',additionalProperties:false,properties:{machines:{type:'array',maxItems:MAX_BATCH,items:{type:'object',additionalProperties:false,properties:{tableNo:{type:['string','number'],description:'Optional table number shown in the screenshot.'},machine:{type:'string',enum:JUGGLER_MACHINE_KEYS,description:'JUGEST machine key: my=マイジャグV, im=ネオアイム, go=ゴージャグ3, fk=ファンキー2, hp=ハッピーVⅢ, gg=ガールズSS, mr=ミスター, um=ウルトラミラクル.'},games:{type:'number',exclusiveMinimum:0},bb:{type:'integer',minimum:0},rb:{type:'integer',minimum:0},diff:{type:'number',description:'Optional current coin difference. Omit rather than guess when unreadable.'}},required:['machine','games','bb','rb']}}},required:['machines']},
     annotations:{readOnlyHint:true,openWorldHint:false}
-  },
-  {
+  }),
+  securedTool({
     name:'list_stores',title:'List JUGEST stores',
     description:'List stores saved in JUGEST that are authorized for the connected Collector channel. Use this to resolve a user-provided store name to storeId.',
     inputSchema:{type:'object',additionalProperties:false},annotations:{readOnlyHint:true,openWorldHint:false}
-  },
-  {
+  }),
+  securedTool({
     name:'get_store_days',title:'Get saved store days',
     description:'List compact saved business dates for one authorized JUGEST store. This is historical data and is separate from current-machine setting judgement.',
     inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1},limit:{type:'integer',minimum:1,maximum:366,default:60}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
-  },
-  {
+  }),
+  securedTool({
     name:'get_store_day',title:'Get one saved store day',
     description:'Read the saved per-machine data for one authorized store and business date.',
     inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1},date:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'}},required:['storeId','date']},annotations:{readOnlyHint:true,openWorldHint:false}
-  },
-  {
+  }),
+  securedTool({
     name:'get_store_prediction',title:'Get PRE/store prediction',
     description:'Read the active JUGEST PRE/store-read prediction for an authorized store. Keep this separate from judge_machines unless the user explicitly asks for store reading or a combined assessment.',
     inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
-  },
-  {
+  }),
+  securedTool({
     name:'get_store_comparison',title:'Get prediction comparison',
     description:'Read PRE/legacy live and historical comparison metrics for an authorized store. This evaluates prediction systems and is not a current-machine setting posterior.',
     inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1},limit:{type:'integer',minimum:1,maximum:366,default:90}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
-  }
+  })
 ]);
 
 function digest(value){return createHash('sha256').update(String(value||'')).digest('hex')}
 function secureMatch(raw,expectedHash){if(!raw||!/^[a-f0-9]{64}$/i.test(String(expectedHash||'')))return false;const a=Buffer.from(digest(raw),'hex'),b=Buffer.from(String(expectedHash),'hex');return a.length===b.length&&timingSafeEqual(a,b)}
 function headerValue(req,name){const value=req.headers?.[name.toLowerCase()];return Array.isArray(value)?String(value[0]||''):String(value||'')}
 function validChannelId(value){return /^[A-Za-z0-9_-]{12,80}$/.test(String(value||''))}
+function bearerToken(req){const match=headerValue(req,'authorization').trim().match(/^Bearer\s+(.+)$/i);return match?.[1]?.trim()||''}
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
 function jsonText(value){return JSON.stringify(value)}
 function sendRaw(res,status,body='',headers={}){const data=Buffer.from(body);res.writeHead(status,{'content-length':String(data.length),'cache-control':'no-store','x-content-type-options':'nosniff',...headers});res.end(data)}
@@ -64,24 +69,32 @@ function jsonRpcError(id,code,message,data){return {jsonrpc:'2.0',id:id??null,er
 function modernMeta(){return {'io.modelcontextprotocol/serverInfo':SERVER_INFO}}
 function modernResult(result){return {resultType:'complete',...result,_meta:{...(result?._meta||{}),...modernMeta()}}}
 function toolResult(payload,{modern,isError=false}={}){const result={content:[{type:'text',text:jsonText(payload)}],structuredContent:payload,isError};return modern?modernResult(result):result}
-function toolError(message,{modern,code='tool_error'}={}){const payload={ok:false,code,message};const result={content:[{type:'text',text:`${code}: ${message}`}],isError:true};return modern?modernResult(result):result}
+function toolError(message,{modern,code='tool_error'}={}){const result={content:[{type:'text',text:`${code}: ${message}`}],isError:true};return modern?modernResult(result):result}
+function authToolError({modern}={}){
+  const result={content:[{type:'text',text:'Authentication required: connect your JUGEST account to continue.'}],isError:true,_meta:{'mcp/www_authenticate':[OAUTH_CHALLENGE]}};
+  return modern?modernResult(result):result;
+}
 
-async function authenticate(req,relayDbPath){
-  const channelId=headerValue(req,'x-jugest-channel-id').trim();
-  const authorization=headerValue(req,'authorization').trim();
-  const match=authorization.match(/^Bearer\s+(.+)$/i),receiverToken=match?.[1]?.trim()||'';
+async function authenticateCollector(req,relayDbPath){
+  const channelId=headerValue(req,'x-jugest-channel-id').trim(),receiverToken=bearerToken(req);
   if(!validChannelId(channelId)||!receiverToken)return null;
   const store=createRelayStore(RELAY_STORE_NAME,{dbPath:relayDbPath,root:'jugest'});
   const channel=await store.get(`channel/${channelId}`,{type:'json'});
   if(!channel||channel.revokedAt||!secureMatch(receiverToken,channel.receiverHash))return null;
-  return {channelId};
+  return {channelId,authType:'collector'};
+}
+async function authenticateToolRequest(req,relayDbPath){
+  const collector=await authenticateCollector(req,relayDbPath);if(collector)return collector;
+  const token=bearerToken(req);if(!token)return null;
+  const oauth=await authenticateOAuthAccessToken(token,{relayDbPath});
+  return oauth?{...oauth,authType:'oauth'}:null;
 }
 
 function trustedOrigin(raw){
   const value=String(raw||'').trim();if(!value)return true;
   let url;try{url=new URL(value)}catch{return false}
   if(['https://chatgpt.com','https://chat.openai.com','https://platform.openai.com'].includes(url.origin))return true;
-  return url.protocol==='http:'&&['127.0.0.1','localhost','::1'].includes(url.hostname);
+  return url.protocol==='http:'&&['127.0.0.1','localhost','::1','[::1]'].includes(url.hostname);
 }
 
 async function readJsonBody(req,{maxBytes=524288}={}){
@@ -190,7 +203,6 @@ export function createMcpHandler({relayDbPath,canonicalDbPath}={}){
   return async function jugestMcpHandler(req,res){
     if(!trustedOrigin(headerValue(req,'origin'))){sendJson(res,403,jsonRpcError(null,-32000,'Forbidden origin'));return}
     if(String(req.method||'GET').toUpperCase()!=='POST'){sendJson(res,405,jsonRpcError(null,-32600,'Method Not Allowed'),{allow:'POST'});return}
-    const auth=await authenticate(req,relayDbPath);if(!auth){sendJson(res,401,{error:'unauthorized'});return}
     let body;try{body=await readJsonBody(req)}catch(error){sendJson(res,error?.code==='body_too_large'?413:400,jsonRpcError(null,-32700,error?.code==='body_too_large'?'Request body too large':'Parse error'));return}
     if(!body||body.jsonrpc!=='2.0'||typeof body.method!=='string'){sendJson(res,400,jsonRpcError(body?.id,-32600,'Invalid Request'));return}
     const routing=validateModernRouting(req,body);if(!routing.ok){sendJson(res,400,jsonRpcError(body.id,routing.code,routing.message,routing.data));return}
@@ -217,6 +229,8 @@ export function createMcpHandler({relayDbPath,canonicalDbPath}={}){
     if(body.method==='tools/call'){
       const name=String(body?.params?.name||''),args=body?.params?.arguments??{};
       if(!TOOL_DEFS.some(tool=>tool.name===name)){sendJson(res,200,jsonRpcError(id,-32602,`Unknown tool: ${name}`));return}
+      const auth=await authenticateToolRequest(req,relayDbPath);
+      if(!auth){sendJson(res,200,{jsonrpc:'2.0',id,result:authToolError({modern})},{'www-authenticate':OAUTH_CHALLENGE});return}
       const result=await runTool(name,args,{channelId:auth.channelId,canonicalDbPath,modern});
       if(!result){sendJson(res,200,jsonRpcError(id,-32603,'Internal error'));return}
       sendJson(res,200,{jsonrpc:'2.0',id,result});return;
