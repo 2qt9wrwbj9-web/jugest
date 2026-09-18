@@ -7,6 +7,7 @@ import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
+import {createJugestMcpNodeHandler} from './mcp/server.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
 const MIME_TYPES=new Map([
@@ -71,6 +72,7 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
+  const mcpHandler=createJugestMcpNodeHandler({rootDir:absoluteRoot});
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createAnalyticsHandler({relayDbPath,canonicalDbPath})
@@ -80,6 +82,9 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
     :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
+    if(url.pathname==='/mcp'){
+      return await mcpHandler(req,res);
+    }
     if(url.pathname==='/api/relay'){
       if(!relayHandler){
         send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});
