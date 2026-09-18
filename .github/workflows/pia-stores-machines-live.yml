@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Probe public store machine list once
+      - name: Probe public Juggler machine search once
         shell: bash
         run: |
           set -euo pipefail
@@ -25,7 +25,7 @@ jobs:
             -A 'UnityPlayer/2022 PIA/1.0.29' \
             -H 'Accept: application/json' \
             -F 'stores=35' \
-            -F 'search_text=' \
+            -F 'search_text=ジャグラー' \
             -D pia-stores-machines-live/headers.txt \
             -o pia-stores-machines-live/body.json \
             -w '%{http_code}\n' "$URL" > pia-stores-machines-live/http-code.txt
