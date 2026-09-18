@@ -3,6 +3,9 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 
+const JUGGLER_MACHINE_KEYS=new Set(['my','im','go','fk','hp','gg','mr','um']);
+const MAX_MACHINE_JUDGEMENT_ROWS=200;
+
 function memoryStorage(seed={}){
   const map=new Map(Object.entries(seed));
   return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key),clear:()=>map.clear()};
@@ -15,6 +18,8 @@ function makeElement(){
 function plain(value){return JSON.parse(JSON.stringify(value))}
 function mustFunction(value,name){if(typeof value!=="function")throw new Error(`JUGEST runtime missing ${name}`);return value}
 function validTargetDate(value){const text=String(value??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError('targetDate must be YYYY-MM-DD');return text}
+function finiteOrNull(value){const number=Number(value);return Number.isFinite(number)?number:null}
+function nonNegativeInteger(value,label,index){const number=Number(value);if(!Number.isInteger(number)||number<0)throw new TypeError(`machines[${index}].${label} must be a non-negative integer`);return number}
 
 async function bootRuntime(rootDir){
   const root=path.resolve(rootDir);
@@ -74,6 +79,55 @@ async function bootImportedRuntime({rootDir,shop,sourceStoreId,days}){
   if(!checked?.preview)throw new Error('JUGEST runtime rejected canonical store payload');
   await saveExternalJsonPreview(checked.preview);
   return {ctx,bridge,name,storeId};
+}
+
+export async function runExistingMachineJudgement({rootDir,machines}={}){
+  if(!rootDir)throw new TypeError('rootDir is required');
+  if(!Array.isArray(machines)||!machines.length)throw new TypeError('machines are required');
+  if(machines.length>MAX_MACHINE_JUDGEMENT_ROWS)throw new RangeError(`machine judgement supports at most ${MAX_MACHINE_JUDGEMENT_ROWS} rows`);
+  const normalized=machines.map((row,index)=>{
+    if(!row||typeof row!=='object')throw new TypeError(`machines[${index}] must be an object`);
+    const machine=String(row.machine??'').trim();
+    if(!JUGGLER_MACHINE_KEYS.has(machine))throw new TypeError(`unsupported machine: ${machine||'(empty)'}`);
+    const games=nonNegativeInteger(row.games,'games',index);
+    const bb=nonNegativeInteger(row.bb,'bb',index);
+    const rb=nonNegativeInteger(row.rb,'rb',index);
+    if(games<=0)throw new TypeError(`machines[${index}].games must be greater than zero`);
+    if(bb+rb>games)throw new RangeError(`machines[${index}] BB+RB must not exceed games`);
+    const hasDiff=row.diff!==undefined&&row.diff!==null&&String(row.diff).trim()!=='';
+    const diff=hasDiff?Number(row.diff):null;
+    if(hasDiff&&!Number.isFinite(diff))throw new TypeError(`machines[${index}].diff must be finite when provided`);
+    const machineNo=String(row.machineNo??'').trim()||null;
+    return {machineNo,machine,games,bb,rb,diff};
+  });
+
+  const {ctx}=await bootRuntime(rootDir);
+  const externalJudge=mustFunction(ctx.externalJudge,'externalJudge');
+  const rows=normalized.map((input,index)=>{
+    const raw=plain(externalJudge(input.machine,input.games,input.bb,input.rb,input.diff));
+    const q=Array.isArray(raw?.q)?raw.q.map(Number):null;
+    if(!q||q.length!==6||q.some(value=>!Number.isFinite(value)||value<0))throw new Error(`JUGEST machine judgement row ${index} returned an invalid posterior q`);
+    const total=q.reduce((sum,value)=>sum+value,0);
+    if(!Number.isFinite(total)||Math.abs(total-1)>1e-6)throw new Error(`JUGEST machine judgement row ${index} returned a non-normalized posterior q`);
+    const expectedSetting=q.reduce((sum,value,settingIndex)=>sum+value*(settingIndex+1),0);
+    const machineName=String(vm.runInContext(`M[${JSON.stringify(input.machine)}]?.name||${JSON.stringify(input.machine)}`,ctx));
+    return Object.freeze({
+      ...input,
+      machineName,
+      q:Object.freeze(q),
+      expectedSetting,
+      p4:(q[3]||0)+(q[4]||0)+(q[5]||0),
+      p5:(q[4]||0)+(q[5]||0),
+      p6:q[5]||0,
+      method:String(raw?.method||''),
+      estimatedGrape:finiteOrNull(raw?.estimatedGrape),
+      estimatedGrapeCount:finiteOrNull(raw?.estimatedGrapeCount),
+      grapeCountLo:finiteOrNull(raw?.grapeCountLo),
+      grapeCountHi:finiteOrNull(raw?.grapeCountHi),
+      reverseWarn:Boolean(raw?.reverseWarn)
+    });
+  });
+  return Object.freeze({machines:Object.freeze(rows)});
 }
 
 export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,options={}}={}){
