@@ -103,7 +103,9 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
-function normalizeMachineToken(value){return String(value??'').normalize('NFKC').toLocaleLowerCase('ja-JP').replace(/[\s　]+/g,'').trim()}
+function normalizeMachineToken(value){
+  return String(value??'').normalize('NFKC').toLocaleLowerCase('ja-JP').replace(/[\s　]+/g,'').replace(/^マイジャグラー/,'マイジャグ').trim();
+}
 function machineCatalog(bridge){
   const getJudgeState=mustFunction(bridge?.getJudgeState,'getJudgeState');
   const machines=plain(getJudgeState())?.machines;
