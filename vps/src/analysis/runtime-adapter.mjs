@@ -50,6 +50,38 @@ async function bootRuntime(rootDir){
   return {ctx,bridge};
 }
 
+const judgementRuntimeCache=new Map();
+async function existingJugglerJudge(rootDir){
+  if(!rootDir)throw new TypeError('rootDir is required');
+  const root=path.resolve(rootDir);
+  let pending=judgementRuntimeCache.get(root);
+  if(!pending){
+    pending=bootRuntime(root).then(({ctx})=>mustFunction(ctx.V4_TEST?.externalJudge,'V4_TEST.externalJudge'));
+    judgementRuntimeCache.set(root,pending);
+    pending.catch(()=>judgementRuntimeCache.delete(root));
+  }
+  return await pending;
+}
+
+export async function runExistingJugglerJudgementBatch({rootDir,machines}={}){
+  if(!Array.isArray(machines))throw new TypeError('machines must be an array');
+  const judge=await existingJugglerJudge(rootDir);
+  return Object.freeze(machines.map(input=>{
+    const machine=String(input?.machine??'').trim();
+    const games=Number(input?.games)||0,bb=Math.max(0,Number(input?.bb)||0),rb=Math.max(0,Number(input?.rb)||0);
+    const hasDiff=input?.diff!==null&&input?.diff!==undefined&&input?.diff!==''&&Number.isFinite(Number(input.diff));
+    const raw=judge(machine,games,bb,rb,hasDiff?Number(input.diff):null);
+    if(!raw)return null;
+    const q=Array.isArray(raw.q)?Array.from(raw.q,Number):null;
+    if(!q||!q.length||q.some(value=>!Number.isFinite(value)))return null;
+    return Object.freeze({
+      q:Object.freeze(q),method:String(raw.method||''),
+      estimatedGrape:Number(raw.estimatedGrape),estimatedGrapeCount:Number(raw.estimatedGrapeCount),
+      grapeCountLo:Number(raw.grapeCountLo),grapeCountHi:Number(raw.grapeCountHi),reverseWarn:!!raw.reverseWarn
+    });
+  }));
+}
+
 function validateImportArgs({rootDir,shop,sourceStoreId,days}){
   const name=String(shop??'').trim();
   const storeId=String(sourceStoreId??name).trim();
