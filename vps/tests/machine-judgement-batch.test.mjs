@@ -29,3 +29,16 @@ test('runtime adapter exposes observed-only machine batch judgement',async()=>{
   assert.ok(Number.isFinite(row.p5));
   assert.ok(Number.isFinite(row.p6));
 });
+
+test('runtime adapter resolves the existing JUGEST display name instead of asking ChatGPT to know internal machine keys',async()=>{
+  const result=await runtime.runExistingMachineJudgementBatch({
+    rootDir:REPO_ROOT,
+    machines:[{tableNo:'413',machine:'マイジャグラーV',games:4100,bb:18,rb:16}]
+  });
+
+  assert.equal(result.accepted,1);
+  assert.equal(result.rejected,0);
+  assert.equal(result.rows[0].ok,true);
+  assert.equal(result.rows[0].machineKey,'my');
+  assert.equal(result.rows[0].machineName,'マイジャグラーV');
+});
