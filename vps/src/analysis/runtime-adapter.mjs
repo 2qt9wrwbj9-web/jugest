@@ -103,6 +103,51 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
+function normalizedMachineInput(row,index){
+  if(!row||typeof row!=='object')throw new TypeError(`machine row ${index} must be an object`);
+  const machineKey=String(row.machine??row.machineKey??'').trim();
+  if(!machineKey)throw new TypeError(`machine row ${index} is missing machine`);
+  const games=Number(row.games),bb=Number(row.bb),rb=Number(row.rb);
+  if(!Number.isFinite(games)||games<=0)throw new TypeError(`machine row ${index} games must be > 0`);
+  if(!Number.isFinite(bb)||bb<0)throw new TypeError(`machine row ${index} bb must be >= 0`);
+  if(!Number.isFinite(rb)||rb<0)throw new TypeError(`machine row ${index} rb must be >= 0`);
+  if(bb+rb>games)throw new TypeError(`machine row ${index} bonus count exceeds games`);
+  const hasDiff=row.diff!==undefined&&row.diff!==null&&row.diff!=='';
+  const diff=hasDiff?Number(row.diff):undefined;
+  if(hasDiff&&!Number.isFinite(diff))throw new TypeError(`machine row ${index} diff must be finite`);
+  return {tableNo:String(row.tableNo??'').trim(),machineKey,games,bb,rb,diff,hasDiff};
+}
+
+function protectedJudgementRow(externalJudge,input){
+  const raw=plain(externalJudge(input.machineKey,input.games,input.bb,input.rb,input.hasDiff?input.diff:undefined));
+  const q=Array.isArray(raw?.q)?raw.q.map(Number):null;
+  if(!q||q.length!==6||q.some(value=>!Number.isFinite(value)||value<0))throw new Error('JUGEST protected judgement returned invalid posterior q');
+  const total=q.reduce((sum,value)=>sum+value,0);
+  if(!Number.isFinite(total)||Math.abs(total-1)>1e-6)throw new Error('JUGEST protected judgement posterior q is not normalized');
+  const expectedSetting=q.reduce((sum,value,index)=>sum+value*(index+1),0);
+  const result={
+    ok:true,tableNo:input.tableNo,machineKey:input.machineKey,
+    input:input.hasDiff?{games:input.games,bb:input.bb,rb:input.rb,diff:input.diff}:{games:input.games,bb:input.bb,rb:input.rb},
+    q,expectedSetting,p4:q[3]+q[4]+q[5],p5:q[4]+q[5],p6:q[5],method:String(raw?.method??'')
+  };
+  for(const key of ['estGrape','grape','grapeInterval','warning'])if(raw?.[key]!==undefined)result[key]=raw[key];
+  return Object.freeze(result);
+}
+
+export async function runExistingMachineJudgementBatch({rootDir,machines}={}){
+  if(!rootDir)throw new TypeError('rootDir is required');
+  if(!Array.isArray(machines)||machines.length<1)throw new TypeError('machines must contain at least one row');
+  if(machines.length>200)throw new RangeError('machine batch supports at most 200 rows');
+  const {ctx}=await bootRuntime(rootDir);
+  const externalJudge=mustFunction(ctx.V4_TEST?.externalJudge,'V4_TEST.externalJudge');
+  const rows=machines.map((row,index)=>{
+    try{return protectedJudgementRow(externalJudge,normalizedMachineInput(row,index))}
+    catch(error){return Object.freeze({ok:false,tableNo:String(row?.tableNo??'').trim(),machineKey:String(row?.machine??row?.machineKey??'').trim(),error:String(error?.message??error)})}
+  });
+  const accepted=rows.reduce((count,row)=>count+(row.ok?1:0),0);
+  return Object.freeze({accepted,rejected:rows.length-accepted,rows:Object.freeze(rows)});
+}
+
 export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){
   const target=validTargetDate(targetDate);
   if(!Array.isArray(days)||!days.some(day=>String(day?.date||'')===target))throw new TypeError('targetDate must exist in days');
