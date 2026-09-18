@@ -1,0 +1,43 @@
+name: PIA stores machines live probe
+
+on:
+  push:
+    branches: [research/pia-api-recovery]
+    paths: ['.github/workflows/pia-stores-machines-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public store machine list once
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pia-stores-machines-live
+          URL='https://pia-server.heuron.net/api/stores/getStoresMachines'
+          curl -sS --connect-timeout 10 --max-time 30 \
+            -A 'UnityPlayer/2022 PIA/1.0.29' \
+            -H 'Accept: application/json' \
+            -F 'stores=35' \
+            -F 'search_text=' \
+            -D pia-stores-machines-live/headers.txt \
+            -o pia-stores-machines-live/body.json \
+            -w '%{http_code}\n' "$URL" > pia-stores-machines-live/http-code.txt
+          echo '=== HTTP ==='
+          cat pia-stores-machines-live/http-code.txt
+          echo '=== bytes ==='
+          wc -c pia-stores-machines-live/body.json
+          echo '=== preview ==='
+          head -c 12000 pia-stores-machines-live/body.json || true
+          echo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-stores-machines-live
+          path: pia-stores-machines-live
+          retention-days: 7
