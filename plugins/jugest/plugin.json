@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jugest",
+  "version": "0.1.0",
+  "description": "Use JUGEST for screenshot-driven Juggler setting judgement and authenticated store/PRE research without implicitly mixing store reading into live setting probabilities."
+}
