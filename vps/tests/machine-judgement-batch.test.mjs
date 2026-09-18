@@ -30,6 +30,23 @@ test('runtime adapter exposes observed-only machine batch judgement',async()=>{
   assert.ok(Number.isFinite(row.p6));
 });
 
+test('MCP batch posterior and method exactly match the current protected JUGEST externalJudge result',async()=>{
+  const input={tableNo:412,machine:'my',games:5230,bb:24,rb:18,diff:850};
+  const {ctx}=await runtime.__test.bootRuntime(REPO_ROOT);
+  const direct=JSON.parse(JSON.stringify(ctx.V4_TEST.externalJudge('my',5230,24,18,850)));
+  const batch=await runtime.runExistingMachineJudgementBatch({rootDir:REPO_ROOT,machines:[input]});
+  const row=batch.rows[0];
+
+  assert.equal(row.ok,true);
+  assert.equal(row.tableNo,'412');
+  assert.deepEqual(row.q,direct.q);
+  assert.equal(row.method,direct.method);
+  assert.equal(row.expectedSetting,direct.q.reduce((sum,value,index)=>sum+value*(index+1),0));
+  assert.equal(row.p4,direct.q[3]+direct.q[4]+direct.q[5]);
+  assert.equal(row.p5,direct.q[4]+direct.q[5]);
+  assert.equal(row.p6,direct.q[5]);
+});
+
 test('runtime adapter resolves a public My Juggler alias to the canonical JUGEST machine identity',async()=>{
   const result=await runtime.runExistingMachineJudgementBatch({
     rootDir:REPO_ROOT,
