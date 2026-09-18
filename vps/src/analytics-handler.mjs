@@ -31,7 +31,7 @@ async function readJsonBody(req,{maxBytes=262144}={}){
   try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{const error=new Error('bad_json');error.code='bad_json';throw error}
 }
 function finiteNumber(value){const n=Number(value);return Number.isFinite(n)?n:null}
-function judgeInputRow(raw,index){
+async function judgeInputRow(raw,index,rootDir){
   const tableNo=String(raw?.tableNo??'').trim().slice(0,80),base={ok:false,index,tableNo};
   if(!raw||typeof raw!=='object'||Array.isArray(raw))return {...base,code:'bad_machine_row'};
   const machine=String(raw.machine??'').trim();
@@ -42,7 +42,7 @@ function judgeInputRow(raw,index){
   if(bb+rb>games)return {...base,machine,code:'bonus_exceeds_games'};
   const hasDiff=raw.diff!==null&&raw.diff!==undefined&&raw.diff!=='';
   const diff=hasDiff?finiteNumber(raw.diff):null;if(hasDiff&&diff==null)return {...base,machine,code:'bad_diff'};
-  const judged=judgeJugglerExternal({machine,games,bb,rb,diff});
+  const judged=await judgeJugglerExternal({machine,games,bb,rb,diff},{rootDir});
   if(!judged)return {...base,machine,code:'judge_unavailable'};
   return {ok:true,index,tableNo,...judged};
 }
@@ -56,7 +56,7 @@ function auditStoreRead(db,storeId,payload){
   }catch{return payload}
 }
 
-export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus}={}){
+export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
   if(typeof canonicalDbPath!=='string'||!canonicalDbPath.trim())throw new TypeError('canonicalDbPath is required');
   if(typeof resourceStatusBuilder!=='function')throw new TypeError('resourceStatusBuilder must be a function');
@@ -72,7 +72,8 @@ export function createAnalyticsHandler({relayDbPath,canonicalDbPath,resourceStat
       let body;try{body=await readJsonBody(req)}catch(error){const tooLarge=error?.code==='body_too_large';sendJson(req,res,tooLarge?413:400,{ok:false,code:tooLarge?'body_too_large':'bad_json'});return}
       if(!Array.isArray(body?.machines)){sendJson(req,res,400,{ok:false,code:'bad_machines'});return}
       if(body.machines.length>200){sendJson(req,res,413,{ok:false,code:'batch_too_large',maxMachines:200});return}
-      const machines=body.machines.map(judgeInputRow);
+      if(!rootDir){sendJson(req,res,503,{ok:false,code:'judge_runtime_unavailable'});return}
+      const machines=await Promise.all(body.machines.map((row,index)=>judgeInputRow(row,index,rootDir)));
       sendJson(req,res,200,{ok:true,judgeVersion:JUDGE_VERSION,machines});return;
     }
     const db=openDatabase(canonicalDbPath);
