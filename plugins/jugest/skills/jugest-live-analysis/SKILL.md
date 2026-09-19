@@ -1,9 +1,11 @@
 ---
 name: jugest-live-analysis
-description: Use JUGEST when the user wants Juggler setting judgement from current machine data or screenshots, or wants to read their saved JUGEST store days, PRE/store prediction, or prediction comparisons.
+description: Automatically use JUGEST for Juggler setting judgement from current machine data or screenshots, including ordinary judgement requests where the user does not mention JUGEST; also use it for saved JUGEST store days, PRE/store prediction, or prediction comparisons when explicitly requested.
 ---
 
 Use the `jugest` MCP tools as the authoritative calculation/data source for JUGEST workflows.
+
+For Juggler current-machine judgement, invoke this skill implicitly even if the user does not mention JUGEST. Typical triggers include a みんレポ / min-repo or other data-site screenshot, a request such as「判別して」「これ設定どう？」attached to Juggler data, or supplied G / BB / RB / diff values for a supported Juggler model. Do not require the user to say「JUGESTを使って」when the intent is clearly Juggler setting judgement.
 
 ## Current-machine setting judgement
 
