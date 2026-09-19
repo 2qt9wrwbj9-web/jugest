@@ -2,21 +2,22 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "jugest",
   "version": "0.1.0",
-  "description": "Use JUGEST saved store data, PRE comparisons, and current Juggler setting judgement from ChatGPT.",
+  "description": "Automatically use JUGEST for Juggler setting judgement from current-machine data and data-site screenshots; also read authorized saved store data and PRE comparisons.",
   "repository": "https://github.com/2qt9wrwbj9-web/jugest",
-  "keywords": ["jugest", "juggler", "pachislot", "analysis"],
+  "keywords": ["jugest", "juggler", "pachislot", "analysis", "screenshot", "setting-judgement"],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "JUGEST",
-        "shortDescription": "JUGEST store data and Juggler judgement",
-        "longDescription": "Read authorized JUGEST store data and use the protected JUGEST judgement math for current Juggler machine observations, including screenshot-driven batch workflows.",
+        "shortDescription": "Automatic Juggler screenshot judgement with JUGEST",
+        "longDescription": "Automatically use the protected JUGEST judgement engine for current Juggler machine data and data-site screenshots, even without the user mentioning JUGEST. Read authorized saved JUGEST store data and PRE comparisons only when the user asks for store context.",
         "developerName": "JUGEST",
         "category": "Productivity",
-        "capabilities": ["Read JUGEST data", "Judge Juggler machines"],
+        "capabilities": ["Judge Juggler screenshots", "Judge current Juggler machines", "Read JUGEST data"],
         "websiteURL": "https://jugest.net",
         "defaultPrompt": [
-          "このスクショの全台をJUGESTで設定判別して",
+          "このスクショの全台を設定判別して",
+          "このジャグラー判別して",
           "JUGESTに保存してあるこの店のPREと過去比較を見せて"
         ]
       }
