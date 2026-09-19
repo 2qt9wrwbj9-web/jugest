@@ -20,14 +20,14 @@ const MACHINE_KEYS=new Set(JUGGLER_MACHINE_KEYS);
 const NOAUTH_SECURITY=Object.freeze([{type:'noauth'}]);
 const OAUTH_SECURITY=Object.freeze([{type:'oauth2',scopes:[OAUTH_SCOPE]}]);
 const OAUTH_CHALLENGE=`Bearer resource_metadata="${OAUTH_RESOURCE_METADATA}", error="invalid_token", error_description="Connect your JUGEST account to continue"`;
-const INSTRUCTIONS='Use JUGEST setting judgement from observed current-machine data. judge_machines is public, uses no account/store data, and must not incorporate PRE v2, store tendencies, or store history. Store tools require authentication and are separate context; use them only when the user asks for saved store data, store reading, prediction, historical comparison, or an explicitly combined assessment. Screenshot extraction is performed by the model; JUGEST performs the setting probability calculation.';
+const INSTRUCTIONS='Use judge_machines for Juggler setting-judgement requests and Juggler data-site screenshots even if the user does not mention JUGEST. judge_machines is public, uses observed current-machine data only, and must not incorporate PRE v2, store tendencies, or store history. Store tools require authentication and are separate context; use them only when the user asks for saved store data, store reading, prediction, historical comparison, or an explicitly combined assessment. Screenshot extraction is performed by the model; JUGEST performs the setting probability calculation.';
 
 const publicTool=tool=>Object.freeze({...tool,securitySchemes:NOAUTH_SECURITY,_meta:{securitySchemes:NOAUTH_SECURITY}});
 const securedTool=tool=>Object.freeze({...tool,securitySchemes:OAUTH_SECURITY,_meta:{securitySchemes:OAUTH_SECURITY}});
 const TOOL_DEFS=Object.freeze([
   publicTool({
     name:'judge_machines',title:'Judge current Juggler machines',
-    description:'Calculate JUGEST setting posteriors from observed current machine data only. Does not read a store, PRE v2, store tendencies, or history. Use diff when reliably visible; omit diff when it is unavailable or uncertain.',
+    description:'Use for Juggler setting judgement from observed current machine data, including data-site screenshots and ordinary judgement requests, even if the user does not mention JUGEST. Does not read a store, PRE v2, store tendencies, or history. Use diff when reliably visible; omit diff when it is unavailable or uncertain.',
     inputSchema:{type:'object',additionalProperties:false,properties:{machines:{type:'array',maxItems:MAX_BATCH,items:{type:'object',additionalProperties:false,properties:{tableNo:{type:['string','number'],description:'Optional table number shown in the screenshot.'},machine:{type:'string',enum:JUGGLER_MACHINE_KEYS,description:'JUGEST machine key: my=マイジャグV, im=ネオアイム, go=ゴージャグ3, fk=ファンキー2, hp=ハッピーVⅢ, gg=ガールズSS, mr=ミスター, um=ウルトラミラクル.'},games:{type:'number',exclusiveMinimum:0},bb:{type:'integer',minimum:0},rb:{type:'integer',minimum:0},diff:{type:'number',description:'Optional current coin difference. Omit rather than guess when unreadable.'}},required:['machine','games','bb','rb']}}},required:['machines']},
     annotations:{readOnlyHint:true,openWorldHint:false}
   }),
