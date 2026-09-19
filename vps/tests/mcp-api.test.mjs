@@ -72,7 +72,7 @@ async function issueOAuthToken(base){
   return await tokenResponse.json();
 }
 
-test('MCP discovery and tool list are public and every tool advertises jugest:read OAuth',async()=>{
+test('MCP tool list exposes public judgement and OAuth-only store tools',async()=>{
   const f=await fixture();
   try{
     const discover=await f.post('server/discover',{}, {}, {});
@@ -96,19 +96,37 @@ test('MCP discovery and tool list are public and every tool advertises jugest:re
     for(const tool of body.result.tools){
       assert.equal(tool.annotations.readOnlyHint,true);
       assert.equal(tool.annotations.openWorldHint,false);
+    }
+    const [judge,...storeTools]=body.result.tools;
+    assert.deepEqual(judge.securitySchemes,[{type:'noauth'}]);
+    assert.deepEqual(judge._meta.securitySchemes,[{type:'noauth'}]);
+    for(const tool of storeTools){
       assert.deepEqual(tool.securitySchemes,[{type:'oauth2',scopes:['jugest:read']}]);
       assert.deepEqual(tool._meta.securitySchemes,[{type:'oauth2',scopes:['jugest:read']}]);
     }
-    const judge=body.result.tools[0];
     assert.match(judge.description,/observed|current machine/i);
     assert.doesNotMatch(judge.description,/automatically.*PRE|mix.*PRE/i);
   }finally{await f.close()}
 });
 
-test('unauthenticated MCP tool call returns the OAuth resource challenge in tool metadata',async()=>{
+test('unauthenticated judge_machines runs without account or store context',async()=>{
   const f=await fixture();
   try{
-    const response=await f.post('tools/call',{name:'judge_machines',arguments:{machines:[{machine:'my',games:1000,bb:4,rb:3}]}}, {}, {});
+    const response=await f.post('tools/call',{name:'judge_machines',arguments:{machines:[{tableNo:'101',machine:'my',games:5230,bb:24,rb:18,diff:1200}]}}, {}, {});
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.result.isError,false);
+    assert.equal(body.result.structuredContent.machines.length,1);
+    assert.ok(Math.abs(body.result.structuredContent.machines[0].expectedSetting-3.6317261654375623)<1e-11);
+    assert.equal('store' in body.result.structuredContent,false);
+    assert.equal('storeRead' in body.result.structuredContent,false);
+  }finally{await f.close()}
+});
+
+test('unauthenticated store tool returns the OAuth resource challenge in tool metadata',async()=>{
+  const f=await fixture();
+  try{
+    const response=await f.post('tools/call',{name:'list_stores',arguments:{}}, {}, {});
     assert.equal(response.status,200);
     const body=await response.json();
     assert.equal(body.result.isError,true);
