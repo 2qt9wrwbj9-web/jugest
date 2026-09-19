@@ -102,7 +102,7 @@ test('authorization code + S256 PKCE issues tokens, makes codes single-use, and 
     const authorizeBody=new URLSearchParams(flow.params);
     authorizeBody.set('channel_id',CHANNEL);authorizeBody.set('receiver_token',RECEIVER);
     const authorized=await fetch(`${f.base}/oauth/authorize`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:authorizeBody,redirect:'manual'});
-    assert.equal(authorized.status,302);
+    assert.equal(authorized.status,303);
     const location=new URL(authorized.headers.get('location'));
     assert.equal(location.origin+location.pathname,CALLBACK_REDIRECT);
     assert.equal(location.searchParams.get('state'),flow.state);

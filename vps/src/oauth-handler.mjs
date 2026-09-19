@@ -151,7 +151,7 @@ async function authorize(req,res,url,relayDbPath){
   const now=Date.now(),store=oauthStore(relayDbPath);
   const {token:code}=await persistUnique(store,'code',()=>({type:'authorization_code',issuer:OAUTH_ISSUER,resource:OAUTH_RESOURCE,scope:OAUTH_SCOPE,clientId:params.clientId,channelId:auth.channelId,redirectUri:params.redirectUri,codeChallenge:params.codeChallenge,issuedAt:now,expiresAt:now+CODE_TTL_MS}),{tokenPrefix:'jugest_code_',bytes:32});
   const location=new URL(params.redirectUri);location.searchParams.set('code',code);if(params.state)location.searchParams.set('state',params.state);
-  sendRaw(res,302,'',{'location':location.toString()});
+  sendRaw(res,303,'',{'location':location.toString()});
 }
 async function issueTokenPair(store,{clientId,channelId,scope=OAUTH_SCOPE}){
   const now=Date.now();
