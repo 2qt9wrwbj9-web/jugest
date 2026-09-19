@@ -37,3 +37,22 @@ test('JUGEST skill keeps current-machine judgement separate from PRE/store read'
   assert.match(openai,/url: "https:\/\/jugest\.net\/mcp"/);
   assert.doesNotMatch(openai,/Bearer|receiver-token|x-jugest-channel-id/i);
 });
+
+test('JUGEST package strongly cues implicit judgement for ordinary Juggler requests',async()=>{
+  const manifest=JSON.parse(await read('plugin.json'));
+  const iface=manifest.extensions?.['com.openai']?.interface||{};
+  assert.match(String(manifest.description||''),/automatically|implicit/i);
+  assert.match(String(iface.shortDescription||''),/screenshot|setting judgement/i);
+  assert.match(String(iface.longDescription||''),/without.*mention.*JUGEST|even if.*JUGEST/i);
+
+  const skill=await read('skills/jugest-live-analysis/SKILL.md');
+  assert.match(skill,/do not require the user to mention `?JUGEST`?/i);
+  assert.match(skill,/Juggler.*screenshot|screenshot.*Juggler/i);
+  assert.match(skill,/G\s*\/\s*BB\s*\/\s*RB|games.*BB.*RB/i);
+  assert.match(skill,/prefer.*`judge_machines`|`judge_machines`.*prefer/i);
+
+  const openai=await read('skills/jugest-live-analysis/agents/openai.yaml');
+  assert.match(openai,/allow_implicit_invocation: true/);
+  assert.match(openai,/automatically|implicit/i);
+  assert.match(openai,/Juggler|ジャグラー/i);
+});
