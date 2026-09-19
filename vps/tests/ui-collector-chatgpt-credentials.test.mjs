@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
+import {MASK,normalizeConnectionInfo,tokenFieldValue} from '../../vps-ui-collector-credentials.mjs';
+
+const here=path.dirname(fileURLToPath(import.meta.url));
+const root=path.resolve(here,'../..');
+
+test('Collector credentials bridge is injected without exposing receiver token by default',async()=>{
+  const source=await readFile(path.join(root,'index.html'),'utf8');
+  const patched=patchJugestIndexSource(source);
+  assert.match(patched,/getCollectorConnectionInfo:\(includeSecret=false\)=>/);
+  assert.match(patched,/receiverToken:includeSecret\?String\(relayReceiver\?\.receiverToken\|\|""\):""/);
+  assert.match(patched,/vps-ui-collector-credentials\.mjs/);
+});
+
+test('Receiver token stays masked until explicitly revealed',()=>{
+  const info=normalizeConnectionInfo({channelId:'channel-123',receiverToken:'secret-token'});
+  assert.equal(info.channelId,'channel-123');
+  assert.equal(tokenFieldValue(info,false),MASK);
+  assert.notEqual(tokenFieldValue(info,false),info.receiverToken);
+  assert.equal(tokenFieldValue(info,true),'secret-token');
+});
