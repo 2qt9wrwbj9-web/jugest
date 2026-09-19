@@ -15,6 +15,7 @@ const RECEIVER='receiver-token-oauth-test-1234567890';
 const RESOURCE='https://jugest.net/mcp';
 const ISSUER='https://jugest.net';
 const REDIRECT='https://chatgpt.com/connector_platform_oauth_redirect';
+const CALLBACK_REDIRECT='https://chatgpt.com/connector/oauth/callback-test-123';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
 const challenge=value=>createHash('sha256').update(String(value)).digest('base64url');
 
@@ -41,7 +42,7 @@ function authorizeParams(clientId,{state='state-123',verifier='v'.repeat(64),red
   return {clientId,state,verifier,redirectUri,params:new URLSearchParams({response_type:'code',client_id:clientId,redirect_uri:redirectUri,scope:'jugest:read',state,resource:RESOURCE,code_challenge:challenge(verifier),code_challenge_method:'S256'})};
 }
 
-test('OAuth discovery metadata advertises the protected JUGEST MCP resource and DCR+PKCE server',async()=>{
+test('OAuth discovery metadata advertises DCR+PKCE without fixed-callback issuer identification',async()=>{
   const f=await fixture();
   try{
     const protectedResource=await fetch(`${f.base}/.well-known/oauth-protected-resource`);
@@ -60,7 +61,7 @@ test('OAuth discovery metadata advertises the protected JUGEST MCP resource and 
     assert.equal(metadata.registration_endpoint,`${ISSUER}/oauth/register`);
     assert.deepEqual(metadata.code_challenge_methods_supported,['S256']);
     assert.deepEqual(metadata.token_endpoint_auth_methods_supported,['none']);
-    assert.equal(metadata.authorization_response_iss_parameter_supported,true);
+    assert.equal(metadata.authorization_response_iss_parameter_supported,undefined);
   }finally{await f.close()}
 });
 
@@ -75,6 +76,11 @@ test('DCR issues a public client only for trusted ChatGPT/OpenAI or loopback red
     assert.equal(client.token_endpoint_auth_method,'none');
     assert.deepEqual(client.redirect_uris,[REDIRECT]);
 
+    const callbackSpecific=await register(f.base,CALLBACK_REDIRECT);
+    assert.equal(callbackSpecific.status,201);
+    const callbackClient=await callbackSpecific.json();
+    assert.deepEqual(callbackClient.redirect_uris,[CALLBACK_REDIRECT]);
+
     const loopback=await register(f.base,'http://127.0.0.1:8787/callback');
     assert.equal(loopback.status,201);
     const bad=await register(f.base,'https://evil.example/callback');
@@ -87,8 +93,8 @@ test('DCR issues a public client only for trusted ChatGPT/OpenAI or loopback red
 test('authorization code + S256 PKCE issues tokens, makes codes single-use, and rotates refresh tokens',async()=>{
   const f=await fixture();
   try{
-    const client=await (await register(f.base)).json();
-    const flow=authorizeParams(client.client_id);
+    const client=await (await register(f.base,CALLBACK_REDIRECT)).json();
+    const flow=authorizeParams(client.client_id,{redirectUri:CALLBACK_REDIRECT});
     const page=await fetch(`${f.base}/oauth/authorize?${flow.params}`);
     assert.equal(page.status,200);
     assert.match(await page.text(),/JUGEST/i);
@@ -98,13 +104,13 @@ test('authorization code + S256 PKCE issues tokens, makes codes single-use, and 
     const authorized=await fetch(`${f.base}/oauth/authorize`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:authorizeBody,redirect:'manual'});
     assert.equal(authorized.status,302);
     const location=new URL(authorized.headers.get('location'));
-    assert.equal(location.origin+location.pathname,REDIRECT);
+    assert.equal(location.origin+location.pathname,CALLBACK_REDIRECT);
     assert.equal(location.searchParams.get('state'),flow.state);
-    assert.equal(location.searchParams.get('iss'),ISSUER);
+    assert.equal(location.searchParams.get('iss'),null);
     const code=location.searchParams.get('code');
     assert.ok(code);
 
-    const tokenBody=new URLSearchParams({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:REDIRECT,code_verifier:flow.verifier,resource:RESOURCE});
+    const tokenBody=new URLSearchParams({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:CALLBACK_REDIRECT,code_verifier:flow.verifier,resource:RESOURCE});
     const tokenResponse=await fetch(`${f.base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:tokenBody});
     assert.equal(tokenResponse.status,200);
     const token=await tokenResponse.json();
