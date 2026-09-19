@@ -24,3 +24,11 @@ test('Receiver token stays masked until explicitly revealed',()=>{
   assert.notEqual(tokenFieldValue(info,false),info.receiverToken);
   assert.equal(tokenFieldValue(info,true),'secret-token');
 });
+
+test('ChatGPT credential card targets the gear Collector settings overlay, not Data auto-acquisition',async()=>{
+  const source=await readFile(path.join(root,'vps-ui-collector-credentials.mjs'),'utf8');
+  assert.match(source,/\.vps-settings-overlay/);
+  assert.match(source,/Collector連携設定/);
+  assert.doesNotMatch(source,/\.workspace\.data-screen/);
+  assert.doesNotMatch(source,/textContent\?\.trim\(\)!=='自動取得'/);
+});
