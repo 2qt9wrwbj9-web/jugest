@@ -83,6 +83,7 @@ test('MCP tool list exposes public judgement and OAuth-only store tools',async()
     assert.deepEqual(discovery.result.capabilities,{tools:{}});
     assert.equal(discovery.result._meta['io.modelcontextprotocol/serverInfo'].name,'jugest');
     assert.match(discovery.result.instructions,/setting judgement.*observed|observed.*setting judgement/i);
+    assert.match(discovery.result.instructions,/automatically.*judge_machines.*without.*mentioning JUGEST|without.*mentioning JUGEST.*judge_machines/i);
     assert.equal(discovery.result.cacheScope,'private');
 
     const listed=await f.post('tools/list',{}, {}, {});
@@ -105,6 +106,7 @@ test('MCP tool list exposes public judgement and OAuth-only store tools',async()
       assert.deepEqual(tool._meta.securitySchemes,[{type:'oauth2',scopes:['jugest:read']}]);
     }
     assert.match(judge.description,/observed|current machine/i);
+    assert.match(judge.description,/even if.*does not mention JUGEST|without.*mentioning JUGEST/i);
     assert.doesNotMatch(judge.description,/automatically.*PRE|mix.*PRE/i);
   }finally{await f.close()}
 });

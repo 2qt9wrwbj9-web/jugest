@@ -22,6 +22,21 @@ test('JUGEST plugin manifest and MCP config use the portable plugin format',asyn
   assert.equal(JSON.stringify(mcp).includes('receiver-token'),false);
 });
 
+test('JUGEST routing metadata strongly advertises implicit Juggler screenshot judgement',async()=>{
+  const manifest=JSON.parse(await read('plugin.json'));
+  assert.match(manifest.description,/automatically use JUGEST.*Juggler.*screenshot/i);
+  assert.match(manifest.extensions?.['com.openai']?.interface?.longDescription||'',/without.*mention(?:ing)? JUGEST|even if.*JUGEST/i);
+
+  const skill=await read('skills/jugest-live-analysis/SKILL.md');
+  assert.match(skill,/even if (?:they|the user) do(?:es)? not mention JUGEST/i);
+  assert.match(skill,/みんレポ|min-repo/i);
+  assert.match(skill,/generic.*pachislot.*do not|do not.*generic.*pachislot/i);
+
+  const openai=await read('skills/jugest-live-analysis/agents/openai.yaml');
+  assert.match(openai,/short_description: "Automatically .*Juggler screenshots.*JUGEST"/i);
+  assert.match(openai,/allow_implicit_invocation: true/);
+});
+
 test('JUGEST skill keeps current-machine judgement separate from PRE/store read',async()=>{
   const skill=await read('skills/jugest-live-analysis/SKILL.md');
   assert.match(skill,/^---\nname: jugest-live-analysis\ndescription:/);
