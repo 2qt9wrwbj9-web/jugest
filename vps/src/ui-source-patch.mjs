@@ -9,7 +9,7 @@ const HISTORICAL_UI_MODULE_TAG='<script type="module" src="./vps-ui-historical-c
 const STORE_RESET_MODULE_TAG='<script type="module" src="./vps-store-reset.mjs"></script>';
 const RESOURCE_UI_MODULE_TAG='<script type="module" src="./vps-resource-ui.mjs"></script>';
 const AUDIT_STORE_UI_MODULE_TAG='<script type="module" src="./vps-ui-audit-store.mjs"></script>';
-const COLLECTOR_CREDENTIALS_MODULE_TAG='<script type="module" src="./vps-ui-collector-credentials.mjs"></script>';
+const COLLECTOR_CREDENTIALS_MODULE_TAG='<script type="module" src="./vps-ui-collector-credentials.mjs?v=collector-chatgpt-2"></script>';
 const RELEASE_VERSION_MODULE_TAG='<script type="module" src="./vps-release-version.mjs?v=602-historical-audit-1"></script>';
 const STORE_RESET_HELPER=`async function vpsResetStoreAcquiredData(name){
  name=String(name||"").trim();if(!name)throw new Error("店舗名がありません");
