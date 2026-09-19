@@ -97,7 +97,6 @@ function authorizationServerMetadata(){
     grant_types_supported:['authorization_code','refresh_token'],
     code_challenge_methods_supported:['S256'],
     token_endpoint_auth_methods_supported:['none'],
-    authorization_response_iss_parameter_supported:true
   };
 }
 function registrationValid(body){
@@ -151,7 +150,7 @@ async function authorize(req,res,url,relayDbPath){
   if(!auth){sendRaw(res,401,'JUGEST authentication failed\n',{'content-type':'text/plain; charset=utf-8'});return}
   const now=Date.now(),store=oauthStore(relayDbPath);
   const {token:code}=await persistUnique(store,'code',()=>({type:'authorization_code',issuer:OAUTH_ISSUER,resource:OAUTH_RESOURCE,scope:OAUTH_SCOPE,clientId:params.clientId,channelId:auth.channelId,redirectUri:params.redirectUri,codeChallenge:params.codeChallenge,issuedAt:now,expiresAt:now+CODE_TTL_MS}),{tokenPrefix:'jugest_code_',bytes:32});
-  const location=new URL(params.redirectUri);location.searchParams.set('code',code);if(params.state)location.searchParams.set('state',params.state);location.searchParams.set('iss',OAUTH_ISSUER);
+  const location=new URL(params.redirectUri);location.searchParams.set('code',code);if(params.state)location.searchParams.set('state',params.state);
   sendRaw(res,302,'',{'location':location.toString()});
 }
 async function issueTokenPair(store,{clientId,channelId,scope=OAUTH_SCOPE}){
