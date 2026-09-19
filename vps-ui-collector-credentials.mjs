@@ -67,6 +67,7 @@ function ensureCard(){
   const setup=screen.querySelector('.sync-setup');if(!setup||setup.querySelector('[data-chatgpt-credentials]'))return;
   const info=publicInfo();if(!info.channelId)return;
 
+  tokenVisible=false;
   installStyle();
   const card=document.createElement('section');card.className='chatgpt-credentials-card';card.dataset.chatgptCredentials='';
   const head=document.createElement('div');head.className='chatgpt-credentials-head';
