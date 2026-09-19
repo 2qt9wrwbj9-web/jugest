@@ -65,7 +65,7 @@ async function issueOAuthToken(base){
   const verifier='m'.repeat(64);
   const params=new URLSearchParams({response_type:'code',client_id:client.client_id,redirect_uri:REDIRECT,scope:'jugest:read',state:'mcp-oauth-state',resource:RESOURCE,code_challenge:challenge(verifier),code_challenge_method:'S256',channel_id:CHANNEL,receiver_token:TOKEN});
   const authorized=await fetch(`${base}/oauth/authorize`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:params,redirect:'manual'});
-  assert.equal(authorized.status,302);
+  assert.equal(authorized.status,303);
   const code=new URL(authorized.headers.get('location')).searchParams.get('code');
   const tokenResponse=await fetch(`${base}/oauth/token`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:REDIRECT,code_verifier:verifier,resource:RESOURCE})});
   assert.equal(tokenResponse.status,200);
