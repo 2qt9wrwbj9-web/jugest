@@ -5,11 +5,3 @@ interface:
 
 policy:
   allow_implicit_invocation: true
-
-dependencies:
-  tools:
-    - type: "mcp"
-      value: "jugest"
-      description: "Automatically use JUGEST for current-machine Juggler judgement; read authorized store data only when requested"
-      transport: "streamable_http"
-      url: "https://jugest.net/mcp"
