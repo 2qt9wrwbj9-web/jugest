@@ -1,12 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "jugest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatically use JUGEST for Juggler setting judgement from current-machine data and data-site screenshots; also read authorized saved store data and PRE comparisons.",
   "repository": "https://github.com/2qt9wrwbj9-web/jugest",
   "keywords": ["jugest", "juggler", "pachislot", "analysis", "screenshot", "setting-judgement"],
   "extensions": {
     "com.openai": {
+      "apps": "./.app.json",
       "interface": {
         "displayName": "JUGEST",
         "shortDescription": "Automatic Juggler screenshot judgement with JUGEST",
