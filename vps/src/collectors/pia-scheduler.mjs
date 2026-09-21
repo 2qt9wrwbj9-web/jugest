@@ -1,6 +1,7 @@
 import {openDatabase} from '../db.mjs';
 import {migrate} from '../schema.mjs';
 import {collectPiaPublicOnce,PIA_COLLECTOR_ID} from './pia-public.mjs';
+import {backfillPiaRollingHistory,shouldBackfillPiaRollingHistory} from './pia-backfill-once.mjs';
 import {markCollectorActivity} from '../collector-activity.mjs';
 
 const JST_OFFSET_MS=9*60*60*1000;
@@ -25,6 +26,15 @@ export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=ne
   const db=openDatabase(dbPath);
   try{
     migrate(db);
+    const backfillDecision=shouldBackfillPiaRollingHistory(db);
+    if(backfillDecision.attempt){
+      markCollectorActivity({dbPath,nowMs:now.getTime()});
+      await enterCollectorBarrier();
+      try{
+        const backfill=await backfillPiaRollingHistory(db,{rawRoot,fetchImpl,nowIso:now.toISOString(),minMachineCount});
+        logger(JSON.stringify({level:'info',event:'pia_public_backfill_result',...backfill}));
+      }finally{markCollectorActivity({dbPath,ttlMs:2_000})}
+    }
     const decision=shouldAttemptPiaCollection(db,{now,targetHour,targetMinute,cooldownMs});
     if(!decision.attempt)return decision;
     markCollectorActivity({dbPath,nowMs:now.getTime()});
