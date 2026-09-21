@@ -36,6 +36,9 @@ async function fixture(){
   const seedStore=(id,name,channel)=>db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run(id,name,canonicalJson({collectorChannelId:channel,source:'fixture'}),now,now);
   seedStore('store-a','認証店舗',CHANNEL);
   seedStore('store-b','他人店舗','another-channel');
+  db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('pia:35','PIA大船1',canonicalJson({visibility:'public',source:'pia-public-ranking-top',publicStoreId:35}),now,now);
+  db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at) VALUES(?,?,?,?,?,'valid',?,?,?)`).run('pia:35','2026-09-18','pia-rankingtop-v1','pia-raw','pia-norm',join(rawRoot,'pia.json.gz'),now,now);
+  db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)').run('pia:35','2026-09-18','000000',canonicalJson({machine:'my',tableNo:'3090',games:5000,bb:20,rb:18,diff:900}));
   db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
     VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a','2026-09-18','fixture','raw-secret','norm-secret',join(rawRoot,'2026-09-18.html.gz'),now,now);
   db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)').run('store-a','2026-09-18','000101',canonicalJson({machine:'my',tableNo:'101',games:5230,bb:24,rb:18,diff:1200}));
@@ -171,7 +174,7 @@ test('OAuth store tools inherit the proven Collector channel and keep PRE separa
   try{
     const token=await issueOAuthToken(f.base),oauth={authorization:`Bearer ${token.access_token}`};
     const stores=await (await f.post('tools/call',{name:'list_stores',arguments:{}}, {}, oauth)).json();
-    assert.deepEqual(stores.result.structuredContent.stores.map(store=>store.id),['store-a']);
+    assert.deepEqual(stores.result.structuredContent.stores.map(store=>store.id),['pia:35','store-a']);
 
     const days=await (await f.post('tools/call',{name:'get_store_days',arguments:{storeId:'store-a',limit:30}}, {}, oauth)).json();
     assert.deepEqual(days.result.structuredContent.days.map(day=>day.date),['2026-09-18']);
@@ -190,13 +193,33 @@ test('OAuth store tools inherit the proven Collector channel and keep PRE separa
   }finally{await f.close()}
 });
 
+test('OAuth store tools include and read explicit public PIA stores while private foreign stores stay forbidden',async()=>{
+  const f=await fixture();
+  try{
+    const token=await issueOAuthToken(f.base);
+    const headers={authorization:`Bearer ${token.access_token}`};
+    const listed=await f.post('tools/call',{name:'list_stores',arguments:{}},{},headers);
+    const listedBody=await listed.json();
+    assert.deepEqual(listedBody.result.structuredContent.stores.map(x=>x.id),['pia:35','store-a']);
+    const pia=await f.post('tools/call',{name:'get_store_day',arguments:{storeId:'pia:35',date:'2026-09-18'}},{},headers);
+    assert.equal(pia.status,200);
+    const piaBody=await pia.json();
+    assert.equal(piaBody.result.isError,false);
+    assert.equal(piaBody.result.structuredContent.day.machines[0].tableNo,'3090');
+    const foreign=await f.post('tools/call',{name:'get_store_days',arguments:{storeId:'store-b'}},{},headers);
+    const foreignBody=await foreign.json();
+    assert.equal(foreignBody.result.isError,true);
+    assert.match(foreignBody.result.content[0].text,/forbidden/i);
+  }finally{await f.close()}
+});
+
 test('legacy Collector receiver credentials continue to authorize MCP tool calls',async()=>{
   const f=await fixture();
   try{
     const response=await f.post('tools/call',{name:'list_stores',arguments:{}});
     assert.equal(response.status,200);
     const body=await response.json();
-    assert.deepEqual(body.result.structuredContent.stores.map(store=>store.id),['store-a']);
+    assert.deepEqual(body.result.structuredContent.stores.map(store=>store.id),['pia:35','store-a']);
   }finally{await f.close()}
 });
 

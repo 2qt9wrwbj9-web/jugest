@@ -25,7 +25,9 @@ function isoTime(value){
 export async function ingestCollectorDay(db,input={}){
   if(!db?.prepare||!db?.exec)throw new TypeError('db is required');
   const rawRoot=requiredText(input.rawRoot,'rawRoot');
-  const channelId=requiredText(input.channelId,'channelId');
+  const source=requiredText(input.source??'ana-slo-ios-relay','source');
+  const channelId=String(input.channelId??'').trim();
+  if(source==='ana-slo-ios-relay'&&!channelId)throw new TypeError('channelId is required');
   const storeId=requiredText(input.sourceStoreId,'sourceStoreId');
   const shop=requiredText(input.shop,'shop');
   const businessDate=isoDate(input.date,'date');
@@ -39,9 +41,11 @@ export async function ingestCollectorDay(db,input={}){
 
   const artifact=await archiveRawArtifact({root:rawRoot,storeId,date:businessDate,rawText:input.rawText});
   const normalizedHash=hashCanonical(day);
+  const extraMetadata=input.sourceMetadata&&typeof input.sourceMetadata==='object'&&!Array.isArray(input.sourceMetadata)?input.sourceMetadata:{};
   const sourceMetadata=canonicalJson({
-    source:'ana-slo-ios-relay',
-    collectorChannelId:channelId,
+    ...extraMetadata,
+    source,
+    ...(channelId?{collectorChannelId:channelId}:{}),
     parserBuild,
     latestRevision:revision
   });

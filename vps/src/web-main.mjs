@@ -3,6 +3,7 @@ import {once} from 'node:events';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createWebServer} from './web-server.mjs';
 import {startCoordinatorProcess} from './coordinator-supervisor.mjs';
+import {startPiaPublicCollectorScheduler} from './collectors/pia-scheduler.mjs';
 
 const DEFAULT_WEB_ROOT=fileURLToPath(new URL('../..',import.meta.url));
 const DEFAULT_RELAY_DB='/var/lib/jugest/relay.sqlite';
@@ -17,21 +18,23 @@ export function readWebConfig(env=process.env){
   const relayDbPath=path.resolve(String(env.JUGEST_RELAY_DB||DEFAULT_RELAY_DB));
   const canonicalDbPath=path.resolve(String(env.JUGEST_DB_PATH||DEFAULT_CANONICAL_DB));
   const rawRoot=path.resolve(String(env.JUGEST_RAW_ROOT||DEFAULT_RAW_ROOT));
+  const piaCollectorEnabled=!['0','false','no','off'].includes(String(env.JUGEST_PIA_COLLECTOR_ENABLED??'1').trim().toLowerCase());
   if(!host)throw new TypeError('JUGEST_WEB_HOST must not be empty');
   if(!Number.isInteger(port)||port<1||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 1 to 65535');
-  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot};
+  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled};
 }
 
 export async function runWebServer({
   config=readWebConfig(),
   logger=message=>console.log(message),
-  startCoordinator=options=>startCoordinatorProcess({...options,logger})
+  startCoordinator=options=>startCoordinatorProcess({...options,logger}),
+  startPiaCollector=options=>startPiaPublicCollectorScheduler({...options,logger})
 }={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
   if(typeof startCoordinator!=='function')throw new TypeError('startCoordinator must be a function');
-  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot}=config;
+  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled=false}=config;
 
-  let coordinatorRuntime=null;
+  let coordinatorRuntime=null,piaCollectorRuntime=null;
   if(canonicalDbPath){
     coordinatorRuntime=await startCoordinator({dbPath:canonicalDbPath,installSignalHandlers:false});
   }
@@ -60,6 +63,14 @@ export async function runWebServer({
     });
   }
 
+  if(canonicalDbPath&&rawRoot&&piaCollectorEnabled){
+    piaCollectorRuntime=startPiaCollector({dbPath:canonicalDbPath,rawRoot,enterCollectorBarrier:coordinatorRuntime?.enterCollectorBarrier??(async()=>({ok:true,noCoordinator:true}))});
+  }
+
+  if(piaCollectorRuntime){
+    server.once('close',()=>{try{piaCollectorRuntime.stop?.()}catch{}});
+  }
+
   const address=server.address();
   logger(JSON.stringify({
     level:'info',
@@ -70,7 +81,8 @@ export async function runWebServer({
     relayDbPath:path.resolve(relayDbPath),
     canonicalDbPath:canonicalDbPath?path.resolve(canonicalDbPath):null,
     rawRoot:rawRoot?path.resolve(rawRoot):null,
-    coordinatorMode:canonicalDbPath?'web-supervised':'disabled'
+    coordinatorMode:canonicalDbPath?'web-supervised':'disabled',
+    piaCollectorMode:canonicalDbPath&&rawRoot&&piaCollectorEnabled?'enabled':'disabled'
   }));
   return server;
 }

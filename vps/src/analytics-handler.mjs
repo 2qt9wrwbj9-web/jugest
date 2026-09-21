@@ -8,6 +8,7 @@ import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
+import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -21,7 +22,7 @@ function sendJson(req,res,status,payload,extra={}){const body=Buffer.from(JSON.s
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
 function validChannelId(value){return /^[A-Za-z0-9_-]{12,80}$/.test(String(value||''))}
 async function authenticate(req,relayDbPath){const channelId=headerValue(req,'x-jugest-channel-id').trim();const authorization=headerValue(req,'authorization').trim();const match=authorization.match(/^Bearer\s+(.+)$/i);const receiverToken=match?.[1]?.trim()||'';if(!validChannelId(channelId)||!receiverToken)return null;const store=createRelayStore(RELAY_STORE_NAME,{dbPath:relayDbPath,root:'jugest'});const channel=await store.get(`channel/${channelId}`,{type:'json'});if(!channel||channel.revokedAt||!secureMatch(receiverToken,channel.receiverHash))return null;return {channelId}}
-function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==channelId)return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
+function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
 function isJudgeMachinesRoute(parts){return !!parts&&parts.length===4&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='judge'&&parts[3]==='machines'}
 async function readJsonBody(req,{maxBytes=262144}={}){
@@ -84,7 +85,7 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       }
       if(parts.length===3&&parts[2]==='stores'){
         const rows=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all();
-        const stores=rows.flatMap(row=>{const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==auth.channelId)return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at}]});
+        const stores=rows.flatMap(row=>{const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,auth.channelId))return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at,source:String(metadata.source||''),visibility:metadata.visibility==='public'?'public':'private'}]});
         sendJson(req,res,200,{ok:true,stores});return;
       }
       if(parts[2]!=='stores'||parts.length<4){sendJson(req,res,404,{ok:false,code:'not_found'});return}

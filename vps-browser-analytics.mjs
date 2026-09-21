@@ -30,18 +30,20 @@ export function createVpsAnalyticsClient({
   if(typeof fetchFn!=='function')throw new TypeError('fetchFn is required');
   const base=String(baseUrl||DEFAULT_BASE_URL).replace(/\/+$/,'');
 
-  async function request(path){
+  async function request(path,{method='GET',body=null}={}){
     const receiver=readRelayReceiver(storage);
     if(!receiver)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
     let response;
     try{
       response=await fetchFn(`${base}${path}`,{
-        method:'GET',
+        method,
         headers:{
           accept:'application/json',
+          ...(body!=null?{'content-type':'application/json'}:{}),
           'x-jugest-channel-id':receiver.channelId,
           authorization:`Bearer ${receiver.receiverToken}`
         },
+        ...(body!=null?{body}:{}),
         cache:'no-store',
         credentials:'same-origin'
       });
@@ -69,6 +71,26 @@ export function createVpsAnalyticsClient({
   }
 
   return Object.freeze({
+    async listStores(){
+      const payload=await request('/stores');
+      return Array.isArray(payload.stores)?payload.stores:[];
+    },
+    async judgeMachines(machines){
+      if(!Array.isArray(machines))throw makeError('machines must be an array','bad_machines');
+      return request('/judge/machines',{method:'POST',body:JSON.stringify({machines})});
+    },
+    async getStoreDaysById(storeId,{limit=120}={}){
+      const id=String(storeId||'').trim();
+      if(!id)throw makeError('storeId is required','vps_store_required');
+      const bounded=Math.min(366,Math.max(1,Math.trunc(Number(limit)||120)));
+      return request(`/stores/${encodeURIComponent(id)}/days?limit=${bounded}`);
+    },
+    async getStoreDayById(storeId,date){
+      const id=String(storeId||'').trim(),day=String(date||'').trim();
+      if(!id)throw makeError('storeId is required','vps_store_required');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw makeError('date must be YYYY-MM-DD','bad_date');
+      return request(`/stores/${encodeURIComponent(id)}/days/${encodeURIComponent(day)}`);
+    },
     async getDefaultAnalysis(shop){
       const store=await resolveStore(shop);
       const payload=await request(`/stores/${encodeURIComponent(store.id)}/analysis/default`);

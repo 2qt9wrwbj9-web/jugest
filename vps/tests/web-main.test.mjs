@@ -20,7 +20,8 @@ test('readWebConfig accepts explicit VPS web, relay, canonical DB, and raw setti
     port:3100,
     relayDbPath:path.resolve('/srv/jugest/relay.sqlite'),
     canonicalDbPath:path.resolve('/srv/jugest/jugest.sqlite'),
-    rawRoot:path.resolve('/srv/jugest/raw')
+    rawRoot:path.resolve('/srv/jugest/raw'),
+    piaCollectorEnabled:true
   });
 });
 
@@ -29,6 +30,8 @@ test('readWebConfig defaults Relay and canonical storage to persistent VPS state
   assert.equal(config.relayDbPath,path.resolve('/var/lib/jugest/relay.sqlite'));
   assert.equal(config.canonicalDbPath,path.resolve('/var/lib/jugest/jugest.sqlite'));
   assert.equal(config.rawRoot,path.resolve('/var/lib/jugest/raw'));
+  assert.equal(config.piaCollectorEnabled,true);
+  assert.equal(readWebConfig({JUGEST_WEB_PORT:'3000',JUGEST_PIA_COLLECTOR_ENABLED:'0'}).piaCollectorEnabled,false);
 });
 
 test('readWebConfig rejects an invalid port instead of silently binding elsewhere',()=>{

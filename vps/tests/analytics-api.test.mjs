@@ -32,6 +32,9 @@ async function fixture(){
   const seedStore=(id,name,channel)=>db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run(id,name,canonicalJson({collectorChannelId:channel,source:'ana-slo-ios-relay'}),now,now);
   seedStore('store-a','認証店舗',CHANNEL);
   seedStore('store-b','他人店舗','another-channel');
+  db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('pia:35','PIA大船1',canonicalJson({visibility:'public',source:'pia-public-ranking-top',publicStoreId:35}),now,now);
+  db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at) VALUES(?,?,?,?,?,'valid',?,?,?)`).run('pia:35','2026-09-10','pia-rankingtop-v1','pia-raw','pia-norm',join(rawRoot,'pia.json.gz'),now,now);
+  db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)').run('pia:35','2026-09-10','000000',canonicalJson({machine:'my',tableNo:'3090',games:5000,bb:20,rb:18,diff:900}));
   for(const [i,date] of ['2026-09-01','2026-09-02'].entries()){
     db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
       VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a',date,'fixture','raw-secret-'+i,'norm-'+i,join(rawRoot,date+'.html.gz'),now,now);
@@ -61,16 +64,23 @@ test('analytics API rejects missing and invalid receiver credentials',async()=>{
   }finally{await f.close()}
 });
 
-test('store enumeration is restricted to the authenticated Collector channel',async()=>{
+test('store enumeration includes explicit public native stores while keeping private stores channel-scoped',async()=>{
   const f=await fixture();
   try{
     const response=await fetch(`${f.base}/api/vps/stores`,{headers:f.auth});
     assert.equal(response.status,200);
     const body=await response.json();
     assert.equal(body.ok,true);
-    assert.deepEqual(body.stores.map(x=>x.id),['store-a']);
-    assert.equal(body.stores[0].name,'認証店舗');
-    assert.doesNotMatch(JSON.stringify(body),/receiver-token|raw-secret|rawRoot|artifact/i);
+    assert.deepEqual(body.stores.map(x=>x.id),['pia:35','store-a']);
+    assert.equal(body.stores.find(x=>x.id==='store-a').name,'認証店舗');
+    const pia=body.stores.find(x=>x.id==='pia:35');
+    assert.equal(pia.name,'PIA大船1');
+    assert.equal(pia.source,'pia-public-ranking-top');
+    assert.equal(pia.visibility,'public');
+    const owned=body.stores.find(x=>x.id==='store-a');
+    assert.equal(owned.source,'ana-slo-ios-relay');
+    assert.equal(owned.visibility,'private');
+    assert.doesNotMatch(JSON.stringify(body),/collectorChannelId|receiver-token|raw-secret|rawRoot|artifact/i);
   }finally{await f.close()}
 });
 
@@ -105,6 +115,20 @@ test('authorized browser can read compact days, one day, analysis, history, stat
     assert.equal(storeRead.storeRead.targetDate,'2026-09-03');
     assert.equal(storeRead.storeRead.rankings[0].tableNo,'101');
     assert.doesNotMatch(JSON.stringify(storeRead),/raw-secret|html\.gz|model_json/i);
+  }finally{await f.close()}
+});
+
+test('authenticated browser can read the explicit public PIA store without gaining access to private cross-channel stores',async()=>{
+  const f=await fixture();
+  try{
+    const daysResponse=await fetch(`${f.base}/api/vps/stores/pia%3A35/days`,{headers:f.auth});
+    assert.equal(daysResponse.status,200);
+    const days=await daysResponse.json();
+    assert.equal(days.store.name,'PIA大船1');
+    assert.deepEqual(days.days.map(x=>x.date),['2026-09-10']);
+    const day=await (await fetch(`${f.base}/api/vps/stores/pia%3A35/days/2026-09-10`,{headers:f.auth})).json();
+    assert.equal(day.day.machines[0].tableNo,'3090');
+    assert.equal((await fetch(`${f.base}/api/vps/stores/store-b/days`,{headers:f.auth})).status,403);
   }finally{await f.close()}
 });
 

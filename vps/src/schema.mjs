@@ -32,6 +32,20 @@ export function migrate(db){
     );
     CREATE INDEX IF NOT EXISTS machine_day_data_store_date_idx ON machine_day_data(store_id,business_date);
 
+    CREATE TABLE IF NOT EXISTS source_collector_state (
+      collector_id TEXT PRIMARY KEY,
+      source_store_id TEXT NOT NULL,
+      last_snapshot_date TEXT,
+      last_snapshot_hash TEXT,
+      last_snapshot_json TEXT,
+      last_result TEXT,
+      last_ingested_date TEXT,
+      last_attempt_at TEXT,
+      last_success_at TEXT,
+      last_error TEXT,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS analysis_state (
       store_id TEXT NOT NULL,
       component TEXT NOT NULL,
