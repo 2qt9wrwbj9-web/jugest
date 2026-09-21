@@ -9,6 +9,7 @@ import {ingestCollectorDay} from '../src/ingest/canonical-ingest.mjs';
 import {backfillPiaRollingHistory,shouldBackfillPiaRollingHistory} from '../src/collectors/pia-backfill-once.mjs';
 import {normalizePiaJugglerRow,PIA_PARSER_BUILD} from '../src/collectors/pia-public.mjs';
 
+// The production backfill is anchored to the already verified 2026-09-21 canonical day.
 function row({no,name,code,id}){const games=1200+id*17,bb=5+(id%18),rb=4+(id%15),specialOut=120,out=specialOut+games*3,diff=(id-15)*31;return {store_id:35,machine_no:no,name,sis_machine_code:code,store_machine_id:no,special:bb,start:rb,final_start:id,special_1:bb,special_2:0,special_2d:rb,special_out:specialOut,special_safe:0,out,safe:out+diff,difference:diff}}
 function snapshot(){const ranking=[];for(const [no,name,code] of [[3090,'ＳマイジャグラーⅤＫＤ','00087'],[3118,'Ｓゴーゴージャグラー３ＫＡ','00088']])for(let id=1;id<=30;id++)ranking.push(row({no,name,code,id}));return {status:0,ranking,server_date_time:{date:'2026-09-22',time:'07:00:00'}}}
 function response(data){return {ok:true,status:200,text:async()=>JSON.stringify(data)}}
