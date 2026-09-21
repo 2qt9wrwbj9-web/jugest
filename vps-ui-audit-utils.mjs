@@ -5,11 +5,12 @@ function observedDiffRow(row){
   return games!==null&&games>0&&diff!==null&&source!=='estimated'&&source!=='missing';
 }
 export function aggregateStoreRows(rows=[]){
-  const list=Array.isArray(rows)?rows:[],diffRows=list.filter(observedDiffRow),totalGames=diffRows.reduce((sum,row)=>sum+Number(row.games),0),totalDiff=diffRows.reduce((sum,row)=>sum+Number(row.diff),0);
+  const list=Array.isArray(rows)?rows:[],gameRows=list.map(row=>finite(row?.games)).filter(value=>value!==null&&value>0),diffRows=list.filter(observedDiffRow),totalGames=diffRows.reduce((sum,row)=>sum+Number(row.games),0),totalDiff=diffRows.reduce((sum,row)=>sum+Number(row.diff),0);
   const settingRows=list.map(row=>({games:finite(row?.games),setting:finite(row?.expectedSetting)})).filter(row=>row.games!==null&&row.games>0&&row.setting!==null);
   const settingGames=settingRows.reduce((sum,row)=>sum+row.games,0),weightedSetting=settingRows.reduce((sum,row)=>sum+row.games*row.setting,0);
   return Object.freeze({
     rowCount:list.length,diffCount:diffRows.length,totalGames,totalDiff:diffRows.length?totalDiff:null,
+    avgGames:gameRows.length?gameRows.reduce((sum,value)=>sum+value,0)/gameRows.length:null,
     avgDiff:diffRows.length?totalDiff/diffRows.length:null,
     actualRate:totalGames>0?100*(1+totalDiff/(3*totalGames)):null,
     avgExpectedSetting:settingGames>0?weightedSetting/settingGames:null
@@ -36,6 +37,27 @@ export function mergeStoreRows(displayRows=[],rawRows=[]){
     };
   });
 }
+
+const HEAT_STOPS=Object.freeze([
+  Object.freeze({value:1,rgb:[255,255,255]}),
+  Object.freeze({value:8/3,rgb:[77,144,254]}),
+  Object.freeze({value:13/3,rgb:[255,218,72]}),
+  Object.freeze({value:6,rgb:[232,65,65]})
+]);
+function clamp(value,min,max){return Math.min(max,Math.max(min,value))}
+function interpolateRgb(a,b,t){return a.map((value,index)=>Math.round(value+(b[index]-value)*t))}
+export function settingHeatColor(value){
+  const n=finite(value);if(n===null)return '#f1f3f7';const v=clamp(n,1,6);
+  let left=HEAT_STOPS[0],right=HEAT_STOPS.at(-1);
+  for(let i=1;i<HEAT_STOPS.length;i++)if(v<=HEAT_STOPS[i].value){left=HEAT_STOPS[i-1];right=HEAT_STOPS[i];break}
+  const span=right.value-left.value,t=span>0?(v-left.value)/span:0,rgb=interpolateRgb(left.rgb,right.rgb,clamp(t,0,1));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+export function settingHeatTextColor(value){
+  const color=settingHeatColor(value),match=color.match(/(\d+)[^\d]+(\d+)[^\d]+(\d+)/);if(!match)return '#172342';
+  const [,r,g,b]=match.map(Number),yiq=(r*299+g*587+b*114)/1000;return yiq<150?'#ffffff':'#172342';
+}
+
 export function normalizeMachineSelection(available=[],saved=null){
   const ids=[...new Set((Array.isArray(available)?available:[]).map(value=>String(value)))];
   if(!Array.isArray(saved))return ids;

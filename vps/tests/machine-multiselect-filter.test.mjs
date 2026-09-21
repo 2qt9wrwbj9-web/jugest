@@ -37,7 +37,7 @@ test('machine filter applies selected machine ids without changing source order'
 test('store audit addon contains separate multi-select controls for data and trend sections',()=>{
   const source=readFileSync(resolve(ROOT,'vps-ui-audit-store.mjs'),'utf8');
   assert.ok(source.includes('data-vps-machine-filter="${esc(scope)}"'));
-  assert.ok(source.includes("machineFilterHtml('data',allMachines,selected)"));
+  assert.ok(source.includes("machineFilterHtml('data',availableSummaries,selected)"));
   assert.ok(source.includes("machineFilterHtml('trend',allMachines,selected)"));
   assert.match(source,/全選択/);
   assert.match(source,/全解除/);
