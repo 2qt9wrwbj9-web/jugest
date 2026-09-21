@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {canAccessStoreMetadata,isPublicNativeStore,storeMetadata} from '../src/store-access.mjs';
 
+// PIA owner-only access is opt-in via production environment configuration.
 test('explicit public PIA native metadata remains public in public mode',()=>{
   const pia={source:'pia-public-ranking-top',visibility:'public'};
   assert.equal(isPublicNativeStore(pia),true);
