@@ -7,6 +7,7 @@ import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
+import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateOAuthAccessToken,OAUTH_RESOURCE_METADATA,OAUTH_SCOPE} from './oauth-handler.mjs';
 
 const MCP_VERSION='2026-07-28';
@@ -109,8 +110,8 @@ async function readJsonBody(req,{maxBytes=524288}={}){
 function authorizedStore(db,storeId,channelId){
   const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);
   if(!row)return {status:404,store:null,code:'store_not_found'};
-  const metadata=safeJson(row.source_metadata_json,{})||{};
-  if(String(metadata.collectorChannelId||'')!==channelId)return {status:403,store:null,code:'forbidden'};
+  const metadata=storeMetadata(row.source_metadata_json);
+  if(!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null,code:'forbidden'};
   return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at},code:null};
 }
 
@@ -141,7 +142,7 @@ async function judgeRow(raw,index,rootDir){
 
 function listStores(db,channelId){
   const rows=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all();
-  return rows.flatMap(row=>{const metadata=safeJson(row.source_metadata_json,{})||{};if(String(metadata.collectorChannelId||'')!==channelId)return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at}]});
+  return rows.flatMap(row=>{const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,channelId))return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at}]});
 }
 
 async function runTool(name,args,{rootDir,channelId,canonicalDbPath,modern}){
