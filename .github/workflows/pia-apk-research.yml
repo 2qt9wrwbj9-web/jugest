@@ -90,7 +90,28 @@ jobs:
             aarch64-linux-gnu-objdump -d --start-address=0x14613b8 --stop-address=0x1461fc8 "$LIB"
           } > native-focus.txt
           wc -l native-focus.txt
-          head -80 native-focus.txt
+
+      - name: Map IL2CPP string pointer slots
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m pip install -q pyelftools
+          python3 - <<'PY' > string-slot-map.txt
+          import json
+          from elftools.elf.elffile import ELFFile
+          strings={int(x['Address']):x['Value'] for x in json.load(open('il2cpp-out/script.json'))['ScriptString']}
+          with open('arm64/lib/arm64-v8a/libil2cpp.so','rb') as fh:
+              elf=ELFFile(fh)
+              for sec in elf.iter_sections():
+                  if not hasattr(sec,'iter_relocations'): continue
+                  for rel in sec.iter_relocations():
+                      addend=int(rel['r_addend']) if rel.is_RELA() else None
+                      if addend in strings:
+                          print(f"0x{int(rel['r_offset']):x}\t0x{addend:x}\t{strings[addend]!r}")
+          PY
+          grep -E "getStoreMachine2|getStoreMachineChart|store_id|machine_no|sis_machine_code|machine_type|price|date|limit|history|encoded" string-slot-map.txt | head -500 || true
+          wc -l string-slot-map.txt
 
       - name: Build recovered C# API report
         if: always()
@@ -103,23 +124,15 @@ jobs:
             cat metadata-report.txt 2>/dev/null || true
             echo
             echo '=== Il2CppDumper dump.cs findings ==='
-            if test -f il2cpp-out/dump.cs; then
-              grep -Ein -B 60 -A 60 "$PATTERN" il2cpp-out/dump.cs || true
-            fi
+            if test -f il2cpp-out/dump.cs; then grep -Ein -B 60 -A 60 "$PATTERN" il2cpp-out/dump.cs || true; fi
             echo
             echo '=== Il2CppDumper string literals ==='
-            if test -f il2cpp-out/stringliteral.json; then
-              grep -Ein -B 20 -A 20 "$PATTERN" il2cpp-out/stringliteral.json || true
-            fi
+            if test -f il2cpp-out/stringliteral.json; then grep -Ein -B 20 -A 20 "$PATTERN" il2cpp-out/stringliteral.json || true; fi
             echo
             echo '=== Il2CppDumper script symbol findings ==='
-            if test -f il2cpp-out/script.json; then
-              grep -Ein -B 10 -A 10 'StoreMachine|MachineChart|ContainAllDetail|Encrypt|Decrypt|Base64' il2cpp-out/script.json || true
-            fi
+            if test -f il2cpp-out/script.json; then grep -Ein -B 10 -A 10 'StoreMachine|MachineChart|ContainAllDetail|Encrypt|Decrypt|Base64' il2cpp-out/script.json || true; fi
           } | tee pia-il2cpp-report.txt
-          echo '=== Focused summary ==='
           grep -Ein 'pia-server|heuron|StoreMachine|encodedData|AFTER DECRYPT|DESede|PKCS5|3DES|store_machine' pia-il2cpp-report.txt | head -1000 || true
-          wc -c pia-il2cpp-report.txt
 
       - name: Upload IL2CPP findings
         if: always()
@@ -130,6 +143,7 @@ jobs:
             pia-il2cpp-report.txt
             metadata-report.txt
             native-focus.txt
+            string-slot-map.txt
             il2cpp-out/dump.cs
             il2cpp-out/stringliteral.json
             il2cpp-out/script.json
