@@ -14,7 +14,7 @@ function ownerChannelIds(raw){
   return new Set(source.map(value=>String(value||'').trim()).filter(Boolean));
 }
 
-export function canAccessStoreMetadata(metadata,channelId,{piaAccessMode=process.env.JUGEST_PIA_ACCESS_MODE??'public',piaOwnerChannelIds=process.env.JUGEST_PIA_OWNER_CHANNEL_IDS??''}={}){
+export function canAccessStoreMetadata(metadata,channelId,{piaAccessMode=process.env.JUGEST_PIA_ACCESS_MODE??'owner',piaOwnerChannelIds=process.env.JUGEST_PIA_OWNER_CHANNEL_IDS??''}={}){
   if(metadata?.source===PIA_SOURCE){
     const mode=String(piaAccessMode||'').trim().toLowerCase();
     if(mode==='owner')return Boolean(channelId)&&ownerChannelIds(piaOwnerChannelIds).has(String(channelId));
