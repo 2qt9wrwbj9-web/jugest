@@ -14,13 +14,15 @@ test('store data summaries include average games for all rows and each machine',
   assert.equal(my.avgGames,5000);
 });
 
-test('setting heat scale runs white to blue to yellow to red across settings 1 to 6',()=>{
-  assert.equal(settingHeatColor(1),'rgb(255, 255, 255)');
-  assert.equal(settingHeatColor(8/3),'rgb(77, 144, 254)');
-  assert.equal(settingHeatColor(13/3),'rgb(255, 218, 72)');
-  assert.equal(settingHeatColor(6),'rgb(232, 65, 65)');
-  assert.equal(settingHeatTextColor(1),'#172342');
-  assert.equal(settingHeatTextColor(6),'#ffffff');
+test('setting heat uses four fixed readable ranges',()=>{
+  assert.equal(settingHeatColor(2.49),'#ffffff');
+  assert.equal(settingHeatColor(2.5),'#60a5fa');
+  assert.equal(settingHeatColor(3.49),'#60a5fa');
+  assert.equal(settingHeatColor(3.5),'#fde047');
+  assert.equal(settingHeatColor(4.49),'#fde047');
+  assert.equal(settingHeatColor(4.5),'#ef4444');
+  assert.equal(settingHeatTextColor(2.49),'#172342');
+  assert.equal(settingHeatTextColor(4.5),'#ffffff');
 });
 
 test('store data UI contains matrix filters, sticky axes, tap detail and hides the legacy machine list',async()=>{
