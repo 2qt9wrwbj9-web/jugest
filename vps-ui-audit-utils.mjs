@@ -38,25 +38,18 @@ export function mergeStoreRows(displayRows=[],rawRows=[]){
   });
 }
 
-const HEAT_STOPS=Object.freeze([
-  Object.freeze({value:1,rgb:[255,255,255]}),
-  Object.freeze({value:8/3,rgb:[77,144,254]}),
-  Object.freeze({value:13/3,rgb:[255,218,72]}),
-  Object.freeze({value:6,rgb:[232,65,65]})
+const HEAT_BANDS=Object.freeze([
+  Object.freeze({max:2.49,color:'#ffffff',text:'#172342'}),
+  Object.freeze({max:3.49,color:'#60a5fa',text:'#102040'}),
+  Object.freeze({max:4.49,color:'#fde047',text:'#3f3300'}),
+  Object.freeze({max:6,color:'#ef4444',text:'#ffffff'})
 ]);
-function clamp(value,min,max){return Math.min(max,Math.max(min,value))}
-function interpolateRgb(a,b,t){return a.map((value,index)=>Math.round(value+(b[index]-value)*t))}
-export function settingHeatColor(value){
-  const n=finite(value);if(n===null)return '#f1f3f7';const v=clamp(n,1,6);
-  let left=HEAT_STOPS[0],right=HEAT_STOPS.at(-1);
-  for(let i=1;i<HEAT_STOPS.length;i++)if(v<=HEAT_STOPS[i].value){left=HEAT_STOPS[i-1];right=HEAT_STOPS[i];break}
-  const span=right.value-left.value,t=span>0?(v-left.value)/span:0,rgb=interpolateRgb(left.rgb,right.rgb,clamp(t,0,1));
-  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+function settingHeatBand(value){
+  const n=finite(value);if(n===null)return null;const v=Math.min(6,Math.max(1,n));
+  return HEAT_BANDS.find(band=>v<=band.max)||HEAT_BANDS.at(-1);
 }
-export function settingHeatTextColor(value){
-  const color=settingHeatColor(value),match=color.match(/(\d+)[^\d]+(\d+)[^\d]+(\d+)/);if(!match)return '#172342';
-  const [,r,g,b]=match.map(Number),yiq=(r*299+g*587+b*114)/1000;return yiq<150?'#ffffff':'#172342';
-}
+export function settingHeatColor(value){return settingHeatBand(value)?.color||'#f1f3f7'}
+export function settingHeatTextColor(value){return settingHeatBand(value)?.text||'#172342'}
 
 export function normalizeMachineSelection(available=[],saved=null){
   const ids=[...new Set((Array.isArray(available)?available:[]).map(value=>String(value)))];
