@@ -1,7 +1,7 @@
 interface:
-  display_name: "JUGEST Live Analysis"
-  short_description: "Automatically judge Juggler screenshots with JUGEST"
-  default_prompt: "このスクショをJUGESTで全台判別して"
+  display_name: "JUGEST Analysis"
+  short_description: "Automatically route Juggler screenshots and store analysis to JUGEST"
+  default_prompt: "JUGESTでこのデータを分析して"
 
 policy:
   allow_implicit_invocation: true
