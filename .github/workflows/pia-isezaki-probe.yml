@@ -13,61 +13,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fast PIA slot ranking probe
+      - name: Inspect PIA store metadata
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request, urllib.error
           BASE='https://pia-server.heuron.net'
-          RANK='/api/stores/getRankingTop'
-          MACH='/api/stores/getStoreMachiesWithHowToPlay'
-
           def post(path,data):
               body=urllib.parse.urlencode(data).encode()
               req=urllib.request.Request(BASE+path,data=body,method='POST',headers={'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json','User-Agent':'Mozilla/5.0 PIA-public-probe'})
-              try:
-                  with urllib.request.urlopen(req,timeout=12) as r: raw=r.read(); code=r.status
-              except urllib.error.HTTPError as e: raw=e.read(); code=e.code
-              try: obj=json.loads(raw.decode('utf-8','replace'))
-              except Exception: obj=None
-              return code,obj
+              with urllib.request.urlopen(req,timeout=15) as r:
+                  raw=r.read(); code=r.status
+              return code,json.loads(raw.decode('utf-8','replace'))
 
-          combos=[
-            {'price':20,'kind':1,'machine_type':1},
-            {'price':20,'kind':1,'machine_type':2},
-            {'price':20,'kind':2,'machine_type':1},
-            {'price':20,'kind':2,'machine_type':2},
-            {'price':46,'kind':1,'machine_type':1},
-            {'price':46,'kind':1,'machine_type':2},
-            {'price':0,'kind':1,'machine_type':1},
-            {'price':0,'kind':1,'machine_type':2},
-          ]
-          results=[]
-          for c in combos:
-              d={'user_code':'','day':0,'store_id':35,'limit':5000,**c}
-              code,obj=post(RANK,d)
-              ranking=obj.get('ranking',[]) if isinstance(obj,dict) else []
-              print('COMBO35',json.dumps(d,ensure_ascii=False),'HTTP',code,'STATUS',obj.get('status') if isinstance(obj,dict) else None,'LEN',len(ranking))
-              results.append((len(ranking),d))
-          chosen=next((d for n,d in results if n==3210),None)
-          if chosen is None:
-              valid=[(n,d) for n,d in results if n>0 and n<5000 and n%30==0]
-              chosen=max(valid,key=lambda x:x[0])[1] if valid else max(results,key=lambda x:x[0])[1]
-          print('CHOSEN',json.dumps(chosen,ensure_ascii=False))
+          code,obj=post('/api/stores/getAllStores',{})
+          print('ALLSTORES_HTTP',code,'TOP_KEYS',list(obj) if isinstance(obj,dict) else type(obj).__name__)
+          targets={11,12,35}
+          def walk(x):
+              if isinstance(x,dict):
+                  if x.get('store_id') in targets:
+                      print('STORE_OBJECT',json.dumps(x,ensure_ascii=False)[:12000])
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+          walk(obj)
 
           for sid in (35,11,12):
-              d=dict(chosen); d['store_id']=sid
-              code,obj=post(RANK,d)
-              ranking=obj.get('ranking',[]) if isinstance(obj,dict) else []
-              uniq=len({r.get('machine_no') for r in ranking if isinstance(r,dict) and r.get('machine_no') is not None})
-              print('RANKSTORE',sid,'HTTP',code,'STATUS',obj.get('status') if isinstance(obj,dict) else None,'LEN',len(ranking),'UNIQ',uniq)
-              if ranking: print('RANKSAMPLE',sid,json.dumps(ranking[:2],ensure_ascii=False)[:4000])
-
-          for sid in (35,11,12):
-              code,obj=post(MACH,{'store_id':sid})
-              slot=obj.get('slot',[]) if isinstance(obj,dict) else []
-              pach=obj.get('pachinko',[]) if isinstance(obj,dict) else []
-              slot_nos=sum(len(x.get('machine_nos',[])) for x in slot if isinstance(x,dict))
-              pach_nos=sum(len(x.get('machine_nos',[])) for x in pach if isinstance(x,dict))
-              print('INVENTORY',sid,'HTTP',code,'STATUS',obj.get('status') if isinstance(obj,dict) else None,'SLOT_MODELS',len(slot),'SLOT_MACHINES',slot_nos,'PACH_MODELS',len(pach),'PACH_MACHINES',pach_nos)
+              code,m=post('/api/stores/getStoreMachiesWithHowToPlay',{'store_id':sid})
+              print('MACHINE_STORE',sid,'TOP_KEYS',list(m.keys()) if isinstance(m,dict) else [])
+              slot=m.get('slot',[]) if isinstance(m,dict) else []
+              print('SLOT_FIRST',sid,json.dumps(slot[:3],ensure_ascii=False)[:12000])
           PY
