@@ -53,12 +53,12 @@ test('store summaries use observed diff metrics and one-table-one-vote MAP setti
   const overall=aggregateStoreRows(rows);
   assert.equal(overall.totalDiff,1200);assert.equal(overall.avgDiff,400);assert.equal(overall.diffCount,3);
   assert.equal(overall.actualRate,104);
-  assert.equal(overall.avgExpectedSetting,3.375);
+  assert.equal(overall.avgExpectedSetting,3.625);
   const machines=machineStoreSummaries(rows);
   assert.deepEqual(machines.map(x=>x.machine),['im','my']);
   const my=machines.find(x=>x.machine==='my'),im=machines.find(x=>x.machine==='im');
   assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3);
-  assert.equal(im.totalDiff,900);assert.equal(im.diffCount,1);assert.equal(im.avgExpectedSetting,4);
+  assert.equal(im.totalDiff,900);assert.equal(im.diffCount,1);assert.equal(im.avgExpectedSetting,4.25);
 });
 
 test('store MAP average excludes rows without posterior q instead of falling back to expected setting',()=>{
