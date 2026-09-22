@@ -10,36 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe public PIA APIs
+      - name: Probe Isezaki ranking variants
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request
-
           BASE='https://pia-server.heuron.net/api/stores/'
           HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
-
-          def post(endpoint, data):
-              body=urllib.parse.urlencode(data).encode()
-              req=urllib.request.Request(BASE+endpoint,data=body,headers=HDR,method='POST')
-              with urllib.request.urlopen(req,timeout=20) as r:
-                  raw=r.read().decode('utf-8','replace')
-              try: return json.loads(raw)
-              except Exception: return {'_raw':raw[:1000]}
-
-          def flatten_values(obj, names):
-              out={n:set() for n in names}
-              def walk(x):
-                  if isinstance(x,dict):
-                      for k,v in x.items():
-                          if k in out and v is not None: out[k].add(str(v))
-                          walk(v)
-                  elif isinstance(x,list):
-                      for v in x: walk(v)
-              walk(obj)
-              return {k:sorted(v)[:30] for k,v in out.items()}
-
-          def count_rows(obj):
+          def post(ep,data):
+              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read().decode('utf-8','replace'))
+          def best_list(obj):
               best=[]
               def walk(x):
                   nonlocal best
@@ -48,35 +29,18 @@ jobs:
                       for v in x: walk(v)
                   elif isinstance(x,dict):
                       for v in x.values(): walk(v)
-              walk(obj)
-              return len(best), best
-
-          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
-              roster=post('getStoreMachiesWithHowToPlay',{'store_id':sid})
-              rc,rows=count_rows(roster)
-              vals=flatten_values(roster,['price','machine_type','kind'])
-              print('ROSTER',json.dumps({'store_id':sid,'name':name,'status':roster.get('status'),'rows':rc,'values':vals},ensure_ascii=False))
-
-              candidates=[]
-              prices=vals['price'] or ['20','21.277','5','4','1','']
-              mtypes=vals['machine_type'] or ['1','2','0','']
-              # Prioritize common 20-yen slot combinations, then roster-derived values.
-              preferred=[('20','2'),('20','1'),('','2'),('','1')]
-              for p,m in preferred+[(p,m) for p in prices for m in mtypes]:
-                  if (p,m) not in candidates: candidates.append((p,m))
-              success=None
-              attempts=[]
-              for p,m in candidates[:16]:
-                  data={'user_code':'','price':p,'kind':'1','machine_type':m,'day':'0','store_id':str(sid),'limit':'5000'}
+              walk(obj); return best
+          plans={
+              11:['47','186','21.277','5.376','20','','46'],
+              12:['47','200','21.277','5','20','','46']
+          }
+          for sid,prices in plans.items():
+              print('STORE',sid)
+              for price in prices:
+                  body={'user_code':'','price':price,'kind':'1','machine_type':'2','day':'0','store_id':str(sid),'limit':'100'}
                   try:
-                      rank=post('getRankingTop',data)
-                      n,rrows=count_rows(rank)
-                      attempts.append({'price':p,'machine_type':m,'status':rank.get('status'),'rows':n})
-                      if str(rank.get('status'))=='0' and n>0:
-                          sample=rrows[0] if rrows else {}
-                          success={'price':p,'machine_type':m,'status':rank.get('status'),'rows':n,'sample':{k:sample.get(k) for k in ['machine_no','machine_name','special_1','special_2d','difference','out','special_out']}}
-                          break
+                      rank=post('getRankingTop',body); rows=best_list(rank)
+                      print('TRY',json.dumps({'sid':sid,'price':price,'status':rank.get('status'),'rows':len(rows),'sample':({k:rows[0].get(k) for k in ['machine_no','special_1','special_2d','difference','out','special_out']} if rows else None)},ensure_ascii=False))
                   except Exception as e:
-                      attempts.append({'price':p,'machine_type':m,'error':type(e).__name__+': '+str(e)[:160]})
-              print('RANKING',json.dumps({'store_id':sid,'name':name,'success':success,'attempts':attempts},ensure_ascii=False))
+                      print('ERR',json.dumps({'sid':sid,'price':price,'error':repr(e)},ensure_ascii=False))
           PY
