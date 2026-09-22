@@ -13,124 +13,76 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Probe public PIA endpoints
+      - name: Probe PIA ranking filters
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request, urllib.error
-
+          import json, urllib.parse, urllib.request, urllib.error, itertools
           BASE='https://pia-server.heuron.net'
+          PATH='/api/stores/getRankingTop'
 
-          def post(path, data):
-              body=urllib.parse.urlencode(data, doseq=True).encode()
-              req=urllib.request.Request(BASE+path, data=body, method='POST', headers={
+          def post(data):
+              body=urllib.parse.urlencode(data).encode()
+              req=urllib.request.Request(BASE+PATH,data=body,method='POST',headers={
                   'Content-Type':'application/x-www-form-urlencoded',
                   'Accept':'application/json',
-                  'User-Agent':'Mozilla/5.0 PIA-public-probe'
-              })
+                  'User-Agent':'Mozilla/5.0 PIA-public-probe'})
               try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      raw=r.read()
-                      code=r.status
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      raw=r.read(); code=r.status
               except urllib.error.HTTPError as e:
                   raw=e.read(); code=e.code
-              text=raw.decode('utf-8','replace')
-              try: obj=json.loads(text)
+              try: obj=json.loads(raw.decode('utf-8','replace'))
               except Exception: obj=None
-              return code, text, obj
+              return code,obj
 
-          def summarize(obj):
-              if not isinstance(obj,(dict,list)):
-                  return {'json':False}
-              lists=[]
-              def walk(x,p='$'):
-                  if isinstance(x,list):
-                      lists.append((len(x),p,x))
-                      for i,v in enumerate(x[:3]): walk(v,f'{p}[{i}]')
-                  elif isinstance(x,dict):
-                      for k,v in x.items(): walk(v,f'{p}.{k}')
-              walk(obj)
-              lists.sort(key=lambda z:z[0], reverse=True)
-              best=lists[0] if lists else (0,None,[])
-              first=best[2][0] if best[0] and isinstance(best[2][0],dict) else None
-              status=obj.get('status') if isinstance(obj,dict) else None
-              keys=list(obj.keys())[:30] if isinstance(obj,dict) else []
-              return {
-                  'json':True,'status':status,'top_keys':keys,
-                  'largest_list_len':best[0],'largest_list_path':best[1],
-                  'first_item_keys':list(first.keys())[:40] if first else []
-              }
+          def ranklen(obj):
+              return len(obj.get('ranking',[])) if isinstance(obj,dict) and isinstance(obj.get('ranking'),list) else -1
 
-          print('=== MACHINE LIST TESTS ===')
-          machine_path='/api/stores/getStoreMachiesWithHowToPlay'
+          print('=== FILTER GRID store 35 ===')
+          candidates=[]
+          for price,kind,mt in itertools.product(('',0,5,20,46),(0,1,2,3),('',0,1,2,3)):
+              d={'user_code':'','price':price,'kind':kind,'machine_type':mt,'day':0,'store_id':35,'limit':5000}
+              code,obj=post(d); n=ranklen(obj); status=obj.get('status') if isinstance(obj,dict) else None
+              if code==200 and status in (0,'0'):
+                  print('GRID',json.dumps(d,ensure_ascii=False),'LEN',n)
+                  candidates.append((n,d))
+                  if n==3210:
+                      print('EXACT_3210',json.dumps(d,ensure_ascii=False)); break
+          else:
+              pass
+
+          exact=next((d for n,d in candidates if n==3210),None)
+          if exact is None and candidates:
+              # Prefer a 30-row-per-machine looking result, then the largest non-capped result.
+              good=[(n,d) for n,d in candidates if n>0 and n<5000 and n%30==0]
+              if good: exact=max(good,key=lambda x:x[0])[1]
+              else:
+                  noncap=[(n,d) for n,d in candidates if n>0 and n<5000]
+                  exact=max(noncap,key=lambda x:x[0])[1] if noncap else max(candidates,key=lambda x:x[0])[1]
+          print('CHOSEN',json.dumps(exact,ensure_ascii=False) if exact else 'NONE')
+
+          if exact:
+              print('=== SAME FILTER ON 35/11/12 ===')
+              for sid in (35,11,12):
+                  d=dict(exact); d['store_id']=sid
+                  code,obj=post(d); n=ranklen(obj)
+                  ranking=obj.get('ranking',[]) if isinstance(obj,dict) else []
+                  uniq=len({r.get('machine_no') for r in ranking if isinstance(r,dict) and r.get('machine_no') is not None})
+                  names=[]
+                  for r in ranking[:10]:
+                      if isinstance(r,dict): names.append(r.get('name'))
+                  print('STORE',sid,'HTTP',code,'STATUS',obj.get('status') if isinstance(obj,dict) else None,'LEN',n,'UNIQ',uniq,'SAMPLE_NAMES',json.dumps(names[:5],ensure_ascii=False))
+
+          print('=== MACHINE INVENTORY COUNTS ===')
+          mpath='/api/stores/getStoreMachiesWithHowToPlay'
           for sid in (35,11,12):
-              code,text,obj=post(machine_path, {'store_id':sid})
-              print('MACHINE',sid,'HTTP',code,'SUMMARY',json.dumps(summarize(obj),ensure_ascii=False))
-              if isinstance(obj,dict):
-                  # print compact name-like values only
-                  vals=[]
-                  def names(x):
-                      if isinstance(x,dict):
-                          for k,v in x.items():
-                              if isinstance(v,str) and ('name' in k.lower() or 'store' in k.lower()): vals.append((k,v))
-                              elif isinstance(v,(dict,list)): names(v)
-                      elif isinstance(x,list):
-                          for v in x[:5]: names(v)
-                  names(obj)
-                  print('MACHINE_NAMES',sid,json.dumps(vals[:20],ensure_ascii=False))
-
-          print('=== RANKING ENDPOINT DISCOVERY ON STORE 35 ===')
-          paths=[
-              '/api/rankings/getRankingTop',
-              '/api/ranking/getRankingTop',
-              '/api/stores/getRankingTop',
-              '/api/rank/getRankingTop',
-              '/api/getRankingTop'
-          ]
-          bodies=[]
-          bodies.append({'store_id':35,'limit':5000})
-          for mt in ('',0,1,2):
-              for price in ('',0,20):
-                  bodies.append({'user_code':'','price':price,'kind':1,'machine_type':mt,'day':0,'store_id':35,'limit':5000})
-          chosen=None
-          seen=set()
-          for path in paths:
-              for data in bodies:
-                  key=(path,tuple(sorted((k,str(v)) for k,v in data.items())))
-                  if key in seen: continue
-                  seen.add(key)
-                  code,text,obj=post(path,data)
-                  s=summarize(obj)
-                  print('TRY',path,json.dumps(data,ensure_ascii=False),'HTTP',code,'SUMMARY',json.dumps(s,ensure_ascii=False))
-                  if code==200 and s.get('json') and s.get('status') in (0,'0',None) and s.get('largest_list_len',0)>0:
-                      chosen=(path,data,s)
-                      break
-              if chosen: break
-
-          if not chosen:
-              print('RANKING_CHOSEN NONE')
-              raise SystemExit(0)
-
-          path,data,s=chosen
-          print('RANKING_CHOSEN',path,json.dumps(data,ensure_ascii=False),json.dumps(s,ensure_ascii=False))
-          print('=== RANKING STORE TESTS ===')
-          for sid in (35,11,12):
-              d=dict(data); d['store_id']=sid
-              code,text,obj=post(path,d)
-              sm=summarize(obj)
-              print('RANKING',sid,'HTTP',code,'BODY',json.dumps(d,ensure_ascii=False),'SUMMARY',json.dumps(sm,ensure_ascii=False))
-              if isinstance(obj,dict):
-                  # compact sample from largest list
-                  lists=[]
-                  def collect(x,p='$'):
-                      if isinstance(x,list):
-                          lists.append((len(x),p,x))
-                          for v in x[:2]: collect(v,p)
-                      elif isinstance(x,dict):
-                          for k,v in x.items(): collect(v,p+'.'+k)
-                  collect(obj)
-                  lists.sort(key=lambda z:z[0],reverse=True)
-                  if lists and lists[0][0]:
-                      sample=lists[0][2][:2]
-                      print('RANKING_SAMPLE',sid,json.dumps(sample,ensure_ascii=False)[:6000])
+              body=urllib.parse.urlencode({'store_id':sid}).encode()
+              req=urllib.request.Request(BASE+mpath,data=body,method='POST',headers={'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0 PIA-public-probe'})
+              with urllib.request.urlopen(req,timeout=15) as r: obj=json.loads(r.read().decode())
+              slot=obj.get('slot',[]) if isinstance(obj,dict) else []
+              pach=obj.get('pachinko',[]) if isinstance(obj,dict) else []
+              slot_nos=sum(len(x.get('machine_nos',[])) for x in slot if isinstance(x,dict))
+              pach_nos=sum(len(x.get('machine_nos',[])) for x in pach if isinstance(x,dict))
+              print('INVENTORY',sid,'SLOT_MODELS',len(slot),'SLOT_MACHINES',slot_nos,'PACH_MODELS',len(pach),'PACH_MACHINES',pach_nos)
           PY
