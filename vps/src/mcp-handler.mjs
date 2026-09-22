@@ -15,6 +15,7 @@ const MCP_VERSION='2026-07-28';
 const LEGACY_VERSION='2025-11-25';
 const SERVER_INFO=Object.freeze({name:'jugest',version:'0.1.0'});
 const RELAY_STORE_NAME='juggler-relay-v1';
+const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
 const JUDGE_VERSION='external-juggler-browser-parity-v1';
 const MAX_BATCH=200;
@@ -22,7 +23,7 @@ const MACHINE_KEYS=new Set(JUGGLER_MACHINE_KEYS);
 const NOAUTH_SECURITY=Object.freeze([{type:'noauth'}]);
 const OAUTH_SECURITY=Object.freeze([{type:'oauth2',scopes:[OAUTH_SCOPE]}]);
 const OAUTH_CHALLENGE=`Bearer resource_metadata="${OAUTH_RESOURCE_METADATA}", error="invalid_token", error_description="Connect your JUGEST account to continue"`;
-const INSTRUCTIONS='Automatically use judge_machines for supported current-machine Juggler setting judgement from observed data, including data-site screenshots and short judgement requests, even without the user mentioning JUGEST. judge_machines is public, uses no account/store data, and must not incorporate PRE v2, store tendencies, or store history. Store tools require authentication and are separate context; use them only when the user asks for saved store data, store reading, prediction, historical comparison, or an explicitly combined assessment. Screenshot extraction is performed by the model; JUGEST performs the setting probability calculation. Do not invoke JUGEST for generic pachislot questions that are not current-machine Juggler setting judgement.';
+const INSTRUCTIONS='Automatically use judge_machines for supported current-machine Juggler setting judgement from observed data, including data-site screenshots and short judgement requests, even without the user mentioning JUGEST. judge_machines is public, uses no account/store data, and must not incorporate PRE v2, store tendencies, or store history. Store tools require authentication and are separate context; use them when the user asks for saved store data, store tendencies or store analysis, PRE/store prediction, analysis freshness or analysis status, bounded analysis history or audit history, prediction comparison or historical walk-forward evaluation, or an explicitly combined assessment. Screenshot extraction is performed by the model; JUGEST performs the setting probability calculation. Do not invoke JUGEST for generic pachislot questions that are not a supported JUGEST analysis intent.';
 
 const publicTool=tool=>Object.freeze({...tool,securitySchemes:NOAUTH_SECURITY,_meta:{securitySchemes:NOAUTH_SECURITY}});
 const securedTool=tool=>Object.freeze({...tool,securitySchemes:OAUTH_SECURITY,_meta:{securitySchemes:OAUTH_SECURITY}});
@@ -47,6 +48,21 @@ const TOOL_DEFS=Object.freeze([
     name:'get_store_day',title:'Get one saved store day',
     description:'Read the saved per-machine data for one authorized store and business date.',
     inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1},date:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'}},required:['storeId','date']},annotations:{readOnlyHint:true,openWorldHint:false}
+  }),
+  securedTool({
+    name:'get_store_analysis',title:'Get store analysis',
+    description:'Read the current user-facing JUGEST store analysis for an authorized store, including tendency and pattern sections produced by JUGEST.net. This does not modify data or change current-machine setting judgement.',
+    inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
+  }),
+  securedTool({
+    name:'get_store_status',title:'Get store analysis status',
+    description:'Read freshness and processing state for the current JUGEST analysis of an authorized store. This is user-facing analysis state and does not expose VPS resource telemetry.',
+    inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
+  }),
+  securedTool({
+    name:'get_store_analysis_history',title:'Get store analysis history',
+    description:'Read bounded user-facing JUGEST analysis receipt history for an authorized store. Returns audit metadata only and never raw artifacts, credentials, or operator filesystem state.',
+    inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1},limit:{type:'integer',minimum:1,maximum:100,default:50}},required:['storeId']},annotations:{readOnlyHint:true,openWorldHint:false}
   }),
   securedTool({
     name:'get_store_prediction',title:'Get PRE/store prediction',
@@ -174,6 +190,21 @@ async function runTool(name,args,{rootDir,channelId,canonicalDbPath,modern}){
       if(!day)return toolError('day_not_found',{modern,code:'day_not_found'});
       const machines=db.prepare('SELECT payload_json FROM machine_day_data WHERE store_id=? AND business_date=? ORDER BY machine_key').all(storeId,date).map(row=>safeJson(row.payload_json,null)).filter(Boolean);
       return toolResult({ok:true,store:access.store,day:{date:day.business_date,parserVersion:day.parser_version||'',qualityStatus:day.quality_status,machines}},{modern});
+    }
+    if(name==='get_store_analysis'){
+      const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-analysis-default' AND version=?`).get(storeId,ANALYSIS_VERSION);
+      return toolResult({ok:true,store:access.store,analysis:row?safeJson(row.payload_json,null):null,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null},{modern});
+    }
+    if(name==='get_store_status'){
+      const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-latest-status' AND version=?`).get(storeId,ANALYSIS_VERSION);
+      const refresh=db.prepare(`SELECT generation,completed_generation,active_job_id,updated_at FROM analysis_refresh_state WHERE store_id=? AND analysis_version=?`).get(storeId,ANALYSIS_VERSION);
+      const status=row?safeJson(row.payload_json,null):{status:refresh&&refresh.generation>refresh.completed_generation?'pending':'unavailable',generation:refresh?.generation??0,completedGeneration:refresh?.completed_generation??0};
+      return toolResult({ok:true,store:access.store,status,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??refresh?.updated_at??null},{modern});
+    }
+    if(name==='get_store_analysis_history'){
+      const limit=Math.min(100,Math.max(1,Math.trunc(Number(args?.limit)||50)));
+      const rows=db.prepare(`SELECT target_date,component,version,input_hash,output_hash,created_at FROM analysis_receipts WHERE store_id=? ORDER BY id DESC LIMIT ?`).all(storeId,limit);
+      return toolResult({ok:true,store:access.store,limit,history:rows.map(row=>({targetDate:row.target_date,component:row.component,version:row.version,inputHash:row.input_hash,outputHash:row.output_hash,createdAt:row.created_at}))},{modern});
     }
     if(name==='get_store_prediction'){
       const row=db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-read-active' AND version=?`).get(storeId,STORE_READ_VERSION);

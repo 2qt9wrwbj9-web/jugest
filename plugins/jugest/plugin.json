@@ -1,25 +1,33 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "jugest",
-  "version": "0.1.1",
-  "description": "Automatically use JUGEST for Juggler setting judgement from current-machine data and data-site screenshots; also read authorized saved store data and PRE comparisons.",
+  "version": "0.2.0",
+  "description": "Use JUGEST as the ChatGPT analysis frontend for Juggler setting judgement, authorized store data, store tendencies, PRE/store prediction, analysis status, and prediction comparisons.",
   "repository": "https://github.com/2qt9wrwbj9-web/jugest",
-  "keywords": ["jugest", "juggler", "pachislot", "analysis", "screenshot", "setting-judgement"],
+  "keywords": ["jugest", "juggler", "pachislot", "analysis", "screenshot", "setting-judgement", "store-analysis", "pre"],
   "extensions": {
     "com.openai": {
       "apps": "./.app.json",
       "interface": {
         "displayName": "JUGEST",
-        "shortDescription": "Automatic Juggler screenshot judgement with JUGEST",
-        "longDescription": "Automatically use the protected JUGEST judgement engine for current Juggler machine data and data-site screenshots, even without the user mentioning JUGEST. Read authorized saved JUGEST store data and PRE comparisons only when the user asks for store context.",
+        "shortDescription": "JUGEST analysis for Juggler screenshots, stores, and PRE",
+        "longDescription": "Use JUGEST.net as the authoritative backend for current Juggler setting judgement and authorized store analysis. Route store tendencies, saved dates, PRE/store prediction, analysis freshness, analysis history, and prediction comparisons to JUGEST tools without reproducing JUGEST calculation logic in ChatGPT.",
         "developerName": "JUGEST",
         "category": "Productivity",
-        "capabilities": ["Judge Juggler screenshots", "Judge current Juggler machines", "Read JUGEST data"],
+        "capabilities": [
+          "Judge Juggler screenshots",
+          "Judge current Juggler machines",
+          "Read authorized JUGEST store data",
+          "Read store tendency analysis",
+          "Read PRE and comparison data",
+          "Read analysis status and history"
+        ],
         "websiteURL": "https://jugest.net",
         "defaultPrompt": [
           "このスクショの全台を設定判別して",
-          "このジャグラー判別して",
-          "JUGESTに保存してあるこの店のPREと過去比較を見せて"
+          "PIA大船の店舗傾向を見せて",
+          "この店のPREと過去比較を見せて",
+          "この店の分析は最新？"
         ]
       }
     }

@@ -17,6 +17,7 @@ const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const CHANNEL='channel_mcp_test_123';
 const TOKEN='receiver-token-mcp-test-1234567890';
 const RESOURCE='https://jugest.net/mcp';
+const ANALYSIS_VERSION='vps-runtime-v1';
 const REDIRECT='https://chatgpt.com/connector_platform_oauth_redirect';
 const digest=value=>createHash('sha256').update(String(value)).digest('hex');
 const challenge=value=>createHash('sha256').update(String(value)).digest('base64url');
@@ -44,6 +45,13 @@ async function fixture(){
   db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
     VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a','2026-09-18','fixture','raw-secret','norm-secret',join(rawRoot,'2026-09-18.html.gz'),now,now);
   db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)').run('store-a','2026-09-18','000101',canonicalJson({machine:'my',tableNo:'101',games:5230,bb:24,rb:18,diff:1200}));
+  const analysis={shop:'認証店舗',from:'2026-09-01',latest:'2026-09-18',days:18,rowCount:18,machines:[],positive:[],negative:[],patterns:[],machinePatterns:[]};
+  db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-analysis-default',ANALYSIS_VERSION,'2026-09-18',canonicalJson(analysis),hashCanonical(analysis),now);
+  const status={status:'analyzed',generation:2,completedGeneration:2,businessDate:'2026-09-18'};
+  db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-latest-status',ANALYSIS_VERSION,'2026-09-18',canonicalJson(status),hashCanonical(status),now);
+  db.prepare(`INSERT INTO analysis_refresh_state(store_id,analysis_version,generation,completed_generation,active_job_id,updated_at) VALUES(?,?,?,?,?,?)`).run('pia:35',ANALYSIS_VERSION,3,2,null,now);
+  db.prepare(`INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','2026-09-17','store-analysis-default',ANALYSIS_VERSION,'a'.repeat(64),'b'.repeat(64),'2026-09-18T00:00:00.000Z');
+  db.prepare(`INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','2026-09-18','store-analysis-default',ANALYSIS_VERSION,'c'.repeat(64),'d'.repeat(64),'2026-09-19T00:00:00.000Z');
   const storeRead={status:'ready',storeId:'store-a',modelFingerprint:'research-model-fp',featureVersion:'store-features-v1',asOfDate:'2026-09-18',targetDate:'2026-09-19',machineCount:1,rankings:[{rank:1,machineKey:'101',tableNo:'101',machineName:'my',score:2}]};
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-read-active','store-read-v1','2026-09-19',canonicalJson(storeRead),hashCanonical(storeRead),now);
   db.close();
@@ -90,6 +98,9 @@ test('MCP tool list exposes public judgement and OAuth-only store tools',async()
     assert.equal(discovery.result._meta['io.modelcontextprotocol/serverInfo'].name,'jugest');
     assert.match(discovery.result.instructions,/setting judgement.*observed|observed.*setting judgement/i);
     assert.match(discovery.result.instructions,/automatically.*judge_machines.*without.*mentioning JUGEST|without.*mentioning JUGEST.*judge_machines/i);
+    assert.match(discovery.result.instructions,/store tendenc|store analysis/i);
+    assert.match(discovery.result.instructions,/analysis status|freshness/i);
+    assert.match(discovery.result.instructions,/analysis history|audit history/i);
     assert.equal(discovery.result.cacheScope,'private');
 
     const listed=await f.post('tools/list',{}, {}, {});
@@ -98,7 +109,7 @@ test('MCP tool list exposes public judgement and OAuth-only store tools',async()
     assert.equal(body.result.resultType,'complete');
     assert.equal(body.result.cacheScope,'private');
     assert.deepEqual(body.result.tools.map(tool=>tool.name),[
-      'judge_machines','list_stores','get_store_days','get_store_day','get_store_prediction','get_store_comparison'
+      'judge_machines','list_stores','get_store_days','get_store_day','get_store_analysis','get_store_status','get_store_analysis_history','get_store_prediction','get_store_comparison'
     ]);
     for(const tool of body.result.tools){
       assert.equal(tool.annotations.readOnlyHint,true);
@@ -186,6 +197,29 @@ test('OAuth store tools inherit the proven Collector channel and keep PRE separa
     assert.equal(day.result.structuredContent.day.machines[0].tableNo,'101');
     assert.doesNotMatch(JSON.stringify(day),/raw-secret|html\.gz/);
 
+    const analysisResult=await (await f.post('tools/call',{name:'get_store_analysis',arguments:{storeId:'store-a'}}, {}, oauth)).json();
+    assert.equal(analysisResult.result.structuredContent.analysis.shop,'認証店舗');
+    assert.equal(analysisResult.result.structuredContent.businessDate,'2026-09-18');
+    assert.doesNotMatch(JSON.stringify(analysisResult),/raw-secret|html\.gz|artifact|receiver-token/i);
+
+    const missingAnalysis=await (await f.post('tools/call',{name:'get_store_analysis',arguments:{storeId:'pia:35'}}, {}, oauth)).json();
+    assert.equal(missingAnalysis.result.isError,false);
+    assert.equal(missingAnalysis.result.structuredContent.analysis,null);
+
+    const statusResult=await (await f.post('tools/call',{name:'get_store_status',arguments:{storeId:'store-a'}}, {}, oauth)).json();
+    assert.equal(statusResult.result.structuredContent.status.status,'analyzed');
+    assert.equal(statusResult.result.structuredContent.businessDate,'2026-09-18');
+    assert.equal('resources' in statusResult.result.structuredContent,false);
+
+    const pendingResult=await (await f.post('tools/call',{name:'get_store_status',arguments:{storeId:'pia:35'}}, {}, oauth)).json();
+    assert.deepEqual(pendingResult.result.structuredContent.status,{status:'pending',generation:3,completedGeneration:2});
+
+    const history=await (await f.post('tools/call',{name:'get_store_analysis_history',arguments:{storeId:'store-a',limit:1}}, {}, oauth)).json();
+    assert.equal(history.result.structuredContent.limit,1);
+    assert.deepEqual(history.result.structuredContent.history.map(x=>x.targetDate),['2026-09-18']);
+    assert.deepEqual(Object.keys(history.result.structuredContent.history[0]).sort(),['component','createdAt','inputHash','outputHash','targetDate','version'].sort());
+    assert.doesNotMatch(JSON.stringify(history),/raw-secret|html\.gz|artifact|receiver-token|model_json|filesystem/i);
+
     const prediction=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-a'}}, {}, oauth)).json();
     assert.equal(prediction.result.structuredContent.storeRead.targetDate,'2026-09-19');
     assert.equal(prediction.result.structuredContent.storeRead.rankings[0].tableNo,'101');
@@ -193,6 +227,13 @@ test('OAuth store tools inherit the proven Collector channel and keep PRE separa
     const forbidden=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-b'}}, {}, oauth)).json();
     assert.equal(forbidden.result.isError,true);
     assert.match(forbidden.result.content[0].text,/forbidden/i);
+
+    for(const name of ['get_store_analysis','get_store_status','get_store_analysis_history']){
+      const args=name==='get_store_analysis_history'?{storeId:'store-b',limit:10}:{storeId:'store-b'};
+      const denied=await (await f.post('tools/call',{name,arguments:args},{},oauth)).json();
+      assert.equal(denied.result.isError,true,name);
+      assert.match(denied.result.content[0].text,/forbidden/i);
+    }
   }finally{await f.close()}
 });
 
@@ -229,6 +270,12 @@ test('assistant PRE read-only key authorizes MCP store tools without a Collector
     assert.equal(prediction.result.isError,false);
     assert.equal(prediction.result.structuredContent.storeRead.targetDate,'2026-09-19');
 
+    for(const name of ['get_store_analysis','get_store_status','get_store_analysis_history']){
+      const args=name==='get_store_analysis_history'?{storeId:'store-a',limit:10}:{storeId:'store-a'};
+      const response=await (await f.post('tools/call',{name,arguments:args},{},f.assistantAuth)).json();
+      assert.equal(response.result.isError,false,name);
+    }
+
     const forbidden=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-b'}},{},f.assistantAuth)).json();
     assert.equal(forbidden.result.isError,true);
     assert.match(forbidden.result.content[0].text,/forbidden/i);
@@ -242,6 +289,9 @@ test('legacy Collector receiver credentials continue to authorize MCP tool calls
     assert.equal(response.status,200);
     const body=await response.json();
     assert.deepEqual(body.result.structuredContent.stores.map(store=>store.id),['pia:35','store-a']);
+    const status=await (await f.post('tools/call',{name:'get_store_status',arguments:{storeId:'store-a'}})).json();
+    assert.equal(status.result.isError,false);
+    assert.equal(status.result.structuredContent.status.status,'analyzed');
   }finally{await f.close()}
 });
 
