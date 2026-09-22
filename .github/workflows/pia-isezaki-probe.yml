@@ -13,34 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect PIA store metadata
+      - name: Inspect PIA target store objects
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request, urllib.error
+          import json, urllib.parse, urllib.request
           BASE='https://pia-server.heuron.net'
           def post(path,data):
               body=urllib.parse.urlencode(data).encode()
               req=urllib.request.Request(BASE+path,data=body,method='POST',headers={'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json','User-Agent':'Mozilla/5.0 PIA-public-probe'})
               with urllib.request.urlopen(req,timeout=15) as r:
-                  raw=r.read(); code=r.status
-              return code,json.loads(raw.decode('utf-8','replace'))
-
-          code,obj=post('/api/stores/getAllStores',{})
-          print('ALLSTORES_HTTP',code,'TOP_KEYS',list(obj) if isinstance(obj,dict) else type(obj).__name__)
-          targets={11,12,35}
-          def walk(x):
-              if isinstance(x,dict):
-                  if x.get('store_id') in targets:
-                      print('STORE_OBJECT',json.dumps(x,ensure_ascii=False)[:12000])
-                  for v in x.values(): walk(v)
-              elif isinstance(x,list):
-                  for v in x: walk(v)
-          walk(obj)
-
-          for sid in (35,11,12):
-              code,m=post('/api/stores/getStoreMachiesWithHowToPlay',{'store_id':sid})
-              print('MACHINE_STORE',sid,'TOP_KEYS',list(m.keys()) if isinstance(m,dict) else [])
-              slot=m.get('slot',[]) if isinstance(m,dict) else []
-              print('SLOT_FIRST',sid,json.dumps(slot[:3],ensure_ascii=False)[:12000])
+                  return json.loads(r.read().decode('utf-8','replace'))
+          obj=post('/api/stores/getAllStores',{})
+          stores=obj.get('stores',[]) if isinstance(obj,dict) else []
+          print('STORE_COUNT',len(stores))
+          if stores: print('FIRST_STORE_KEYS',list(stores[0].keys()) if isinstance(stores[0],dict) else type(stores[0]).__name__)
+          for s in stores:
+              txt=json.dumps(s,ensure_ascii=False)
+              if '伊勢佐木' in txt or '大船' in txt:
+                  print('TARGET_STORE',txt[:20000])
           PY
