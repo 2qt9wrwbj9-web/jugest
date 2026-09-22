@@ -18,6 +18,7 @@
 - `judge_machines` remains current-machine observed-data-only and mathematically unchanged.
 - PRE/store-read remains separate evidence unless a future approved combined JUGEST tool exists.
 - OAuth `jugest:read`, assistant read key, and legacy Receiver auth keep current store authorization boundaries.
+- Do not expand the HTTP assistant-key whitelist in this project; the new capabilities are exposed through MCP.
 - Do not change PRE score/rank, strict Champion, calibration, store-share constraints, ranking/model search, or probability tables.
 - Production deploy is a separate explicit approval gate after implementation and verification.
 
@@ -41,7 +42,7 @@
 - Consumes: authorized `storeId`; `client_snapshots` row where `snapshot_type='store-analysis-default'` and `version='vps-runtime-v1'`.
 - Produces: `get_store_analysis({storeId}) -> {ok,store,analysis,businessDate,payloadHash,updatedAt}`.
 
-- [ ] **Step 1: Seed an analysis snapshot in the MCP fixture**
+- [ ] **Step 1: Extend the MCP fixture**
 
 Add near the existing constants:
 ```js
@@ -54,7 +55,12 @@ const analysis={shop:'認証店舗',from:'2026-09-01',latest:'2026-09-18',days:1
 db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-analysis-default',ANALYSIS_VERSION,'2026-09-18',canonicalJson(analysis),hashCanonical(analysis),now);
 ```
 
-- [ ] **Step 2: Write the failing MCP contract test**
+Return `canonicalDbPath` from `fixture()` so the missing-snapshot and pending-status cases can mutate only disposable test state:
+```js
+return {base,canonicalDbPath,legacyAuth,assistantAuth,post,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
+```
+
+- [ ] **Step 2: Write the failing contract assertions**
 
 Update the expected tool list to:
 ```js
@@ -71,11 +77,17 @@ const analysisResult=await (await f.post('tools/call',{name:'get_store_analysis'
 assert.equal(analysisResult.result.structuredContent.analysis.shop,'認証店舗');
 assert.equal(analysisResult.result.structuredContent.businessDate,'2026-09-18');
 assert.doesNotMatch(JSON.stringify(analysisResult),/raw-secret|html\.gz|artifact|receiver-token/i);
+
+const db=openDatabase(f.canonicalDbPath);
+db.prepare(`DELETE FROM client_snapshots WHERE store_id=? AND snapshot_type='store-analysis-default' AND version=?`).run('store-a',ANALYSIS_VERSION);
+db.close();
+const missingAnalysis=await (await f.post('tools/call',{name:'get_store_analysis',arguments:{storeId:'store-a'}}, {}, oauth)).json();
+assert.equal(missingAnalysis.result.isError,false);
+assert.equal(missingAnalysis.result.structuredContent.analysis,null);
 ```
 
 - [ ] **Step 3: Run the targeted test and verify RED**
 
-Run:
 ```bash
 cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
 ```
@@ -92,7 +104,7 @@ Add this secured tool before `get_store_prediction`:
 ```js
 securedTool({
   name:'get_store_analysis',title:'Get store analysis',
-  description:'Read the current user-facing JUGEST store analysis for an authorized store, including current tendency and pattern sections produced by JUGEST.net. This does not modify data or change setting judgement.',
+  description:'Read the current user-facing JUGEST store analysis for an authorized store, including tendency and pattern sections produced by JUGEST.net. This does not modify data or change setting judgement.',
   inputSchema:{type:'object',additionalProperties:false,properties:{storeId:{type:'string',minLength:1}},required:['storeId']},
   annotations:{readOnlyHint:true,openWorldHint:false}
 }),
@@ -114,7 +126,10 @@ if(name==='get_store_analysis'){
 
 - [ ] **Step 5: Run the targeted test**
 
-Run the same command. Expected: remaining failures are only for the not-yet-implemented status/history tools.
+```bash
+cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
+```
+Expected: analysis assertions PASS; failures remain only for status/history tools that are not implemented yet.
 
 - [ ] **Step 6: Commit**
 
@@ -135,21 +150,15 @@ git commit -m "feat: expose store analysis over MCP"
 - Consumes: `store-latest-status` snapshot and `analysis_refresh_state` for the authorized store.
 - Produces: `get_store_status({storeId}) -> {ok,store,status,businessDate,payloadHash,updatedAt}`.
 
-- [ ] **Step 1: Seed analyzed and pending status cases**
+- [ ] **Step 1: Seed the analyzed status snapshot**
 
-Seed the normal status:
+Add before `db.close()`:
 ```js
 const status={status:'analyzed',generation:2,completedGeneration:2,businessDate:'2026-09-18'};
 db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','store-latest-status',ANALYSIS_VERSION,'2026-09-18',canonicalJson(status),hashCanonical(status),now);
 ```
 
-Seed a second authorized store for the no-snapshot pending case:
-```js
-seedStore('store-pending','解析待ち店舗',CHANNEL);
-db.prepare(`INSERT INTO analysis_refresh_state(store_id,analysis_version,generation,completed_generation,active_job_id,updated_at) VALUES(?,?,?,?,?,?)`).run('store-pending',ANALYSIS_VERSION,3,2,null,now);
-```
-
-- [ ] **Step 2: Write failing assertions**
+- [ ] **Step 2: Write analyzed and pending fallback assertions**
 
 Add:
 ```js
@@ -158,13 +167,17 @@ assert.equal(statusResult.result.structuredContent.status.status,'analyzed');
 assert.equal(statusResult.result.structuredContent.businessDate,'2026-09-18');
 assert.equal('resources' in statusResult.result.structuredContent,false);
 
-const pendingResult=await (await f.post('tools/call',{name:'get_store_status',arguments:{storeId:'store-pending'}}, {}, oauth)).json();
+const db=openDatabase(f.canonicalDbPath);
+db.prepare(`DELETE FROM client_snapshots WHERE store_id=? AND snapshot_type='store-latest-status' AND version=?`).run('store-a',ANALYSIS_VERSION);
+db.prepare(`INSERT INTO analysis_refresh_state(store_id,analysis_version,generation,completed_generation,active_job_id,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(store_id,analysis_version) DO UPDATE SET generation=excluded.generation,completed_generation=excluded.completed_generation,active_job_id=excluded.active_job_id,updated_at=excluded.updated_at`).run('store-a',ANALYSIS_VERSION,3,2,null,'2026-09-19T00:00:00.000Z');
+db.close();
+const pendingResult=await (await f.post('tools/call',{name:'get_store_status',arguments:{storeId:'store-a'}}, {}, oauth)).json();
 assert.deepEqual(pendingResult.result.structuredContent.status,{status:'pending',generation:3,completedGeneration:2});
+assert.equal(pendingResult.result.structuredContent.updatedAt,'2026-09-19T00:00:00.000Z');
 ```
 
 - [ ] **Step 3: Run targeted tests and verify RED**
 
-Run:
 ```bash
 cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
 ```
@@ -203,6 +216,9 @@ if(name==='get_store_status'){
 
 - [ ] **Step 5: Run targeted tests**
 
+```bash
+cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
+```
 Expected: status assertions PASS; only history-related failures remain.
 
 - [ ] **Step 6: Commit**
@@ -226,7 +242,7 @@ git commit -m "feat: expose store analysis status over MCP"
 
 - [ ] **Step 1: Seed bounded history data**
 
-Insert two receipts so ordering and limiting can be tested:
+Insert two receipts:
 ```js
 db.prepare(`INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','2026-09-17','store-analysis-default',ANALYSIS_VERSION,'a'.repeat(64),'b'.repeat(64),'2026-09-18T00:00:00.000Z');
 db.prepare(`INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) VALUES(?,?,?,?,?,?,?)`).run('store-a','2026-09-18','store-analysis-default',ANALYSIS_VERSION,'c'.repeat(64),'d'.repeat(64),'2026-09-19T00:00:00.000Z');
@@ -245,7 +261,10 @@ assert.doesNotMatch(JSON.stringify(history),/raw-secret|html\.gz|artifact|receiv
 
 - [ ] **Step 3: Run targeted tests and verify RED**
 
-Run the MCP test command. Expected: FAIL because history tool is not implemented.
+```bash
+cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
+```
+Expected: FAIL because `get_store_analysis_history` is not implemented.
 
 - [ ] **Step 4: Add tool definition and implementation**
 
@@ -279,7 +298,10 @@ if(name==='get_store_analysis_history'){
 
 - [ ] **Step 5: Run targeted tests**
 
-Expected: the core MCP file is GREEN.
+```bash
+cd vps && JUGEST_PIA_ACCESS_MODE=public node --test tests/mcp-api.test.mjs
+```
+Expected: PASS for the core MCP feature tests.
 
 - [ ] **Step 6: Commit**
 
@@ -313,7 +335,7 @@ for(const name of ['get_store_analysis','get_store_status','get_store_analysis_h
 
 - [ ] **Step 2: Add cross-channel denial coverage**
 
-Add:
+Inside the OAuth test, add:
 ```js
 for(const name of ['get_store_analysis','get_store_status','get_store_analysis_history']){
   const args=name==='get_store_analysis_history'?{storeId:'store-b',limit:10}:{storeId:'store-b'};
@@ -332,21 +354,29 @@ assert.equal(status.result.isError,false);
 assert.equal(status.result.structuredContent.status.status,'analyzed');
 ```
 
+Because Task 2 mutates disposable state in the OAuth test, place the analyzed-status legacy assertion in a fresh fixture/test or restore the `store-latest-status` snapshot before this assertion.
+
 - [ ] **Step 4: Pin `judge_machines` semantic parity**
 
-Keep the existing expected value assertion unchanged:
+Keep these assertions unchanged:
 ```js
+assert.equal(output.judgeVersion,'external-juggler-browser-parity-v1');
+assert.equal(output.machines[0].method,'reverse-diff');
 assert.ok(Math.abs(output.machines[0].expectedSetting-3.6317261654375623)<1e-11);
+assert.equal('pre' in output,false);
+assert.equal('storeRead' in output,false);
+assert.equal('store' in output,false);
 ```
-Also assert the result still contains no `pre`, `storeRead`, or `store` fields.
 
-- [ ] **Step 5: Test PIA policy in both explicit modes**
+- [ ] **Step 5: Pin PIA policy behavior explicitly**
 
-Do not rewrite the MCP fixture to assume production owner-only behavior. Keep the standard suite explicit with `JUGEST_PIA_ACCESS_MODE=public`, and run the existing store-access policy test separately:
+Run:
 ```bash
 cd vps && node --test tests/store-access.test.mjs
 ```
 Expected: owner mode allows only configured owner channels and fails closed; public mode exposes only explicit public-native metadata.
+
+The standard MCP fixture continues to run with `JUGEST_PIA_ACCESS_MODE=public`; do not infer production owner-only behavior from that fixture.
 
 - [ ] **Step 6: Run auth/regression tests**
 
@@ -364,7 +394,7 @@ git commit -m "test: lock expanded MCP authorization contract"
 
 ---
 
-### Task 5: Broaden the Plugin from live judgement to the JUGEST analysis frontend
+### Task 5: Broaden the Plugin to the JUGEST analysis frontend
 
 **Files:**
 - Modify: `plugins/jugest/plugin.json`
@@ -376,20 +406,22 @@ git commit -m "test: lock expanded MCP authorization contract"
 - Consumes: the nine stable MCP tools.
 - Produces: Plugin metadata and routing instructions that map user intent to JUGEST tools without embedding JUGEST calculation logic.
 
-- [ ] **Step 1: Write failing Plugin-package tests first**
+- [ ] **Step 1: Write failing Plugin-package tests**
 
-Change expected manifest version to `0.2.0` and add assertions equivalent to:
+Change the version assertion and add exactly:
 ```js
-assert.match(manifest.description,/JUGEST analysis frontend|JUGEST.*analysis/i);
+assert.equal(manifest.version,'0.2.0');
+assert.match(manifest.description,/JUGEST.*analysis/i);
 assert.ok(manifest.extensions['com.openai'].interface.capabilities.includes('Read store tendency analysis'));
 assert.ok(manifest.extensions['com.openai'].interface.capabilities.includes('Read PRE and comparison data'));
 
 const skill=await read('skills/jugest-live-analysis/SKILL.md');
 for(const tool of ['get_store_analysis','get_store_status','get_store_analysis_history'])assert.match(skill,new RegExp('`'+tool+'`'));
 assert.match(skill,/intent.*tool|tool.*intent/i);
-assert.doesNotMatch(skill,/probability table|PRE formula|ranking formula/i);
+assert.doesNotMatch(skill,/probability tables|PRE formulas|ranking formulas/i);
 ```
-Keep the existing assertions that `.app.json` points to `asdk_app_6aae6ef520dc8191af6ccfa59395524d`, no `mcp.json` exists, implicit Juggler invocation remains enabled, and current judgement stays separate from PRE.
+
+Keep the existing assertions that `.app.json` points to `asdk_app_6aae6ef520dc8191af6ccfa59395524d`, no `mcp.json` exists, implicit Juggler invocation remains enabled, and current judgement stays separate from PRE/store-read.
 
 - [ ] **Step 2: Run Plugin tests and verify RED**
 
@@ -406,7 +438,7 @@ Set:
 "description": "Use JUGEST as the ChatGPT analysis frontend for Juggler setting judgement, authorized store data, store tendencies, PRE/store prediction, analysis status, and prediction comparisons."
 ```
 
-Use interface values:
+Set interface fields to:
 ```json
 "shortDescription": "JUGEST analysis from live Juggler data to store/PRE context",
 "longDescription": "Use JUGEST.net as the authoritative backend for current Juggler setting judgement and authorized store analysis. Route store tendencies, saved dates, PRE/store prediction, analysis freshness, analysis history, and prediction comparisons to JUGEST tools without reproducing JUGEST calculation logic in ChatGPT.",
@@ -417,12 +449,8 @@ Use interface values:
   "Read store tendency analysis",
   "Read PRE and comparison data",
   "Read analysis status and history"
-]
-```
-
-Use default prompts:
-```json
-[
+],
+"defaultPrompt": [
   "このスクショの全台を設定判別して",
   "PIA大船の店舗傾向を見せて",
   "この店のPREと過去比較を見せて",
@@ -430,25 +458,38 @@ Use default prompts:
 ]
 ```
 
-- [ ] **Step 4: Rewrite the Skill around intent routing**
+- [ ] **Step 4: Replace the Skill with intent-first routing while preserving live judgement rules**
 
-Keep the existing screenshot extraction rules and evidence separation, but add a compact routing section exactly mapping:
-```text
-current Juggler judgement -> judge_machines
-store resolution -> list_stores
-saved dates -> get_store_days
-saved day -> get_store_day
-store tendencies -> get_store_analysis
-analysis freshness -> get_store_status
-analysis audit/history -> get_store_analysis_history
-active PRE/store-read -> get_store_prediction
-PRE/current evaluation -> get_store_comparison
+The resulting Skill must contain this routing table verbatim:
+```markdown
+## Intent-to-tool routing
+
+- Current Juggler setting judgement or readable Juggler screenshot data → `judge_machines`
+- Resolve an authorized store name → `list_stores`
+- Ask which saved dates exist → `get_store_days`
+- Read one saved business day → `get_store_day`
+- Ask for store tendencies, allocation tendencies, machine/position patterns, positive/negative store signals → `get_store_analysis`
+- Ask whether store analysis is current, pending, or unavailable → `get_store_status`
+- Ask for bounded analysis audit/history → `get_store_analysis_history`
+- Ask for active PRE/store-read prediction → `get_store_prediction`
+- Ask for PRE/current accuracy, legacy comparison, or historical walk-forward evaluation → `get_store_comparison`
 ```
-State that tool outputs are authoritative and that the Skill must not reproduce JUGEST probability tables, PRE formulas, store-analysis heuristics, or model internals.
+
+The Skill must also retain these rules:
+```markdown
+- For current-machine setting judgement, extract only readable table/model/G/BB/RB/diff values and call `judge_machines` once with the readable batch.
+- If `diff` is unreadable, omit it; never guess numeric values.
+- Do not reproduce or approximate JUGEST posterior math yourself.
+- A known store does not authorize mixing PRE/store tendencies into the current-machine posterior.
+- If the user requests both current judgement and store context, call both relevant tools and present them as separate evidence unless JUGEST exposes an approved combined tool.
+- Treat tool output as authoritative for JUGEST calculations and saved data.
+- Never embed or reproduce JUGEST probability tables, PRE formulas, ranking formulas, store-analysis heuristics, or model internals in the Plugin Skill.
+- Do not invoke JUGEST for generic pachislot questions that are not a supported JUGEST analysis intent.
+```
 
 - [ ] **Step 5: Broaden `agents/openai.yaml` without weakening implicit live judgement**
 
-Use:
+Replace it with:
 ```yaml
 interface:
   display_name: "JUGEST Analysis"
@@ -478,7 +519,7 @@ git commit -m "feat: broaden JUGEST plugin to full analysis frontend"
 ### Task 6: Full verification and release-readiness gate
 
 **Files:**
-- Verify: all changed files
+- Verify: all changed files.
 - Do not modify production behavior unless a failing regression proves a defect introduced by Tasks 1-5.
 
 **Interfaces:**
@@ -505,9 +546,8 @@ cd .. && npm test
 ```
 Expected: every root regression command PASS.
 
-- [ ] **Step 4: Verify the protected surfaces were not changed**
+- [ ] **Step 4: Verify protected surfaces were not changed**
 
-Run:
 ```bash
 git diff --name-only 911221ddd4cab92d345729ca619c7c6d645370be...HEAD
 ```
@@ -531,13 +571,16 @@ git diff --check 911221ddd4cab92d345729ca619c7c6d645370be...HEAD
 ```
 Expected: no output.
 
-- [ ] **Step 6: Inspect tool discovery manually**
+- [ ] **Step 6: Re-run only the MCP discovery contract**
 
-Start the test server through the existing MCP test fixture or a local disposable server and verify `tools/list` contains exactly nine tools in the intended order, with `judge_machines` no-auth and all store tools `oauth2`/`jugest:read`, `readOnlyHint:true`, `openWorldHint:false`.
+```bash
+cd vps && JUGEST_PIA_ACCESS_MODE=public node --test --test-name-pattern="MCP tool list exposes" tests/mcp-api.test.mjs
+```
+Expected: PASS with exactly nine tools, `judge_machines` using `noauth`, and all store tools using OAuth `jugest:read`, `readOnlyHint:true`, `openWorldHint:false`.
 
-- [ ] **Step 7: Prepare PR summary**
+- [ ] **Step 7: Prepare the PR summary**
 
-PR summary must state:
+Use:
 ```text
 - Added get_store_analysis, get_store_status, get_store_analysis_history.
 - Kept JUGEST.net authoritative; Plugin only routes intents.
@@ -547,6 +590,6 @@ PR summary must state:
 - Full VPS/root regressions and git diff --check pass.
 ```
 
-- [ ] **Step 8: Commit any final test-only fixes, then stop before production deployment**
+- [ ] **Step 8: Stop before production deployment**
 
 No merge to `deploy/vps` and no VPS production switch until Hiro explicitly approves the reviewed implementation/PR.
