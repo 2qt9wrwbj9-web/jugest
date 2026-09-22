@@ -8,48 +8,72 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Probe direct machine API
+      - name: Recover direct-machine request builder
         shell: bash
+        env:
+          XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTlfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          curl -L --fail --retry 2 -A 'Mozilla/5.0' "$XAPK_URL" -o pia.xapk
+          mkdir -p xapk arm64 findings
+          unzip -q pia.xapk -d xapk
+          unzip -q xapk/config.arm64_v8a.apk -d arm64
+          LIB=arm64/lib/arm64-v8a/libil2cpp.so
+          test -f "$LIB"
+
+          curl -L --fail \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            'https://api.github.com/repos/2qt9wrwbj9-web/jugest/actions/artifacts/10667924440/zip' \
+            -o findings.zip
+          unzip -q findings.zip -d findings
+          test -f findings/string-slot-map.txt
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq binutils-aarch64-linux-gnu
+
+          aarch64-linux-gnu-objdump -d --start-address=0x145dc40 --stop-address=0x145e1d4 "$LIB" > direct-machine.asm
+          aarch64-linux-gnu-objdump -d --start-address=0x145ca98 --stop-address=0x145d090 "$LIB" > contain-all.asm
+
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request
-          BASE='https://pia-server.heuron.net/api/stores/'
-          HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
-          def post(ep,data):
-              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
-              with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read().decode('utf-8','replace'))
-          def summary(x):
-              if not isinstance(x,dict): return {'type':type(x).__name__}
-              out={'status':x.get('status'),'keys':list(x.keys())}
-              for k in ('store_is_open','has_history','server_date_time'):
-                  if k in x: out[k]=x.get(k)
-              m=x.get('machine')
-              if isinstance(m,dict):
-                  out['machine_keys']=list(m.keys())
-                  cur=m.get('current')
-                  if isinstance(cur,dict): out['current']=cur
-                  det=m.get('detail')
-                  if isinstance(det,dict): out['detail']=det
-                  elif isinstance(det,list): out['detail_count']=len(det); out['detail_sample']=det[0] if det else None
-              return out
-          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
-              roster=post('getStoreMachiesWithHowToPlay',{'store_id':sid})
-              slots=roster.get('slot') or []
-              print('ROSTER_META',json.dumps({'sid':sid,'name':name,'status':roster.get('status'),'slot_models':len(slots),'slot_machine_total':sum(len(x.get('machine_nos') or []) for x in slots)},ensure_ascii=False))
-              if not slots: continue
-              model=next((x for x in slots if x.get('machine_nos')),slots[0])
-              mno=(model.get('machine_nos') or [None])[0]
-              code=model.get('sis_machine_code') or ''
-              mname=model.get('name') or ''
-              print('SAMPLE_MACHINE',json.dumps({'sid':sid,'machine_no':mno,'sis_machine_code':code,'machine_name':mname},ensure_ascii=False))
-              for date in ('','0','2026-09-23','20260923','2026/09/23'):
-                  body={'store_id':str(sid),'machine_no':str(mno),'sis_machine_code':code,'machine_name':mname,'user_code':'','date':date,'device_uuid':'','device_type':'1','app_version':'1.0.29'}
-                  try:
-                      res=post('getStoreMachine2',body)
-                      print('DIRECT',json.dumps({'sid':sid,'date':date,'response':summary(res)},ensure_ascii=False))
-                      if str(res.get('status'))=='0': break
-                  except Exception as e:
-                      print('ERR',json.dumps({'sid':sid,'date':date,'error':repr(e)},ensure_ascii=False))
+          import re
+          targets={
+            0x2c6a6b0:'ENDPOINT getStoreMachine2',
+            0x2c6a6a0:'ENDPOINT getStoreMachineChart',
+            0x2c6a8c0:'KEY store_id',
+            0x2c6b558:'KEY machine_no',
+            0x2c6a2c8:'KEY sis_machine_code',
+            0x2c6b2f0:'KEY machine_name',
+            0x2c6a2d8:'KEY user_code',
+            0x2c6ad38:'KEY date',
+            0x2c6a968:'KEY device_uuid',
+            0x2c69f28:'KEY device_type',
+            0x2c6a078:'KEY app_version',
+            0x2c6b388:'KEY price',
+            0x2c6aad8:'KEY machine_type',
+            0x2c6a950:'KEY limit',
+          }
+          for fn in ('direct-machine.asm','contain-all.asm'):
+            print('\n===',fn,'===')
+            lines=open(fn).read().splitlines(); regs={}
+            for i,line in enumerate(lines):
+              m=re.search(r'\badrp\s+x(\d+),\s*([0-9a-f]+)',line)
+              if m:
+                regs[int(m.group(1))]=int(m.group(2),16); continue
+              m=re.search(r'\bldr\s+x(\d+),\s*\[x(\d+),\s*#(\d+)\]',line)
+              if not m: continue
+              dst,base,off=map(int,m.groups())
+              if base in regs:
+                addr=regs[base]+off
+                if addr in targets:
+                  lo=max(0,i-3); hi=min(len(lines),i+5)
+                  print(f'REF {targets[addr]} slot={addr:#x}')
+                  print('\n'.join(lines[lo:hi]))
+              if dst==base: regs.pop(dst,None)
           PY
+
+          echo '=== Direct machine full body (filtered) ==='
+          grep -nE 'adrp|ldr|str|bl|mov|fmov|scvtf' direct-machine.asm | head -900
