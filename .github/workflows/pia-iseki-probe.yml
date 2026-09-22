@@ -8,72 +8,49 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Map endpoint references to native methods
+      - name: Test stores-machines endpoint
         shell: bash
-        env:
-          XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTlfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
-          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          curl -L --fail --retry 2 -A 'Mozilla/5.0' "$XAPK_URL" -o pia.xapk
-          mkdir -p xapk arm64 findings
-          unzip -q pia.xapk -d xapk
-          unzip -q xapk/config.arm64_v8a.apk -d arm64
-          LIB=arm64/lib/arm64-v8a/libil2cpp.so
-          curl -L --fail -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
-            'https://api.github.com/repos/2qt9wrwbj9-web/jugest/actions/artifacts/10667924440/zip' -o findings.zip
-          unzip -q findings.zip -d findings
-          sudo apt-get update -qq && sudo apt-get install -y -qq binutils-aarch64-linux-gnu
-          aarch64-linux-gnu-objdump -d --start-address=0x145ca98 --stop-address=0x146d610 "$LIB" > khf.asm
-
           python3 - <<'PY'
-          import re
-          asm=open('khf.asm').read().splitlines()
-          endpoints={
-            0x2c6a6a0:'getStoreMachineChart',
-            0x2c6a6b0:'getStoreMachine2',
-            0x2c6a688:'getStoresMachines',
-            0x2c6a6f0:'getRankingTop',
-            0x2c6a720:'getStoreMachiesWithHowToPlay',
-          }
-          # Parse method RVAs/signatures from dump.cs within KHFHCFDEBLH.
-          dump=open('findings/il2cpp-out/dump.cs',errors='replace').read()
-          start=dump.index('public class KHFHCFDEBLH //')
-          end=dump.find('\n// Namespace:',start+30)
-          block=dump[start:end if end!=-1 else None]
-          methods=[]
-          lines=block.splitlines()
-          for i,line in enumerate(lines):
-            m=re.search(r'RVA: 0x([0-9A-Fa-f]+)',line)
-            if m and i+1<len(lines):
-              sig=lines[i+1].strip()
-              methods.append((int(m.group(1),16),sig))
-          methods.sort()
-          def owner(pc):
-            prev=None
-            for r,s in methods:
-              if r>pc: break
-              prev=(r,s)
-            return prev
+          import json, urllib.parse, urllib.request
+          BASE='https://pia-server.heuron.net/api/stores/'
+          HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
+          def post(ep,data):
+              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.loads(r.read().decode('utf-8','replace'))
+          def summarize(obj):
+              out={'status':obj.get('status') if isinstance(obj,dict) else None,'keys':list(obj.keys()) if isinstance(obj,dict) else []}
+              if not isinstance(obj,dict): return out
+              for key in ('slot','pachinko','slot_price','pachinko_price'):
+                  v=obj.get(key)
+                  if isinstance(v,dict):
+                      out[key]={'groups':len(v),'rows':sum(len(x) for x in v.values() if isinstance(x,list)),'keys':list(v.keys())[:20]}
+                      for arr in v.values():
+                          if isinstance(arr,list) and arr:
+                              s=arr[0]
+                              if isinstance(s,dict): out[key]['sample']={k:s.get(k) for k in ['machine_no','name','machine_name','sis_machine_code','special_1','special_2d','difference','out','special_out','price']}
+                              break
+                  elif isinstance(v,list): out[key]=v[:20]
+              return out
 
-          regs={}; refs=[]
-          for line in asm:
-            pm=re.match(r'\s*([0-9a-f]+):',line); pc=int(pm.group(1),16) if pm else None
-            m=re.search(r'\badrp\s+x(\d+),\s*([0-9a-f]+)',line)
-            if m:
-              regs[int(m.group(1))]=int(m.group(2),16); continue
-            m=re.search(r'\bldr\s+x(\d+),\s*\[x(\d+),\s*#(\d+)\]',line)
-            if m:
-              dst,base,off=map(int,m.groups())
-              if base in regs:
-                addr=regs[base]+off
-                if addr in endpoints:
-                  refs.append((pc,addr,endpoints[addr],line.strip(),owner(pc)))
-              if dst==base: regs.pop(dst,None)
-          print('=== ENDPOINT METHOD MAP ===')
-          for pc,addr,name,line,own in refs:
-            print(f'{name} ref_pc={pc:#x} slot={addr:#x} owner={own} :: {line}')
-          print('TOTAL_REFS',len(refs))
+          bodies=[]
+          for sid in (11,12):
+              bodies=[
+                {'store_id':str(sid)},
+                {'store_id':str(sid),'user_code':''},
+                {'store_id':str(sid),'price':''},
+                {'store_id':str(sid),'machine_type':'2'},
+                {'store_id':str(sid),'price':'','machine_type':'2'},
+                {'store_id':str(sid),'user_code':'','price':'','machine_type':'2'},
+              ]
+              print('STORE',sid)
+              for body in bodies:
+                  try:
+                      res=post('getStoresMachines',body)
+                      print('TRY',json.dumps({'body':body,'summary':summarize(res)},ensure_ascii=False))
+                  except Exception as e:
+                      print('ERR',json.dumps({'body':body,'error':repr(e)},ensure_ascii=False))
           PY
