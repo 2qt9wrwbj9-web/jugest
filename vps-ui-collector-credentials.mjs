@@ -17,6 +17,9 @@ let app=null;
 let root=null;
 let observer=null;
 let tokenVisible=false;
+let assistantKeyValue='';
+let assistantKeyActive=false;
+let assistantKeyBusy=false;
 let statusTimer=null;
 
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
@@ -56,6 +59,48 @@ async function copyText(card,value,label){
   }
 }
 
+async function assistantKeyRequest(method='GET'){
+  const info=secretInfo();if(!info.channelId||!info.receiverToken)throw new Error('Receiver tokenが見つからないよ');
+  const response=await globalThis.fetch('/api/vps/assistant-key',{
+    method,
+    headers:{accept:'application/json','x-jugest-channel-id':info.channelId,authorization:`Bearer ${info.receiverToken}`},
+    cache:'no-store',credentials:'same-origin'
+  });
+  let payload=null;try{payload=await response.json()}catch{}
+  if(!response.ok||payload?.ok!==true)throw new Error(`PRE参照鍵APIエラー (${payload?.code||response.status})`);
+  return payload;
+}
+function renderAssistantKey(card){
+  const field=card?.querySelector?.('[data-chatgpt-assistant-key]');
+  const issue=card?.querySelector?.('[data-chatgpt-issue-assistant-key]');
+  const copy=card?.querySelector?.('[data-chatgpt-copy-assistant-key]');
+  const revoke=card?.querySelector?.('[data-chatgpt-revoke-assistant-key]');
+  if(field)field.textContent=assistantKeyValue||(assistantKeyActive?'発行済み（平文は再表示しません）':'未発行');
+  if(issue){issue.textContent=assistantKeyActive?'PRE参照鍵を再発行':'PRE参照鍵を発行';issue.disabled=assistantKeyBusy}
+  if(copy)copy.disabled=assistantKeyBusy||!assistantKeyValue;
+  if(revoke)revoke.disabled=assistantKeyBusy||!assistantKeyActive;
+}
+async function refreshAssistantKeyStatus(card){
+  try{const payload=await assistantKeyRequest('GET');assistantKeyActive=!!payload.active;renderAssistantKey(card)}
+  catch(error){setStatus(card,String(error?.message||error))}
+}
+async function rotateAssistantKey(card){
+  if(assistantKeyBusy)return;assistantKeyBusy=true;renderAssistantKey(card);
+  try{
+    const payload=await assistantKeyRequest('POST');assistantKeyValue=String(payload.key||'');assistantKeyActive=!!payload.active;renderAssistantKey(card);
+    setStatus(card,'PRE参照鍵を発行したよ。今表示されている鍵をコピーして使ってね');
+  }catch(error){setStatus(card,String(error?.message||error))}
+  finally{assistantKeyBusy=false;renderAssistantKey(card)}
+}
+async function revokeAssistantKey(card){
+  if(assistantKeyBusy||!assistantKeyActive)return;
+  if(globalThis.confirm&&!globalThis.confirm('PRE参照鍵を失効する？ この鍵を使った参照はすぐ止まるよ。'))return;
+  assistantKeyBusy=true;renderAssistantKey(card);
+  try{await assistantKeyRequest('DELETE');assistantKeyValue='';assistantKeyActive=false;setStatus(card,'PRE参照鍵を失効したよ')}
+  catch(error){setStatus(card,String(error?.message||error))}
+  finally{assistantKeyBusy=false;renderAssistantKey(card)}
+}
+
 function makeReadonlyField(label,value,ariaLabel){
   const wrap=document.createElement('div');
   const small=document.createElement('small');small.textContent=label;
@@ -70,6 +115,9 @@ function installStyle(){
     .chatgpt-credentials-card .chatgpt-credentials-head h2{margin-bottom:6px}
     .chatgpt-credentials-actions{grid-template-columns:1fr 1fr}
     .chatgpt-credentials-actions .wide{grid-column:1/-1}
+    .chatgpt-assistant-note{margin:18px 0 8px;font-size:13px;line-height:1.55}
+    .chatgpt-assistant-actions{grid-template-columns:1fr 1fr}
+    .chatgpt-assistant-actions .wide{grid-column:1/-1}
     .chatgpt-credentials-status{display:block;min-height:1.4em;margin-top:8px;color:#315ec9;font-weight:700;font-size:13px}
     @media(max-width:420px){.chatgpt-credentials-actions{grid-template-columns:1fr}}
   `;root.append(style);
@@ -98,9 +146,18 @@ function ensureCard(){
   const reveal=document.createElement('button');reveal.type='button';reveal.dataset.chatgptToggleToken='';reveal.textContent='Receiver tokenを表示';
   const copyToken=document.createElement('button');copyToken.type='button';copyToken.className='wide';copyToken.dataset.chatgptCopyToken='';copyToken.textContent='Receiver tokenをコピー';
   actions.append(copyChannel,reveal,copyToken);card.append(actions);
+
+  const assistantNote=document.createElement('p');assistantNote.className='chatgpt-assistant-note';assistantNote.textContent='PRE・保存店舗データだけを読むChatGPT用の読み取り専用鍵。発行した平文はこの画面セッションでだけ表示するよ。';card.append(assistantNote);
+  const assistant=makeReadonlyField('ChatGPT PRE参照鍵','状態確認中…','ChatGPT PRE参照専用 read-only key');assistant.field.dataset.chatgptAssistantKey='';card.append(assistant.wrap);
+  const assistantActions=document.createElement('div');assistantActions.className='vps-settings-actions chatgpt-assistant-actions';
+  const issueAssistant=document.createElement('button');issueAssistant.type='button';issueAssistant.dataset.chatgptIssueAssistantKey='';issueAssistant.textContent='PRE参照鍵を発行';
+  const copyAssistant=document.createElement('button');copyAssistant.type='button';copyAssistant.dataset.chatgptCopyAssistantKey='';copyAssistant.textContent='PRE参照鍵をコピー';copyAssistant.disabled=true;
+  const revokeAssistant=document.createElement('button');revokeAssistant.type='button';revokeAssistant.className='wide';revokeAssistant.dataset.chatgptRevokeAssistantKey='';revokeAssistant.textContent='PRE参照鍵を失効';revokeAssistant.disabled=true;
+  assistantActions.append(issueAssistant,copyAssistant,revokeAssistant);card.append(assistantActions);
   const status=document.createElement('small');status.className='chatgpt-credentials-status';status.dataset.chatgptCredentialStatus='';status.setAttribute('role','status');card.append(status);
 
   firstCard.insertAdjacentElement?.('afterend',card) || firstCard.parentNode?.insertBefore(card,firstCard.nextSibling);
+  refreshAssistantKeyStatus(card);
 }
 
 function setTokenVisibility(card,visible){
@@ -119,12 +176,18 @@ function onClick(event){
   const channelButton=event.target?.closest?.('[data-chatgpt-copy-channel]');
   const tokenButton=event.target?.closest?.('[data-chatgpt-copy-token]');
   const toggleButton=event.target?.closest?.('[data-chatgpt-toggle-token]');
-  if(!channelButton&&!tokenButton&&!toggleButton)return;
+  const issueAssistant=event.target?.closest?.('[data-chatgpt-issue-assistant-key]');
+  const copyAssistant=event.target?.closest?.('[data-chatgpt-copy-assistant-key]');
+  const revokeAssistant=event.target?.closest?.('[data-chatgpt-revoke-assistant-key]');
+  if(!channelButton&&!tokenButton&&!toggleButton&&!issueAssistant&&!copyAssistant&&!revokeAssistant)return;
   event.preventDefault();event.stopPropagation();
   const card=event.target.closest('[data-chatgpt-credentials]');if(!card)return;
   if(channelButton){copyText(card,publicInfo().channelId,'Channel ID');return}
   if(tokenButton){copyText(card,secretInfo().receiverToken,'Receiver token');return}
-  if(toggleButton)setTokenVisibility(card,!tokenVisible);
+  if(toggleButton){setTokenVisibility(card,!tokenVisible);return}
+  if(issueAssistant){rotateAssistantKey(card);return}
+  if(copyAssistant){copyText(card,assistantKeyValue,'PRE参照鍵');return}
+  if(revokeAssistant)revokeAssistantKey(card);
 }
 
 function schedule(){(globalThis.requestAnimationFrame||globalThis.setTimeout)(ensureCard,0)}
