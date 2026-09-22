@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
-import {MASK,normalizeConnectionInfo,tokenFieldValue} from '../../vps-ui-collector-credentials.mjs';
+import {MASK,normalizeConnectionInfo,tokenFieldValue,__test} from '../../vps-ui-collector-credentials.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(here,'../..');
@@ -40,4 +40,29 @@ test('ChatGPT credential card manages a one-time visible PRE read-only key witho
   assert.match(source,/assistantKeyRequest\('POST'\)/);
   assert.match(source,/assistantKeyRequest\('DELETE'\)/);
   assert.doesNotMatch(source,/localStorage[^\n]*assistant/i);
+});
+
+
+test('assistant key status refresh is single-flight across repeated settings redraws',async()=>{
+  assert.equal(typeof __test.refreshAssistantKeyStatus,'function');
+  const originalBridge=globalThis.JUGEST_CORE_BRIDGE,originalFetch=globalThis.fetch;
+  const nodes=new Map([
+    ['[data-chatgpt-assistant-key]',{textContent:''}],
+    ['[data-chatgpt-issue-assistant-key]',{textContent:'',disabled:false}],
+    ['[data-chatgpt-copy-assistant-key]',{textContent:'',disabled:false}],
+    ['[data-chatgpt-revoke-assistant-key]',{textContent:'',disabled:false}],
+    ['[data-chatgpt-credential-status]',{textContent:'',isConnected:true}]
+  ]);
+  const card={querySelector:selector=>nodes.get(selector)||null};
+  let calls=0;
+  try{
+    globalThis.JUGEST_CORE_BRIDGE={getCollectorConnectionInfo:includeSecret=>({channelId:'channel_status_cache_123',receiverToken:includeSecret?'receiver-status-cache-token':''})};
+    globalThis.fetch=async()=>{calls++;await new Promise(resolve=>setTimeout(resolve,10));return {ok:true,json:async()=>({ok:true,active:false,createdAt:null})}};
+    await Promise.all(Array.from({length:25},()=>__test.refreshAssistantKeyStatus(card)));
+    assert.equal(calls,1);
+    assert.equal(nodes.get('[data-chatgpt-assistant-key]').textContent,'未発行');
+  }finally{
+    globalThis.JUGEST_CORE_BRIDGE=originalBridge;
+    globalThis.fetch=originalFetch;
+  }
 });
