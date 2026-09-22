@@ -1,0 +1,64 @@
+name: PIA Native Slot Xrefs
+
+on:
+  push:
+    branches: [research/pia-api]
+    paths: [.github/workflows/pia-slot-xrefs.yml]
+  workflow_dispatch:
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download PIA XAPK
+        env:
+          XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTkfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 --retry-all-errors -A 'Mozilla/5.0' "$XAPK_URL" -o pia.xapk
+          mkdir xapk arm64
+          unzip -q pia.xapk -d xapk
+          unzip -q xapk/config.arm64_v8a.apk -d arm64
+          test -f arm64/lib/arm64-v8a/libil2cpp.so
+
+      - name: Find ADRP+LDR xrefs to API/key string slots
+        run: |
+          set -euxo pipefail
+          python3 -m pip install -q capstone pyelftools
+          python3 - <<'PY' > xrefs.txt
+          from capstone import Cs,CS_ARCH_ARM64,CS_MODE_ARM
+          from capstone.arm64 import ARM64_OP_REG,ARM64_OP_IMM,ARM64_OP_MEM
+          from elftools.elf.elffile import ELFFile
+          targets={
+            0x2c6a6b0:'endpoint:getStoreMachine2',0x2c6a6a0:'endpoint:getStoreMachineChart',
+            0x2c6a8c0:'key:store_id',0x2c6a2c8:'key:sis_machine_code',
+            0x2c6b558:'key:machine_no',0x2c6aad8:'key:machine_type',
+            0x2c6b388:'key:price',0x2c6ad38:'key:date',0x2c6a950:'key:limit',
+            0x2c6a8e0:'content-type'
+          }
+          fn='arm64/lib/arm64-v8a/libil2cpp.so'
+          with open(fn,'rb') as f:
+            elf=ELFFile(f); md=Cs(CS_ARCH_ARM64,CS_MODE_ARM); md.detail=True
+            for seg in elf.iter_segments():
+              if seg['p_type']!='PT_LOAD' or not (seg['p_flags'] & 1): continue
+              data=seg.data(); base=int(seg['p_vaddr']); ins=list(md.disasm(data,base))
+              for i,x in enumerate(ins):
+                if x.mnemonic!='adrp' or len(x.operands)<2 or x.operands[0].type!=ARM64_OP_REG or x.operands[1].type!=ARM64_OP_IMM: continue
+                reg=x.operands[0].reg; page=x.operands[1].imm
+                for y in ins[i+1:i+7]:
+                  if y.mnemonic!='ldr' or len(y.operands)<2 or y.operands[0].type!=ARM64_OP_REG or y.operands[0].reg!=reg or y.operands[1].type!=ARM64_OP_MEM or y.operands[1].mem.base!=reg: continue
+                  addr=page+y.operands[1].mem.disp
+                  if addr in targets:
+                    lo=max(0,i-4); hi=min(len(ins),i+14)
+                    print(f'=== {targets[addr]} slot=0x{addr:x} xref=0x{x.address:x} ===')
+                    for z in ins[lo:hi]: print(f'0x{z.address:x}: {z.mnemonic}\t{z.op_str}')
+                    print()
+          PY
+          cat xrefs.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pia-slot-xrefs
+          path: xrefs.txt
+          retention-days: 3

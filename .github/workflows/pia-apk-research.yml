@@ -1,0 +1,66 @@
+name: PIA APK API Research
+
+on:
+  push:
+    branches:
+      - research/pia-api
+    paths:
+      - .github/workflows/pia-apk-research.yml
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe Isezaki public APIs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request
+          BASE='https://pia-server.heuron.net/api/stores/'
+          HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
+          def post(ep,data):
+              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r: raw=r.read().decode('utf-8','replace')
+              return json.loads(raw)
+          def best_list(obj):
+              best=[]
+              def walk(x):
+                  nonlocal best
+                  if isinstance(x,list):
+                      if len(x)>len(best) and (not x or isinstance(x[0],dict)): best=x
+                      for v in x: walk(v)
+                  elif isinstance(x,dict):
+                      for v in x.values(): walk(v)
+              walk(obj); return best
+          def values(obj,key):
+              out=set()
+              def walk(x):
+                  if isinstance(x,dict):
+                      for k,v in x.items():
+                          if k==key and v is not None: out.add(str(v))
+                          walk(v)
+                  elif isinstance(x,list):
+                      for v in x: walk(v)
+              walk(obj); return sorted(out)
+          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
+              roster=post('getStoreMachiesWithHowToPlay',{'store_id':sid})
+              rows=best_list(roster)
+              print('ROSTER',json.dumps({'sid':sid,'name':name,'status':roster.get('status'),'rows':len(rows),'price':values(roster,'price'),'machine_type':values(roster,'machine_type')},ensure_ascii=False))
+              # Test a very small set of plausible slot combinations; stop at first nonempty success.
+              tests=[('20','2'),('20','1'),('','2'),('','1'),('0','2'),('0','1')]
+              found=None
+              for price,mtype in tests:
+                  body={'user_code':'','price':price,'kind':'1','machine_type':mtype,'day':'0','store_id':str(sid),'limit':'5000'}
+                  try:
+                      rank=post('getRankingTop',body)
+                      rrows=best_list(rank)
+                      print('TRY',json.dumps({'sid':sid,'price':price,'machine_type':mtype,'status':rank.get('status'),'rows':len(rrows)},ensure_ascii=False))
+                      if str(rank.get('status'))=='0' and rrows:
+                          s=rrows[0]
+                          found={'price':price,'machine_type':mtype,'status':rank.get('status'),'rows':len(rrows),'sample':{k:s.get(k) for k in ['machine_no','machine_name','special_1','special_2d','difference','out','special_out']}}
+                          break
+                  except Exception as e:
+                      print('TRYERR',json.dumps({'sid':sid,'price':price,'machine_type':mtype,'error':repr(e)},ensure_ascii=False))
+              print('RESULT',json.dumps({'sid':sid,'name':name,'found':found},ensure_ascii=False))
+          PY

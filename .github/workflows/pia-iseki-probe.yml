@@ -1,0 +1,56 @@
+name: PIA Isezaki probe
+
+on:
+  push:
+    branches: [research/pia-api]
+    paths: [.github/workflows/pia-iseki-probe.yml]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test stores-machines endpoint
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request
+          BASE='https://pia-server.heuron.net/api/stores/'
+          HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
+          def post(ep,data):
+              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.loads(r.read().decode('utf-8','replace'))
+          def summarize(obj):
+              out={'status':obj.get('status') if isinstance(obj,dict) else None,'keys':list(obj.keys()) if isinstance(obj,dict) else []}
+              if not isinstance(obj,dict): return out
+              for key in ('slot','pachinko','slot_price','pachinko_price'):
+                  v=obj.get(key)
+                  if isinstance(v,dict):
+                      out[key]={'groups':len(v),'rows':sum(len(x) for x in v.values() if isinstance(x,list)),'keys':list(v.keys())[:20]}
+                      for arr in v.values():
+                          if isinstance(arr,list) and arr:
+                              s=arr[0]
+                              if isinstance(s,dict): out[key]['sample']={k:s.get(k) for k in ['machine_no','name','machine_name','sis_machine_code','special_1','special_2d','difference','out','special_out','price']}
+                              break
+                  elif isinstance(v,list): out[key]=v[:20]
+              return out
+
+          bodies=[]
+          for sid in (11,12):
+              bodies=[
+                {'store_id':str(sid)},
+                {'store_id':str(sid),'user_code':''},
+                {'store_id':str(sid),'price':''},
+                {'store_id':str(sid),'machine_type':'2'},
+                {'store_id':str(sid),'price':'','machine_type':'2'},
+                {'store_id':str(sid),'user_code':'','price':'','machine_type':'2'},
+              ]
+              print('STORE',sid)
+              for body in bodies:
+                  try:
+                      res=post('getStoresMachines',body)
+                      print('TRY',json.dumps({'body':body,'summary':summarize(res)},ensure_ascii=False))
+                  except Exception as e:
+                      print('ERR',json.dumps({'body':body,'error':repr(e)},ensure_ascii=False))
+          PY
