@@ -11,25 +11,39 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Inspect PIA target store objects
+      - name: Download and extract PIA XAPK
+        shell: bash
+        env:
+          XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTkfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 --retry-all-errors -A 'Mozilla/5.0 Chrome/140' "$XAPK_URL" -o pia.xapk
+          mkdir xapk base arm64
+          unzip -q pia.xapk -d xapk
+          unzip -q xapk/jp.co.piagroup.app.apk -d base
+          unzip -q xapk/config.arm64_v8a.apk -d arm64
+      - name: Dump IL2CPP metadata
         shell: bash
         run: |
-          python3 - <<'PY'
-          import json, urllib.parse, urllib.request
-          BASE='https://pia-server.heuron.net'
-          def post(path,data):
-              body=urllib.parse.urlencode(data).encode()
-              req=urllib.request.Request(BASE+path,data=body,method='POST',headers={'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json','User-Agent':'Mozilla/5.0 PIA-public-probe'})
-              with urllib.request.urlopen(req,timeout=15) as r:
-                  return json.loads(r.read().decode('utf-8','replace'))
-          obj=post('/api/stores/getAllStores',{})
-          stores=obj.get('stores',[]) if isinstance(obj,dict) else []
-          print('STORE_COUNT',len(stores))
-          if stores: print('FIRST_STORE_KEYS',list(stores[0].keys()) if isinstance(stores[0],dict) else type(stores[0]).__name__)
-          for s in stores:
-              txt=json.dumps(s,ensure_ascii=False)
-              if '伊勢佐木' in txt or '大船' in txt:
-                  print('TARGET_STORE',txt[:20000])
-          PY
+          set -euxo pipefail
+          curl -L --fail https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net6-v6.7.46.zip -o dumper.zip
+          mkdir dumper il2cpp-out
+          unzip -q dumper.zip -d dumper
+          DUMPER="$(find dumper -type f -name 'Il2CppDumper.dll' | head -1)"
+          LIB="$(realpath arm64/lib/arm64-v8a/libil2cpp.so)"
+          META="$(realpath base/assets/bin/Data/Managed/Metadata/global-metadata.dat)"
+          OUT="$(realpath il2cpp-out)"
+          dotnet "$DUMPER" "$LIB" "$META" "$OUT"
+      - name: Find ranking request definitions and literals
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo '=== GET RANKING TOP DEFINITIONS ==='
+          grep -Ein -B 50 -A 100 'getRankingTop|RankingTop|Ranking.*Top' il2cpp-out/dump.cs | head -4000 || true
+          echo '=== RANKING / FILTER STRING LITERALS ==='
+          grep -Ein -B 10 -A 10 'getRankingTop|ranking|machine_type|price|kind|slot_20|slot_5|pachinko_4|store_id|user_code|limit' il2cpp-out/stringliteral.json | head -8000 || true
+          echo '=== RAW METADATA STRING NEIGHBORHOODS ==='
+          strings -a -n 3 -t x base/assets/bin/Data/Managed/Metadata/global-metadata.dat > meta.txt
+          grep -Ein -B 20 -A 40 'getRankingTop|machine_type|user_code|slot_20|pachinko_4' meta.txt | head -6000 || true
