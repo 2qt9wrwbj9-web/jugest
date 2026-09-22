@@ -1,0 +1,136 @@
+name: PIA Isezaki API Probe
+
+on:
+  push:
+    branches:
+      - investigation/pia-isezaki-probe-20260923
+    paths:
+      - .github/workflows/pia-isezaki-probe.yml
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe public PIA endpoints
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request, urllib.error
+
+          BASE='https://pia-server.heuron.net'
+
+          def post(path, data):
+              body=urllib.parse.urlencode(data, doseq=True).encode()
+              req=urllib.request.Request(BASE+path, data=body, method='POST', headers={
+                  'Content-Type':'application/x-www-form-urlencoded',
+                  'Accept':'application/json',
+                  'User-Agent':'Mozilla/5.0 PIA-public-probe'
+              })
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      raw=r.read()
+                      code=r.status
+              except urllib.error.HTTPError as e:
+                  raw=e.read(); code=e.code
+              text=raw.decode('utf-8','replace')
+              try: obj=json.loads(text)
+              except Exception: obj=None
+              return code, text, obj
+
+          def summarize(obj):
+              if not isinstance(obj,(dict,list)):
+                  return {'json':False}
+              lists=[]
+              def walk(x,p='$'):
+                  if isinstance(x,list):
+                      lists.append((len(x),p,x))
+                      for i,v in enumerate(x[:3]): walk(v,f'{p}[{i}]')
+                  elif isinstance(x,dict):
+                      for k,v in x.items(): walk(v,f'{p}.{k}')
+              walk(obj)
+              lists.sort(key=lambda z:z[0], reverse=True)
+              best=lists[0] if lists else (0,None,[])
+              first=best[2][0] if best[0] and isinstance(best[2][0],dict) else None
+              status=obj.get('status') if isinstance(obj,dict) else None
+              keys=list(obj.keys())[:30] if isinstance(obj,dict) else []
+              return {
+                  'json':True,'status':status,'top_keys':keys,
+                  'largest_list_len':best[0],'largest_list_path':best[1],
+                  'first_item_keys':list(first.keys())[:40] if first else []
+              }
+
+          print('=== MACHINE LIST TESTS ===')
+          machine_path='/api/stores/getStoreMachiesWithHowToPlay'
+          for sid in (35,11,12):
+              code,text,obj=post(machine_path, {'store_id':sid})
+              print('MACHINE',sid,'HTTP',code,'SUMMARY',json.dumps(summarize(obj),ensure_ascii=False))
+              if isinstance(obj,dict):
+                  # print compact name-like values only
+                  vals=[]
+                  def names(x):
+                      if isinstance(x,dict):
+                          for k,v in x.items():
+                              if isinstance(v,str) and ('name' in k.lower() or 'store' in k.lower()): vals.append((k,v))
+                              elif isinstance(v,(dict,list)): names(v)
+                      elif isinstance(x,list):
+                          for v in x[:5]: names(v)
+                  names(obj)
+                  print('MACHINE_NAMES',sid,json.dumps(vals[:20],ensure_ascii=False))
+
+          print('=== RANKING ENDPOINT DISCOVERY ON STORE 35 ===')
+          paths=[
+              '/api/rankings/getRankingTop',
+              '/api/ranking/getRankingTop',
+              '/api/stores/getRankingTop',
+              '/api/rank/getRankingTop',
+              '/api/getRankingTop'
+          ]
+          bodies=[]
+          bodies.append({'store_id':35,'limit':5000})
+          for mt in ('',0,1,2):
+              for price in ('',0,20):
+                  bodies.append({'user_code':'','price':price,'kind':1,'machine_type':mt,'day':0,'store_id':35,'limit':5000})
+          chosen=None
+          seen=set()
+          for path in paths:
+              for data in bodies:
+                  key=(path,tuple(sorted((k,str(v)) for k,v in data.items())))
+                  if key in seen: continue
+                  seen.add(key)
+                  code,text,obj=post(path,data)
+                  s=summarize(obj)
+                  print('TRY',path,json.dumps(data,ensure_ascii=False),'HTTP',code,'SUMMARY',json.dumps(s,ensure_ascii=False))
+                  if code==200 and s.get('json') and s.get('status') in (0,'0',None) and s.get('largest_list_len',0)>0:
+                      chosen=(path,data,s)
+                      break
+              if chosen: break
+
+          if not chosen:
+              print('RANKING_CHOSEN NONE')
+              raise SystemExit(0)
+
+          path,data,s=chosen
+          print('RANKING_CHOSEN',path,json.dumps(data,ensure_ascii=False),json.dumps(s,ensure_ascii=False))
+          print('=== RANKING STORE TESTS ===')
+          for sid in (35,11,12):
+              d=dict(data); d['store_id']=sid
+              code,text,obj=post(path,d)
+              sm=summarize(obj)
+              print('RANKING',sid,'HTTP',code,'BODY',json.dumps(d,ensure_ascii=False),'SUMMARY',json.dumps(sm,ensure_ascii=False))
+              if isinstance(obj,dict):
+                  # compact sample from largest list
+                  lists=[]
+                  def collect(x,p='$'):
+                      if isinstance(x,list):
+                          lists.append((len(x),p,x))
+                          for v in x[:2]: collect(v,p)
+                      elif isinstance(x,dict):
+                          for k,v in x.items(): collect(v,p+'.'+k)
+                  collect(obj)
+                  lists.sort(key=lambda z:z[0],reverse=True)
+                  if lists and lists[0][0]:
+                      sample=lists[0][2][:2]
+                      print('RANKING_SAMPLE',sid,json.dumps(sample,ensure_ascii=False)[:6000])
+          PY
