@@ -43,21 +43,30 @@ test('existing PRE snapshot can gain audit fields without changing persisted sco
   assert.equal(out.rankings[0].evidenceFamilyCount,1);
 });
 
-test('store summaries use observed diff metrics and game-weighted expected setting',()=>{
+test('store summaries use observed diff metrics and one-table-one-vote MAP setting average',()=>{
   const rows=[
-    {machine:'my',machineName:'マイV',games:3000,diff:600,diffSource:'observed',expectedSetting:4},
-    {machine:'my',machineName:'マイV',games:2000,diff:-300,diffSource:'observed',expectedSetting:2},
-    {machine:'im',machineName:'ネオアイム',games:5000,diff:900,diffSource:'observed',expectedSetting:3},
-    {machine:'im',machineName:'ネオアイム',games:5000,diff:3000,diffSource:'estimated',expectedSetting:5}
+    {machine:'my',machineName:'マイV',games:3000,diff:600,diffSource:'observed',expectedSetting:4,q:[.05,.10,.15,.50,.15,.05]},
+    {machine:'my',machineName:'マイV',games:2000,diff:-300,diffSource:'observed',expectedSetting:2,q:[.10,.45,.20,.15,.07,.03]},
+    {machine:'im',machineName:'ネオアイム',games:5000,diff:900,diffSource:'observed',expectedSetting:3,q:[.05,.10,.30,.30,.15,.10]},
+    {machine:'im',machineName:'ネオアイム',games:5000,diff:3000,diffSource:'estimated',expectedSetting:5,q:[.05,.10,.10,.15,.45,.15]}
   ];
   const overall=aggregateStoreRows(rows);
   assert.equal(overall.totalDiff,1200);assert.equal(overall.avgDiff,400);assert.equal(overall.diffCount,3);
   assert.equal(overall.actualRate,104);
+  assert.equal(overall.avgExpectedSetting,3.375);
   const machines=machineStoreSummaries(rows);
   assert.deepEqual(machines.map(x=>x.machine),['im','my']);
   const my=machines.find(x=>x.machine==='my'),im=machines.find(x=>x.machine==='im');
-  assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3.2);
+  assert.equal(my.totalDiff,300);assert.equal(my.avgDiff,150);assert.equal(my.actualRate,102);assert.equal(my.avgExpectedSetting,3);
   assert.equal(im.totalDiff,900);assert.equal(im.diffCount,1);assert.equal(im.avgExpectedSetting,4);
+});
+
+test('store MAP average excludes rows without posterior q instead of falling back to expected setting',()=>{
+  const rows=[
+    {machine:'my',games:9000,expectedSetting:6,q:null},
+    {machine:'my',games:1000,expectedSetting:1,q:[.7,.1,.05,.05,.05,.05]}
+  ];
+  assert.equal(aggregateStoreRows(rows).avgExpectedSetting,1);
 });
 
 test('exclusion reasons are readable while unknown codes remain auditable',()=>{
