@@ -4,16 +4,22 @@ function observedDiffRow(row){
   const games=finite(row?.games),diff=finite(row?.diff),source=String(row?.diffSource||'').toLowerCase();
   return games!==null&&games>0&&diff!==null&&source!=='estimated'&&source!=='missing';
 }
+function mapSettingFromPosterior(q){
+  if(!Array.isArray(q)||!q.length)return null;
+  const values=q.map(finite);if(values.some(value=>value===null))return null;
+  const max=Math.max(...values),ties=[];
+  for(let i=0;i<values.length;i++)if(values[i]===max)ties.push(i+1);
+  return ties.length?ties.reduce((sum,value)=>sum+value,0)/ties.length:null;
+}
 export function aggregateStoreRows(rows=[]){
   const list=Array.isArray(rows)?rows:[],gameRows=list.map(row=>finite(row?.games)).filter(value=>value!==null&&value>0),diffRows=list.filter(observedDiffRow),totalGames=diffRows.reduce((sum,row)=>sum+Number(row.games),0),totalDiff=diffRows.reduce((sum,row)=>sum+Number(row.diff),0);
-  const settingRows=list.map(row=>({games:finite(row?.games),setting:finite(row?.expectedSetting)})).filter(row=>row.games!==null&&row.games>0&&row.setting!==null);
-  const settingGames=settingRows.reduce((sum,row)=>sum+row.games,0),weightedSetting=settingRows.reduce((sum,row)=>sum+row.games*row.setting,0);
+  const settings=list.map(row=>mapSettingFromPosterior(row?.q)).filter(value=>value!==null);
   return Object.freeze({
     rowCount:list.length,diffCount:diffRows.length,totalGames,totalDiff:diffRows.length?totalDiff:null,
     avgGames:gameRows.length?gameRows.reduce((sum,value)=>sum+value,0)/gameRows.length:null,
     avgDiff:diffRows.length?totalDiff/diffRows.length:null,
     actualRate:totalGames>0?100*(1+totalDiff/(3*totalGames)):null,
-    avgExpectedSetting:settingGames>0?weightedSetting/settingGames:null
+    avgExpectedSetting:settings.length?settings.reduce((sum,value)=>sum+value,0)/settings.length:null
   });
 }
 export function machineStoreSummaries(rows=[]){
@@ -77,4 +83,4 @@ const EXCLUSION_LABELS=Object.freeze({
   unscored:'実績待ち・未採点'
 });
 export function exclusionReasonLabel(code){const key=String(code||'').trim();return EXCLUSION_LABELS[key]||key}
-export const __test={finite,observedDiffRow,EXCLUSION_LABELS};
+export const __test={finite,observedDiffRow,mapSettingFromPosterior,EXCLUSION_LABELS};
