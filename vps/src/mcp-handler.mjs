@@ -202,7 +202,7 @@ function validateModernRouting(req,body){
   return {ok:true};
 }
 
-function isModern(req,body){return headerValue(req,'mcp-protocol-version').trim()==='2026-07-28'||body?.params?._meta?.['io.modelcontextprotocol/protocolVersion']==='2026-07-28'}
+function isModern(req,body){return headerValue(req,'mcp-protocol-version').trim()===MCP_VERSION||body?.params?._meta?.['io.modelcontextprotocol/protocolVersion']===MCP_VERSION}
 
 export function createMcpHandler({rootDir,relayDbPath,canonicalDbPath}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
