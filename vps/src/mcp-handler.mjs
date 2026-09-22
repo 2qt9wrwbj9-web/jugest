@@ -9,6 +9,7 @@ import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateOAuthAccessToken,OAUTH_RESOURCE_METADATA,OAUTH_SCOPE} from './oauth-handler.mjs';
+import {authenticateAssistantRead} from './assistant-read-key.mjs';
 
 const MCP_VERSION='2026-07-28';
 const LEGACY_VERSION='2025-11-25';
@@ -88,6 +89,7 @@ async function authenticateCollector(req,relayDbPath){
 }
 async function authenticateToolRequest(req,relayDbPath){
   const collector=await authenticateCollector(req,relayDbPath);if(collector)return collector;
+  const assistantRead=await authenticateAssistantRead(req,relayDbPath);if(assistantRead)return assistantRead;
   const token=bearerToken(req);if(!token)return null;
   const oauth=await authenticateOAuthAccessToken(token,{relayDbPath});
   return oauth?{...oauth,authType:'oauth'}:null;
@@ -200,7 +202,7 @@ function validateModernRouting(req,body){
   return {ok:true};
 }
 
-function isModern(req,body){return headerValue(req,'mcp-protocol-version').trim()===MCP_VERSION||body?.params?._meta?.['io.modelcontextprotocol/protocolVersion']===MCP_VERSION}
+function isModern(req,body){return headerValue(req,'mcp-protocol-version').trim()==='2026-07-28'||body?.params?._meta?.['io.modelcontextprotocol/protocolVersion']==='2026-07-28'}
 
 export function createMcpHandler({rootDir,relayDbPath,canonicalDbPath}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
