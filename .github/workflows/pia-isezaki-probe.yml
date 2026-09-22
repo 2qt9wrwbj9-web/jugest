@@ -24,6 +24,10 @@ jobs:
           unzip -q pia.xapk -d xapk
           unzip -q xapk/jp.co.piagroup.app.apk -d base
           unzip -q xapk/config.arm64_v8a.apk -d arm64
+      - name: Setup .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
       - name: Dump IL2CPP metadata
         shell: bash
         run: |
