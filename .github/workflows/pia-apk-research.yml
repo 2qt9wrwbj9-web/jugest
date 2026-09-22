@@ -6,145 +6,61 @@ on:
       - research/pia-api
     paths:
       - .github/workflows/pia-apk-research.yml
-  workflow_dispatch:
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
-      - name: Download and extract PIA XAPK
-        shell: bash
-        env:
-          XAPK_URL: "https://download.pureapk.com/b/XAPK/anAuY28ucGlhZ3JvdXAuYXBwXzE0OF82YTNmMmViZQ?as2=96e4607b6808b31a794d9d7f78543da66c8563b0&k=f8949fdaf447292cfb26ab4e47d1955b6c8563b0&_p=anAuY28ucGlhZ3JvdXAuYXBw&c=1%7CENTERTAINMENT%7Cb2lkPTkfZGV2PVBJQSUyMEdST1VQJnQ9eGFwayZzPTY1ODAwODQwJnZuPTEuMC4yOSZ2Yz0xNDg&_fn=UElBJUU1JTg1JUFDJUU1JUJDJThGJUUzJTgyJUEyJUUzJTgzJTk3JUUzJTgzJUFBXzEuMC4yOV9hcGtjb21iby5jb20ueGFwaw%3D%3D"
-        run: |
-          set -euxo pipefail
-          curl -L --fail --retry 3 --retry-all-errors \
-            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36' \
-            "$XAPK_URL" -o pia.xapk
-          mkdir xapk base arm64
-          unzip -q pia.xapk -d xapk
-          unzip -q xapk/jp.co.piagroup.app.apk -d base
-          unzip -q xapk/config.arm64_v8a.apk -d arm64
-          test -f arm64/lib/arm64-v8a/libil2cpp.so
-          test -f base/assets/bin/Data/Managed/Metadata/global-metadata.dat
-          ls -lh arm64/lib/arm64-v8a/libil2cpp.so base/assets/bin/Data/Managed/Metadata/global-metadata.dat
-
-      - name: Search raw IL2CPP metadata
+      - name: Probe Isezaki public APIs
         shell: bash
         run: |
-          set -uo pipefail
-          META=base/assets/bin/Data/Managed/Metadata/global-metadata.dat
-          strings -a -n 3 -t x "$META" > metadata-strings.txt
-          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId|encrypt|decrypt'
-          {
-            echo '=== Exact / focused metadata matches ==='
-            grep -Ein -B 50 -A 50 "$PATTERN" metadata-strings.txt || true
-            echo
-            echo '=== Nearby PIA / API / server / machine strings ==='
-            grep -Ein -B 15 -A 15 'PIA|api|server|machine|store|ranking|chart|encode|decode|crypto|cipher|base64' metadata-strings.txt | head -12000 || true
-          } | tee metadata-report.txt
-
-      - name: Setup .NET 6
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '6.0.x'
-
-      - name: Run Il2CppDumper
-        shell: bash
-        run: |
-          set -euxo pipefail
-          curl -L --fail https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net6-v6.7.46.zip -o dumper.zip
-          mkdir dumper il2cpp-out
-          unzip -q dumper.zip -d dumper
-          DUMPER="$(find dumper -type f -name 'Il2CppDumper.dll' | head -1)"
-          test -n "$DUMPER"
-          DUMPER="$(realpath "$DUMPER")"
-          LIB="$(realpath arm64/lib/arm64-v8a/libil2cpp.so)"
-          META="$(realpath base/assets/bin/Data/Managed/Metadata/global-metadata.dat)"
-          OUT="$(realpath il2cpp-out)"
-          cd "$(dirname "$DUMPER")"
-          dotnet "$DUMPER" "$LIB" "$META" "$OUT"
-          cd -
-          find il2cpp-out -maxdepth 2 -type f -printf '%s %p\n' | sort -nr | head -50
-
-      - name: Focused ARM64 disassembly for PIA detail API
-        if: always()
-        shell: bash
-        run: |
-          set -euxo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq binutils-aarch64-linux-gnu
-          LIB=arm64/lib/arm64-v8a/libil2cpp.so
-          {
-            echo '=== ELF sections ==='
-            aarch64-linux-gnu-objdump -h "$LIB"
-            echo
-            echo '=== KHFHCFDEBLH.PKJGDPPANJP StoreSisContainAll request builder ==='
-            aarch64-linux-gnu-objdump -d --start-address=0x145ca98 --stop-address=0x145d090 "$LIB"
-            echo
-            echo '=== UnitDataController.GetStoreMachineContainAllDetail ==='
-            aarch64-linux-gnu-objdump -d --start-address=0x14a3668 --stop-address=0x14a3abc "$LIB"
-            echo
-            echo '=== Neighbor StoreSisContainAll request builders ==='
-            aarch64-linux-gnu-objdump -d --start-address=0x14613b8 --stop-address=0x1461fc8 "$LIB"
-          } > native-focus.txt
-          wc -l native-focus.txt
-
-      - name: Map IL2CPP string pointer slots
-        if: always()
-        shell: bash
-        run: |
-          set -euxo pipefail
-          python3 -m pip install -q pyelftools
-          python3 - <<'PY' > string-slot-map.txt
-          import json
-          from elftools.elf.elffile import ELFFile
-          strings={int(x['Address']):x['Value'] for x in json.load(open('il2cpp-out/script.json'))['ScriptString']}
-          with open('arm64/lib/arm64-v8a/libil2cpp.so','rb') as fh:
-              elf=ELFFile(fh)
-              for sec in elf.iter_sections():
-                  if not hasattr(sec,'iter_relocations'): continue
-                  for rel in sec.iter_relocations():
-                      addend=int(rel['r_addend']) if rel.is_RELA() else None
-                      if addend in strings:
-                          print(f"0x{int(rel['r_offset']):x}\t0x{addend:x}\t{strings[addend]!r}")
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request
+          BASE='https://pia-server.heuron.net/api/stores/'
+          HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
+          def post(ep,data):
+              req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=20) as r: raw=r.read().decode('utf-8','replace')
+              return json.loads(raw)
+          def best_list(obj):
+              best=[]
+              def walk(x):
+                  nonlocal best
+                  if isinstance(x,list):
+                      if len(x)>len(best) and (not x or isinstance(x[0],dict)): best=x
+                      for v in x: walk(v)
+                  elif isinstance(x,dict):
+                      for v in x.values(): walk(v)
+              walk(obj); return best
+          def values(obj,key):
+              out=set()
+              def walk(x):
+                  if isinstance(x,dict):
+                      for k,v in x.items():
+                          if k==key and v is not None: out.add(str(v))
+                          walk(v)
+                  elif isinstance(x,list):
+                      for v in x: walk(v)
+              walk(obj); return sorted(out)
+          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
+              roster=post('getStoreMachiesWithHowToPlay',{'store_id':sid})
+              rows=best_list(roster)
+              print('ROSTER',json.dumps({'sid':sid,'name':name,'status':roster.get('status'),'rows':len(rows),'price':values(roster,'price'),'machine_type':values(roster,'machine_type')},ensure_ascii=False))
+              # Test a very small set of plausible slot combinations; stop at first nonempty success.
+              tests=[('20','2'),('20','1'),('','2'),('','1'),('0','2'),('0','1')]
+              found=None
+              for price,mtype in tests:
+                  body={'user_code':'','price':price,'kind':'1','machine_type':mtype,'day':'0','store_id':str(sid),'limit':'5000'}
+                  try:
+                      rank=post('getRankingTop',body)
+                      rrows=best_list(rank)
+                      print('TRY',json.dumps({'sid':sid,'price':price,'machine_type':mtype,'status':rank.get('status'),'rows':len(rrows)},ensure_ascii=False))
+                      if str(rank.get('status'))=='0' and rrows:
+                          s=rrows[0]
+                          found={'price':price,'machine_type':mtype,'status':rank.get('status'),'rows':len(rrows),'sample':{k:s.get(k) for k in ['machine_no','machine_name','special_1','special_2d','difference','out','special_out']}}
+                          break
+                  except Exception as e:
+                      print('TRYERR',json.dumps({'sid':sid,'price':price,'machine_type':mtype,'error':repr(e)},ensure_ascii=False))
+              print('RESULT',json.dumps({'sid':sid,'name':name,'found':found},ensure_ascii=False))
           PY
-          grep -E "getStoreMachine2|getStoreMachineChart|store_id|machine_no|sis_machine_code|machine_type|price|date|limit|history|encoded" string-slot-map.txt | head -500 || true
-          wc -l string-slot-map.txt
-
-      - name: Build recovered C# API report
-        if: always()
-        shell: bash
-        run: |
-          set -uo pipefail
-          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|StoreMachine|MachineChart|ContainAllDetail|AFTER DECRYPT GET MACHINE|encodedData|DESede|SecretKeySpec|IvParameterSpec|PKCS5Padding|TripleDES|3DES|store_machine_id|storeMachineId|Encrypt|Decrypt|Base64'
-          {
-            echo '=== Raw metadata findings ==='
-            cat metadata-report.txt 2>/dev/null || true
-            echo
-            echo '=== Il2CppDumper dump.cs findings ==='
-            if test -f il2cpp-out/dump.cs; then grep -Ein -B 60 -A 60 "$PATTERN" il2cpp-out/dump.cs || true; fi
-            echo
-            echo '=== Il2CppDumper string literals ==='
-            if test -f il2cpp-out/stringliteral.json; then grep -Ein -B 20 -A 20 "$PATTERN" il2cpp-out/stringliteral.json || true; fi
-            echo
-            echo '=== Il2CppDumper script symbol findings ==='
-            if test -f il2cpp-out/script.json; then grep -Ein -B 10 -A 10 'StoreMachine|MachineChart|ContainAllDetail|Encrypt|Decrypt|Base64' il2cpp-out/script.json || true; fi
-          } | tee pia-il2cpp-report.txt
-          grep -Ein 'pia-server|heuron|StoreMachine|encodedData|AFTER DECRYPT|DESede|PKCS5|3DES|store_machine' pia-il2cpp-report.txt | head -1000 || true
-
-      - name: Upload IL2CPP findings
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pia-il2cpp-findings
-          path: |
-            pia-il2cpp-report.txt
-            metadata-report.txt
-            native-focus.txt
-            string-slot-map.txt
-            il2cpp-out/dump.cs
-            il2cpp-out/stringliteral.json
-            il2cpp-out/script.json
-          retention-days: 3
