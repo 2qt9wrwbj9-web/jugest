@@ -10,16 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe Isezaki ranking variants
+      - name: Compare store flags and ranking selectors
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request
           BASE='https://pia-server.heuron.net/api/stores/'
           HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
-          def post(ep,data):
+          def post(ep,data=None):
+              data={} if data is None else data
               req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
               with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read().decode('utf-8','replace'))
+          def walk_dicts(x):
+              if isinstance(x,dict):
+                  yield x
+                  for v in x.values(): yield from walk_dicts(v)
+              elif isinstance(x,list):
+                  for v in x: yield from walk_dicts(v)
           def best_list(obj):
               best=[]
               def walk(x):
@@ -30,17 +37,36 @@ jobs:
                   elif isinstance(x,dict):
                       for v in x.values(): walk(v)
               walk(obj); return best
-          plans={
-              11:['47','186','21.277','5.376','20','','46'],
-              12:['47','200','21.277','5','20','','46']
-          }
-          for sid,prices in plans.items():
-              print('STORE',sid)
-              for price in prices:
-                  body={'user_code':'','price':price,'kind':'1','machine_type':'2','day':'0','store_id':str(sid),'limit':'100'}
-                  try:
+
+          stores=post('getAllStores')
+          print('ALLSTORES_STATUS',stores.get('status'))
+          for d in walk_dicts(stores):
+              sid=d.get('store_id',d.get('id'))
+              if str(sid) in ('11','12'):
+                  print('STORE_RECORD',json.dumps(d,ensure_ascii=False,sort_keys=True))
+
+          sid=12
+          found=None
+          for mt in map(str,range(0,7)):
+              body={'user_code':'','price':'','kind':'1','machine_type':mt,'day':'0','store_id':str(sid),'limit':'10'}
+              rank=post('getRankingTop',body); rows=best_list(rank)
+              print('MT',json.dumps({'machine_type':mt,'status':rank.get('status'),'rows':len(rows)},ensure_ascii=False))
+              if str(rank.get('status'))=='0' and rows:
+                  found=('1',mt,rows); break
+
+          if not found:
+              for kind in map(str,range(0,4)):
+                  for mt in ('0','1','2','3'):
+                      body={'user_code':'','price':'','kind':kind,'machine_type':mt,'day':'0','store_id':str(sid),'limit':'10'}
                       rank=post('getRankingTop',body); rows=best_list(rank)
-                      print('TRY',json.dumps({'sid':sid,'price':price,'status':rank.get('status'),'rows':len(rows),'sample':({k:rows[0].get(k) for k in ['machine_no','special_1','special_2d','difference','out','special_out']} if rows else None)},ensure_ascii=False))
-                  except Exception as e:
-                      print('ERR',json.dumps({'sid':sid,'price':price,'error':repr(e)},ensure_ascii=False))
+                      print('KIND_MT',json.dumps({'kind':kind,'machine_type':mt,'status':rank.get('status'),'rows':len(rows)},ensure_ascii=False))
+                      if str(rank.get('status'))=='0' and rows:
+                          found=(kind,mt,rows); break
+                  if found: break
+
+          if found:
+              kind,mt,rows=found; s=rows[0]
+              print('FOUND',json.dumps({'kind':kind,'machine_type':mt,'rows':len(rows),'sample':{k:s.get(k) for k in ['machine_no','machine_name','special_1','special_2d','difference','out','special_out']}},ensure_ascii=False))
+          else:
+              print('FOUND null')
           PY
