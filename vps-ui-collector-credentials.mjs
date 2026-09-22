@@ -20,6 +20,8 @@ let tokenVisible=false;
 let assistantKeyValue='';
 let assistantKeyActive=false;
 let assistantKeyBusy=false;
+let assistantKeyStatusLoaded=false;
+let assistantKeyStatusPromise=null;
 let statusTimer=null;
 
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
@@ -75,19 +77,23 @@ function renderAssistantKey(card){
   const issue=card?.querySelector?.('[data-chatgpt-issue-assistant-key]');
   const copy=card?.querySelector?.('[data-chatgpt-copy-assistant-key]');
   const revoke=card?.querySelector?.('[data-chatgpt-revoke-assistant-key]');
-  if(field)field.textContent=assistantKeyValue||(assistantKeyActive?'発行済み（平文は再表示しません）':'未発行');
+  if(field)field.textContent=assistantKeyValue||(assistantKeyStatusLoaded?(assistantKeyActive?'発行済み（平文は再表示しません）':'未発行'):'状態確認中…');
   if(issue){issue.textContent=assistantKeyActive?'PRE参照鍵を再発行':'PRE参照鍵を発行';issue.disabled=assistantKeyBusy}
   if(copy)copy.disabled=assistantKeyBusy||!assistantKeyValue;
   if(revoke)revoke.disabled=assistantKeyBusy||!assistantKeyActive;
 }
 async function refreshAssistantKeyStatus(card){
-  try{const payload=await assistantKeyRequest('GET');assistantKeyActive=!!payload.active;renderAssistantKey(card)}
-  catch(error){setStatus(card,String(error?.message||error))}
+  if(assistantKeyStatusLoaded){renderAssistantKey(card);return}
+  if(!assistantKeyStatusPromise){
+    assistantKeyStatusPromise=assistantKeyRequest('GET').then(payload=>{assistantKeyActive=!!payload.active;assistantKeyStatusLoaded=true;return payload}).finally(()=>{assistantKeyStatusPromise=null});
+  }
+  try{await assistantKeyStatusPromise;renderAssistantKey(card)}
+  catch(error){const field=card?.querySelector?.('[data-chatgpt-assistant-key]');if(field)field.textContent='状態取得に失敗';setStatus(card,String(error?.message||error))}
 }
 async function rotateAssistantKey(card){
   if(assistantKeyBusy)return;assistantKeyBusy=true;renderAssistantKey(card);
   try{
-    const payload=await assistantKeyRequest('POST');assistantKeyValue=String(payload.key||'');assistantKeyActive=!!payload.active;renderAssistantKey(card);
+    const payload=await assistantKeyRequest('POST');assistantKeyValue=String(payload.key||'');assistantKeyActive=!!payload.active;assistantKeyStatusLoaded=true;renderAssistantKey(card);
     setStatus(card,'PRE参照鍵を発行したよ。今表示されている鍵をコピーして使ってね');
   }catch(error){setStatus(card,String(error?.message||error))}
   finally{assistantKeyBusy=false;renderAssistantKey(card)}
@@ -96,7 +102,7 @@ async function revokeAssistantKey(card){
   if(assistantKeyBusy||!assistantKeyActive)return;
   if(globalThis.confirm&&!globalThis.confirm('PRE参照鍵を失効する？ この鍵を使った参照はすぐ止まるよ。'))return;
   assistantKeyBusy=true;renderAssistantKey(card);
-  try{await assistantKeyRequest('DELETE');assistantKeyValue='';assistantKeyActive=false;setStatus(card,'PRE参照鍵を失効したよ')}
+  try{await assistantKeyRequest('DELETE');assistantKeyValue='';assistantKeyActive=false;assistantKeyStatusLoaded=true;setStatus(card,'PRE参照鍵を失効したよ')}
   catch(error){setStatus(card,String(error?.message||error))}
   finally{assistantKeyBusy=false;renderAssistantKey(card)}
 }
@@ -204,4 +210,4 @@ function attach(candidate){
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
 if(typeof document!=='undefined')boot();
 
-export const __test={publicInfo,secretInfo,setTokenVisibility,storedInfo};
+export const __test={publicInfo,secretInfo,setTokenVisibility,storedInfo,refreshAssistantKeyStatus};
