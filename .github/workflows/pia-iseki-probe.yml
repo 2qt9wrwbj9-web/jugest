@@ -10,63 +10,46 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Compare store flags and ranking selectors
+      - name: Probe direct machine API
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request
           BASE='https://pia-server.heuron.net/api/stores/'
           HDR={'Accept':'application/json','Content-Type':'application/x-www-form-urlencoded','User-Agent':'Mozilla/5.0'}
-          def post(ep,data=None):
-              data={} if data is None else data
+          def post(ep,data):
               req=urllib.request.Request(BASE+ep,data=urllib.parse.urlencode(data).encode(),headers=HDR,method='POST')
               with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read().decode('utf-8','replace'))
-          def walk_dicts(x):
-              if isinstance(x,dict):
-                  yield x
-                  for v in x.values(): yield from walk_dicts(v)
-              elif isinstance(x,list):
-                  for v in x: yield from walk_dicts(v)
-          def best_list(obj):
-              best=[]
-              def walk(x):
-                  nonlocal best
-                  if isinstance(x,list):
-                      if len(x)>len(best) and (not x or isinstance(x[0],dict)): best=x
-                      for v in x: walk(v)
-                  elif isinstance(x,dict):
-                      for v in x.values(): walk(v)
-              walk(obj); return best
-
-          stores=post('getAllStores')
-          print('ALLSTORES_STATUS',stores.get('status'))
-          for d in walk_dicts(stores):
-              sid=d.get('store_id',d.get('id'))
-              if str(sid) in ('11','12'):
-                  print('STORE_RECORD',json.dumps(d,ensure_ascii=False,sort_keys=True))
-
-          sid=12
-          found=None
-          for mt in map(str,range(0,7)):
-              body={'user_code':'','price':'','kind':'1','machine_type':mt,'day':'0','store_id':str(sid),'limit':'10'}
-              rank=post('getRankingTop',body); rows=best_list(rank)
-              print('MT',json.dumps({'machine_type':mt,'status':rank.get('status'),'rows':len(rows)},ensure_ascii=False))
-              if str(rank.get('status'))=='0' and rows:
-                  found=('1',mt,rows); break
-
-          if not found:
-              for kind in map(str,range(0,4)):
-                  for mt in ('0','1','2','3'):
-                      body={'user_code':'','price':'','kind':kind,'machine_type':mt,'day':'0','store_id':str(sid),'limit':'10'}
-                      rank=post('getRankingTop',body); rows=best_list(rank)
-                      print('KIND_MT',json.dumps({'kind':kind,'machine_type':mt,'status':rank.get('status'),'rows':len(rows)},ensure_ascii=False))
-                      if str(rank.get('status'))=='0' and rows:
-                          found=(kind,mt,rows); break
-                  if found: break
-
-          if found:
-              kind,mt,rows=found; s=rows[0]
-              print('FOUND',json.dumps({'kind':kind,'machine_type':mt,'rows':len(rows),'sample':{k:s.get(k) for k in ['machine_no','machine_name','special_1','special_2d','difference','out','special_out']}},ensure_ascii=False))
-          else:
-              print('FOUND null')
+          def summary(x):
+              if not isinstance(x,dict): return {'type':type(x).__name__}
+              out={'status':x.get('status'),'keys':list(x.keys())}
+              for k in ('store_is_open','has_history','server_date_time'):
+                  if k in x: out[k]=x.get(k)
+              m=x.get('machine')
+              if isinstance(m,dict):
+                  out['machine_keys']=list(m.keys())
+                  cur=m.get('current')
+                  if isinstance(cur,dict): out['current']=cur
+                  det=m.get('detail')
+                  if isinstance(det,dict): out['detail']=det
+                  elif isinstance(det,list): out['detail_count']=len(det); out['detail_sample']=det[0] if det else None
+              return out
+          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
+              roster=post('getStoreMachiesWithHowToPlay',{'store_id':sid})
+              slots=roster.get('slot') or []
+              print('ROSTER_META',json.dumps({'sid':sid,'name':name,'status':roster.get('status'),'slot_models':len(slots),'slot_machine_total':sum(len(x.get('machine_nos') or []) for x in slots)},ensure_ascii=False))
+              if not slots: continue
+              model=next((x for x in slots if x.get('machine_nos')),slots[0])
+              mno=(model.get('machine_nos') or [None])[0]
+              code=model.get('sis_machine_code') or ''
+              mname=model.get('name') or ''
+              print('SAMPLE_MACHINE',json.dumps({'sid':sid,'machine_no':mno,'sis_machine_code':code,'machine_name':mname},ensure_ascii=False))
+              for date in ('','0','2026-09-23','20260923','2026/09/23'):
+                  body={'store_id':str(sid),'machine_no':str(mno),'sis_machine_code':code,'machine_name':mname,'user_code':'','date':date,'device_uuid':'','device_type':'1','app_version':'1.0.29'}
+                  try:
+                      res=post('getStoreMachine2',body)
+                      print('DIRECT',json.dumps({'sid':sid,'date':date,'response':summary(res)},ensure_ascii=False))
+                      if str(res.get('status'))=='0': break
+                  except Exception as e:
+                      print('ERR',json.dumps({'sid':sid,'date':date,'error':repr(e)},ensure_ascii=False))
           PY
