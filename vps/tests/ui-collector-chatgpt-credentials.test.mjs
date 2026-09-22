@@ -32,3 +32,12 @@ test('ChatGPT credential card targets the gear Collector settings overlay, not D
   assert.doesNotMatch(source,/\.workspace\.data-screen/);
   assert.doesNotMatch(source,/textContent\?\.trim\(\)!=='自動取得'/);
 });
+
+
+test('ChatGPT credential card manages a one-time visible PRE read-only key without localStorage persistence',async()=>{
+  const source=await readFile(path.join(root,'vps-ui-collector-credentials.mjs'),'utf8');
+  for(const token of ['assistant-key','PRE参照鍵を発行','PRE参照鍵をコピー','PRE参照鍵を失効','data-chatgpt-assistant-key'])assert.match(source,new RegExp(token));
+  assert.match(source,/assistantKeyRequest\('POST'\)/);
+  assert.match(source,/assistantKeyRequest\('DELETE'\)/);
+  assert.doesNotMatch(source,/localStorage[^\n]*assistant/i);
+});

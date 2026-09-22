@@ -1,7 +1,5 @@
-import {createHash,timingSafeEqual} from 'node:crypto';
 import {openDatabase} from './db.mjs';
 import {migrate} from './schema.mjs';
-import {createRelayStore} from './relay-store.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
 import {loadStoreDays} from './analysis/store-data.mjs';
 import {buildComparisonSummary} from './research/live-comparison.mjs';
@@ -9,22 +7,26 @@ import {buildHistoricalComparisonSummary} from './research/historical-summary.mj
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
+import {authenticateReceiver,authenticateAssistantRead,assistantReadKeyStatus,rotateAssistantReadKey,revokeAssistantReadKey} from './assistant-read-key.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
 const JUDGE_VERSION='external-juggler-browser-parity-v1';
-const RELAY_STORE_NAME='juggler-relay-v1';
 const JUGGLER_MACHINE_KEY_SET=new Set(JUGGLER_MACHINE_KEYS);
-function digest(value){return createHash('sha256').update(String(value||'')).digest('hex')}
-function secureMatch(raw,expectedHash){if(!raw||!/^[a-f0-9]{64}$/i.test(String(expectedHash||'')))return false;const a=Buffer.from(digest(raw),'hex'),b=Buffer.from(String(expectedHash),'hex');return a.length===b.length&&timingSafeEqual(a,b)}
-function headerValue(req,name){const value=req.headers?.[name.toLowerCase()];return Array.isArray(value)?String(value[0]||''):String(value||'')}
 function sendJson(req,res,status,payload,extra={}){const body=Buffer.from(JSON.stringify(payload));res.writeHead(status,{'content-type':'application/json; charset=utf-8','content-length':String(body.length),'cache-control':'no-store','x-content-type-options':'nosniff',...extra});if(String(req.method||'GET').toUpperCase()==='HEAD')res.end();else res.end(body)}
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
-function validChannelId(value){return /^[A-Za-z0-9_-]{12,80}$/.test(String(value||''))}
-async function authenticate(req,relayDbPath){const channelId=headerValue(req,'x-jugest-channel-id').trim();const authorization=headerValue(req,'authorization').trim();const match=authorization.match(/^Bearer\s+(.+)$/i);const receiverToken=match?.[1]?.trim()||'';if(!validChannelId(channelId)||!receiverToken)return null;const store=createRelayStore(RELAY_STORE_NAME,{dbPath:relayDbPath,root:'jugest'});const channel=await store.get(`channel/${channelId}`,{type:'json'});if(!channel||channel.revokedAt||!secureMatch(receiverToken,channel.receiverHash))return null;return {channelId}}
 function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
 function isJudgeMachinesRoute(parts){return !!parts&&parts.length===4&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='judge'&&parts[3]==='machines'}
+function isAssistantKeyRoute(parts){return !!parts&&parts.length===3&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='assistant-key'}
+function assistantReadRouteAllowed(parts,method){
+  if(!['GET','HEAD'].includes(method)||!parts||parts[0]!=='api'||parts[1]!=='vps')return false;
+  if(parts.length===3&&parts[2]==='stores')return true;
+  if(parts[2]!=='stores'||parts.length<5)return false;
+  if(parts.length===5&&parts[4]==='days')return true;
+  if(parts.length===6&&parts[4]==='days')return true;
+  return parts.length===6&&parts[4]==='research'&&['store-read','comparison'].includes(parts[5]);
+}
 async function readJsonBody(req,{maxBytes=262144}={}){
   let size=0;const chunks=[];
   for await(const chunk of req){const data=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=data.length;if(size>maxBytes){const error=new Error('body_too_large');error.code='body_too_large';throw error}chunks.push(data)}
@@ -65,10 +67,20 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
     const method=String(req.method||'GET').toUpperCase();
     const url=new URL(req.url||'/','http://127.0.0.1');const parts=parseApiPath(url.pathname);
     if(!parts||parts[0]!=='api'||parts[1]!=='vps'){sendJson(req,res,404,{ok:false,code:'not_found'});return}
+    const assistantKeyRoute=isAssistantKeyRoute(parts);
+    if(assistantKeyRoute){
+      if(!['GET','POST','DELETE'].includes(method)){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, POST, DELETE'});return}
+      const owner=await authenticateReceiver(req,relayDbPath);if(!owner){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+      if(method==='GET'){sendJson(req,res,200,{ok:true,...await assistantReadKeyStatus(relayDbPath,owner.channelId)});return}
+      if(method==='POST'){sendJson(req,res,200,{ok:true,...await rotateAssistantReadKey(relayDbPath,owner.channelId)});return}
+      sendJson(req,res,200,{ok:true,...await revokeAssistantReadKey(relayDbPath,owner.channelId)});return;
+    }
     const judgeRoute=isJudgeMachinesRoute(parts);
     if(judgeRoute){if(method!=='POST'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'POST'});return}}
     else if(method!=='GET'&&method!=='HEAD'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, HEAD'});return}
-    const auth=await authenticate(req,relayDbPath);if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+    const auth=await authenticateReceiver(req,relayDbPath)||await authenticateAssistantRead(req,relayDbPath);
+    if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+    if(auth.authType==='assistant-read'&&!assistantReadRouteAllowed(parts,method)){sendJson(req,res,403,{ok:false,code:'assistant_read_scope_denied'});return}
     if(judgeRoute){
       let body;try{body=await readJsonBody(req)}catch(error){const tooLarge=error?.code==='body_too_large';sendJson(req,res,tooLarge?413:400,{ok:false,code:tooLarge?'body_too_large':'bad_json'});return}
       if(!Array.isArray(body?.machines)){sendJson(req,res,400,{ok:false,code:'bad_machines'});return}
@@ -126,4 +138,4 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
     }finally{db.close()}
   };
 }
-export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,JUDGE_VERSION,secureMatch,auditStoreRead,isJudgeMachinesRoute,judgeInputRow};
+export const __test={ANALYSIS_VERSION,STORE_READ_VERSION,JUDGE_VERSION,auditStoreRead,isJudgeMachinesRoute,isAssistantKeyRoute,assistantReadRouteAllowed,judgeInputRow};
