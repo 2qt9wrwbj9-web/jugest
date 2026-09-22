@@ -9,6 +9,7 @@ import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateOAuthAccessToken,OAUTH_RESOURCE_METADATA,OAUTH_SCOPE} from './oauth-handler.mjs';
+import {authenticateAssistantRead} from './assistant-read-key.mjs';
 
 const MCP_VERSION='2026-07-28';
 const LEGACY_VERSION='2025-11-25';
@@ -88,6 +89,7 @@ async function authenticateCollector(req,relayDbPath){
 }
 async function authenticateToolRequest(req,relayDbPath){
   const collector=await authenticateCollector(req,relayDbPath);if(collector)return collector;
+  const assistantRead=await authenticateAssistantRead(req,relayDbPath);if(assistantRead)return assistantRead;
   const token=bearerToken(req);if(!token)return null;
   const oauth=await authenticateOAuthAccessToken(token,{relayDbPath});
   return oauth?{...oauth,authType:'oauth'}:null;

@@ -11,6 +11,7 @@ import {createRelayStore} from '../src/relay-store.mjs';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {canonicalJson,hashCanonical} from '../src/canonical-json.mjs';
+import {rotateAssistantReadKey} from '../src/assistant-read-key.mjs';
 
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const CHANNEL='channel_mcp_test_123';
@@ -30,6 +31,7 @@ async function fixture(){
   const relayDbPath=join(dir,'relay.sqlite'),canonicalDbPath=join(dir,'jugest.sqlite'),rawRoot=join(dir,'raw');
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON(`channel/${CHANNEL}`,{version:1,createdAt:1,claimedAt:1,revokedAt:0,receiverHash:digest(TOKEN),senderHash:'sender'});
+  const assistantKey=(await rotateAssistantReadKey(relayDbPath,CHANNEL)).key;
 
   const db=openDatabase(canonicalDbPath);migrate(db);
   const now='2026-09-19T00:00:00.000Z';
@@ -58,7 +60,8 @@ async function fixture(){
       body:JSON.stringify({jsonrpc:'2.0',id:1,method,params:{...params,_meta:params?._meta??modernMeta}})
     });
   };
-  return {base,legacyAuth,post,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
+  const assistantAuth={authorization:`Bearer ${assistantKey}`};
+  return {base,legacyAuth,assistantAuth,post,async close(){server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));rmSync(dir,{recursive:true,force:true})}};
 }
 
 async function issueOAuthToken(base){
@@ -210,6 +213,25 @@ test('OAuth store tools include and read explicit public PIA stores while privat
     const foreignBody=await foreign.json();
     assert.equal(foreignBody.result.isError,true);
     assert.match(foreignBody.result.content[0].text,/forbidden/i);
+  }finally{await f.close()}
+});
+
+test('assistant PRE read-only key authorizes MCP store tools without a Collector channel header',async()=>{
+  const f=await fixture();
+  try{
+    const listed=await (await f.post('tools/call',{name:'list_stores',arguments:{}},{},f.assistantAuth)).json();
+    assert.deepEqual(listed.result.structuredContent.stores.map(store=>store.id),['pia:35','store-a']);
+
+    const days=await (await f.post('tools/call',{name:'get_store_days',arguments:{storeId:'store-a',limit:30}},{},f.assistantAuth)).json();
+    assert.deepEqual(days.result.structuredContent.days.map(day=>day.date),['2026-09-18']);
+
+    const prediction=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-a'}},{},f.assistantAuth)).json();
+    assert.equal(prediction.result.isError,false);
+    assert.equal(prediction.result.structuredContent.storeRead.targetDate,'2026-09-19');
+
+    const forbidden=await (await f.post('tools/call',{name:'get_store_prediction',arguments:{storeId:'store-b'}},{},f.assistantAuth)).json();
+    assert.equal(forbidden.result.isError,true);
+    assert.match(forbidden.result.content[0].text,/forbidden/i);
   }finally{await f.close()}
 });
 
