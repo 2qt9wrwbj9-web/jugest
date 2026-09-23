@@ -15,41 +15,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify canonical slot ranking endpoint for Ofuna and Isezaki
+      - name: Verify full rolling history limit for Isezaki stores
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request
 
           url='https://piagroupapp.com/api/stores/getRankingTop'
-          stores=[(35,'PIA大船'),(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
+          stores=[(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
 
           for sid,name in stores:
-              payload={'machine_type':'S','store_id':str(sid),'limit':'5000'}
+              payload={'machine_type':'S','store_id':str(sid),'limit':'25000'}
               data=urllib.parse.urlencode(payload).encode()
               req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},method='POST')
               try:
-                  with urllib.request.urlopen(req,timeout=30) as r:
+                  with urllib.request.urlopen(req,timeout=45) as r:
                       raw=r.read().decode('utf-8','replace')
                       obj=json.loads(raw)
                       rows=obj.get('ranking',[]) if isinstance(obj,dict) else []
-                      distinct=sorted({str(x.get('machine_no')) for x in rows if isinstance(x,dict) and x.get('machine_no') is not None})
+                      counts={}
+                      for x in rows:
+                          if isinstance(x,dict) and x.get('machine_no') is not None:
+                              no=str(x.get('machine_no'))
+                              counts[no]=counts.get(no,0)+1
                       juggler=[x for x in rows if isinstance(x,dict) and 'ジャグラー' in str(x.get('name',''))]
-                      juggler_machines=sorted({str(x.get('machine_no')) for x in juggler if x.get('machine_no') is not None})
-                      print(name,'store_id=',sid,'http=',r.status,'status=',obj.get('status'),'rows=',len(rows),'machines=',len(distinct),'juggler_rows=',len(juggler),'juggler_machines=',len(juggler_machines),'bytes=',len(raw))
+                      jcounts={}
+                      for x in juggler:
+                          no=str(x.get('machine_no'))
+                          jcounts[no]=jcounts.get(no,0)+1
+                      print(name,'store_id=',sid,'http=',r.status,'status=',obj.get('status'),'rows=',len(rows),'machines=',len(counts),'bytes=',len(raw))
+                      print('history_counts=',sorted(set(counts.values())),'irregular_all=',sum(1 for v in counts.values() if v!=30))
+                      print('juggler_rows=',len(juggler),'juggler_machines=',len(jcounts),'juggler_history_counts=',sorted(set(jcounts.values())),'irregular_juggler=',sum(1 for v in jcounts.values() if v!=30))
                       print('server_date_time=',obj.get('server_date_time'))
-                      if juggler:
-                          sample=juggler[0]
-                          print('sample_name=',sample.get('name'),'machine_no=',sample.get('machine_no'),'sis_machine_code=',sample.get('sis_machine_code'),'special_1=',sample.get('special_1'),'special_2d=',sample.get('special_2d'),'out=',sample.get('out'),'special_out=',sample.get('special_out'),'difference=',sample.get('difference'))
-                          print('sample_keys=',sorted(sample.keys()))
-                      if rows:
-                          counts={}
-                          for x in rows:
-                              if isinstance(x,dict):
-                                  no=str(x.get('machine_no'))
-                                  counts[no]=counts.get(no,0)+1
-                          vals=sorted(set(counts.values()))
-                          print('history_rows_per_machine=',vals[:20],'irregular_count=',sum(1 for v in counts.values() if v!=30))
               except Exception as e:
                   print(name,'ERROR',repr(e))
           PY
