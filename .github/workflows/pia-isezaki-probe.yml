@@ -15,39 +15,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe per-machine endpoints
+      - name: Verify Juggler coverage in capped ranking history
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request, urllib.error
+          import json, urllib.parse, urllib.request
 
-          endpoints=[
-            'https://piagroupapp.com/api/stores/getStoreMachine2',
-            'https://pia-server.heuron.net/api/stores/getStoreMachine2',
-          ]
-          payloads=[
-            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','machine_no':'3240','limit':'31'},
-            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','machine_no':'3240','date':'2026-09-22','limit':'31'},
-            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','limit':'1000'},
-          ]
-          for url in endpoints:
-              print('\nENDPOINT',url)
-              for i,payload in enumerate(payloads,1):
-                  data=urllib.parse.urlencode(payload).encode()
-                  req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},method='POST')
-                  try:
-                      with urllib.request.urlopen(req,timeout=30) as r:
-                          raw=r.read().decode('utf-8','replace')
-                          print('case',i,'http=',r.status,'bytes=',len(raw))
-                          try:
-                              obj=json.loads(raw)
-                              print('type=',type(obj).__name__,'keys=',sorted(obj.keys()) if isinstance(obj,dict) else None,'status=',obj.get('status') if isinstance(obj,dict) else None)
-                              print('preview=',json.dumps(obj,ensure_ascii=False)[:3000])
-                          except Exception:
-                              print('preview=',raw[:3000])
-                  except urllib.error.HTTPError as e:
-                      body=e.read().decode('utf-8','replace')
-                      print('case',i,'HTTPError',e.code,'body=',body[:1500])
-                  except Exception as e:
-                      print('case',i,'ERROR',repr(e))
+          BASE='https://piagroupapp.com/api/stores/'
+          ROSTER='https://pia-server.heuron.net/api/stores/getStoreMachiesWithHowToPlay'
+          HDR={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','User-Agent':'Mozilla/5.0'}
+          def post(url,payload):
+              req=urllib.request.Request(url,data=urllib.parse.urlencode(payload).encode(),headers=HDR,method='POST')
+              with urllib.request.urlopen(req,timeout=35) as r:
+                  return json.loads(r.read().decode('utf-8','replace'))
+
+          for sid,name in [(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]:
+              roster=post(ROSTER,{'store_id':str(sid)})
+              rank=post(BASE+'getRankingTop',{'machine_type':'S','store_id':str(sid),'limit':'5000'})
+              roster_nos=set()
+              for model in roster.get('slot') or []:
+                  if 'ジャグラー' in str(model.get('name','')):
+                      roster_nos.update(str(x) for x in (model.get('machine_nos') or []))
+              rows=[x for x in (rank.get('ranking') or []) if isinstance(x,dict) and 'ジャグラー' in str(x.get('name',''))]
+              rank_nos={str(x.get('machine_no')) for x in rows if x.get('machine_no') is not None}
+              counts={}
+              for x in rows:
+                  no=str(x.get('machine_no'))
+                  counts[no]=counts.get(no,0)+1
+              print(name,'store_id=',sid)
+              print('roster_juggler_machines=',len(roster_nos),'ranking_juggler_machines=',len(rank_nos),'ranking_juggler_rows=',len(rows))
+              print('missing_from_ranking=',sorted(roster_nos-rank_nos))
+              print('unexpected_in_ranking=',sorted(rank_nos-roster_nos))
+              print('history_count_min=',min(counts.values()) if counts else None,'max=',max(counts.values()) if counts else None,'values=',sorted(set(counts.values())))
           PY
