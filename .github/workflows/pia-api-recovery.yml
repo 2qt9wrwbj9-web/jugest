@@ -12,100 +12,33 @@ permissions:
   contents: read
 
 jobs:
-  inspect-pia-apk:
+  probe-isezaki:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download and unpack current PIA XAPK
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/pia/xapk /tmp/pia/unpacked
-          curl --fail --location --retry 2 \
-            -A 'Mozilla/5.0 (Linux; Android 13)' \
-            'https://d.apkpure.net/b/XAPK/jp.co.piagroup.app?version=latest' \
-            -o /tmp/pia/pia.xapk
-          echo '=== XAPK ==='
-          ls -lh /tmp/pia/pia.xapk
-          sha256sum /tmp/pia/pia.xapk
-          unzip -q /tmp/pia/pia.xapk -d /tmp/pia/xapk
-          cat /tmp/pia/xapk/manifest.json 2>/dev/null || true
-          for apk in /tmp/pia/xapk/*.apk; do
-            d="/tmp/pia/unpacked/$(basename "$apk" .apk)"
-            mkdir -p "$d"
-            unzip -q "$apk" -d "$d"
-          done
-          echo '=== likely Unity/IL2CPP files ==='
-          find /tmp/pia/unpacked -type f \( \
-            -iname 'global-metadata.dat' -o \
-            -iname 'libil2cpp.so' -o \
-            -iname 'Assembly-CSharp.dll' -o \
-            -iname '*ScriptingAssemblies*' -o \
-            -iname '*.js' \
-          \) -printf '%p %s bytes\n' | sort
-
-      - name: Search all unpacked files for API and crypto strings
+      - name: Probe store-machine endpoint for Ofuna and Isezaki
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          root = Path('/tmp/pia/unpacked')
-          needles = [
-              b'pia-server', b'heuron', b'GetStoreMachineContainAllDetail',
-              b'getStoreMachine2', b'getStoreMachineChart', b'getStoresMachines',
-              b'encodedData', b'AFTER DECRYPT GET MACHINE', b'3des', b'DESede',
-              b'GetStoreMachine', b'StoreMachine', b'Decrypt', b'Encrypt'
-          ]
-          wide_needles=[]
-          for n in needles:
-              try: wide_needles.append((n.decode().encode('utf-16le'), n + b' [utf16le]'))
-              except: pass
-          found=0
-          for p in root.rglob('*'):
-              if not p.is_file(): continue
-              try: data=p.read_bytes()
-              except Exception: continue
-              low=data.lower()
-              hits=[]
-              for n in needles:
-                  q=low.find(n.lower())
-                  if q>=0: hits.append((q,n.decode('utf-8','replace')))
-              for wn,label in wide_needles:
-                  q=low.find(wn.lower())
-                  if q>=0: hits.append((q,label.decode('utf-8','replace')))
-              if not hits: continue
-              found += 1
-              print(f'\n===== RAW HIT FILE {p} ({len(data)} bytes) =====')
-              for q,label in sorted(hits)[:40]:
-                  lo=max(0,q-1200); hi=min(len(data),q+3000)
-                  chunk=data[lo:hi]
-                  print(f'\n>>> {label} @ {q}')
-                  print(chunk.decode('utf-8','replace'))
-          print(f'\nRAW HIT FILE COUNT={found}')
+          import json, urllib.parse, urllib.request
+          url='https://pia-server.heuron.net/api/stores/getStoreMachiesWithHowToPlay'
+          stores=[(35,'PIA大船'),(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
+          for sid,name in stores:
+              print(f'=== {name} store_id={sid} ===')
+              body=urllib.parse.urlencode({'store_id':sid}).encode()
+              req=urllib.request.Request(url,data=body,headers={'Content-Type':'application/x-www-form-urlencoded'},method='POST')
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as r:
+                      raw=r.read().decode('utf-8','replace')
+                      print('http=',r.status,'bytes=',len(raw))
+                      try:
+                          obj=json.loads(raw)
+                          print('status=',obj.get('status') if isinstance(obj,dict) else None)
+                          print('top_keys=',sorted(obj.keys()) if isinstance(obj,dict) else type(obj).__name__)
+                          print('preview=',json.dumps(obj,ensure_ascii=False)[:2500])
+                      except Exception:
+                          print('preview=',raw[:2500])
+              except Exception as e:
+                  print('ERROR',repr(e))
           PY
-
-          echo '=== printable string context from metadata/native code ==='
-          PATTERN='pia-server|heuron|GetStoreMachineContainAllDetail|getStoreMachine2|getStoreMachineChart|getStoresMachines|encodedData|AFTER DECRYPT GET MACHINE|3des|DESede|GetStoreMachine|StoreMachine|Decrypt|Encrypt'
-          while IFS= read -r -d '' f; do
-            tmp="/tmp/$(echo -n "$f" | sha256sum | cut -d' ' -f1).strings"
-            strings -a -n 4 "$f" > "$tmp" || true
-            if grep -Eqi "$PATTERN" "$tmp"; then
-              echo "===== ASCII STRINGS: $f ====="
-              grep -Ein -C 35 "$PATTERN" "$tmp" | head -n 2000
-            fi
-            strings -a -el -n 4 "$f" > "${tmp}.wide" || true
-            if grep -Eqi "$PATTERN" "${tmp}.wide"; then
-              echo "===== UTF16LE STRINGS: $f ====="
-              grep -Ein -C 35 "$PATTERN" "${tmp}.wide" | head -n 2000
-            fi
-          done < <(find /tmp/pia/unpacked -type f \( -name 'global-metadata.dat' -o -name 'libil2cpp.so' -o -name '*.dll' \) -print0)
-
-          echo '=== API-like URLs in Unity metadata/native code ==='
-          while IFS= read -r -d '' f; do
-            strings -a -n 6 "$f" | grep -Eio 'https?://[^[:space:]"<>]+' | grep -Ei 'pia|heuron|api' | sort -u | head -n 200 || true
-          done < <(find /tmp/pia/unpacked -type f \( -name 'global-metadata.dat' -o -name 'libil2cpp.so' -o -name '*.dll' \) -print0)
