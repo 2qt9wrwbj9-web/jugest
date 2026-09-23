@@ -1,0 +1,63 @@
+name: PIA Isezaki probe
+
+on:
+  push:
+    branches:
+      - 'investigation/pia-api-recovery-20260917'
+    paths:
+      - '.github/workflows/pia-isezaki-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe public PIA store-machine endpoint
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request
+
+          url = 'https://pia-server.heuron.net/api/stores/getStoreMachiesWithHowToPlay'
+          stores = [(35, 'PIA大船'), (11, 'PIA伊勢佐木町'), (12, 'PIA伊勢佐木3丁目')]
+
+          def summarize(obj):
+              if isinstance(obj, dict):
+                  print('top_keys=', sorted(obj.keys()))
+                  print('status=', obj.get('status'))
+                  for key, value in obj.items():
+                      if isinstance(value, list):
+                          print('list_field=', key, 'count=', len(value))
+                          if value:
+                              sample = value[0]
+                              if isinstance(sample, dict):
+                                  print('sample_keys=', sorted(sample.keys()))
+                                  print('sample=', json.dumps(sample, ensure_ascii=False)[:1500])
+                          break
+                      if isinstance(value, dict):
+                          for k2, v2 in value.items():
+                              if isinstance(v2, list):
+                                  print('nested_list_field=', f'{key}.{k2}', 'count=', len(v2))
+                                  if v2 and isinstance(v2[0], dict):
+                                      print('sample_keys=', sorted(v2[0].keys()))
+                                      print('sample=', json.dumps(v2[0], ensure_ascii=False)[:1500])
+                                  return
+              else:
+                  print('response_type=', type(obj).__name__)
+
+          for sid, name in stores:
+              print('\n===', name, 'store_id=', sid, 'FORM ===')
+              data = urllib.parse.urlencode({'store_id': sid}).encode()
+              req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/x-www-form-urlencoded'}, method='POST')
+              try:
+                  with urllib.request.urlopen(req, timeout=25) as r:
+                      body = r.read().decode('utf-8', 'replace')
+                      print('http=', r.status, 'len=', len(body))
+                      try: summarize(json.loads(body))
+                      except Exception: print('body=', body[:2000])
+              except Exception as e:
+                  print('ERROR', repr(e))
+          PY
