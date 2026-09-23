@@ -1,0 +1,44 @@
+name: PIA API recovery (temporary)
+
+on:
+  push:
+    branches:
+      - 'investigation/pia-api-recovery-20260917'
+    paths:
+      - '.github/workflows/pia-api-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-isezaki:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe store-machine endpoint for Ofuna and Isezaki
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request
+          url='https://pia-server.heuron.net/api/stores/getStoreMachiesWithHowToPlay'
+          stores=[(35,'PIA大船'),(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
+          for sid,name in stores:
+              print(f'=== {name} store_id={sid} ===')
+              body=urllib.parse.urlencode({'store_id':sid}).encode()
+              req=urllib.request.Request(url,data=body,headers={'Content-Type':'application/x-www-form-urlencoded'},method='POST')
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as r:
+                      raw=r.read().decode('utf-8','replace')
+                      print('http=',r.status,'bytes=',len(raw))
+                      try:
+                          obj=json.loads(raw)
+                          print('status=',obj.get('status') if isinstance(obj,dict) else None)
+                          print('top_keys=',sorted(obj.keys()) if isinstance(obj,dict) else type(obj).__name__)
+                          print('preview=',json.dumps(obj,ensure_ascii=False)[:2500])
+                      except Exception:
+                          print('preview=',raw[:2500])
+              except Exception as e:
+                  print('ERROR',repr(e))
+          PY
