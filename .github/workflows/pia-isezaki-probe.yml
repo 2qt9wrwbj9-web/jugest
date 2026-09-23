@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify slot ranking endpoint for Ofuna and Isezaki
+      - name: Verify ranking kind for Ofuna and Isezaki
         shell: bash
         run: |
           python3 - <<'PY'
@@ -24,14 +24,14 @@ jobs:
           url='https://pia-server.heuron.net/api/stores/getRankingTop'
           stores=[(35,'PIA大船'),(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
 
-          for mt in ['1','2']:
-              print('\n===== machine_type',mt,'=====')
+          for kind in ['1','2']:
+              print('\n===== kind',kind,'=====')
               for sid,name in stores:
                   payload={
                       'user_code':'',
                       'price':'',
-                      'kind':'1',
-                      'machine_type':mt,
+                      'kind':kind,
+                      'machine_type':'',
                       'day':'0',
                       'store_id':str(sid),
                       'limit':'5000',
@@ -45,13 +45,10 @@ jobs:
                           rows=obj.get('ranking',[]) if isinstance(obj,dict) else []
                           print(name,'store_id=',sid,'http=',r.status,'status=',obj.get('status'),'count=',len(rows),'bytes=',len(raw))
                           if rows:
-                              names=[]
-                              for x in rows[:8]:
-                                  if isinstance(x,dict): names.append(str(x.get('name')))
+                              names=[str(x.get('name')) for x in rows[:10] if isinstance(x,dict)]
                               print('sample_names=',names)
                               sample=rows[0]
                               if isinstance(sample,dict):
-                                  print('sample_keys=',sorted(sample.keys()))
                                   print('sample_machine_no=',sample.get('machine_no'),'difference=',sample.get('difference'),'special_1=',sample.get('special_1'),'special_2d=',sample.get('special_2d'),'out=',sample.get('out'),'special_out=',sample.get('special_out'))
                   except Exception as e:
                       print(name,'ERROR',repr(e))
