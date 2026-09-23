@@ -15,33 +15,39 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe RankingTop machine filters
+      - name: Probe per-machine endpoints
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request
+          import json, urllib.parse, urllib.request, urllib.error
 
-          url='https://piagroupapp.com/api/stores/getRankingTop'
-          cases=[
-            ('base', {'machine_type':'S','store_id':'11','limit':'1000'}),
-            ('code', {'machine_type':'S','store_id':'11','limit':'1000','sis_machine_code':'99119996'}),
-            ('machine_no', {'machine_type':'S','store_id':'11','limit':'1000','machine_no':'3240'}),
-            ('both', {'machine_type':'S','store_id':'11','limit':'1000','sis_machine_code':'99119996','machine_no':'3240'}),
+          endpoints=[
+            'https://piagroupapp.com/api/stores/getStoreMachine2',
+            'https://pia-server.heuron.net/api/stores/getStoreMachine2',
           ]
-          for label,payload in cases:
-              data=urllib.parse.urlencode(payload).encode()
-              req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},method='POST')
-              try:
-                  with urllib.request.urlopen(req,timeout=30) as r:
-                      obj=json.loads(r.read().decode('utf-8','replace'))
-                      rows=obj.get('ranking',[]) if isinstance(obj,dict) else []
-                      nos=sorted({str(x.get('machine_no')) for x in rows if isinstance(x,dict)})
-                      codes=sorted({str(x.get('sis_machine_code')) for x in rows if isinstance(x,dict)})
-                      names=sorted({str(x.get('name')) for x in rows if isinstance(x,dict)})
-                      print(label,'status=',obj.get('status'),'rows=',len(rows),'machine_count=',len(nos),'code_count=',len(codes))
-                      print('nos=',nos[:25])
-                      print('codes=',codes[:15])
-                      print('names=',names[:15])
-              except Exception as e:
-                  print(label,'ERROR',repr(e))
+          payloads=[
+            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','machine_no':'3240','limit':'31'},
+            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','machine_no':'3240','date':'2026-09-22','limit':'31'},
+            {'store_id':'11','machine_type':'S','sis_machine_code':'99119996','limit':'1000'},
+          ]
+          for url in endpoints:
+              print('\nENDPOINT',url)
+              for i,payload in enumerate(payloads,1):
+                  data=urllib.parse.urlencode(payload).encode()
+                  req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},method='POST')
+                  try:
+                      with urllib.request.urlopen(req,timeout=30) as r:
+                          raw=r.read().decode('utf-8','replace')
+                          print('case',i,'http=',r.status,'bytes=',len(raw))
+                          try:
+                              obj=json.loads(raw)
+                              print('type=',type(obj).__name__,'keys=',sorted(obj.keys()) if isinstance(obj,dict) else None,'status=',obj.get('status') if isinstance(obj,dict) else None)
+                              print('preview=',json.dumps(obj,ensure_ascii=False)[:3000])
+                          except Exception:
+                              print('preview=',raw[:3000])
+                  except urllib.error.HTTPError as e:
+                      body=e.read().decode('utf-8','replace')
+                      print('case',i,'HTTPError',e.code,'body=',body[:1500])
+                  except Exception as e:
+                      print('case',i,'ERROR',repr(e))
           PY
