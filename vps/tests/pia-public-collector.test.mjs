@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {collectPiaPublicOnce,derivePiaBusinessDay,normalizePiaJugglerRow,validatePiaSnapshot} from '../src/collectors/pia-public.mjs';
+import {shouldAttemptPiaCollection} from '../src/collectors/pia-scheduler.mjs';
 
 function row({no,name,code,id,storeMachineId=no}){
   const games=1000+id*37,bb=5+(id%20),rb=4+(id%17),specialOut=120+(id%5)*3,out=specialOut+games*3,diff=(id-15)*41;
@@ -95,4 +96,36 @@ test('validation rejects partial rolling history',()=>{
   const data=snapshot('2026-09-21',{advance:false});
   data.ranking.pop();
   assert.throws(()=>validatePiaSnapshot(data,{minMachineCount:2}),/30-row rolling history/);
+});
+
+test('midnight source date lag waits 30 minutes and preserves the baseline until yesterday can be ingested',async()=>{
+  const f=await fixture();
+  try{
+    let data=snapshot('2026-09-22',{advance:false});
+    const fetchImpl=async()=>response(data);
+    await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-21T21:10:00.000Z'});
+
+    const unchanged=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-22T15:00:00.000Z'});
+    assert.equal(unchanged.status,'already_collected');
+    const state=f.db.prepare('SELECT last_snapshot_date,last_snapshot_json,last_attempt_at FROM source_collector_state').get();
+    assert.equal(state.last_attempt_at,'2026-09-22T15:00:00.000Z');
+    assert.equal(state.last_snapshot_date,'2026-09-22');
+    assert.deepEqual(JSON.parse(state.last_snapshot_json),data);
+    assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T15:05:00.000Z')}).reason,'cooldown');
+    assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T15:29:59.999Z')}).reason,'cooldown');
+    assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T15:30:00.000Z')}).attempt,true);
+
+    data=snapshot('2026-09-23',{advance:false});
+    const notReady=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-22T15:30:00.000Z'});
+    assert.equal(notReady.status,'not_ready');
+    assert.equal(f.db.prepare('SELECT COUNT(*) n FROM store_days').get().n,0);
+    assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T15:35:00.000Z')}).reason,'cooldown');
+
+    data=snapshot('2026-09-23',{advance:true});
+    const ready=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-22T16:00:00.000Z'});
+    assert.equal(ready.status,'ingested');
+    assert.equal(ready.businessDate,'2026-09-22');
+    assert.equal(f.db.prepare('SELECT COUNT(*) n FROM machine_day_data WHERE business_date=?').get('2026-09-22').n,2);
+    assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T16:05:00.000Z')}).reason,'done_today');
+  }finally{await f.close()}
 });
