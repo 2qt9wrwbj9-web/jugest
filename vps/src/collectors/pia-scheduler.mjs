@@ -9,7 +9,7 @@ export function jstClock(date=new Date()){
   return {date:shifted.toISOString().slice(0,10),minutes:shifted.getUTCHours()*60+shifted.getUTCMinutes()};
 }
 
-export function shouldAttemptPiaCollection(db,{now=new Date(),targetHour=6,targetMinute=10,cooldownMs=30*60*1000}={}){
+export function shouldAttemptPiaCollection(db,{now=new Date(),targetHour=0,targetMinute=0,cooldownMs=30*60*1000}={}){
   const clock=jstClock(now),target=targetHour*60+targetMinute;
   if(clock.minutes<target)return {attempt:false,reason:'before_window',jstDate:clock.date};
   const state=db.prepare('SELECT last_snapshot_date,last_attempt_at FROM source_collector_state WHERE collector_id=?').get(PIA_COLLECTOR_ID);
@@ -21,7 +21,7 @@ export function shouldAttemptPiaCollection(db,{now=new Date(),targetHour=6,targe
   return {attempt:true,reason:'due',jstDate:clock.date};
 }
 
-export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=new Date(),logger=()=>{},targetHour=6,targetMinute=10,cooldownMs=30*60*1000,minMachineCount=80,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
+export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=new Date(),logger=()=>{},targetHour=0,targetMinute=0,cooldownMs=30*60*1000,minMachineCount=80,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
   const db=openDatabase(dbPath);
   try{
     migrate(db);
@@ -40,7 +40,7 @@ export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=ne
   }finally{db.close()}
 }
 
-export function startPiaPublicCollectorScheduler({dbPath,rawRoot,fetchImpl=fetch,logger=()=>{},clock=()=>new Date(),intervalMs=5*60*1000,targetHour=6,targetMinute=10,cooldownMs=30*60*1000,minMachineCount=80,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
+export function startPiaPublicCollectorScheduler({dbPath,rawRoot,fetchImpl=fetch,logger=()=>{},clock=()=>new Date(),intervalMs=5*60*1000,targetHour=0,targetMinute=0,cooldownMs=30*60*1000,minMachineCount=80,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
   if(typeof dbPath!=='string'||!dbPath)throw new TypeError('dbPath is required');
   if(typeof rawRoot!=='string'||!rawRoot)throw new TypeError('rawRoot is required');
   let running=false,stopped=false;
@@ -51,8 +51,15 @@ export function startPiaPublicCollectorScheduler({dbPath,rawRoot,fetchImpl=fetch
     catch{return {attempt:true,reason:'failed'}}
     finally{running=false}
   };
+  let timer=null;
+  const scheduleNext=()=>{
+    if(stopped)return;
+    // Align checks to clock boundaries so startup time cannot shift midnight.
+    const elapsed=((clock().getTime()%intervalMs)+intervalMs)%intervalMs;
+    timer=setTimeout(()=>{void tick();scheduleNext()},intervalMs-elapsed);
+    timer.unref?.();
+  };
   void tick();
-  const timer=setInterval(()=>{void tick()},intervalMs);
-  timer.unref?.();
-  return {tick,stop(){stopped=true;clearInterval(timer)}};
+  scheduleNext();
+  return {tick,stop(){stopped=true;clearTimeout(timer)}};
 }

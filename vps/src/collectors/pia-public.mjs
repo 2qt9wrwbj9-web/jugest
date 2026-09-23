@@ -178,7 +178,11 @@ export async function collectPiaPublicOnce(db,{rawRoot,fetchImpl=fetch,nowIso=ne
     writeState(db,{collector_id:PIA_COLLECTOR_ID,source_store_id:PIA_SOURCE_STORE_ID,last_snapshot_date:snapshot.snapshotDate,last_snapshot_hash:snapshot.snapshotHash,last_snapshot_json:snapshot.rawText,last_result:'seeded',last_attempt_at:nowIso,last_success_at:nowIso,last_error:null,updated_at:nowIso});
     return {status:'seeded',snapshotDate:snapshot.snapshotDate,rowCount:snapshot.rowCount,machineCount:snapshot.machineCount};
   }
-  if(snapshot.snapshotDate===prior.last_snapshot_date)return {status:'already_collected',snapshotDate:snapshot.snapshotDate};
+  if(snapshot.snapshotDate===prior.last_snapshot_date){
+    // The source date can lag behind JST midnight; honor the retry cooldown.
+    writeState(db,{collector_id:PIA_COLLECTOR_ID,last_attempt_at:nowIso,last_result:'already_collected',last_error:null,updated_at:nowIso});
+    return {status:'already_collected',snapshotDate:snapshot.snapshotDate};
+  }
   const gap=dayDistance(prior.last_snapshot_date,snapshot.snapshotDate);
   if(gap<=0)throw new Error(`PIA snapshot date moved backwards: ${prior.last_snapshot_date} -> ${snapshot.snapshotDate}`);
   if(gap>1){
