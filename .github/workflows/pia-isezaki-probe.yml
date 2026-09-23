@@ -15,54 +15,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Identify getRankingTop slot payload on PIA Ofuna
+      - name: Verify slot ranking endpoint for Ofuna and Isezaki
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, urllib.parse, urllib.request, time
+          import json, urllib.parse, urllib.request
 
           url='https://pia-server.heuron.net/api/stores/getRankingTop'
-          candidates=[]
-          for price in ['20','21.27','5','46','47','0']:
-              for mt in ['1','2']:
-                  candidates.append((price,mt))
-          candidates += [('', '1'), ('', '2'), ('20',''), ('','')]
+          stores=[(35,'PIA大船'),(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
 
-          def list_counts(x, path='root'):
-              out=[]
-              if isinstance(x,list):
-                  out.append((path,len(x)))
-              elif isinstance(x,dict):
-                  for k,v in x.items():
-                      out += list_counts(v, path+'.'+k)
-              return out
-
-          for price,mt in candidates:
-              payload={
-                  'user_code':'',
-                  'price':price,
-                  'kind':'1',
-                  'machine_type':mt,
-                  'day':'0',
-                  'store_id':'35',
-                  'limit':'5000',
-              }
-              data=urllib.parse.urlencode(payload).encode()
-              req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded'},method='POST')
-              try:
-                  with urllib.request.urlopen(req,timeout=25) as r:
-                      raw=r.read().decode('utf-8','replace')
-                      try: obj=json.loads(raw)
-                      except Exception:
-                          print('TRY',price,mt,'http',r.status,'NONJSON',raw[:200]); continue
-                      counts=sorted(list_counts(obj), key=lambda p:p[1], reverse=True)[:4]
-                      print('TRY price=',repr(price),'mt=',repr(mt),'http=',r.status,'status=',obj.get('status') if isinstance(obj,dict) else None,'counts=',counts,'bytes=',len(raw))
-                      if isinstance(obj,dict) and obj.get('status')==0 and any(n>0 for _,n in counts):
-                          print('SUCCESS_PAYLOAD=',payload)
-                          print('TOP_KEYS=',sorted(obj.keys()))
-                          print('PREVIEW=',json.dumps(obj,ensure_ascii=False)[:1800])
-                          break
-              except Exception as e:
-                  print('TRY',price,mt,'ERROR',repr(e))
-              time.sleep(0.15)
+          for mt in ['1','2']:
+              print('\n===== machine_type',mt,'=====')
+              for sid,name in stores:
+                  payload={
+                      'user_code':'',
+                      'price':'',
+                      'kind':'1',
+                      'machine_type':mt,
+                      'day':'0',
+                      'store_id':str(sid),
+                      'limit':'5000',
+                  }
+                  data=urllib.parse.urlencode(payload).encode()
+                  req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded'},method='POST')
+                  try:
+                      with urllib.request.urlopen(req,timeout=30) as r:
+                          raw=r.read().decode('utf-8','replace')
+                          obj=json.loads(raw)
+                          rows=obj.get('ranking',[]) if isinstance(obj,dict) else []
+                          print(name,'store_id=',sid,'http=',r.status,'status=',obj.get('status'),'count=',len(rows),'bytes=',len(raw))
+                          if rows:
+                              names=[]
+                              for x in rows[:8]:
+                                  if isinstance(x,dict): names.append(str(x.get('name')))
+                              print('sample_names=',names)
+                              sample=rows[0]
+                              if isinstance(sample,dict):
+                                  print('sample_keys=',sorted(sample.keys()))
+                                  print('sample_machine_no=',sample.get('machine_no'),'difference=',sample.get('difference'),'special_1=',sample.get('special_1'),'special_2d=',sample.get('special_2d'),'out=',sample.get('out'),'special_out=',sample.get('special_out'))
+                  except Exception as e:
+                      print(name,'ERROR',repr(e))
           PY
