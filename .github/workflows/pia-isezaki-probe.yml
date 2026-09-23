@@ -15,38 +15,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify full rolling history limit for Isezaki stores
+      - name: Probe RankingTop machine filters
         shell: bash
         run: |
           python3 - <<'PY'
           import json, urllib.parse, urllib.request
 
           url='https://piagroupapp.com/api/stores/getRankingTop'
-          stores=[(11,'PIA伊勢佐木町'),(12,'PIA伊勢佐木3丁目')]
-
-          for sid,name in stores:
-              payload={'machine_type':'S','store_id':str(sid),'limit':'25000'}
+          cases=[
+            ('base', {'machine_type':'S','store_id':'11','limit':'1000'}),
+            ('code', {'machine_type':'S','store_id':'11','limit':'1000','sis_machine_code':'99119996'}),
+            ('machine_no', {'machine_type':'S','store_id':'11','limit':'1000','machine_no':'3240'}),
+            ('both', {'machine_type':'S','store_id':'11','limit':'1000','sis_machine_code':'99119996','machine_no':'3240'}),
+          ]
+          for label,payload in cases:
               data=urllib.parse.urlencode(payload).encode()
               req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},method='POST')
               try:
-                  with urllib.request.urlopen(req,timeout=45) as r:
-                      raw=r.read().decode('utf-8','replace')
-                      obj=json.loads(raw)
+                  with urllib.request.urlopen(req,timeout=30) as r:
+                      obj=json.loads(r.read().decode('utf-8','replace'))
                       rows=obj.get('ranking',[]) if isinstance(obj,dict) else []
-                      counts={}
-                      for x in rows:
-                          if isinstance(x,dict) and x.get('machine_no') is not None:
-                              no=str(x.get('machine_no'))
-                              counts[no]=counts.get(no,0)+1
-                      juggler=[x for x in rows if isinstance(x,dict) and 'ジャグラー' in str(x.get('name',''))]
-                      jcounts={}
-                      for x in juggler:
-                          no=str(x.get('machine_no'))
-                          jcounts[no]=jcounts.get(no,0)+1
-                      print(name,'store_id=',sid,'http=',r.status,'status=',obj.get('status'),'rows=',len(rows),'machines=',len(counts),'bytes=',len(raw))
-                      print('history_counts=',sorted(set(counts.values())),'irregular_all=',sum(1 for v in counts.values() if v!=30))
-                      print('juggler_rows=',len(juggler),'juggler_machines=',len(jcounts),'juggler_history_counts=',sorted(set(jcounts.values())),'irregular_juggler=',sum(1 for v in jcounts.values() if v!=30))
-                      print('server_date_time=',obj.get('server_date_time'))
+                      nos=sorted({str(x.get('machine_no')) for x in rows if isinstance(x,dict)})
+                      codes=sorted({str(x.get('sis_machine_code')) for x in rows if isinstance(x,dict)})
+                      names=sorted({str(x.get('name')) for x in rows if isinstance(x,dict)})
+                      print(label,'status=',obj.get('status'),'rows=',len(rows),'machine_count=',len(nos),'code_count=',len(codes))
+                      print('nos=',nos[:25])
+                      print('codes=',codes[:15])
+                      print('names=',names[:15])
               except Exception as e:
-                  print(name,'ERROR',repr(e))
+                  print(label,'ERROR',repr(e))
           PY
