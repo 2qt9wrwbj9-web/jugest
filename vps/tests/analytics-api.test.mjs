@@ -1,15 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,rmSync,writeFileSync,copyFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {once} from 'node:events';
 import {createWebServer} from '../src/web-server.mjs';
 import {createRelayStore} from '../src/relay-store.mjs';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {canonicalJson,hashCanonical} from '../src/canonical-json.mjs';
+
+const REPO_ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 
 const CHANNEL='channel_api_test_123';
 const TOKEN='receiver-token-api-test-1234567890';
@@ -23,7 +26,7 @@ async function fixture(){
   const canonicalDbPath=join(dir,'jugest.sqlite');
   const rawRoot=join(dir,'raw');
   await import('node:fs/promises').then(fs=>fs.mkdir(root,{recursive:true}));
-  writeFileSync(join(root,'index.html'),'<title>JUGEST API TEST</title>');
+  for(const name of ['index.html','hanahana-judge.js','missing-inference.js','core-v510.js'])copyFileSync(join(REPO_ROOT,name),join(root,name));
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON(`channel/${CHANNEL}`,{version:1,createdAt:1,claimedAt:1,revokedAt:0,receiverHash:digest(TOKEN),senderHash:'sender'});
 
@@ -53,7 +56,7 @@ async function fixture(){
   server.listen(0,'127.0.0.1');await once(server,'listening');
   const base=`http://127.0.0.1:${server.address().port}`;
   const auth={'authorization':`Bearer ${TOKEN}`,'x-jugest-channel-id':CHANNEL};
-  return {base,auth,async close(){server.closeAllConnections?.();await new Promise(r=>server.close(r));rmSync(dir,{recursive:true,force:true})}};
+  return {base,auth,canonicalDbPath,async close(){server.closeAllConnections?.();await new Promise(r=>server.close(r));rmSync(dir,{recursive:true,force:true})}};
 }
 
 test('analytics API rejects missing and invalid receiver credentials',async()=>{
@@ -129,6 +132,36 @@ test('authenticated browser can read the explicit public PIA store without gaini
     const day=await (await fetch(`${f.base}/api/vps/stores/pia%3A35/days/2026-09-10`,{headers:f.auth})).json();
     assert.equal(day.day.machines[0].tableNo,'3090');
     assert.equal((await fetch(`${f.base}/api/vps/stores/store-b/days`,{headers:f.auth})).status,403);
+  }finally{await f.close()}
+});
+
+test('legacy-plan endpoint uses seven canonical VPS days instead of browser-local history',async()=>{
+  const f=await fixture();
+  try{
+    const db=openDatabase(f.canonicalDbPath);migrate(db);
+    const now='2026-09-11T09:00:00.000Z';
+    for(const date of ['2026-09-01','2026-09-02']){
+      db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
+        .run('store-a',date,'000001',canonicalJson({machine:'fk',tableNo:'102',games:5200,bb:21,rb:17,diff:250}));
+    }
+    for(const [index,date] of ['2026-09-03','2026-09-04','2026-09-05','2026-09-06','2026-09-07'].entries()){
+      db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
+        VALUES(?,?,?,?,?,'valid',?,?,?)`).run('store-a',date,'fixture','raw-legacy-'+index,'norm-legacy-'+index,'/tmp/'+date+'.html.gz',now,now);
+      db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
+        .run('store-a',date,'000000',canonicalJson({machine:'my',tableNo:'101',games:5000+index*120,bb:20+(index%3),rb:18+(index%2),diff:100+index*80}));
+      db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)')
+        .run('store-a',date,'000001',canonicalJson({machine:'fk',tableNo:'102',games:5300+index*90,bb:22+(index%2),rb:17+(index%3),diff:200-index*70}));
+    }
+    db.close();
+    const response=await fetch(`${f.base}/api/vps/stores/store-a/legacy-plan?date=2026-09-08`,{headers:f.auth});
+    assert.equal(response.status,200);
+    const body=await response.json();
+    assert.equal(body.ok,true);
+    assert.equal(body.plan.source,'vps-canonical');
+    assert.equal(body.plan.trainingDays,7);
+    assert.equal(body.plan.shortHistory,true);
+    assert.equal(body.plan.available,true);
+    assert.ok(body.plan.candidates.length>0);
   }finally{await f.close()}
 });
 
