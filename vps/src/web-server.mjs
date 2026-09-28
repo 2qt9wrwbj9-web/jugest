@@ -6,7 +6,7 @@ import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
-import {createMcpHandler} from './mcp-handler.mjs';
+import {createMcpHandler,judgeMachinesPublic} from './mcp-handler.mjs';
 import {createOAuthHandler} from './oauth-handler.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
 
@@ -120,6 +120,32 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
         return;
       }
       return await mcpHandler(req,res);
+    }
+
+    if(url.pathname==='/api/public/judge'){
+      if(req.method!=='GET'&&req.method!=='HEAD'){
+        send(res,405,'Method Not Allowed\n',{'content-type':'text/plain; charset=utf-8','allow':'GET, HEAD'});
+        return;
+      }
+      const required=['machine','games','bb','rb'];
+      const missing=required.filter(name=>!url.searchParams.has(name));
+      if(missing.length){
+        const body=JSON.stringify({ok:false,code:'missing_required_query',required,missing});
+        send(res,400,body,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
+        return;
+      }
+      const machine={
+        machine:url.searchParams.get('machine'),
+        games:url.searchParams.get('games'),
+        bb:url.searchParams.get('bb'),
+        rb:url.searchParams.get('rb')
+      };
+      if(url.searchParams.has('tableNo'))machine.tableNo=url.searchParams.get('tableNo');
+      if(url.searchParams.has('diff'))machine.diff=url.searchParams.get('diff');
+      const payload=await judgeMachinesPublic([machine],{rootDir:absoluteRoot});
+      const body=JSON.stringify(payload);
+      send(res,200,body,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
+      return;
     }
 
     if(req.method!=='GET'&&req.method!=='HEAD'){
