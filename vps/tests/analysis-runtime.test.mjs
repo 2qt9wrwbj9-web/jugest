@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {loadStoreDays} from '../src/analysis/store-data.mjs';
-import {runExistingStoreAnalysis,runExistingStorePlan,runExistingStoreDayJudgement} from '../src/analysis/runtime-adapter.mjs';
+import {runExistingStoreAnalysis,runExistingStorePlan,runExistingLegacyStorePlan,runExistingStoreDayJudgement} from '../src/analysis/runtime-adapter.mjs';
 
 const REPO_ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 
@@ -97,6 +97,28 @@ test('headless shadow plan uses the real current full ranking path and excludes 
     assert.ok(result.rankings.length>0);
     assert.deepEqual(Object.keys(result.rankings[0]).sort(),['machineKey','machineName','rank','score','tableNo']);
     assert.deepEqual(result.rankings.map(row=>row.rank),result.rankings.map((_,index)=>index+1));
+  }finally{f.cleanup()}
+});
+
+test('headless legacy plan uses VPS canonical history and becomes available from seven days',async()=>{
+  const f=fixture();
+  try{
+    for(const [date,offset] of [['2026-09-05',5],['2026-09-06',6],['2026-09-07',7]])insertDay(f.db,date,{games:5000+offset*20,bb:20+(offset%4),rb:17+(offset%3),diff:offset*90-220});
+    const loaded=loadStoreDays(f.db,'store-a',{limit:180});
+    const result=await runExistingLegacyStorePlan({
+      rootDir:REPO_ROOT,
+      shop:loaded.store.name,
+      sourceStoreId:loaded.store.id,
+      days:loaded.days,
+      targetDate:'2026-09-08'
+    });
+    assert.equal(result.source,'vps-canonical');
+    assert.equal(result.sourceFrontierDate,'2026-09-07');
+    assert.equal(result.available,true);
+    assert.equal(result.shortHistory,true);
+    assert.equal(result.trainingDays,7);
+    assert.equal(result.championLabel,'保留（短期履歴）');
+    assert.ok(result.candidates.length>0);
   }finally{f.cleanup()}
 });
 
