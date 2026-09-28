@@ -117,6 +117,13 @@ export function createVpsAnalyticsClient({
         updatedAt:payload.updatedAt??null
       };
     },
+    async getLegacyPlan(shop,date,{lottery=0,queue=0}={}){
+      const store=await resolveStore(shop),target=String(date||'').trim();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(target))throw makeError('date must be YYYY-MM-DD','bad_date');
+      const params=new URLSearchParams({date:target,lottery:String(Math.max(0,Math.trunc(Number(lottery)||0))),queue:String(Math.max(0,Math.trunc(Number(queue)||0)))});
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/legacy-plan?${params.toString()}`);
+      return {store:payload.store||store,plan:payload.plan??null};
+    },
     async getResearchComparison(shop,{limit=90}={}){
       const store=await resolveStore(shop);
       const bounded=Math.min(366,Math.max(1,Math.trunc(Number(limit)||90)));
