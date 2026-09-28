@@ -2,6 +2,7 @@ import {openDatabase} from './db.mjs';
 import {migrate} from './schema.mjs';
 import {buildResourceStatus} from './resource-telemetry.mjs';
 import {loadStoreDays} from './analysis/store-data.mjs';
+import {runExistingLegacyStorePlan} from './analysis/runtime-adapter.mjs';
 import {buildComparisonSummary} from './research/live-comparison.mjs';
 import {buildHistoricalComparisonSummary} from './research/historical-summary.mjs';
 import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store-read-output.mjs';
@@ -23,7 +24,7 @@ function assistantReadRouteAllowed(parts,method){
   if(!['GET','HEAD'].includes(method)||!parts||parts[0]!=='api'||parts[1]!=='vps')return false;
   if(parts.length===3&&parts[2]==='stores')return true;
   if(parts[2]!=='stores'||parts.length<5)return false;
-  if(parts.length===5&&parts[4]==='days')return true;
+  if(parts.length===5&&['days','legacy-plan'].includes(parts[4]))return true;
   if(parts.length===6&&parts[4]==='days')return true;
   return parts.length===6&&parts[4]==='research'&&['store-read','comparison'].includes(parts[5]);
 }
@@ -106,6 +107,20 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
         const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||60)));
         const rows=db.prepare(`SELECT d.business_date,d.parser_version,d.quality_status,COUNT(m.machine_key) AS machine_count FROM store_days d LEFT JOIN machine_day_data m ON m.store_id=d.store_id AND m.business_date=d.business_date WHERE d.store_id=? AND d.quality_status='valid' GROUP BY d.store_id,d.business_date ORDER BY d.business_date DESC LIMIT ?`).all(storeId,limit).reverse();
         sendJson(req,res,200,{ok:true,store:access.store,days:rows.map(row=>({date:row.business_date,parserVersion:row.parser_version||'',qualityStatus:row.quality_status,machineCount:Number(row.machine_count)||0}))});return;
+      }
+      if(parts.length===5&&parts[4]==='legacy-plan'){
+        const date=String(url.searchParams.get('date')||'').trim();
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){sendJson(req,res,400,{ok:false,code:'bad_date'});return}
+        if(!rootDir){sendJson(req,res,503,{ok:false,code:'legacy_runtime_unavailable'});return}
+        const {days}=loadStoreDays(db,storeId,{limit:400});
+        const lottery=Math.max(0,Math.trunc(Number(url.searchParams.get('lottery'))||0)),queue=Math.max(0,Math.trunc(Number(url.searchParams.get('queue'))||0));
+        try{
+          const plan=await runExistingLegacyStorePlan({rootDir,shop:access.store.name,sourceStoreId:storeId,days,targetDate:date,options:{lottery,queue}});
+          sendJson(req,res,200,{ok:true,store:access.store,plan});
+        }catch(error){
+          sendJson(req,res,500,{ok:false,code:'legacy_plan_failed',message:String(error?.message||error)});
+        }
+        return;
       }
       if(parts.length===6&&parts[4]==='days'){
         const date=parts[5];if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){sendJson(req,res,400,{ok:false,code:'bad_date'});return}
