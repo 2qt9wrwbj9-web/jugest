@@ -135,6 +135,19 @@ export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targ
   return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
 }
 
+export async function runExistingLegacyStorePlan({rootDir,shop,sourceStoreId,days,targetDate,options={}}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days))throw new TypeError('days are required');
+  const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!history.length)return Object.freeze({shop:String(shop||''),date:target,available:false,reason:'insufficient-history',trainingDays:0,minimumDays:7,candidates:[],source:'vps-canonical'});
+  const sourceFrontierDate=String(history.at(-1)?.date||'');
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
+  const getLegacyTodayPlan=mustFunction(bridge.getLegacyTodayPlan,'bridge.getLegacyTodayPlan');
+  const result=plain(await getLegacyTodayPlan(name,target,options||{}));
+  if(!result||typeof result!=='object')throw new Error('JUGEST legacy store plan returned no result');
+  return Object.freeze({...result,source:'vps-canonical',sourceFrontierDate});
+}
+
 export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){
   const target=validTargetDate(targetDate);
   if(!Array.isArray(days)||!days.some(day=>String(day?.date||'')===target))throw new TypeError('targetDate must exist in days');
