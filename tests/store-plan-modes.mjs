@@ -18,6 +18,7 @@ test('prediction starts with the new mode; each mode runs only when selected and
   app.handleAction('store-plan');
   assert.deepEqual(calls,[],'opening the prediction screen must not calculate either mode');
   assert.match(app.mount.innerHTML,/data-plan-mode="new" class="selected" aria-pressed="true">新版解析/);
+  assert.match(app.mount.innerHTML,/新版の学習済み予測が利用できない場合は、旧版の結果を表示します/);
   await app.runTodayPlan();
   assert.deepEqual(calls,[['new','PIA大船1','2026-09-29','']]);
   assert.match(app.mount.innerHTML,/新版だけ/);
@@ -58,6 +59,28 @@ test('an in-flight new prediction finishes before legacy starts and never appear
   finishNew();await current;await tick();await tick();
   assert.equal(legacyCalls,1);assert.equal(maxInFlight,1);
   assert.match(app.mount.innerHTML,/旧版だけ/);assert.doesNotMatch(app.mount.innerHTML,/新版だけ/);
+});
+
+test('switching from an externally requested new prediction to legacy starts the legacy result',async()=>{
+  const {app}=await boot();app.state.activeStore='PIA大船1';app.state.planDate='2026-09-29';
+  const calls=[];
+  app.runNewTodayPlan=async()=>{calls.push('new');return result('新版')};
+  app.runLegacyTodayPlan=async()=>{calls.push('legacy');return result('旧版')};
+  app.handleAction('store-plan');
+  app._planRequestedKey=app.planKey();
+  app.selectPlanMode('legacy');
+  await tick();
+  assert.deepEqual(calls,['legacy']);
+  assert.match(app.mount.innerHTML,/旧版だけ|予測方式：旧版/);
+});
+
+test('switching back to new hands its result to the PRE prediction runner',async()=>{
+  const {app}=await boot();app.state.activeStore='PIA大船1';app.state.planDate='2026-09-29';app.state.planMode='legacy';app.state.planResult=result('旧版');
+  const key=app.planKey(),calls=[];
+  app._planRequestedKey=key;app._runExternalNewPlan=requested=>calls.push(requested);
+  app.selectPlanMode('new');
+  assert.deepEqual(calls,[key]);
+  assert.equal(app.state.planResult,null,'the cached legacy output must not remain visible in new mode');
 });
 
 test('the legacy prediction retains its original display and core entry',async()=>{

@@ -31,3 +31,13 @@ test('PRE lookup keeps the current Today Plan button usable and suppresses dupli
   assert.doesNotMatch(source,/prePlanState\?\.busy[\s\S]{0,180}button\.disabled=true/);
   assert.match(source,/function restorePlanButton\(\)/);
 });
+
+test('legacy mode bypasses the PRE-only prediction card and click interception',()=>{
+  const ui=source.slice(source.indexOf('function ensurePrePlanUi()'),source.indexOf('async function runPrePrimaryPlan'));
+  const click=source.slice(source.indexOf('function onClick(event)'),source.indexOf('function attach(candidate)'));
+  assert.match(source,/function currentPlanMode\(workspace\)/);
+  assert.match(source,/function shouldInterceptPlanRun\(workspace\)/);
+  assert.match(ui,/currentPlanMode\(workspace\)==='legacy'[\s\S]*?return/);
+  assert.match(click,/shouldInterceptPlanRun\(workspace\)[\s\S]*?return/);
+  assert.match(source,/if\(currentPlanMode\(workspace\)==='legacy'\)\{restorePlanButton\(\);return\}/);
+});
