@@ -32,6 +32,13 @@ test('PRE lookup keeps the current Today Plan button usable and suppresses dupli
   assert.match(source,/function restorePlanButton\(\)/);
 });
 
+test('legacy mode replaces only its data source with the VPS canonical legacy endpoint',()=>{
+  assert.match(source,/installVpsLegacyPlanRunner/);
+  assert.match(source,/getLegacyPlan\(shop,date,options\|\|\{\}\)/);
+  assert.match(source,/vps_store_not_found/);
+  assert.match(source,/_vpsOriginalRunLegacyTodayPlan/);
+});
+
 test('legacy mode bypasses the PRE-only prediction card and click interception',()=>{
   const ui=source.slice(source.indexOf('function ensurePrePlanUi()'),source.indexOf('async function runPrePrimaryPlan'));
   const click=source.slice(source.indexOf('function onClick(event)'),source.indexOf('function attach(candidate)'));
