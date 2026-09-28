@@ -88,7 +88,8 @@ test('the legacy prediction retains its original display and core entry',async()
   const html=app.renderTodayPlanScreen().replace(/<div class="plan-mode-switch".*?<\/div>/,'').replace('<p class="plan-mode-label">予測方式：旧版</p>','');
   assert.equal(createHash('sha256').update(html).digest('hex'),'387f208097dcf47b5456bcb9a41a65d3e1a7c2b4042bd07ac693b3dda15fbb93');
   const seen=[];app.bridge=()=>({...bridge,
-    getTodayPlan:(...args)=>{seen.push(['legacy',...args]);return result('旧版')},
+    getLegacyTodayPlan:(...args)=>{seen.push(['legacy',...args]);return result('旧版')},
+    getTodayPlan:(...args)=>{seen.push(['fallback',...args]);return result('現行')},
     getNewTodayPlan:(...args)=>{seen.push(['new',...args]);return result('新版')}});
   await app.runTodayPlan();app.selectPlanMode('new');await tick();
   assert.deepEqual(seen.map(([mode])=>mode),['legacy','new'],'a future new bridge leaves the legacy entry untouched');
@@ -100,6 +101,19 @@ test('the legacy prediction retains its original display and core entry',async()
     const line=source.split('\n').find(value=>value.startsWith(`function ${name}(`));
     assert.equal(createHash('sha256').update(line).digest('hex'),expected,`existing ${name} prediction math must stay unchanged`);
   }
+});
+
+test('legacy short-history output is clearly labeled and 6-day shortage explains the threshold',async()=>{
+  const {app}=await boot();app.state.activeStore='PIA大船1';app.state.planDate='2026-09-28';app.state.planMode='legacy';
+  app.state.planResult={...result('短期根拠'),shortHistory:true,trainingDays:7,championLabel:'保留（短期履歴）',
+    candidates:[{...result('短期根拠').candidates[0],shortHistory:true}]};
+  let html=app.renderTodayPlanScreen();
+  assert.match(html,/短期履歴モード：過去7営業日/);
+  assert.match(html,/P4\+目安/);
+  assert.match(html,/保留（短期履歴）/);
+  app.state.planResult={shop:'PIA大船1',date:'2026-09-28',available:false,reason:'insufficient-history',trainingDays:6,minimumDays:7,candidates:[]};
+  html=app.renderTodayPlanScreen();
+  assert.match(html,/旧版予測には過去7営業日以上のデータが必要だよ。現在6日。/);
 });
 
 test('the built prediction switch preserves two full-width mobile targets',()=>{
