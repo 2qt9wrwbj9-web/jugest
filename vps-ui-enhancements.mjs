@@ -150,6 +150,8 @@ function prePlanHtml(state){
 
 function currentPlanButton(){return root?.querySelector('.workspace.intelligence-screen .plan-controls [data-plan-run]')||null}
 function currentPlanTargetDate(){return String(root?.querySelector('.workspace.intelligence-screen .plan-controls [data-plan-date]')?.value||'').trim()}
+function currentPlanMode(workspace){return workspace?.querySelector?.('[data-plan-mode][aria-pressed="true"]')?.dataset?.planMode==='legacy'?'legacy':'new'}
+function shouldInterceptPlanRun(workspace){return currentPlanMode(workspace)==='new'}
 function restorePlanButton(){
   const currentButton=currentPlanButton();
   if(currentButton?.hasAttribute('data-vps-pre-busy')){
@@ -168,6 +170,7 @@ function ensurePrePlanUi(){
   workspace.querySelector('[data-vps-pre-plan]')?.remove();workspace.querySelector('[data-vps-plan-fallback]')?.remove();workspace.removeAttribute('data-vps-pre-active');
   const currentShop=activeShop(),targetDate=String(controls.querySelector('[data-plan-date]')?.value||'').trim();
   if(prePlanState&&(prePlanState.shop!==currentShop||prePlanState.targetDate!==targetDate)){prePlanState=null;restorePlanButton()}
+  if(currentPlanMode(workspace)==='legacy'){restorePlanButton();return}
   const button=controls.querySelector('[data-plan-run]');
   if(prePlanState?.busy){if(button){button.setAttribute('data-vps-pre-busy','');button.textContent='取得中…'}workspace.setAttribute('data-vps-pre-active','');controls.insertAdjacentHTML('afterend',prePlanHtml(prePlanState));return}
   restorePlanButton();
@@ -178,6 +181,18 @@ function ensurePrePlanUi(){
     const reason=prePlanState.reason?`PRE版: ${prePlanState.reason}`:'PRE版の対象予測を取得できませんでした。';
     controls.insertAdjacentHTML('afterend',`<div class="vps-plan-fallback" data-vps-plan-fallback><b>現行版で表示中</b>${esc(reason)}</div>`);
   }
+}
+
+function runExternalNewPlan(key){
+  const launch=()=>{
+    if(!app||app.state?.planMode!=='new'||app.planKey?.()!==key)return;
+    if(prePlanState?.shop===activeShop()&&prePlanState?.targetDate===currentPlanTargetDate()){schedule();return}
+    const button=currentPlanButton();if(!button)return;
+    app._planRequestedKey=key;void runPrePrimaryPlan(button);
+  };
+  const pending=app?._planTask;
+  if(pending){void pending.promise.finally(launch);return}
+  launch();
 }
 
 async function runPrePrimaryPlan(button){
@@ -263,7 +278,10 @@ function onClick(event){
   const target=event.target?.closest?.('button,[data-vps-settings-gear]');if(!target)return;
   if(target.matches('[data-plan-run]')){
     if(planBypassOnce){planBypassOnce=false;return}
+    const workspace=target.closest('.workspace.intelligence-screen');
+    if(!shouldInterceptPlanRun(workspace))return;
     if(prePlanState?.busy){event.preventDefault();event.stopImmediatePropagation();return}
+    if(typeof app?.planKey==='function')app._planRequestedKey=app.planKey();
     event.preventDefault();event.stopImmediatePropagation();void runPrePrimaryPlan(target);return;
   }
   if(target.matches('[data-vps-settings-gear]')){event.preventDefault();event.stopPropagation();settingsOpen=true;settingsPage='hub';schedule();return}
@@ -282,7 +300,9 @@ function onClick(event){
 
 function attach(candidate){
   if(app===candidate&&root===candidate?.shadowRoot)return true;
+  if(app&&app!==candidate)app._runExternalNewPlan=null;
   observer?.disconnect();bridgeUnsubscribe?.();bridgeUnsubscribe=null;app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
+  app._runExternalNewPlan=key=>runExternalNewPlan(key);
   root.addEventListener('click',onClick,true);
   const unsubscribe=bridge()?.subscribe?.(()=>{
     root?.querySelector('[data-vps-backfill-card]')?.remove();const shop=activeShop();
@@ -296,4 +316,4 @@ function attach(candidate){
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
 boot();
 
-export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml};
+export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml,currentPlanMode,shouldInterceptPlanRun};
