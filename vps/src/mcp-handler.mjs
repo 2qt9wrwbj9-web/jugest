@@ -158,6 +158,11 @@ async function judgeRow(raw,index,rootDir){
   return {ok:true,index,tableNo,...judged};
 }
 
+export async function judgeMachinesPublic(machines,{rootDir}={}){
+  const judged=await Promise.all(machines.map((row,index)=>judgeRow(row,index,rootDir)));
+  return {ok:true,judgeVersion:JUDGE_VERSION,machines:judged};
+}
+
 function listStores(db,channelId){
   const rows=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all();
   return rows.flatMap(row=>{const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,channelId))return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at}]});
@@ -168,8 +173,8 @@ async function runTool(name,args,{rootDir,channelId,canonicalDbPath,modern}){
     if(!Array.isArray(args?.machines))return toolError('machines must be an array',{modern,code:'bad_machines'});
     if(args.machines.length>MAX_BATCH)return toolError(`at most ${MAX_BATCH} machines are allowed`,{modern,code:'batch_too_large'});
     if(!rootDir)return toolError('JUGEST judgement runtime is unavailable',{modern,code:'judge_runtime_unavailable'});
-    const machines=await Promise.all(args.machines.map((row,index)=>judgeRow(row,index,rootDir)));
-    return toolResult({ok:true,judgeVersion:JUDGE_VERSION,machines},{modern});
+    const payload=await judgeMachinesPublic(args.machines,{rootDir});
+    return toolResult(payload,{modern});
   }
   const db=openDatabase(canonicalDbPath);
   try{
