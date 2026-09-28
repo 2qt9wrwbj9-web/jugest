@@ -183,6 +183,29 @@ function ensurePrePlanUi(){
   }
 }
 
+function installVpsLegacyPlanRunner(candidate){
+  if(!candidate||candidate._vpsLegacyPlanRunnerInstalled||typeof candidate.runLegacyTodayPlan!=='function')return;
+  const original=candidate.runLegacyTodayPlan.bind(candidate);
+  candidate._vpsLegacyPlanRunnerInstalled=true;
+  candidate._vpsOriginalRunLegacyTodayPlan=original;
+  candidate.runLegacyTodayPlan=async(coreBridge,shop,date,options)=>{
+    try{
+      const payload=await getAnalyticsClient().getLegacyPlan(shop,date,options||{});
+      if(payload?.plan&&typeof payload.plan==='object')return payload.plan;
+      throw new Error('VPS旧版予測を取得できませんでした。');
+    }catch(error){
+      if(String(error?.code||'')==='vps_store_not_found')return original(coreBridge,shop,date,options);
+      throw error;
+    }
+  };
+}
+function restoreVpsLegacyPlanRunner(candidate){
+  if(!candidate?._vpsLegacyPlanRunnerInstalled)return;
+  if(candidate._vpsOriginalRunLegacyTodayPlan)candidate.runLegacyTodayPlan=candidate._vpsOriginalRunLegacyTodayPlan;
+  delete candidate._vpsLegacyPlanRunnerInstalled;
+  delete candidate._vpsOriginalRunLegacyTodayPlan;
+}
+
 function runExternalNewPlan(key){
   const launch=()=>{
     if(!app||app.state?.planMode!=='new'||app.planKey?.()!==key)return;
@@ -300,9 +323,10 @@ function onClick(event){
 
 function attach(candidate){
   if(app===candidate&&root===candidate?.shadowRoot)return true;
-  if(app&&app!==candidate)app._runExternalNewPlan=null;
+  if(app&&app!==candidate){app._runExternalNewPlan=null;restoreVpsLegacyPlanRunner(app)}
   observer?.disconnect();bridgeUnsubscribe?.();bridgeUnsubscribe=null;app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;
   app._runExternalNewPlan=key=>runExternalNewPlan(key);
+  installVpsLegacyPlanRunner(app);
   root.addEventListener('click',onClick,true);
   const unsubscribe=bridge()?.subscribe?.(()=>{
     root?.querySelector('[data-vps-backfill-card]')?.remove();const shop=activeShop();
@@ -316,4 +340,4 @@ function attach(candidate){
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
 boot();
 
-export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml,currentPlanMode,shouldInterceptPlanRun};
+export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml,currentPlanMode,shouldInterceptPlanRun,installVpsLegacyPlanRunner,restoreVpsLegacyPlanRunner};
