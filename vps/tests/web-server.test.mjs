@@ -153,3 +153,34 @@ test('missing files return 404 and mutating methods return 405',async t=>{
     assert.equal(post.headers.get('allow'),'GET, HEAD');
   });
 });
+
+
+test('GET /api/public/judge returns the same observed-data JUGEST judgement without store context',async t=>{
+  await withRepositoryServer(t,async base=>{
+    const response=await fetch(`${base}/api/public/judge?machine=go&games=7833&bb=32&rb=35&diff=1150`);
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('content-type'),'application/json; charset=utf-8');
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    const body=await response.json();
+    assert.equal(body.ok,true);
+    assert.equal(body.judgeVersion,'external-juggler-browser-parity-v1');
+    assert.equal(body.machines.length,1);
+    assert.equal(body.machines[0].machine,'go');
+    assert.equal(body.machines[0].method,'reverse-diff');
+    assert.ok(Math.abs(body.machines[0].expectedSetting-4.158654645112916)<1e-11);
+    assert.ok(Math.abs(body.machines[0].p4-0.7349887870572087)<1e-11);
+    assert.equal('store' in body,false);
+    assert.equal('storeRead' in body,false);
+
+    const noDiff=await (await fetch(`${base}/api/public/judge?machine=go&games=7833&bb=32&rb=35`)).json();
+    assert.equal(noDiff.machines[0].method,'bonus-only');
+
+    const missing=await fetch(`${base}/api/public/judge?machine=go&games=7833&bb=32`);
+    assert.equal(missing.status,400);
+    assert.deepEqual((await missing.json()).missing,['rb']);
+
+    const post=await fetch(`${base}/api/public/judge?machine=go&games=7833&bb=32&rb=35`,{method:'POST'});
+    assert.equal(post.status,405);
+    assert.equal(post.headers.get('allow'),'GET, HEAD');
+  });
+});
