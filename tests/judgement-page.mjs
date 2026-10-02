@@ -140,7 +140,7 @@ test('preservation rejects unreviewed edits inside excluded additions and duplic
 });
 
 const reviewSample={machine:'my',games:7859,bb:31,rb:35,diff:1500};
-const internalLabels=['設定別ログ尤度','既存の設定別逆算行','逆算ブドウ個数 V','逆算分母 vg','逆算標準偏差 sd','内部機種キー','MCP判別識別子','UIコード版','Bridgeコード版','判別の正','小役逆算の打ち方','使用した既存テーブル'];
+const internalLabels=['設定別ログ尤度','既存の設定別逆算行','逆算ブドウ個数 V','逆算分母 vg','逆算標準偏差 sd','内部機種キー','MCP判別識別子','UIコード版','Bridgeコード版','判別の正','小役逆算の打ち方','使用した既存テーブル','使用モード','打ち方条件','unknown','reverse-diff'];
 
 test('ordinary judgement omits developer DOM while retaining meaningful analysis',async()=>{
  const {ctx,bridge,app}=await observedBoot();
@@ -148,7 +148,7 @@ test('ordinary judgement omits developer DOM while retaining meaningful analysis
  const html=app.mount.innerHTML;
  assert.doesNotMatch(html,/data-observed-debug/);
  for(const label of internalLabels)assert.ok(!html.includes(label),label);
- for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','入力データ','BB確率','RB確率','合算','詳細分析を見る','使用モード','打ち方条件','逆算警告','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
+ for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','入力データ','BB確率','RB確率','合算','詳細分析を見る','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
  const direct=ctx.JUGESTJudgementView.result(bridge.judgeObservedMachine(reviewSample));
  assert.ok(!direct.includes('設定別ログ尤度'),'standalone renderer also defaults to ordinary output');
 });
@@ -206,4 +206,49 @@ test('fallback settings preserve the return destination after repeated gear clic
  assert.equal(app.state.screen,'detail');assert.equal(app.observed.selectedId,ids[0]);
  app.handleObservedAction('settings');app.handleObservedAction('delete',ids[0]);app.handleObservedAction('close-settings');
  assert.equal(app.state.screen,'hub');assert.equal(app.observed.selectedId,null);
+});
+
+test('parallel editor renders all imported rows as compact inputs and escaped comparison results',async()=>{
+ const {app}=await observedBoot();
+ const rows=[{...reviewSample,tableNo:'3064'},{...reviewSample,tableNo:'<img src=x onerror=alert(1)>',diff:-200}];
+ const ids=app.acceptMachineRows(rows);
+ assert.match(app.mount.innerHTML,/data-observed-parallel-editor/);
+ assert.equal((app.mount.innerHTML.match(/data-observed-row=/g)||[]).length,2);
+ assert.match(app.mount.innerHTML,/まとめて判別/);assert.match(app.mount.innerHTML,/＋ 行を追加/);
+ assert.doesNotMatch(app.mount.innerHTML,/<h2>台/);
+ app.handleObservedAction('judge-all');
+ assert.equal((app.mount.innerHTML.match(/data-row-summary/g)||[]).length,2);
+ assert.match(app.mount.innerHTML,/data-observed-result-row/);assert.match(app.mount.innerHTML,/期待設定/);
+ assert.match(app.mount.innerHTML,/P4\+/);assert.match(app.mount.innerHTML,/P5\+/);assert.match(app.mount.innerHTML,/P6/);
+ assert.match(app.mount.innerHTML,/&lt;img/);assert.doesNotMatch(app.mount.innerHTML,/<img src=x/);
+ app.handleObservedAction('detail',ids[0]);assert.match(app.mount.innerHTML,/設定1〜6の確率/);
+ app.handleObservedAction('close-detail');assert.deepEqual(plain(app.observed.rows.map(r=>r.input)),rows.map(r=>({...r,games:String(r.games),bb:String(r.bb),rb:String(r.rb),diff:String(r.diff)})));
+ assert.equal((app.mount.innerHTML.match(/data-row-summary/g)||[]).length,2);
+});
+
+test('batch ignores blank rows, isolates partial errors and preserves zero, missing and negative differences',async()=>{
+ const {ctx,app}=await observedBoot();ctx.JudgementProbe.instrument();
+ app.acceptMachineRows([{machine:'',games:'',bb:'',rb:'',diff:'',tableNo:''},{machine:'my',games:'7859'}, {...reviewSample,bb:0,rb:0,diff:0},{...reviewSample,diff:''},{...reviewSample,diff:-200}]);
+ app.handleObservedAction('judge-all');
+ assert.deepEqual(plain(app.observed.rows[0].errors),{});assert.equal(app.observed.rows[0].result,null);
+ assert.equal(app.observed.rows[1].result,null);assert.ok(app.observed.rows[1].errors.bb);assert.ok(app.observed.rows[1].errors.rb);
+ const results=app.observed.rows.slice(2).map(row=>row.result);
+ assert.equal(results[0].input.bb,0);assert.equal(results[0].input.rb,0);assert.equal(results[0].input.diff,0);
+ assert.equal(results[1].method,'bonus-only');assert.equal(results[1].input.diff,null);assert.equal(results[2].input.diff,-200);
+ assert.equal(ctx.observedCalls.judge,3,'blank and invalid rows never reach the engine');
+ app.handleObservedAction('add');assert.equal(app.observed.rows.length,6);
+ app.handleObservedAction('judge-all');assert.equal(ctx.observedCalls.judge,6,'new empty row is ignored too');
+ assert.deepEqual(plain(app.observed.rows[5].errors),{});
+ const keep=app.observed.rows[4];app.handleObservedAction('delete',app.observed.rows[1].id);
+ assert.equal(app.observed.rows.length,5);assert.equal(app.observed.rows[3],keep);
+});
+
+test('ordinary detail contains only grape estimates, moves engine labels to debug and shows warnings only when present',async()=>{
+ const {ctx,bridge}=await observedBoot({loadApp:false});const result=bridge.judgeObservedMachine(reviewSample);
+ const normal=ctx.JUGESTJudgementView.result(result),debug=ctx.JUGESTJudgementView.result(result,{debug:true});
+ for(const label of ['使用モード','打ち方条件','unknown','reverse-diff','逆算警告'])assert.ok(!normal.includes(label),label);
+ for(const label of ['推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(normal.includes(label),label);
+ for(const label of ['使用モード','打ち方条件','unknown','reverse-diff'])assert.ok(debug.includes(label),label);
+ const warned=ctx.JUGESTJudgementView.result({...result,reverseWarn:true,warnings:['差枚・通常G・BB・RBの組み合わせを確認してください。']});
+ assert.match(warned,/role="alert"[^>]*>逆算警告/);assert.ok(warned.includes('組み合わせを確認'));
 });

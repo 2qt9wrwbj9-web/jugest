@@ -104,6 +104,7 @@ class JugestApp extends HTMLElement{
   renderObservedSettings(){return `<section class="panel observed-display-settings"><h2>開発者向け</h2><label class="observed-debug-setting"><input type="checkbox" role="switch" data-observed-debug-toggle ${this.observed.debug?'checked':''}><span><b>高度なデバッグ情報を表示</b><small>判別エンジンの検証用情報を表示します。通常はOFFで問題ありません。</small></span></label></section>`}
   setObservedDebug(enabled){this.observed.debug=enabled===true;this.persist();this.render()}
   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
+  isObservedRowEmpty(row){return global.JUGESTJudgement.FIELDS.every(key=>String(row.input[key]??'').trim()==='')}
   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))}
   restoreObservedHistory(state){
     if(['single','parallel'].includes(state.observedMode))this.observed.mode=state.observedMode;
@@ -129,6 +130,8 @@ class JugestApp extends HTMLElement{
     row.input[field]=element.value;row.result=null;row.errors={};
     const card=element.closest('[data-observed-card]');
     card?.querySelector('[data-row-summary]')?.remove();
+    this.shadowRoot.querySelector(`[data-observed-result-row="${row.id}"]`)?.remove();
+    const results=this.shadowRoot.querySelector('.observed-parallel-results');if(results&&!results.querySelector('[data-row-summary]'))results.remove();
     card?.querySelectorAll('.observed-error').forEach(node=>node.remove());
     card?.querySelectorAll('[aria-invalid]').forEach(node=>{node.removeAttribute('aria-invalid');node.removeAttribute('aria-describedby')});
     this.shadowRoot.querySelector('[data-observed-detail]')?.remove();
@@ -145,11 +148,11 @@ class JugestApp extends HTMLElement{
     if(action==='close-settings'){const row=this.observedRow(this.observed.settingsReturnRowId),detail=this.observed.settingsReturnScreen==='detail'&&row?.result;this.observed.selectedId=detail?row.id:null;this.navigate('judgement',detail?'detail':'hub',{replace:true});return}
     if(action==='single'||action==='parallel'){
       this.observed.mode=action;this.observed.selectedId=null;
-      if(action==='parallel'&&!this.observed.rows.length)this.observed.rows.push(this.newObservedRow());
+      if(action==='parallel'&&!this.observed.rows.length)this.observed.rows.push(this.newObservedRow({machine:''}));
       this.navigate('judgement','hub',{replace:true});return;
-    }else if(action==='add')this.observed.rows.push(this.newObservedRow());
+    }else if(action==='add')this.observed.rows.push(this.newObservedRow({machine:''}));
     else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null}
-    else if(action==='judge-all'){for(const row of this.observed.rows)this.judgeObservedRow(row)}
+    else if(action==='judge-all'){for(const row of this.observed.rows){if(this.isObservedRowEmpty(row)){row.result=null;row.errors={};continue}this.judgeObservedRow(row)}}
     else if(action==='judge'){const row=this.observedRow(id);if(row)this.judgeObservedRow(row)}
     else if(action==='detail'){const row=this.observedRow(id);if(row?.result){this.observed.selectedId=id;this.navigate('judgement','detail');return}}
     else if(action==='close-detail'){this.observed.selectedId=null;this.navigate('judgement');return}
@@ -163,10 +166,10 @@ class JugestApp extends HTMLElement{
     if(!this.observed.single)this.observed.single=this.newObservedRow();
     const o=this.observed,selected=o.mode==='parallel'&&this.state.screen==='detail'?this.observedRow(o.selectedId):null;
     const controls=`<div class="segmented observed-modes" aria-label="判別モード">${[['single','単品判別'],['parallel','並列判別']].map(([mode,label])=>`<button type="button" data-observed-action="${mode}" aria-pressed="${o.mode===mode}" class="${o.mode===mode?'on':''}">${label}</button>`).join('')}</div>`;
-    const rowCard=row=>`<section class="panel observed-card" data-observed-card><h2>${row.input.tableNo?`台${esc(row.input.tableNo)}`:'台データ'}</h2>${view.fields(row,machines)}<div class="observed-actions"><button type="button" class="primary-btn" data-observed-action="judge" data-row-id="${row.id}">判別する</button><button type="button" data-observed-action="delete" data-row-id="${row.id}">削除</button></div>${row.result?`<div data-row-summary><dl class="observed-input-summary"><div><dt>機種</dt><dd>${esc(row.result.machineName)}</dd></div></dl>${view.summary(row.result)}<button type="button" class="primary-btn" data-observed-action="detail" data-row-id="${row.id}">詳細結果を見る</button></div>`:''}</section>`;
+
     let body;
     if(selected?.result)body=`<div data-observed-detail><button type="button" class="back-row" data-observed-action="close-detail">‹ 並列一覧へ</button>${view.result(selected.result,{debug:o.debug})}</div>`;
-    else if(o.mode==='parallel')body=`<div class="observed-actions"><button type="button" class="primary-btn" data-observed-action="judge-all">すべて判別する</button><button type="button" data-observed-action="add">台を追加</button></div><p class="observed-help">入力順に表示します。結果を見るだけで実戦は開始しません。</p><div class="observed-cards">${o.rows.map(rowCard).join('')||'<p>「台を追加」から入力してください。</p>'}</div>`;
+    else if(o.mode==='parallel')body=`${view.parallelEditor(o.rows,machines)}<div class="observed-parallel-actions"><button type="button" data-observed-action="add">＋ 行を追加</button><button type="button" class="primary-btn" data-observed-action="judge-all">まとめて判別</button></div><p class="observed-help">空行は飛ばします。差枚は任意、BB・RBが0回なら0を入力。結果を見るだけで実戦は開始しません。</p>${view.parallelResults(o.rows)}`;
     else body=`${o.single.result?`<div data-observed-detail>${view.result(o.single.result,{debug:o.debug})}</div>`:'<p class="observed-help">差枚は任意です。BB・RBが0回の場合は0を入力してください。</p>'}<section class="panel observed-card" data-observed-card><h2>${o.single.result?'入力を変更':'台データを入力'}</h2>${view.fields(o.single,machines)}<button type="button" class="primary-btn" data-observed-action="judge" data-row-id="${o.single.id}">判別する</button></section>`;
     return `<section class="workspace observed-page"><div class="kicker">JUDGEMENT</div><h1>判別</h1><p class="lead">観測した台データから設定を分析・比較。</p>${controls}${body}</section>`;
   }

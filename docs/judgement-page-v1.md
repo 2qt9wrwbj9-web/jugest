@@ -17,7 +17,7 @@ is unchanged.
 Required input: `machine`, `games`, `bb`, `rb`. Optional: `tableNo`, `diff`.
 Games must be positive safe integers; bonus counts must be nonnegative safe
 integers. Blank bonus counts are not zero. A missing difference remains `null`.
-Actual engine methods, including `bonus-only`, are shown in the UI.
+Actual engine methods, including `bonus-only`, remain available in developer information.
 
 `document.querySelector('jugest-app').acceptMachineRows(rows, {append:false})`
 fills drafts without judging. One row selects single mode; multiple rows select
@@ -32,7 +32,9 @@ formula is introduced. Reference bonus rates are only displayed, not fed back.
 Display levels:
 
 - Ordinary results retain probabilities, concentration and observed bonus rates.
-- “詳細分析を見る” retains method, style, warnings and estimated grape count/range.
+- “詳細分析を見る” retains only estimated grape probability, count and range.
+  Reverse warnings appear prominently only when present. Method and style are
+  available in developer information.
 - Settings → “高度なデバッグ情報を表示” defaults to OFF. Only ON adds the
   collapsed “開発者情報” containing log likelihoods, setting-specific reverse
   rows, technical identifiers and a separately collapsed table JSON.
@@ -41,6 +43,24 @@ The preference is a boolean `observedDebug` in the existing localStorage UI key
 `jugest:v510:ui`. It is excluded from domain IndexedDB, records and sync.
 Switching it only renders existing results; neither judgement nor reverse
 calculation runs again. No diagnostic capture is removed.
+
+Compact parallel entry:
+
+The judgement mode switch fills two equal columns; other segmented controls
+retain their original layout. Parallel entry uses one seven-column row per
+machine: table number, machine, games, BB, RB, difference and delete. Display
+aliases only shorten machine names; internal keys remain unchanged. One empty
+row is offered initially, and “＋ 行を追加” appends another. Fully empty rows
+are ignored; partly filled rows use the existing validator and show errors
+within that row. Explicit zero and missing difference remain distinct.
+
+Input/select text stays at 16px with 44px row height. At a 320px viewport the
+editor is 314px wide and its measured columns are 40 / 72 / 46 / 32 / 32 / 54 /
+24px, with 1px gaps. Only this editor extends into 8px of the page's side margin.
+Neither document, app nor editor requires horizontal scrolling. Results use
+compact comparison rows; tapping a row opens the same detailed result renderer
+as single mode. Editing invalidates that row's comparison result immediately.
+Structured imports continue to populate the rows without judging or saving.
 
 Validation:
 
