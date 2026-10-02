@@ -2,6 +2,7 @@
 'use strict';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=(value,digits=2)=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('ja-JP',{maximumFractionDigits:digits}):'—';
+const grape=value=>Number.isFinite(value)?`1/${number(value)}`:'—';
 const percent=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
 const top=result=>result.mostLikelySettings.map(s=>`設定${s}`).join(' / ');
 const rate=(games,count)=>count>0?`1/${number(games/count)}`:'0回';
@@ -31,10 +32,10 @@ function parallelResults(rows){
  if(!judged.length)return '';
  return `<section class="observed-parallel-results" aria-label="並列判別結果"><h2>判別結果</h2>${judged.map((row,index)=>{
   const r=row.result;
-  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span><span>${esc(top(r))}</span></span><span class="observed-result-probs"><span>P4+ <b>${percent(r.p4)}</b></span><span>P5+ <b>${percent(r.p5)}</b></span><span>P6 <b>${percent(r.p6)}</b></span></span></button>`;
+  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span><span>${esc(top(r))}</span></span><span class="observed-result-probs"><span>P4+ <b>${percent(r.p4)}</b></span><span>P5+ <b>${percent(r.p5)}</b></span><span>P6 <b>${percent(r.p6)}</b></span></span><span>推定ブドウ <b>${grape(r.estimatedGrape)}</b></span></button>`;
  }).join('')}<p class="observed-help">結果をタップすると詳細を表示します。</p></section>`;
 }
-function summary(result){return `<dl class="observed-summary">${pair('期待設定',number(result.expectedSetting))}${pair('最有力設定',top(result))}${pair('P4+',percent(result.p4))}${pair('P5+',percent(result.p5))}${pair('P6',percent(result.p6))}${pair('分布集中度',`${number(result.distributionConcentration,1)}%`)}</dl>`}
+function summary(result){return `<dl class="observed-summary">${pair('期待設定',number(result.expectedSetting))}${pair('最有力設定',top(result))}${pair('P4+',percent(result.p4))}${pair('P5+',percent(result.p5))}${pair('P6',percent(result.p6))}${pair('推定ブドウ',grape(result.estimatedGrape))}${pair('分布集中度',`${number(result.distributionConcentration,1)}%`)}</dl>`}
 function developerInfo(result){
  const x=result.input,d=result.diagnostics,z=d.reverse,table=result.engine.table;
  return `<details class="panel observed-details" data-observed-debug><summary>開発者情報</summary><dl class="observed-input-summary">${pair('使用モード（method）',result.method)}${pair('打ち方条件','不明（unknown）')}</dl>
@@ -49,7 +50,7 @@ function result(result,{debug=false}={}){
   <section class="panel"><h2>${esc(result.machineName)}${x.tableNo?` · 台${esc(x.tableNo)}`:''}</h2>${summary(result)}<p class="observed-help">分布集中度は、設定確率がどれだけ一部の設定へ集中しているかを表す指標で、判別の的中率ではありません。</p>${result.warnings.map(w=>`<p class="observed-error" role="alert">${result.reverseWarn?'逆算警告：':''}${esc(w)}</p>`).join('')}</section>
   <section class="panel"><h2>設定1〜6の確率</h2><div class="observed-distribution">${result.q.map((p,i)=>`<div class="observed-probability"><span>設定${i+1}</span><div class="observed-bar-track" aria-hidden="true"><div class="observed-bar" style="width:${p*100}%"></div></div><strong>${percent(p)}</strong></div>`).join('')}</div><p class="observed-help">すべての棒は0〜100%の共通スケールです。</p></section>
   <section class="panel"><h2>入力データ</h2><dl class="observed-input-summary">${pair('通常G',`${number(x.games,0)}G`)}${pair('BB',number(x.bb,0))}${pair('RB',number(x.rb,0))}${pair('差枚',x.diff==null?'未入力':`${x.diff>=0?'+':''}${number(x.diff,0)}枚`)}${pair('BB確率',rate(x.games,x.bb))}${pair('RB確率',rate(x.games,x.rb))}${pair('合算',rate(x.games,x.bb+x.rb))}</dl><p class="observed-help">確率表記は入力値からの参考表示です。判別への再入力には使用していません。</p></section>
-  <details class="panel observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',Number.isFinite(result.estimatedGrape)?`1/${number(result.estimatedGrape)}`:'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl>
+  <details class="panel observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',Number.isFinite(result.estimatedGrape)?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl>
   </details>
   ${debug===true?developerInfo(result):''}
  </section>`;

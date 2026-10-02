@@ -197,23 +197,42 @@ try:
    # The reported sample is identical with debug OFF and ON.
    page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'my',games:7859,bb:31,rb:35,diff:1500}]);const app=document.querySelector('jugest-app');app.judgeObservedRow(app.observed.single);app.render()")
    sample=page.evaluate("document.querySelector('jugest-app').observed.single.result")
+   def assert_grape(value):
+    assert host.locator('.observed-summary dt').filter(has_text='推定ブドウ').evaluate('e=>e.nextElementSibling.textContent')==value
+    host.locator('summary',has_text='詳細分析を見る').click()
+    detail=host.locator('summary',has_text='詳細分析を見る').locator('..')
+    assert detail.locator('dt').filter(has_text='推定ブドウ確率').evaluate('e=>e.nextElementSibling.textContent')==('未使用' if value=='—' else value)
+   for width in [320,375,390]:
+    page.set_viewport_size({'width':width,'height':844});mode_layout();assert_grape('1/5.87')
+    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth && document.body.scrollWidth<=innerWidth')
+    assert host.evaluate("e=>[...e.shadowRoot.querySelectorAll('.observed-summary *')].every(x=>{const r=x.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1})")
    assert round(sample['expectedSetting'],2)==4.85
    assert [round(sample[k]*100,1) for k in ['p4','p5','p6']]==[92.1,66.3,28.3]
-   assert_debug(False);set_debug(True);assert_debug(True)
+   assert_debug(False);set_debug(True);assert_debug(True);assert_grape('1/5.87')
    assert page.evaluate("document.querySelector('jugest-app').observed.single.result")==sample
    set_debug(False);assert_debug(False)
    # Structured imports feed the editor unchanged and share the single result.
    page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'my',games:7859,bb:31,rb:35,diff:1500},{machine:'my',games:7859,bb:31,rb:35,diff:1500}])")
    host.locator('[data-observed-action=judge-all]').click()
    assert page.evaluate("document.querySelector('jugest-app').observed.rows[0].result")==sample
+   for row in host.locator('[data-row-summary]').all(): assert '推定ブドウ 1/5.87' in row.inner_text()
+   for width in [320,375,390]:
+    page.set_viewport_size({'width':width,'height':844});editor_layout()
+    assert host.evaluate("e=>[...e.shadowRoot.querySelectorAll('[data-row-summary] *')].every(x=>x.getBoundingClientRect().right<=innerWidth+1)")
    imported=page.evaluate("document.querySelector('jugest-app').observed.rows[0].input")
    page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'go',games:1000,bb:0,rb:0}],{append:true})")
    assert host.locator('.observed-table-row').count()==3
    assert page.evaluate("document.querySelector('jugest-app').observed.rows[0].input")==imported
-   host.locator('[data-observed-action=detail]').first.click();set_debug(True);assert_debug(True)
+   host.locator('[data-observed-action=detail]').first.click();assert_grape('1/5.87');set_debug(True);assert_debug(True);assert_grape('1/5.87')
    assert page.evaluate("document.querySelector('jugest-app').observed.rows[0].result")==sample
    set_debug(False);host.locator('[data-observed-action=close-detail]').click()
    assert host.locator('.observed-table-row').count()==3
+   page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'my',games:7859,bb:31,rb:35,diff:''}]);const app=document.querySelector('jugest-app');app.judgeObservedRow(app.observed.single);app.render()")
+   assert_grape('—')
+   page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'my',games:7859,bb:31,rb:35,diff:''},{machine:'my',games:7859,bb:31,rb:35,diff:1500}])")
+   host.locator('[data-observed-action=judge-all]').click()
+   assert '推定ブドウ —' in host.locator('[data-row-summary]').first.inner_text()
+   assert '推定ブドウ 1/5.87' in host.locator('[data-row-summary]').nth(1).inner_text()
    assert not errors,errors
    if os.environ.get('JUGEST_SCREENSHOT_DIR'):
     output=Path(os.environ['JUGEST_SCREENSHOT_DIR']);output.mkdir(parents=True,exist_ok=True)

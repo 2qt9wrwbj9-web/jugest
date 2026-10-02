@@ -252,3 +252,28 @@ test('ordinary detail contains only grape estimates, moves engine labels to debu
  const warned=ctx.JUGESTJudgementView.result({...result,reverseWarn:true,warnings:['差枚・通常G・BB・RBの組み合わせを確認してください。']});
  assert.match(warned,/role="alert"[^>]*>逆算警告/);assert.ok(warned.includes('組み合わせを確認'));
 });
+
+
+test('grape is visible in both summaries and details without rejudging or changing the result',async()=>{
+ const {ctx,bridge}=await observedBoot({loadApp:false});ctx.JudgementProbe.instrument();
+ const r=bridge.judgeObservedMachine({machine:'my',games:7859,bb:31,rb:35,diff:1500});
+ const before=plain(r),view=ctx.JUGESTJudgementView;
+ assert.equal(r.estimatedGrape,5.867142884046302);
+ for(const debug of [false,true]){
+  assert.match(view.summary(r),/<dt>推定ブドウ<\/dt><dd>1\/5\.87<\/dd>/);
+  assert.match(view.parallelResults([{id:'a',result:r}]),/推定ブドウ <b>1\/5\.87<\/b>/);
+  assert.match(view.result(r,{debug}),/<dt>推定ブドウ確率<\/dt><dd>1\/5\.87<\/dd>/);
+ }
+ assert.deepEqual(plain(r),before);assert.equal(ctx.observedCalls.judge,1);assert.equal(ctx.observedCalls.reverse,1);
+});
+
+test('unavailable grape values render a dash in summaries and never leak NaN or Infinity',async()=>{
+ const {ctx,bridge}=await observedBoot({loadApp:false});
+ const r=bridge.judgeObservedMachine({machine:'my',games:7859,bb:31,rb:35,diff:''});assert.equal(r.method,'bonus-only');
+ for(const value of [r.estimatedGrape,undefined,null,NaN,Infinity,-Infinity]){
+  const x={...r,estimatedGrape:value},view=ctx.JUGESTJudgementView;
+  assert.match(view.summary(x),/<dt>推定ブドウ<\/dt><dd>—<\/dd>/);
+  assert.match(view.parallelResults([{id:'a',result:x}]),/推定ブドウ <b>—<\/b>/);
+  assert.doesNotMatch(view.result(x),/NaN|Infinity/);
+ }
+});

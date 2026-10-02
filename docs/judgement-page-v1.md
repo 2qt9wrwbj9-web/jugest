@@ -82,3 +82,7 @@ hashes. All other existing math, collection, prediction and persistence code
 remains protected.
 
 OCR and HANA UI support are outside v1. No production deployment is included.
+
+## 推定ブドウの主要表示
+
+単品の主要結果カードと並列一覧の3段目にも、同じ判別結果の `estimatedGrape` を表示する。詳細分析と共通の表示処理を使用し、利用できない場合は主要表示を「—」とする。判別の追加実行や再計算は行わない。
