@@ -42,6 +42,18 @@ try:
    nav=host.locator('.bottom-nav button')
    assert nav.all_text_contents()==['⌂ホーム','▥判別','◎実戦','▦店舗','▤記録','⇅データ']
    nav.nth(1).click()
+   def set_debug(enabled):
+    host.locator('[data-vps-settings-gear]').click()
+    toggle=host.locator('[data-observed-debug-toggle]')
+    assert toggle.evaluate('(element)=>new Promise(resolve=>{let n=0;function next(){if(++n===8)resolve(element.isConnected);else requestAnimationFrame(next)}requestAnimationFrame(next)})'), 'settings input must remain attached between frames'
+    toggle.set_checked(enabled)
+    assert toggle.is_checked()==enabled
+    close=host.locator('[data-vps-settings-close]') if delivery=='patched' else host.locator('[data-observed-action="close-settings"]')
+    close.click()
+   def assert_debug(enabled):
+    assert host.locator('[data-observed-debug]').count()==int(enabled)
+    for text in ['設定別ログ尤度','既存の設定別逆算行','内部機種キー','MCP判別識別子','使用した既存テーブル']:
+     assert (text in host.locator('.observed-page').text_content())==enabled
    def fill(field,value,index=0): host.locator(f'[data-observed-field="{field}"]').nth(index).fill(value)
    for field,value in [('games','5278'),('bb','19'),('rb','22'),('diff','830'),('tableNo','3064')]:fill(field,value)
    host.locator('[data-observed-action="judge"]').click()
@@ -49,8 +61,21 @@ try:
    assert 'P5+' in host.locator('[data-observed-result]').inner_text()
    host.locator('summary',has_text='詳細分析を見る').click()
    assert 'reverse-diff' in host.locator('[data-observed-result]').inner_text()
+   assert_debug(False)
+   before=page.evaluate("document.querySelector('jugest-app').observed.single.result")
+   set_debug(True);assert_debug(True)
+   host.locator('summary',has_text='開発者情報').click()
    host.locator('summary',has_text='技術情報を見る').click()
    assert 'external-juggler-browser-parity-v1' in host.locator('[data-observed-result]').inner_text()
+   assert page.evaluate("document.querySelector('jugest-app').observed.single.result")==before
+   host.locator('summary',has_text='使用テーブルJSON').click()
+   assert host.locator('[data-observed-debug] pre').is_visible()
+   for width in [320,375,390]:
+    page.set_viewport_size({'width':width,'height':844})
+    assert host.evaluate("e=>[...e.shadowRoot.querySelectorAll('.observed-page *')].every(x=>{const r=x.getBoundingClientRect();return !r.width||(r.left>=-1&&r.right<=innerWidth+1)})")
+    results.append({'delivery':delivery,'width':width,'single':True,'debug':True})
+   set_debug(False);assert_debug(False)
+   assert page.evaluate("document.querySelector('jugest-app').observed.single.result")==before
    for width in [320,375,390]:
     page.set_viewport_size({'width':width,'height':844})
     for button in nav.all():
@@ -79,6 +104,16 @@ try:
     results.append({'delivery':delivery,'width':width,'parallel':True})
    host.locator('[data-observed-action="detail"]').first.click()
    assert host.locator('.observed-probability').count()==6
+   assert_debug(False)
+   set_debug(True);assert_debug(True)
+   host.locator('summary',has_text='開発者情報').click()
+   host.locator('summary',has_text='技術情報を見る').click()
+   host.locator('summary',has_text='使用テーブルJSON').click()
+   for width in [320,375,390]:
+    page.set_viewport_size({'width':width,'height':844})
+    assert host.evaluate("e=>[...e.shadowRoot.querySelectorAll('.observed-page *')].every(x=>{const r=x.getBoundingClientRect();return !r.width||(r.left>=-1&&r.right<=innerWidth+1)})")
+    results.append({'delivery':delivery,'width':width,'parallel':True,'debug':True})
+   set_debug(False);assert_debug(False)
    page.go_back();assert host.locator('[data-row-summary]').count()==2
    page.go_forward();assert host.locator('.observed-probability').count()==6
    host.locator('[data-observed-action="close-detail"]').click()
@@ -96,10 +131,26 @@ try:
    host.locator('[data-observed-action="parallel"]').click()
    host.locator('[data-observed-action="delete"]').first.click()
    assert host.locator('[data-observed-card]').count()==1
+   # Debug preference persists, but old computed results never do.
+   set_debug(True)
    # UI tab/mode restoration must not restore old computed results as fresh data.
    page.reload();page.wait_for_function("document.querySelector('jugest-app')?.state?.workspace==='judgement'")
    assert host.locator('[data-observed-action="parallel"]').get_attribute('aria-pressed')=='true'
    assert host.locator('[data-observed-result]').count()==0
+   host.locator('[data-vps-settings-gear]').click()
+   assert host.locator('[data-observed-debug-toggle]').is_checked()
+   (host.locator('[data-vps-settings-close]') if delivery=='patched' else host.locator('[data-observed-action="close-settings"]')).click()
+   set_debug(False);page.reload();page.wait_for_function("document.querySelector('jugest-app')?.state")
+   host.locator('[data-vps-settings-gear]').click();assert not host.locator('[data-observed-debug-toggle]').is_checked()
+   (host.locator('[data-vps-settings-close]') if delivery=='patched' else host.locator('[data-observed-action="close-settings"]')).click()
+   # The reported sample is identical with debug OFF and ON.
+   page.evaluate("document.querySelector('jugest-app').acceptMachineRows([{machine:'my',games:7859,bb:31,rb:35,diff:1500}]);const app=document.querySelector('jugest-app');app.judgeObservedRow(app.observed.single);app.render()")
+   sample=page.evaluate("document.querySelector('jugest-app').observed.single.result")
+   assert round(sample['expectedSetting'],2)==4.85
+   assert [round(sample[k]*100,1) for k in ['p4','p5','p6']]==[92.1,66.3,28.3]
+   assert_debug(False);set_debug(True);assert_debug(True)
+   assert page.evaluate("document.querySelector('jugest-app').observed.single.result")==sample
+   set_debug(False);assert_debug(False)
    assert not errors,errors
    if os.environ.get('JUGEST_SCREENSHOT_DIR'):
     output=Path(os.environ['JUGEST_SCREENSHOT_DIR']);output.mkdir(parents=True,exist_ok=True)

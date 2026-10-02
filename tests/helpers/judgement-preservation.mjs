@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
- '  // BEGIN independent judgement UI\n':'1ee13e8c2af078f6ff35c8f96d0b2856f283b06c19b85424a46306521abe14ca',
- '/* BEGIN independent judgement styles */\n':'1df96a9105f3785de8fc9adb7362d2320905956854243aeb2963ba602d65cc6e',
+ '  // BEGIN independent judgement UI\n':'4df6c5c2b13a772f312acd016af030babf4a8e261727ece824916352515ffb80',
+ '/* BEGIN independent judgement styles */\n':'557f03cb15f12f1a455dcbf3ca88898d4bc444dc3057ab19828c2af9f435c7d8',
  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
 });
 function replace(source,from,to='',count=1){
@@ -28,8 +28,11 @@ export function withoutJudgementAdditions(file,source){
    ["['home','judgement','live','store','records','data']","['home','live','store','records','data']"],
    ["home:'ホーム',judgement:'判別',live:","home:'ホーム',live:"],
    ["home:'⌂',judgement:'▥',live:","home:'⌂',live:"],
-   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null};\n",''],
+   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true};\n",''],
+   [',observedDebug:this.observed.debug',''],
    [',observedMode:this.observed.mode',''],
+   ['${this.renderObservedSettingsButton()}',''],
+   ["    const observedDebug=event.target.closest?.('[data-observed-debug-toggle]');if(observedDebug){this.setObservedDebug(observedDebug.checked);return}\n",''],
    ["    const observedAction=event.target.closest?.('[data-observed-action]');if(observedAction){this.handleObservedAction(observedAction.dataset.observedAction,observedAction.dataset.rowId);return}\n",''],
    ['judgement:()=>this.renderObservedPage(),',''],
    ["if(this.state.workspace==='judgement')return this.renderObservedPage();",''],

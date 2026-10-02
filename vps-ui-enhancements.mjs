@@ -117,7 +117,7 @@ function comparisonSettingsHtml(){
 }
 
 function settingsHubHtml(){
-  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-comparison><span><b>PRE版 精度比較</b><small>新版と現行版の翌日ランキングを実運用で比較</small></span><span class="vps-chev">›</span></button></section></div>`;
+  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-comparison><span><b>PRE版 精度比較</b><small>新版と現行版の翌日ランキングを実運用で比較</small></span><span class="vps-chev">›</span></button></section>${app?.renderObservedSettings?.()||''}</div>`;
 }
 
 function renderSettings(){
@@ -126,7 +126,8 @@ function renderSettings(){
   if(!settingsOpen){overlay?.remove();shell.classList.remove('vps-settings-open');return}
   shell.classList.add('vps-settings-open');
   if(!overlay){overlay=document.createElement('div');overlay.className='vps-settings-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','設定');shell.append(overlay)}
-  overlay.innerHTML=settingsPage==='comparison'?comparisonSettingsHtml():settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
+  const html=settingsPage==='comparison'?comparisonSettingsHtml():settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
+  if(overlay._settingsHtml!==html){overlay.innerHTML=html;overlay._settingsHtml=html}
 }
 
 async function loadComparison({force=false}={}){

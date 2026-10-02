@@ -80,7 +80,7 @@ test('all maximum-probability settings are retained and detailed output is escap
  const {ctx,bridge}=await observedBoot({loadApp:false});
  assert.deepEqual(plain(ctx.JUGESTJudgement.mostLikelySettings([.1,.1,.1,.3,.3,.1])),[4,5]);
  const r=bridge.judgeObservedMachine({...input,tableNo:'<img src=x onerror=alert(1)>'});
- const html=ctx.JUGESTJudgementView.result(r);
+ const html=ctx.JUGESTJudgementView.result(r,{debug:true});
  assert.match(html,/&lt;img/);assert.doesNotMatch(html,/<img src=x/);
  for(const label of ['分布集中度','ログ尤度','既存の設定別逆算行','技術情報','MCP判別識別子'])assert.ok(html.includes(label));
  assert.ok(html.indexOf('設定1〜6の確率')<html.indexOf('入力データ'));
@@ -137,4 +137,73 @@ test('preservation rejects unreviewed edits inside excluded additions and duplic
  ]){assert.notEqual(mutated,source);assert.throws(()=>withoutJudgementAdditions(file,mutated),/Unreviewed|boundary|anchor/)}
  const changed=html.replace('let varOut=9*Gg','let varOut=8*Gg');
  assert.notEqual(changed,html);assert.notEqual(withoutJudgementAdditions('index.html',changed),withoutJudgementAdditions('index.html',html),'existing math outside additions must remain visible to original hash guards');
+});
+
+const reviewSample={machine:'my',games:7859,bb:31,rb:35,diff:1500};
+const internalLabels=['設定別ログ尤度','既存の設定別逆算行','逆算ブドウ個数 V','逆算分母 vg','逆算標準偏差 sd','内部機種キー','MCP判別識別子','UIコード版','Bridgeコード版','判別の正','小役逆算の打ち方','使用した既存テーブル'];
+
+test('ordinary judgement omits developer DOM while retaining meaningful analysis',async()=>{
+ const {ctx,bridge,app}=await observedBoot();
+ app.acceptMachineRows([reviewSample]);app.handleObservedAction('judge',app.observed.single.id);
+ const html=app.mount.innerHTML;
+ assert.doesNotMatch(html,/data-observed-debug/);
+ for(const label of internalLabels)assert.ok(!html.includes(label),label);
+ for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','入力データ','BB確率','RB確率','合算','詳細分析を見る','使用モード','打ち方条件','逆算警告','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
+ const direct=ctx.JUGESTJudgementView.result(bridge.judgeObservedMachine(reviewSample));
+ assert.ok(!direct.includes('設定別ログ尤度'),'standalone renderer also defaults to ordinary output');
+});
+
+for(const mode of ['single','parallel'])test(`${mode}: debug switching only changes UI and never reruns judgement`,async()=>{
+ const {ctx,app,storage,timers}=await observedBoot();ctx.JudgementProbe.seed();ctx.JudgementProbe.instrument();
+ app.acceptMachineRows(mode==='single'?[reviewSample]:[reviewSample,{...reviewSample,tableNo:'3065'}]);
+ if(mode==='single')app.handleObservedAction('judge',app.observed.single.id);
+ else{app.handleObservedAction('judge-all');app.handleObservedAction('detail',app.observed.rows[0].id)}
+ const row=mode==='single'?app.observed.single:app.observed.rows[0],original=row.result,values=structuredClone(original),before=state(ctx),calls=plain(ctx.observedCalls),idb=structuredClone([...storage.idb]),scheduled=[...timers.keys()],saved=[...storage.map].filter(([key])=>key!=='jugest:v510:ui');
+ assert.match(app.renderObservedSettings?.()??'',/高度なデバッグ情報を表示/);
+ assert.doesNotMatch(app.renderObservedSettings(),/ checked/);
+ for(const enabled of [true,false,true]){
+  const element={checked:enabled,closest:selector=>selector==='[data-observed-debug-toggle]'?element:null};
+  app.onChange({target:element});
+  assert.equal(row.result,original);assert.deepEqual(structuredClone(row.result),values);
+  assert.deepEqual(plain(ctx.observedCalls),calls);assert.equal(state(ctx),before);
+  assert.deepEqual([...storage.idb],idb);assert.deepEqual([...timers.keys()],scheduled);assert.deepEqual([...storage.map].filter(([key])=>key!=='jugest:v510:ui'),saved);
+  assert.equal(JSON.parse(storage.getItem('jugest:v510:ui')).observedDebug,enabled);
+  assert.equal(app.mount.innerHTML.includes('data-observed-debug'),enabled);
+  for(const label of internalLabels)assert.equal(app.mount.innerHTML.includes(label),enabled,label);
+ }
+ const reloaded=await observedBoot({storage});
+ assert.match(reloaded.app.renderObservedSettings(),/ checked/);
+ assert.equal(reloaded.app.observed.single?.result??null,null);
+ reloaded.app.onChange({target:{checked:false,closest:s=>s==='[data-observed-debug-toggle]'?{checked:false}:null}});
+ const offReload=await observedBoot({storage});assert.doesNotMatch(offReload.app.renderObservedSettings(),/ checked/);
+});
+
+test('debug ON and OFF calculate identical raw sample values with one engine call each',async()=>{
+ const {ctx,app}=await observedBoot();ctx.JudgementProbe.instrument();
+ app.acceptMachineRows([reviewSample]);app.handleObservedAction('judge',app.observed.single.id);const before=structuredClone(app.observed.single.result);
+ assert.equal(before.expectedSetting.toFixed(2),'4.85');assert.equal((before.p4*100).toFixed(1),'92.1');assert.equal((before.p5*100).toFixed(1),'66.3');assert.equal((before.p6*100).toFixed(1),'28.3');assert.equal(before.estimatedGrape.toFixed(2),'5.87');
+ assert.deepEqual(Array.from(before.mostLikelySettings),[5]);
+ assert.deepEqual(Array.from(before.q,p=>(p*100).toFixed(1)),['0.4','1.1','6.4','25.8','38.0','28.3']);
+ assert.equal(ctx.observedCalls.judge,1);assert.equal(ctx.observedCalls.reverse,1);
+ const element={checked:true,closest:s=>s==='[data-observed-debug-toggle]'?element:null};app.onChange({target:element});
+ assert.equal(ctx.observedCalls.judge,1);assert.equal(ctx.observedCalls.reverse,1);
+ app.handleObservedAction('judge',app.observed.single.id);assert.deepEqual(structuredClone(app.observed.single.result),before);
+ assert.equal(ctx.observedCalls.judge,2);assert.equal(ctx.observedCalls.reverse,2);
+});
+
+test('fallback settings preserve the return destination after repeated gear clicks and history',async()=>{
+ const {ctx,app}=await observedBoot();const history=[];
+ ctx.history.pushState=s=>history.push(s);ctx.history.replaceState=s=>{history[history.length-1]=s};
+ const ids=app.acceptMachineRows([reviewSample,{...reviewSample,tableNo:'3065'}]);
+ app.handleObservedAction('judge-all');app.handleObservedAction('detail',ids[0]);
+ app.handleObservedAction('settings');const settings=history.at(-1);
+ app.handleObservedAction('settings');app.handleObservedAction('close-settings');
+ assert.equal(app.state.screen,'detail');assert.equal(app.observed.selectedId,ids[0]);
+ app.onPopState({state:settings});app.navigate('home');app.onPopState({state:settings});
+ app.handleObservedAction('close-settings');assert.equal(app.state.screen,'detail');assert.equal(app.observed.selectedId,ids[0]);
+ app.handleObservedAction('close-detail');app.handleObservedAction('detail',ids[1]);app.handleObservedAction('settings');
+ app.onPopState({state:settings});app.handleObservedAction('close-settings');
+ assert.equal(app.state.screen,'detail');assert.equal(app.observed.selectedId,ids[0]);
+ app.handleObservedAction('settings');app.handleObservedAction('delete',ids[0]);app.handleObservedAction('close-settings');
+ assert.equal(app.state.screen,'hub');assert.equal(app.observed.selectedId,null);
 });

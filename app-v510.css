@@ -102,6 +102,7 @@
 .plan-mode-label{display:block;margin:10px 2px 0;color:var(--muted);font-size:10px;font-weight:800}
 .plan-mode-label+.micro-note{margin-top:4px}
 /* BEGIN independent judgement styles */
+.observed-debug-setting{display:flex;align-items:center;gap:12px;min-height:64px;cursor:pointer}.observed-debug-setting input{flex:0 0 24px;width:24px;height:24px;accent-color:var(--accent)}.observed-debug-setting span{min-width:0}.observed-debug-setting b{display:block;font-size:14px}.observed-debug-setting small{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
 :host .observed-page{min-width:0}
 .observed-page .panel{margin:14px 0;padding:16px;min-width:0}
 .observed-page h2{font-size:17px;margin:0 0 14px;overflow-wrap:anywhere}
