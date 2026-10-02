@@ -82,6 +82,18 @@ try:
    page.go_back();assert host.locator('[data-row-summary]').count()==2
    page.go_forward();assert host.locator('.observed-probability').count()==6
    host.locator('[data-observed-action="close-detail"]').click()
+   page.go_back();assert '台3064' in host.locator('.observed-page').inner_text()
+   assert host.locator('.observed-probability').count()==6
+   page.go_forward();assert host.locator('[data-row-summary]').count()==2
+   host.locator('[data-observed-action="detail"]').nth(1).click()
+   assert '台3065' in host.locator('.observed-page').inner_text()
+   page.go_back();page.go_back()
+   assert '台3064' in host.locator('.observed-page').inner_text()
+   assert '台3065' not in host.locator('.observed-page').inner_text()
+   host.locator('[data-observed-action="single"]').click()
+   assert host.locator('[data-observed-action="single"]').get_attribute('aria-pressed')=='true'
+   assert host.locator('[data-observed-action="close-detail"]').count()==0
+   host.locator('[data-observed-action="parallel"]').click()
    host.locator('[data-observed-action="delete"]').first.click()
    assert host.locator('[data-observed-card]').count()==1
    # UI tab/mode restoration must not restore old computed results as fresh data.

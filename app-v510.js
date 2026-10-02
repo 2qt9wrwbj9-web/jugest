@@ -102,6 +102,12 @@ class JugestApp extends HTMLElement{
   // BEGIN independent judgement UI
   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))}
+  restoreObservedHistory(state){
+    if(['single','parallel'].includes(state.observedMode))this.observed.mode=state.observedMode;
+    const row=this.observed.mode==='parallel'?this.observed.rows.find(row=>row.id===String(state.observedRowId)):null;
+    this.observed.selectedId=this.state.screen==='detail'&&row?.result?row.id:null;
+    if(this.state.screen==='detail'&&!this.observed.selectedId)this.state.screen='hub';
+  }
   // Explicit future import entry point. It only fills drafts; it never judges or saves.
   acceptMachineRows(rows,{append=false}={}){
     if(!Array.isArray(rows)||!rows.length||rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new TypeError('台データを1台以上の配列で渡してください。');
@@ -134,7 +140,7 @@ class JugestApp extends HTMLElement{
     if(action==='single'||action==='parallel'){
       this.observed.mode=action;this.observed.selectedId=null;
       if(action==='parallel'&&!this.observed.rows.length)this.observed.rows.push(this.newObservedRow());
-      this.persist();
+      this.navigate('judgement','hub',{replace:true});return;
     }else if(action==='add')this.observed.rows.push(this.newObservedRow());
     else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null}
     else if(action==='judge-all'){for(const row of this.observed.rows)this.judgeObservedRow(row)}
@@ -161,8 +167,8 @@ class JugestApp extends HTMLElement{
   connectBridge(){const bridge=this.bridge();if(!bridge){this.state.error='JUGESTコアを準備中…';this.render();this._connectTimer=setTimeout(()=>this.connectBridge(),50);return}this.state.error='';if(this.state.activeStore)bridge.setActiveStore?.(this.state.activeStore,{silent:true});this.refreshFromBridge();this._unsubscribe=bridge.subscribe?.(()=>this.refreshFromBridge())||null;this.render();this.loadRecentAnalyses();this.refreshCollectorStatus()}
   refreshFromBridge(){const bridge=this.bridge();if(!bridge)return;this.state.summary=bridge.getSummary?.()||{};this.state.stores=Array.isArray(bridge.getStores?.())?bridge.getStores():[];const bridgeStore=bridge.getActiveStore?.()||'';this.state.activeStore=bridgeStore||this.state.activeStore||this.state.stores[0]?.name||'';if(this.state.workspace==='live'&&this.state.screen==='judge')try{this.state.judge=bridge.getJudgeState?.()||this.state.judge}catch(_){}this.persist();this.render()}
   persist(){try{global.localStorage?.setItem?.(UI_KEY,JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode}))}catch(_){}}
-  navigate(workspace,screen='hub',{replace=false}={}){const next=validWorkspace(workspace);if(next==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.workspace=next;this.state.screen=screen;this.state.error='';this.state.storeSelectorOpen=false;this.state.notificationOpen=false;this.persist();const state={jugestV510:true,workspace:next,screen};try{replace?global.history.replaceState(state,''):global.history.pushState(state,'')}catch(_){}this.render()}
-  onPopState(event){if(this.state.syncBusy||this.state.syncReloadRequired)return;const s=event.state;if(s?.jugestV510){this.state.workspace=validWorkspace(s.workspace);if(this.state.workspace==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.screen=s.screen||'hub';this.state.storeSelectorOpen=false;this.persist();this.render()}}
+  navigate(workspace,screen='hub',{replace=false}={}){const next=validWorkspace(workspace);if(next==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.workspace=next;this.state.screen=screen;this.state.error='';this.state.storeSelectorOpen=false;this.state.notificationOpen=false;this.persist();const state={jugestV510:true,workspace:next,screen,...(next==='judgement'?{observedMode:this.observed.mode,observedRowId:this.observed.selectedId}:{})};try{replace?global.history.replaceState(state,''):global.history.pushState(state,'')}catch(_){}this.render()}
+  onPopState(event){if(this.state.syncBusy||this.state.syncReloadRequired)return;const s=event.state;if(s?.jugestV510){this.state.workspace=validWorkspace(s.workspace);if(this.state.workspace==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.screen=s.screen||'hub';if(this.state.workspace==='judgement')this.restoreObservedHistory(s);this.state.storeSelectorOpen=false;this.persist();this.render()}}
   onInput(event){
     if(this.state.syncBusy||this.state.syncReloadRequired)return;
     const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}

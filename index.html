@@ -1071,7 +1071,7 @@ function externalInferMissing(key,rawG,bb,rb,rawDiff){
 function externalBonusJudgeQ(key,g,bb,rb,capture){
  if(!M[key]||!g)return null;bb=Math.max(0,+bb||0);rb=Math.max(0,+rb||0);let no=Math.max(0,(+g||0)-bb-rb);
  let L=M[key].simple.map(t=>{let pb=1/t.b,pr=1/t.r,p0=1-pb-pr;if(p0<=0)return-Infinity;return (bb?bb*Math.log(pb):0)+(rb?rb*Math.log(pr):0)+(no?no*Math.log(p0):0)});
- if(capture)capture({logs:L,style:"unknown"});
+ if(capture)capture({logs:L.slice(),style:"unknown"});
  return safeNorm(L)
 }
 function hanaQ6(key,q){if(!Array.isArray(q))return null;if(key==="newkingv")return[q[0]||0,q[1]||0,q[2]||0,q[3]||0,q[4]||0,0];return q.length===6?q.slice():null}
@@ -1086,7 +1086,7 @@ function externalJudge(key,g,bb,rb,diff,capture){
  if(diff!=null&&Number.isFinite(+diff)){
   let z=reverseCore(key,g,bb,rb,+diff,"unknown");
   if(z&&Array.isArray(z.q)&&z.q.every(Number.isFinite)){
-   if(capture)capture({logs:z.Ls,reverse:z,style:"unknown"});
+   if(capture){const captured={...z,q:z.q.slice(),Ls:z.Ls.slice(),rows:z.rows.map(row=>({...row}))};capture({logs:captured.Ls,reverse:captured,style:"unknown"});}
    return{q:z.q,method:"reverse-diff",estimatedGrape:Number.isFinite(z.denom)?z.denom:NaN,estimatedGrapeCount:Number.isFinite(z.vbar)?z.vbar:NaN,grapeCountLo:Number.isFinite(z.lo)?z.lo:NaN,grapeCountHi:Number.isFinite(z.hi)?z.hi:NaN,reverseWarn:!!z.warn}
   }
  }

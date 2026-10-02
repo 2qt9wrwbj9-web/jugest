@@ -1,14 +1,24 @@
 // Keep the original protected hashes. Undo only the explicitly authorized
 // judgement UI additions / diagnostic taps before checking the old baseline.
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 
-function replace(source,from,to=''){
- assert.ok(source.includes(from),`approved judgement transform missing: ${from.slice(0,65)}`);
- return source.replace(from,to);
+// Pin only reviewed additions; original production hash fixtures stay unchanged.
+const APPROVED_BLOCKS=Object.freeze({
+ '  // BEGIN independent judgement UI\n':'1ee13e8c2af078f6ff35c8f96d0b2856f283b06c19b85424a46306521abe14ca',
+ '/* BEGIN independent judgement styles */\n':'1df96a9105f3785de8fc9adb7362d2320905956854243aeb2963ba602d65cc6e',
+ '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
+});
+function replace(source,from,to='',count=1){
+ assert.equal(source.split(from).length-1,count,`approved judgement anchor count: ${from.slice(0,65)}`);
+ return source.replaceAll(from,to);
 }
 function block(source,start,end,replacement=''){
+ assert.equal(source.split(start).length-1,1,'approved judgement start boundary count');
+ assert.equal(source.split(end).length-1,1,'approved judgement end boundary count');
  const a=source.indexOf(start),b=source.indexOf(end,a);
  assert.ok(a>=0&&b>a,'approved judgement block markers missing');
+ assert.equal(createHash('sha256').update(source.slice(a,b+end.length)).digest('hex'),APPROVED_BLOCKS[start],'Unreviewed judgement addition inside protected block');
  return source.slice(0,a)+replacement+source.slice(b+end.length);
 }
 export function withoutJudgementAdditions(file,source){
@@ -22,10 +32,12 @@ export function withoutJudgementAdditions(file,source){
    [',observedMode:this.observed.mode',''],
    ["    const observedAction=event.target.closest?.('[data-observed-action]');if(observedAction){this.handleObservedAction(observedAction.dataset.observedAction,observedAction.dataset.rowId);return}\n",''],
    ['judgement:()=>this.renderObservedPage(),',''],
-   ["if(this.state.workspace==='judgement')return this.renderObservedPage();",'']
+   ["if(this.state.workspace==='judgement')return this.renderObservedPage();",''],
+   [",...(next==='judgement'?{observedMode:this.observed.mode,observedRowId:this.observed.selectedId}:{})",''],
+   ["if(this.state.workspace==='judgement')this.restoreObservedHistory(s);",'']
   ])source=replace(source,from,to);
   const field="    const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}\n";
-  source=replace(replace(source,field),field);
+  source=replace(source,field,'',2);
  }else if(file==='app-v510.css'){
   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
@@ -34,8 +46,8 @@ export function withoutJudgementAdditions(file,source){
   source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script>');
   source=replace(source,'function externalBonusJudgeQ(key,g,bb,rb,capture){','function externalBonusJudgeQ(key,g,bb,rb){');
   source=replace(source,'function externalJudge(key,g,bb,rb,diff,capture){','function externalJudge(key,g,bb,rb,diff){');
-  source=replace(source,' if(capture)capture({logs:L,style:"unknown"});\n');
-  source=replace(source,'   if(capture)capture({logs:z.Ls,reverse:z,style:"unknown"});\n');
+  source=replace(source,' if(capture)capture({logs:L.slice(),style:"unknown"});\n');
+  source=replace(source,'   if(capture){const captured={...z,q:z.q.slice(),Ls:z.Ls.slice(),rows:z.rows.map(row=>({...row}))};capture({logs:captured.Ls,reverse:captured,style:"unknown"});}\n');
   source=replace(source,'externalBonusJudgeQ(key,g,bb,rb,capture);','externalBonusJudgeQ(key,g,bb,rb);');
   source=block(source,'// Independent observed-data judgement: no session, context or persistence writes.\n','function rejudgeExternalMachine(r){','function rejudgeExternalMachine(r){');
   source=replace(source,' getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),\n judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),\n');
