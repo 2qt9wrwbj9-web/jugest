@@ -1,3 +1,4 @@
+import '../../../judgement-model.js';
 import {runExistingJugglerJudgementBatch} from '../analysis/runtime-adapter.mjs';
 
 export const JUGGLER_MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
@@ -9,14 +10,7 @@ const MACHINE_NAMES=Object.freeze({
 
 export function jugglerMachineName(key){return MACHINE_NAMES[key]??null}
 
-function posteriorSummary(q){
-  return {
-    expectedSetting:q.reduce((sum,value,index)=>sum+value*(index+1),0),
-    p4:(q[3]||0)+(q[4]||0)+(q[5]||0),
-    p5:(q[4]||0)+(q[5]||0),
-    p6:q[5]||0
-  };
-}
+const {posteriorSummary}=globalThis.JUGESTJudgement;
 
 function decorate(input,judged){
   if(!judged)return null;

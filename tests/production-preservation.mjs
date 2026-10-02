@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {patchStoreAnalysisHtml,patchStoreAnalysisApp} from '../build-store-analysis-view.mjs';
 import {patchAnalysisJitterApp} from '../build-analysis-jitter-fix.mjs';
+import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const baseline=JSON.parse(fs.readFileSync(new URL('./fixtures/production-preservation.json',import.meta.url)));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const intentionalBackendChanges=new Set(['api/_blob-store.js','api/_sync-web.js','api/_relay-web.js']);
@@ -52,7 +53,7 @@ test('Production icons, parser, math libraries and untouched Vercel APIs remain 
  for(const [file,sha] of Object.entries(baseline.api))if(!intentionalBackendChanges.has(file))assert.equal(hash(fs.readFileSync(file)),sha,file);
 });
 test('Protected inline math and research sections remain identical to the captured Production',()=>{
- let html=fs.readFileSync('index.html','utf8');
+ let html=withoutJudgementAdditions('index.html',fs.readFileSync('index.html','utf8'));
  const original=fs.readFileSync('tests/fixtures/v512-analysis-orchestration.txt','utf8');
  let expected=original.replace('async function v510RunStoreAnalysis(shop,opts={}){','async function v510RunStoreAnalysis(shop,opts={},onProgress){')
  .replace(' await ensureExternalJudged(externalDays,{shop});\n let prep=brutePrepare',' onProgress?.(0,"データを準備中");await nextFrame();\n await ensureExternalJudged(externalDays,{shop});\n onProgress?.(.15,"単一条件を検証中");await nextFrame();\n let prep=brutePrepare')

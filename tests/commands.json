@@ -69,5 +69,6 @@
   "node tests/store-analysis-evidence-view.mjs",
   "node --test tests/legacy-short-history.mjs",
   "node --test tests/store-plan-modes.mjs",
-  "node tests/store-optimization-research.mjs"
+  "node tests/store-optimization-research.mjs",
+  "node --test tests/judgement-page.mjs"
 ]

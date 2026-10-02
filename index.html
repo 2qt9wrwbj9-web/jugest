@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 
 <!--
+Independent judgement page v1 — 2026-10-02:
+- Added a second-position judgement workspace with single/parallel observed-data inputs and shared detailed results.
+- Reused externalJudge and the existing MCP summaries; diagnostic taps expose values from the same invocation.
+- Added distribution concentration, setting probability bars and an explicit structured-row draft interface.
+- Judgment math, MCP result schemas, PRE/store analysis, sessions and run-record persistence are unchanged.
+
 v5.1.2 mobile navigation / store management — 2026-09-06:
 - Fixed the Shadow DOM host containment bug that made fixed top/bottom chrome move with long pages on iPhone.
 - Store selector now opens near the top of the viewport instead of appearing too low after scrolling.
@@ -520,7 +526,7 @@ NOTE
 - v3.9.0 test is the first release governed by the permanent changelog rule above.
 - Earlier project history remains in prior handoff/recovery artifacts; future changes must be recorded here.
 -->
-<html class="jugest-app"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><link href="./favicon-32.png" rel="icon" sizes="32x32" type="image/png"/><link href="./icon-192.png" rel="icon" sizes="192x192" type="image/png"/><link href="./icon-512.png" rel="icon" sizes="512x512" type="image/png"/><link href="./apple-touch-icon.png?v=512-icon-tune-3" rel="apple-touch-icon" sizes="180x180"/><link href="./site.webmanifest" rel="manifest"/><title>JUGEST v5.1.2</title><script src="./core-v510.js"></script><script defer="" src="./app-v510.js"></script>
+<html class="jugest-app"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><link href="./favicon-32.png" rel="icon" sizes="32x32" type="image/png"/><link href="./icon-192.png" rel="icon" sizes="192x192" type="image/png"/><link href="./icon-512.png" rel="icon" sizes="512x512" type="image/png"/><link href="./apple-touch-icon.png?v=512-icon-tune-3" rel="apple-touch-icon" sizes="180x180"/><link href="./site.webmanifest" rel="manifest"/><title>JUGEST v5.1.2</title><script src="./judgement-model.js"></script><script src="./judgement-view.js"></script><script src="./core-v510.js"></script><script defer="" src="./app-v510.js"></script>
 <style id="JUGEST_V510_HOST_STYLE">
 html.jugest-app,html.jugest-app body.jugest-v510{margin:0;min-height:100%;background:linear-gradient(180deg,#f9fbff 0,#f4f8ff 55%,#f8faff 100%);}
 body.jugest-v510{min-height:100dvh;overflow-x:hidden;color:#101a33;}
@@ -1062,13 +1068,14 @@ function externalInferMissing(key,rawG,bb,rb,rawDiff){
  return{games:hasG?rawG:null,gamesSource:hasG?"observed":"missing",diff:hasD?rawDiff:null,diffSource:hasD?"observed":"missing",judge:null,estimateConfidence:0};
 }
 
-function externalBonusJudgeQ(key,g,bb,rb){
+function externalBonusJudgeQ(key,g,bb,rb,capture){
  if(!M[key]||!g)return null;bb=Math.max(0,+bb||0);rb=Math.max(0,+rb||0);let no=Math.max(0,(+g||0)-bb-rb);
  let L=M[key].simple.map(t=>{let pb=1/t.b,pr=1/t.r,p0=1-pb-pr;if(p0<=0)return-Infinity;return (bb?bb*Math.log(pb):0)+(rb?rb*Math.log(pr):0)+(no?no*Math.log(p0):0)});
+ if(capture)capture({logs:L,style:"unknown"});
  return safeNorm(L)
 }
 function hanaQ6(key,q){if(!Array.isArray(q))return null;if(key==="newkingv")return[q[0]||0,q[1]||0,q[2]||0,q[3]||0,q[4]||0,0];return q.length===6?q.slice():null}
-function externalJudge(key,g,bb,rb,diff){
+function externalJudge(key,g,bb,rb,diff,capture){
  if(HANA_MACHINE_KEYS.includes(key)&&HANA){
   g=+g||0;bb=Math.max(0,+bb||0);rb=Math.max(0,+rb||0);if(!g)return null;
   let r=HANA.numericJudge(key,{G:g,bb,rb,diff:(diff!=null&&Number.isFinite(+diff))?+diff:null,style:"unknown"}),q=hanaQ6(key,r.q);
@@ -1079,11 +1086,24 @@ function externalJudge(key,g,bb,rb,diff){
  if(diff!=null&&Number.isFinite(+diff)){
   let z=reverseCore(key,g,bb,rb,+diff,"unknown");
   if(z&&Array.isArray(z.q)&&z.q.every(Number.isFinite)){
+   if(capture)capture({logs:z.Ls,reverse:z,style:"unknown"});
    return{q:z.q,method:"reverse-diff",estimatedGrape:Number.isFinite(z.denom)?z.denom:NaN,estimatedGrapeCount:Number.isFinite(z.vbar)?z.vbar:NaN,grapeCountLo:Number.isFinite(z.lo)?z.lo:NaN,grapeCountHi:Number.isFinite(z.hi)?z.hi:NaN,reverseWarn:!!z.warn}
   }
  }
- let q=externalBonusJudgeQ(key,g,bb,rb);
+ let q=externalBonusJudgeQ(key,g,bb,rb,capture);
  return q?{q,method:"bonus-only",estimatedGrape:NaN,estimatedGrapeCount:NaN,grapeCountLo:NaN,grapeCountHi:NaN,reverseWarn:false}:null
+}
+// Independent observed-data judgement: no session, context or persistence writes.
+function v510JudgeObservedMachine(raw={}){
+ const model=window.JUGESTJudgement,checked=model.validateInput(raw);
+ if(!checked.ok)return checked;
+ const x=checked.input;let diagnostics={};
+ const judged=externalJudge(x.machine,x.games,x.bb,x.rb,x.diff,value=>{diagnostics=value});
+ if(!judged||!Array.isArray(judged.q)||judged.q.some(v=>!Number.isFinite(v)))return{ok:false,errors:{result:"入力値から判別結果を生成できませんでした。"}};
+ const table=M[x.machine];
+ return model.resultModel(x,judged,{machineName:table.name,concentration:trendConfidence(judged.q),diagnostics,
+  engine:{judgeVersion:"external-juggler-browser-parity-v1",bridgeVersion:window.JUGESTCoreV510.VERSION,uiVersion:"5.1.2",style:"unknown",
+   table:{key:x.machine,settings:table.simple.map((t,i)=>({setting:i+1,...t})),bbpay:table.bbpay,regpay:table.regpay,replay:table.replay,revch:table.revch.slice(),bell:table.bell,pier:table.pier,chpay:table.chpay||2}}});
 }
 function rejudgeExternalMachine(r){
  if(!r||!M[r.machine])return r;
@@ -2934,6 +2954,8 @@ window.JUGEST_CORE_BRIDGE=window.JUGESTCoreV510.createBridge({
  setJudgeMachine:(machine)=>v510SetJudgeMachine(machine),
  setJudgeContext:(patch)=>v510SetJudgeContext(patch||{}),
 
+ getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),
+ judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),
  getReverseState:(input)=>v510ReverseState(input||{}),
  getReverseStyles:(machine)=>v510ReverseStyles(machine),
  beginPickup:(input)=>v510BeginPickup(input||{}),

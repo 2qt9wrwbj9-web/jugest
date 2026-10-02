@@ -26,7 +26,7 @@ async function fixture(){
   const canonicalDbPath=join(dir,'jugest.sqlite');
   const rawRoot=join(dir,'raw');
   await import('node:fs/promises').then(fs=>fs.mkdir(root,{recursive:true}));
-  for(const name of ['index.html','hanahana-judge.js','missing-inference.js','core-v510.js'])copyFileSync(join(REPO_ROOT,name),join(root,name));
+  for(const name of ['index.html','hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js'])copyFileSync(join(REPO_ROOT,name),join(root,name));
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON(`channel/${CHANNEL}`,{version:1,createdAt:1,claimedAt:1,revokedAt:0,receiverHash:digest(TOKEN),senderHash:'sender'});
 

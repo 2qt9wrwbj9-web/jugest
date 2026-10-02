@@ -1,17 +1,18 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 for(const [file,expected] of Object.entries(manifest.protectedFiles)){
-  const actual=hash(fs.readFileSync(file));
+  const actual=hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8')));
   // Vercel CLI 59.11.7 rewrites this file as compact JSON plus a newline.
   // Accept only that exact baseline-equivalent byte representation; changes to
   // any setting still fail. The checked-in file retains its original hash.
   if(file==='vercel.json')assert.ok([expected,manifest.vercelMinifiedSha256].includes(actual),`Production protected: ${file}`);
   else assert.equal(actual,expected,`Production protected: ${file}`);
 }
-for(const [file,expected] of Object.entries(manifest.jitterFiles))assert.equal(hash(fs.readFileSync(file)),expected,`Exact clean jitter integration: ${file}`);
+for(const [file,expected] of Object.entries(manifest.jitterFiles))assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Exact clean jitter integration: ${file}`);
 const files=fs.readdirSync('api').filter(f=>f.endsWith('.js'));
 assert.ok(!files.some(f=>/health|diagnostic|probe/.test(f)),'no diagnostic endpoints');
 for(const file of ['_blob-store.js','_collector-state-v3.js','_collector-batch-v3.js','_relay-web.js']){

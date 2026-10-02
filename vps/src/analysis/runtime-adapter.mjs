@@ -36,7 +36,7 @@ async function bootRuntime(rootDir){
   };
   ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
 
-  for(const name of ['hanahana-judge.js','missing-inference.js','core-v510.js']){
+  for(const name of ['hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js']){
     vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx,{filename:name});
   }
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -167,4 +167,4 @@ export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,d
   return Object.freeze({shop:name,date:target,rows:Object.freeze(rows)});
 }
 
-export const __test={validTargetDate,bootImportedRuntime};
+export const __test={validTargetDate,bootImportedRuntime,bootRuntime};
