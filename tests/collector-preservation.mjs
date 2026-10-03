@@ -5,7 +5,6 @@ import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const reviewedBuildRefactor=Object.freeze({
-  'build.mjs':'f1aadfc89584e0e4601d7b03c817ccc101bb5acc0cd08f9526f6b8325adf3b82',
   'build/patches/analysis-jitter-fix.mjs':'2f3adf28c082da28082c810c4071fa4887cf9853b59123cafd36411903c49bf2',
   'build/patches/collector-coverage.mjs':'c7687fc5d3b4d8c20a3971a8b5d3eb7e89cd9f10f642db5292bd2be4621555d1',
   'build/patches/collector-ui.mjs':'d72db6e93e71c4c2e38f00dfb8e29a5a9dc523eb6f2624a30a8b5808d8bfff6a',
@@ -28,6 +27,13 @@ for(const [file,expected] of Object.entries(manifest.jitterFiles)){
 for(const [file,expected] of Object.entries(reviewedBuildRefactor)){
   assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Reviewed build refactor: ${file}`);
 }
+const buildSource=fs.readFileSync('build.mjs','utf8');
+assert.match(buildSource,/from '\.\/build\/patches\/index\.mjs'/,'build uses the patch composition entry point');
+for(const leaf of ['analysis-jitter-fix','collector-coverage','collector-ui','fixed-chrome','store-analysis-view']){
+  assert.doesNotMatch(buildSource,new RegExp(`build/patches/${leaf}\\.mjs`),`build does not couple directly to ${leaf}`);
+}
+const expectedPatchIndex="import { patchStoreAnalysisHtml, patchStoreAnalysisApp } from './store-analysis-view.mjs';\nimport { patchAnalysisJitterApp } from './analysis-jitter-fix.mjs';\nimport { patchCollectorCoverageHtml } from './collector-coverage.mjs';\nimport { patchFixedChromeCss } from './fixed-chrome.mjs';\nimport { patchCollectorUiApp } from './collector-ui.mjs';\n\nexport function applyHtmlBuildPatches(input){\n let html=patchCollectorCoverageHtml(input);\n return patchStoreAnalysisHtml(html);\n}\n\nexport function applyCssBuildPatches(input){\n return patchFixedChromeCss(input);\n}\n\nexport function applyAppBuildPatches(input){\n let app=patchCollectorUiApp(input);\n app=patchStoreAnalysisApp(app);\n return patchAnalysisJitterApp(app);\n}\n";
+assert.equal(fs.readFileSync('build/patches/index.mjs','utf8'),expectedPatchIndex,'build patch order remains explicitly frozen');
 const files=fs.readdirSync('api').filter(f=>f.endsWith('.js'));
 assert.ok(!files.some(f=>/health|diagnostic|probe/.test(f)),'no diagnostic endpoints');
 for(const file of ['_blob-store.js','_collector-state-v3.js','_collector-batch-v3.js','_relay-web.js']){

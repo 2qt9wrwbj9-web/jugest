@@ -3,11 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { inflateSync, deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { patchStoreAnalysisHtml, patchStoreAnalysisApp } from './build/patches/store-analysis-view.mjs';
-import { patchAnalysisJitterApp } from './build/patches/analysis-jitter-fix.mjs';
-import { patchCollectorCoverageHtml } from './build/patches/collector-coverage.mjs';
-import { patchFixedChromeCss } from './build/patches/fixed-chrome.mjs';
-import { patchCollectorUiApp } from './build/patches/collector-ui.mjs';
+import { applyHtmlBuildPatches, applyCssBuildPatches, applyAppBuildPatches } from './build/patches/index.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
@@ -51,17 +47,14 @@ for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-5
 
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8');
 html=html.replace(/apple-touch-icon\.png(?:\?[^"']*)?/g,'apple-touch-icon.png?v=512-icon-tune-3');
-html=patchCollectorCoverageHtml(html);
-html=patchStoreAnalysisHtml(html);
+html=applyHtmlBuildPatches(html);
 fs.writeFileSync(path.join(out,'index.html'),html);
 
 let css=fs.readFileSync(path.join(out,'app-v510.css'),'utf8');
-css=patchFixedChromeCss(css);
+css=applyCssBuildPatches(css);
 fs.writeFileSync(path.join(out,'app-v510.css'),css);
 
 let app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
-app=patchCollectorUiApp(app);
-app=patchStoreAnalysisApp(app);
-app=patchAnalysisJitterApp(app);
+app=applyAppBuildPatches(app);
 fs.writeFileSync(path.join(out,'app-v510.js'),app);
 if(!html.includes('<title>JUGEST v5.1.2</title>'))throw new Error('JUGEST v5.1.2 title missing');if(!app.includes("const VERSION='5.1.2'"))throw new Error('JUGEST app version mismatch');if(!app.includes("link.href='./app-v510.css'"))throw new Error('startup style hotfix missing');console.log('JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + analysis progress stability + startup/icon hotfix PASS');
