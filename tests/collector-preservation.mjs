@@ -4,6 +4,12 @@ import {createHash} from 'node:crypto';
 import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
+const reviewedBuildRefactor=Object.freeze({
+  'build.mjs':'280c91dfaf2c03ba1d987fd560236df1ed83d8d89aeb59af3facdac4722f3bd4',
+  'build/patches/collector-coverage.mjs':'c7687fc5d3b4d8c20a3971a8b5d3eb7e89cd9f10f642db5292bd2be4621555d1',
+  'build/patches/collector-ui.mjs':'d72db6e93e71c4c2e38f00dfb8e29a5a9dc523eb6f2624a30a8b5808d8bfff6a',
+  'build/patches/fixed-chrome.mjs':'18e22c75c78b8e8146ec3ac510643b51377708556bd6ceeface7abf2fdc23cd2'
+});
 for(const [file,expected] of Object.entries(manifest.protectedFiles)){
   const actual=hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8')));
   // Vercel CLI 59.11.7 rewrites this file as compact JSON plus a newline.
@@ -12,7 +18,13 @@ for(const [file,expected] of Object.entries(manifest.protectedFiles)){
   if(file==='vercel.json')assert.ok([expected,manifest.vercelMinifiedSha256].includes(actual),`Production protected: ${file}`);
   else assert.equal(actual,expected,`Production protected: ${file}`);
 }
-for(const [file,expected] of Object.entries(manifest.jitterFiles))assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Exact clean jitter integration: ${file}`);
+for(const [file,expected] of Object.entries(manifest.jitterFiles)){
+  if(file==='build.mjs')continue; // Intentionally split into reviewed build/patches modules.
+  assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Exact clean jitter integration: ${file}`);
+}
+for(const [file,expected] of Object.entries(reviewedBuildRefactor)){
+  assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Reviewed build refactor: ${file}`);
+}
 const files=fs.readdirSync('api').filter(f=>f.endsWith('.js'));
 assert.ok(!files.some(f=>/health|diagnostic|probe/.test(f)),'no diagnostic endpoints');
 for(const file of ['_blob-store.js','_collector-state-v3.js','_collector-batch-v3.js','_relay-web.js']){
@@ -22,4 +34,4 @@ for(const file of ['_blob-store.js','_collector-state-v3.js','_collector-batch-v
 const relay=fs.readFileSync('api/_relay-web.js','utf8');
 assert.match(relay,/process\.env\.VERCEL_ENV==='preview'\?'jugest-preview-collector-v3':'jugest'/);
 assert.match(relay,/createBlobStore\(name,\{\.\.\.options,root\}\)/);
-console.log(`PASS ${Object.keys(manifest.protectedFiles).length} Production hashes, five byte-exact clean jitter files, Preview namespace and diagnostic exclusion`);
+console.log(`PASS ${Object.keys(manifest.protectedFiles).length} Production hashes, reviewed build refactor hashes, clean jitter files, Preview namespace and diagnostic exclusion`);

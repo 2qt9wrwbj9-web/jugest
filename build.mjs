@@ -5,6 +5,9 @@ import { inflateSync, deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { patchStoreAnalysisHtml, patchStoreAnalysisApp } from './build-store-analysis-view.mjs';
 import { patchAnalysisJitterApp } from './build-analysis-jitter-fix.mjs';
+import { patchCollectorCoverageHtml } from './build/patches/collector-coverage.mjs';
+import { patchFixedChromeCss } from './build/patches/fixed-chrome.mjs';
+import { patchCollectorUiApp } from './build/patches/collector-ui.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
@@ -48,38 +51,16 @@ for(const rel of ['favicon-32.png','apple-touch-icon.png','icon-192.png','icon-5
 
 let html=fs.readFileSync(path.join(out,'index.html'),'utf8');
 html=html.replace(/apple-touch-icon\.png(?:\?[^"']*)?/g,'apple-touch-icon.png?v=512-icon-tune-3');
-const coverageHelperAnchor='async function v510RefreshCollector(){';
-const coverageHelper=`function v510CollectorCoveragePayload(){\n const grouped=new Map();\n for(const d of externalDays||[]){\n  const shop=canonicalExternalShopName(d?.shop||'').trim(),date=String(d?.date||'');if(!shop||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(date))continue;\n  let row=grouped.get(shop);if(!row){row={shop,dates:new Set()};grouped.set(shop,row)}row.dates.add(date);\n }\n return [...grouped.values()].slice(0,100).map(r=>({shop:r.shop,dates:[...r.dates].sort().slice(-370)}));\n}\n\n`;
-if((html.split(coverageHelperAnchor).length-1)!==1)throw new Error('Collector coverage helper anchor missing');
-html=html.replace(coverageHelperAnchor,coverageHelper+coverageHelperAnchor);
-const sinceRevisionAnchor='sinceRevision:Math.max(0,+collectorSyncState.revision||0)}';
-const coverageStatusReplacement='sinceRevision:Math.max(0,+collectorSyncState.revision||0),localCoverage:v510CollectorCoveragePayload()}';
-const coverageStatusHits=html.split(sinceRevisionAnchor).length-1;if(coverageStatusHits<5)throw new Error(`Collector status coverage anchor count ${coverageStatusHits}`);
-html=html.replaceAll(sinceRevisionAnchor,coverageStatusReplacement);
+html=patchCollectorCoverageHtml(html);
 html=patchStoreAnalysisHtml(html);
 fs.writeFileSync(path.join(out,'index.html'),html);
 
 let css=fs.readFileSync(path.join(out,'app-v510.css'),'utf8');
-const chromeTransforms=[
- ['.topbar{position:fixed;z-index:50;top:0;left:50%;transform:translateX(-50%);width:min(100%,560px);','.topbar{position:fixed;z-index:50;top:0;left:0;right:0;margin:0 auto;width:min(100%,560px);','topbar fixed centering'],
- ['.bottom-nav{position:fixed;z-index:50;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,560px);','.bottom-nav{position:fixed;z-index:50;bottom:0;left:0;right:0;margin:0 auto;width:min(100%,560px);','bottom navigation fixed centering'],
-];
-for(const [from,to,label] of chromeTransforms){const hits=css.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);css=css.replace(from,to)}
+css=patchFixedChromeCss(css);
 fs.writeFileSync(path.join(out,'app-v510.css'),css);
 
 let app=fs.readFileSync(path.join(out,'app-v510.js'),'utf8');
-const manualCollectorStartDate='<label><small>取得開始日</small><input data-store-start type="date" value="${esc(e.startDate)}"></label>';
-if(!app.includes(manualCollectorStartDate))throw new Error('Collector start-date control anchor missing');
-app=app.replace(manualCollectorStartDate,'');
-const collectorSetupOpen='<section class="panel sync-setup"><h2>';
-const compactCollectorSetupOpen=`<details class="panel sync-setup collector-link-card" \${d.linked?'':'open'}><summary class="collector-link-summary">`;
-const collectorSetupHeadingClose='</h2>\n    <p>端末同期とは別の、取得データをJUGESTへ送るための連携です。</p>';
-const compactCollectorSetupHeadingClose=`\${d.linked?'　設定を表示':''}</summary>\n    <p>端末同期とは別の、取得データをJUGESTへ送るための連携です。</p>`;
-const collectorSetupClose='</section>\n    <div class="data-kpis">';
-const compactCollectorSetupClose='</details>\n    <div class="data-kpis">';
-for(const [from,to,label] of [[collectorSetupOpen,compactCollectorSetupOpen,'Collector compact setup open'],[collectorSetupHeadingClose,compactCollectorSetupHeadingClose,'Collector compact setup heading'],[collectorSetupClose,compactCollectorSetupClose,'Collector compact setup close']]){
- const hits=app.split(from).length-1;if(hits!==1)throw new Error(`${label} anchor count ${hits}`);app=app.replace(from,to);
-}
+app=patchCollectorUiApp(app);
 app=patchStoreAnalysisApp(app);
 app=patchAnalysisJitterApp(app);
 fs.writeFileSync(path.join(out,'app-v510.js'),app);
