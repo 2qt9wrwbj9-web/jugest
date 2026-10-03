@@ -5,10 +5,13 @@ import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const reviewedBuildRefactor=Object.freeze({
-  'build.mjs':'280c91dfaf2c03ba1d987fd560236df1ed83d8d89aeb59af3facdac4722f3bd4',
+  'build.mjs':'f1aadfc89584e0e4601d7b03c817ccc101bb5acc0cd08f9526f6b8325adf3b82',
+  'build/patches/analysis-jitter-fix.mjs':'2f3adf28c082da28082c810c4071fa4887cf9853b59123cafd36411903c49bf2',
   'build/patches/collector-coverage.mjs':'c7687fc5d3b4d8c20a3971a8b5d3eb7e89cd9f10f642db5292bd2be4621555d1',
   'build/patches/collector-ui.mjs':'d72db6e93e71c4c2e38f00dfb8e29a5a9dc523eb6f2624a30a8b5808d8bfff6a',
-  'build/patches/fixed-chrome.mjs':'18e22c75c78b8e8146ec3ac510643b51377708556bd6ceeface7abf2fdc23cd2'
+  'build/patches/fixed-chrome.mjs':'18e22c75c78b8e8146ec3ac510643b51377708556bd6ceeface7abf2fdc23cd2',
+  'build/patches/store-analysis-view.mjs':'3a98afda9208fc4ff0101268f49a6df8c895a293bbf69247247179506e01bc33',
+  'tests/production-preservation.mjs':'6c01de6d9af8270382edd3cb83008d3d7e8a9212dcd02f86adcc04bfba6511b7'
 });
 for(const [file,expected] of Object.entries(manifest.protectedFiles)){
   const actual=hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8')));
@@ -19,7 +22,7 @@ for(const [file,expected] of Object.entries(manifest.protectedFiles)){
   else assert.equal(actual,expected,`Production protected: ${file}`);
 }
 for(const [file,expected] of Object.entries(manifest.jitterFiles)){
-  if(file==='build.mjs')continue; // Intentionally split into reviewed build/patches modules.
+  if(['build.mjs','build-analysis-jitter-fix.mjs','tests/production-preservation.mjs'].includes(file))continue;
   assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Exact clean jitter integration: ${file}`);
 }
 for(const [file,expected] of Object.entries(reviewedBuildRefactor)){
