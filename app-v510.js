@@ -104,7 +104,7 @@ class JugestApp extends HTMLElement{
   renderObservedSettings(){return global.JUGESTJudgementPageView?.settings?.(this.observed)||''}
   setObservedDebug(enabled){this.observed.debug=enabled===true;this.persist();this.render()}
   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
-  isObservedRowEmpty(row){return global.JUGESTJudgement.FIELDS.every(key=>String(row.input[key]??'').trim()==='')}
+  isObservedRowEmpty(row){return global.JUGESTJudgementPageInput.isRowEmpty(row,global.JUGESTJudgement.FIELDS)}
   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))}
   restoreObservedHistory(state){
     if(['single','parallel'].includes(state.observedMode))this.observed.mode=state.observedMode;

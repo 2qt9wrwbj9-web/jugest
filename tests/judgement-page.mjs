@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {boot,plain,memoryStorage} from './helpers/runtime.mjs';
+import {installLegacyJudgementPage} from './helpers/judgement-refactor-reference.mjs';
 import {patchJugestIndexSource} from '../vps/src/ui-source-patch.mjs';
 import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 
@@ -109,7 +110,7 @@ test('built and VPS-patched sources retain the page, bridge and existing shop fi
  }
  assert.match(patched,/function vpsSetActiveStore/);
  assert.match(fs.readFileSync('public/app-v510.css','utf8'),/repeat\(6,1fr\)/);
- for(const file of ['judgement-model.js','judgement-view.js','judgement-page-view.js'])assert.equal(fs.readFileSync(`public/${file}`,'utf8'),fs.readFileSync(file,'utf8'));
+ for(const file of ['judgement-model.js','judgement-view.js','judgement-page-view.js','judgement-page-input.js'])assert.equal(fs.readFileSync(`public/${file}`,'utf8'),fs.readFileSync(file,'utf8'));
  assert.match(built,/judgement-page-view\.js/);
  assert.equal(createHash('sha256').update(fs.readFileSync('judgement-page-view.js')).digest('hex'),'4c2d56397892f1297a0e47827f49748f8d798078a2eee313f94fab87d93e953e');
  const {bridge}=await observedBoot({loadApp:false,htmlSource:patched});assert.equal(bridge.judgeObservedMachine(input).ok,true);
@@ -279,4 +280,74 @@ test('unavailable grape values render a dash in summaries and never leak NaN or 
   assert.match(view.parallelResults([{id:'a',result:x}]),/推定ブドウ <b>—<\/b>/);
   assert.doesNotMatch(view.result(x),/NaN|Infinity/);
  }
+});
+
+
+test('extracted empty-row predicate preserves whitespace, absent values and every explicit zero without writes',async()=>{
+ const {ctx,app,storage,timers}=await observedBoot();ctx.JudgementProbe.instrument();
+ const helper=ctx.JUGESTJudgementPageInput;
+ assert.equal(typeof helper?.isRowEmpty,'function','empty-row predicate must be available independently');
+ const old=await observedBoot();installLegacyJudgementPage(old.app,old.ctx);
+ const fields=ctx.JUGESTJudgement.FIELDS;
+ const cases=[
+  {input:{},want:true},
+  {input:Object.fromEntries(fields.map(k=>[k,null])),want:true},
+  {input:Object.fromEntries(fields.map(k=>[k,' \t\n\u3000 '])),want:true},
+  ...fields.flatMap(key=>[0,'0','+0','-0','x'].map(value=>({input:{[key]:value},want:false})))
+ ];
+ const before=state(ctx),saved=[...storage.map],idb=[...storage.idb],scheduled=[...timers.keys()],observed=plain(app.observed);
+ for(const {input,want} of cases){
+  const row={input,result:null,errors:{}},snapshot=structuredClone(row);
+  assert.equal(helper.isRowEmpty(row,fields),want,JSON.stringify(input));
+  assert.equal(app.isObservedRowEmpty(row),want);
+  assert.equal(app.isObservedRowEmpty(row),old.app.isObservedRowEmpty(row));
+  assert.deepEqual(row,snapshot);
+ }
+ assert.deepEqual(plain(app.observed),observed);assert.equal(state(ctx),before);
+ assert.deepEqual([...storage.map],saved);assert.deepEqual([...storage.idb],idb);assert.deepEqual([...timers.keys()],scheduled);
+ assert.deepEqual(plain(ctx.observedCalls),{judge:0,reverse:0,autosave:0,queuedSave:0});
+});
+
+test('pre-Phase-2 page and extracted input preserve seven HTML states and subsequent batch/history operations',async()=>{
+ const current=await observedBoot(),legacy=await observedBoot();installLegacyJudgementPage(legacy.app,legacy.ctx);
+ const history=new Map();
+ for(const runtime of [current,legacy]){
+  runtime.ctx.JudgementProbe.instrument();const entries=[];history.set(runtime,entries);
+  runtime.ctx.history.pushState=s=>entries.push(plain(s));
+  runtime.ctx.history.replaceState=s=>{entries[entries.length-1]=plain(s)};
+ }
+ function equivalent(label){
+  const a=current.app,b=legacy.app;
+  assert.equal(a.renderObservedPage(),b.renderObservedPage(),label+' page HTML');
+  assert.equal(a.renderObservedSettingsButton(),b.renderObservedSettingsButton(),label+' gear HTML');
+  assert.equal(a.mount.innerHTML,b.mount.innerHTML,label+' mounted HTML');
+  assert.deepEqual(plain(a.observed),plain(b.observed),label+' draft/results state');
+  assert.deepEqual([a.state.workspace,a.state.screen],[b.state.workspace,b.state.screen],label+' route');
+  assert.deepEqual(plain(current.ctx.observedCalls),plain(legacy.ctx.observedCalls),label+' engine calls');
+  assert.equal(state(current.ctx),state(legacy.ctx),label+' domain state');
+  assert.deepEqual([...current.storage.map],[...legacy.storage.map],label+' local storage');
+  assert.deepEqual([...current.storage.idb],[...legacy.storage.idb],label+' IndexedDB');
+  assert.deepEqual(history.get(current),history.get(legacy),label+' history');
+ }
+ function step(label,operation){for(const runtime of [current,legacy])operation(runtime.app,runtime);equivalent(label)}
+ step('1 initial',app=>app.navigate('judgement'));
+ step('2 single input',app=>app.acceptMachineRows([reviewSample]));
+ step('3 single result',app=>app.handleObservedAction('judge',app.observed.single.id));
+ step('4 settings',app=>app.handleObservedAction('settings'));
+ step('5 parallel list',app=>{app.handleObservedAction('close-settings');app.acceptMachineRows([reviewSample,{...reviewSample,tableNo:'3065',diff:''}]);app.handleObservedAction('judge-all')});
+ step('6 parallel detail',app=>app.handleObservedAction('detail',app.observed.rows[0].id));
+ step('7 settings from detail',app=>app.handleObservedAction('settings'));
+ step('debug ON',app=>app.setObservedDebug(true));
+ step('back to detail',app=>app.handleObservedAction('close-settings'));
+ step('back to list',app=>app.handleObservedAction('close-detail'));
+ step('mixed imports',app=>app.acceptMachineRows([{machine:'',games:' ',bb:'\t',rb:'',diff:'',tableNo:''},{machine:'my',games:'7859'},{...reviewSample,bb:0,rb:0,diff:0},{...reviewSample,diff:''},{...reviewSample,diff:-200}]));
+ step('batch blank/partial/zero/missing/negative',app=>app.handleObservedAction('judge-all'));
+ assert.deepEqual(plain(current.app.observed.rows[0].errors),{});assert.equal(current.app.observed.rows[1].result,null);
+ assert.equal(current.ctx.observedCalls.judge,6);assert.equal(current.ctx.observedCalls.reverse,4);
+ step('add blank',app=>app.handleObservedAction('add'));
+ step('repeat batch',app=>app.handleObservedAction('judge-all'));
+ assert.equal(current.ctx.observedCalls.judge,9);assert.equal(current.ctx.observedCalls.reverse,6);
+ step('delete blank',app=>app.handleObservedAction('delete',app.observed.rows[0].id));
+ step('detail after batch',app=>app.handleObservedAction('detail',app.observed.rows[1].id));
+ step('restore list history',(app,runtime)=>app.onPopState({state:history.get(runtime).find(s=>s.observedMode==='parallel'&&s.screen==='hub')}));
 });

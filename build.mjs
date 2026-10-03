@@ -6,7 +6,7 @@ import { applyHtmlBuildPatches, applyCssBuildPatches, applyAppBuildPatches } fro
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const out=path.join(root,'public');
-const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','judgement-page-view.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
+const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','judgement-page-view.js','judgement-page-input.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
 fs.rmSync(out,{recursive:true,force:true});
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
 for(const rel of FILES){

@@ -17,7 +17,7 @@ export async function boot({storage=memoryStorage(),fetch=async()=>{throw Error(
  history:{pushState(){},replaceState(){}},confirm:()=>true,fetch,
  HTMLElement:class {constructor(){this.isConnected=true}attachShadow(){this.shadowRoot=makeElement()}},customElements:{get:k=>classes.get(k),define:(k,v)=>classes.set(k,v)}};
  ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
- for(const f of ['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','judgement-page-view.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
+ for(const f of ['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','judgement-page-view.js','judgement-page-input.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
  const html=htmlSource??fs.readFileSync('index.html','utf8');for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].trim())vm.runInContext(m[1],ctx,{filename:'index-inline.js'});
  if(sync)ctx.JUGESTDeviceSync=sync;else vm.runInContext(fs.readFileSync('sync-core.js','utf8'),ctx,{filename:'sync-core.js'});
  for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
