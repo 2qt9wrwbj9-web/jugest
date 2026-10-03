@@ -351,3 +351,20 @@ test('pre-Phase-2 page and extracted input preserve seven HTML states and subseq
  step('detail after batch',app=>app.handleObservedAction('detail',app.observed.rows[1].id));
  step('restore list history',(app,runtime)=>app.onPopState({state:history.get(runtime).find(s=>s.observedMode==='parallel'&&s.screen==='hub')}));
 });
+
+
+test('read-only row lookup preserves identity, coercion order, duplicate priority and missing IDs',async()=>{
+ const current=await observedBoot(),old=await observedBoot();installLegacyJudgementPage(old.app,old.ctx);
+ const helper=current.ctx.JUGESTJudgementPageInput;
+ assert.equal(typeof helper?.findRow,'function','row lookup must be independently available');
+ const single=Object.freeze({id:'1'}),parallel=Object.freeze({id:'2'}),duplicate=Object.freeze({id:'1'}),rows=Object.freeze([null,parallel,duplicate]);
+ current.app.observed.single=single;current.app.observed.rows=rows;old.app.observed.single=single;old.app.observed.rows=rows;
+ const before=plain(current.app.observed),saved=[...current.storage.map],idb=[...current.storage.idb];
+ for(const [id,want] of [[1,single],['1',single],[2,parallel],['2',parallel],[3,undefined],[null,undefined],[undefined,undefined]]){
+  assert.equal(helper.findRow(single,rows,id),want);assert.equal(current.app.observedRow(id),want);assert.equal(old.app.observedRow(id),want);
+ }
+ function coercions(app){let calls=0;const id={toString(){calls++;return '2'}};assert.equal(app.observedRow(id),parallel);return calls}
+ assert.equal(coercions(current.app),3);assert.equal(coercions(old.app),3,'coercion stays inside the existing find callback');
+ assert.equal(helper.findRow(null,[],2),undefined);
+ assert.deepEqual(plain(current.app.observed),before);assert.deepEqual([...current.storage.map],saved);assert.deepEqual([...current.storage.idb],idb);
+});
