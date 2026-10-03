@@ -5,6 +5,7 @@ import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const reviewedBuildRefactor=Object.freeze({
+  'build/assets/icons.mjs':'0368f155af097f5c8612c1d103950b96b87b93a620b08f52e69679c262217d05',
   'build/patches/analysis-jitter-fix.mjs':'2f3adf28c082da28082c810c4071fa4887cf9853b59123cafd36411903c49bf2',
   'build/patches/collector-coverage.mjs':'c7687fc5d3b4d8c20a3971a8b5d3eb7e89cd9f10f642db5292bd2be4621555d1',
   'build/patches/collector-ui.mjs':'d72db6e93e71c4c2e38f00dfb8e29a5a9dc523eb6f2624a30a8b5808d8bfff6a',
@@ -28,6 +29,8 @@ for(const [file,expected] of Object.entries(reviewedBuildRefactor)){
   assert.equal(hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))),expected,`Reviewed build refactor: ${file}`);
 }
 const buildSource=fs.readFileSync('build.mjs','utf8');
+assert.match(buildSource,/from '\.\/build\/assets\/icons\.mjs'/,'build uses the icon build module');
+assert.doesNotMatch(buildSource,/createHash|inflateSync|deflateSync|function crc32|apple-touch-icon-tuned/,'build no longer owns icon implementation details');
 assert.match(buildSource,/from '\.\/build\/patches\/index\.mjs'/,'build uses the patch composition entry point');
 for(const leaf of ['analysis-jitter-fix','collector-coverage','collector-ui','fixed-chrome','store-analysis-view']){
   assert.doesNotMatch(buildSource,new RegExp(`build/patches/${leaf}\\.mjs`),`build does not couple directly to ${leaf}`);
