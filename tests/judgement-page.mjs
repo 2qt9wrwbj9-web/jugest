@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {createHash} from 'node:crypto';
 import {boot,plain,memoryStorage} from './helpers/runtime.mjs';
 import {patchJugestIndexSource} from '../vps/src/ui-source-patch.mjs';
 import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
@@ -108,7 +109,9 @@ test('built and VPS-patched sources retain the page, bridge and existing shop fi
  }
  assert.match(patched,/function vpsSetActiveStore/);
  assert.match(fs.readFileSync('public/app-v510.css','utf8'),/repeat\(6,1fr\)/);
- for(const file of ['judgement-model.js','judgement-view.js'])assert.equal(fs.readFileSync(`public/${file}`,'utf8'),fs.readFileSync(file,'utf8'));
+ for(const file of ['judgement-model.js','judgement-view.js','judgement-page-view.js'])assert.equal(fs.readFileSync(`public/${file}`,'utf8'),fs.readFileSync(file,'utf8'));
+ assert.match(built,/judgement-page-view\.js/);
+ assert.equal(createHash('sha256').update(fs.readFileSync('judgement-page-view.js')).digest('hex'),'4c2d56397892f1297a0e47827f49748f8d798078a2eee313f94fab87d93e953e');
  const {bridge}=await observedBoot({loadApp:false,htmlSource:patched});assert.equal(bridge.judgeObservedMachine(input).ok,true);
 });
 

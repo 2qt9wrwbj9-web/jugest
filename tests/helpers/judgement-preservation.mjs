@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
- '  // BEGIN independent judgement UI\n':'efa1c27d4a3c0a14dbc7c95143b018a9c8289e150a1f76ab175929e6f25da75d',
+ '  // BEGIN independent judgement UI\n':'2982ee818f9a8e4cab938056d45414d9804492c07de8a0edb1ea1dd6a55a797a',
  '/* BEGIN independent judgement styles */\n':'ea3a65a69c8a2cb1531ee73b1f24a52a2588d1cbfa036815bec21159efcbbeac',
  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
 });
@@ -46,7 +46,7 @@ export function withoutJudgementAdditions(file,source){
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
  }else if(file==='index.html'){
   source=replace(source,'Independent judgement page v1 — 2026-10-02:\n- Added a second-position judgement workspace with single/parallel observed-data inputs and shared detailed results.\n- Reused externalJudge and the existing MCP summaries; diagnostic taps expose values from the same invocation.\n- Added distribution concentration, setting probability bars and an explicit structured-row draft interface.\n- Judgment math, MCP result schemas, PRE/store analysis, sessions and run-record persistence are unchanged.\n\n');
-  source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script>');
+  source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script><script src="./judgement-page-view.js"></script>');
   source=replace(source,'function externalBonusJudgeQ(key,g,bb,rb,capture){','function externalBonusJudgeQ(key,g,bb,rb){');
   source=replace(source,'function externalJudge(key,g,bb,rb,diff,capture){','function externalJudge(key,g,bb,rb,diff){');
   source=replace(source,' if(capture)capture({logs:L.slice(),style:"unknown"});\n');
@@ -55,10 +55,10 @@ export function withoutJudgementAdditions(file,source){
   source=block(source,'// Independent observed-data judgement: no session, context or persistence writes.\n','function rejudgeExternalMachine(r){','function rejudgeExternalMachine(r){');
   source=replace(source,' getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),\n judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),\n');
  }else if(file==='build.mjs'){
-  source=replace(source,"'judgement-model.js','judgement-view.js',");
+  source=replace(source,"'judgement-model.js','judgement-view.js','judgement-page-view.js',");
  }else if(file==='tests/helpers/runtime.mjs'){
   source=replace(source,",htmlSource=null",'');
-  source=replace(source,"'judgement-model.js','judgement-view.js',",'');
+  source=replace(source,"'judgement-model.js','judgement-view.js','judgement-page-view.js',",'');
   source=replace(source,"htmlSource??fs.readFileSync('index.html','utf8')","fs.readFileSync('index.html','utf8')");
  }else if(file==='tests/production-preservation.mjs'){
   source=replace(source,"import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';\n");
