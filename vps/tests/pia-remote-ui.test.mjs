@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {patchJugestIndexSource} from '../src/ui-source-patch.mjs';
+import {patchJugestIndexSource,__test as sourcePatchTest} from '../src/ui-source-patch.mjs';
 
 const ROOT=resolve(fileURLToPath(new URL('../../',import.meta.url)));
 
@@ -19,6 +19,37 @@ test('VPS source patch wires remote store cache into the existing store selector
   assert.match(patched,/getStoreDay:\(name,date\)=>vpsMergedStoreDay/);
   assert.match(patched,/setActiveStore:\(name,opts\)=>vpsSetActiveStore/);
 });
+test('remote PIA store metadata and overview are not shadowed by an empty local store-master shell',()=>{
+  const previous=globalThis.JUGEST_VPS_REMOTE_STORES;
+  const remoteRow={id:'pia:35',name:'PIA大船1',latestDate:'2026-10-03',dayCount:5,registered:true,enabled:true,error:false,remote:true};
+  const remoteOverview={name:'PIA大船1',latestDate:'2026-10-03',storedDays:5,machineRows:106,totalG:530000,totalBB:1200,totalRB:900,collector:{registered:true,enabled:true,errorCode:'',missingDays:0,latestDate:'2026-10-03'}};
+  globalThis.JUGEST_VPS_REMOTE_STORES={
+    getStores(){return [remoteRow]},
+    getOverview(name){return name===remoteRow.name?remoteOverview:null},
+    getDates(){return ['2026-10-03']},
+    getDay(){return {shop:remoteRow.name,date:'2026-10-03',rows:[]}}
+  };
+  try{
+    const loadHelpers=new Function('v510KnownStoreRows','v510StoreDates','v510StoreOverview',`${sourcePatchTest.REMOTE_STORE_HELPER};return {vpsMergedStoreRows,vpsMergedStoreOverview};`);
+    const emptyLocalRow={name:'PIA大船1',latestDate:'',registered:false,enabled:false,error:false};
+    const emptyLocalOverview={name:'PIA大船1',latestDate:'',storedDays:0,machineRows:0,totalG:0,totalBB:0,totalRB:0,collector:{registered:false,enabled:false,errorCode:'',missingDays:0,latestDate:''}};
+    const remoteHelpers=loadHelpers(()=>[emptyLocalRow],()=>[],()=>emptyLocalOverview);
+    const mergedRow=remoteHelpers.vpsMergedStoreRows().find(row=>row.name==='PIA大船1');
+    assert.equal(mergedRow.latestDate,'2026-10-03');
+    assert.equal(mergedRow.registered,true);
+    assert.equal(remoteHelpers.vpsMergedStoreOverview('PIA大船1').storedDays,5);
+    assert.equal(remoteHelpers.vpsMergedStoreOverview('PIA大船1').machineRows,106);
+
+    const localOverview={...emptyLocalOverview,latestDate:'2026-10-02',storedDays:1,machineRows:90,totalG:400000,collector:{registered:true,enabled:true,errorCode:'',missingDays:0,latestDate:'2026-10-02'}};
+    const localHelpers=loadHelpers(()=>[{...emptyLocalRow,latestDate:'2026-10-02',registered:true,enabled:true}],()=>['2026-10-02'],()=>localOverview);
+    assert.equal(localHelpers.vpsMergedStoreOverview('PIA大船1').storedDays,1,'real local day data must keep precedence');
+    assert.equal(localHelpers.vpsMergedStoreRows()[0].latestDate,'2026-10-02','real local row metadata must keep precedence');
+  }finally{
+    if(previous===undefined)delete globalThis.JUGEST_VPS_REMOTE_STORES;
+    else globalThis.JUGEST_VPS_REMOTE_STORES=previous;
+  }
+});
+
 test('remote store cache exposes only public PIA native stores and normalizes daily machine rows',async()=>{
   assert.equal(typeof createRemoteStoreCache,'function','createRemoteStoreCache must exist');
   const client={
