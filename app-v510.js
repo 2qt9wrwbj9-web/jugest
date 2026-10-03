@@ -103,7 +103,7 @@ class JugestApp extends HTMLElement{
   renderObservedSettingsButton(){return global.JUGESTJudgementPageView?.settingsButton?.()||''}
   renderObservedSettings(){return global.JUGESTJudgementPageView?.settings?.(this.observed)||''}
   setObservedDebug(enabled){this.observed.debug=enabled===true;this.persist();this.render()}
-  newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
+  newObservedRow(value={machine:'my'}){return global.JUGESTJudgementPageInput.createDraft(String(++this.observed.seq),global.JUGESTJudgement.inputRow(value))}
   isObservedRowEmpty(row){return global.JUGESTJudgementPageInput.isRowEmpty(row,global.JUGESTJudgement.FIELDS)}
   observedRow(id){return global.JUGESTJudgementPageInput.findRow(this.observed.single,this.observed.rows,id)}
   restoreObservedHistory(state){

@@ -368,3 +368,31 @@ test('read-only row lookup preserves identity, coercion order, duplicate priorit
  assert.equal(helper.findRow(null,[],2),undefined);
  assert.deepEqual(plain(current.app.observed),before);assert.deepEqual([...current.storage.map],saved);assert.deepEqual([...current.storage.idb],idb);
 });
+
+
+test('pure draft construction preserves normalized inputs, fresh error objects and application-owned sequence updates',async()=>{
+ const current=await observedBoot(),old=await observedBoot();installLegacyJudgementPage(old.app,old.ctx);
+ const helper=current.ctx.JUGESTJudgementPageInput;
+ assert.equal(typeof helper?.createDraft,'function','draft structure must be independently available');
+ const normalized=Object.freeze({machine:'my',tableNo:'',games:'7859',bb:'0',rb:'35',diff:''});
+ const direct=helper.createDraft('7',normalized),second=helper.createDraft('8',normalized);
+ assert.deepEqual(plain(direct),{id:'7',input:normalized,result:null,errors:{}});
+ assert.equal(direct.input,normalized);assert.notEqual(direct.errors,second.errors);
+ const traces=new Map();
+ for(const runtime of [current,old]){
+  const model=runtime.ctx.JUGESTJudgement,trace=[];traces.set(runtime,trace);
+  runtime.ctx.JUGESTJudgement={...model,inputRow(value){trace.push(runtime.app.observed.seq);return model.inputRow(value)}};
+  runtime.ctx.JudgementProbe.instrument();
+ }
+ const saved=[...current.storage.map],idb=[...current.storage.idb],domain=state(current.ctx);
+ for(const value of [undefined,{},reviewSample,{machine:'',games:' 7859 ',bb:0,rb:'0',diff:null,tableNo:0},{games:NaN,diff:Infinity},{machine:'my',unknown:'ignored'}]){
+  assert.deepEqual(plain(current.app.newObservedRow(value)),plain(old.app.newObservedRow(value)));
+ }
+ assert.deepEqual(traces.get(current),[1,2,3,4,5,6]);assert.deepEqual(traces.get(current),traces.get(old));
+ assert.equal(current.app.observed.seq,6);assert.equal(old.app.observed.seq,6);
+ for(const runtime of [current,old])assert.throws(()=>runtime.app.newObservedRow(null),e=>e.name==='TypeError');
+ assert.equal(current.app.observed.seq,7);assert.equal(old.app.observed.seq,7,'failed normalization must still consume the same sequence ID');
+ assert.deepEqual(traces.get(current),traces.get(old));assert.equal(state(current.ctx),domain);
+ assert.deepEqual([...current.storage.map],saved);assert.deepEqual([...current.storage.idb],idb);
+ assert.deepEqual(plain(current.ctx.observedCalls),{judge:0,reverse:0,autosave:0,queuedSave:0});
+});
