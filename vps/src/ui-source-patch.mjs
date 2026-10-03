@@ -13,14 +13,15 @@ const COLLECTOR_CREDENTIALS_MODULE_TAG='<script type="module" src="./vps-ui-coll
 const RELEASE_VERSION_MODULE_TAG='<script type="module" src="./vps-release-version.mjs?v=602-historical-audit-1"></script>';
 const REMOTE_STORES_MODULE_TAG='<script type="module" src="./vps-ui-remote-stores.mjs"></script>';
 const REMOTE_STORE_HELPER=`function vpsRemoteStoreCache(){return globalThis.JUGEST_VPS_REMOTE_STORES||null}
+function vpsHasLocalStoreData(name){return v510StoreDates(name,1).length>0}
 function vpsMergedStoreRows(){
  let local=v510KnownStoreRows().map(x=>({...x})),remote=vpsRemoteStoreCache()?.getStores?.()||[],rows=new Map(local.map(x=>[x.name,x]));
- for(const row of remote)if(row?.name&&!rows.has(row.name))rows.set(row.name,{...row});
+ for(const row of remote){if(!row?.name)continue;let current=rows.get(row.name);if(!current||!vpsHasLocalStoreData(row.name))rows.set(row.name,{...current,...row})}
  return [...rows.values()].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ja"))
 }
 function vpsMergedStoreDates(name,limit=120){let local=v510StoreDates(name,limit);return local.length?local:(vpsRemoteStoreCache()?.getDates?.(name,limit)||[])}
 function vpsMergedStoreDay(name,date=""){let localDates=v510StoreDates(name,1);return localDates.length?v510StoreDay(name,date):(vpsRemoteStoreCache()?.getDay?.(name,date)||{shop:name,date:String(date||""),rows:[]})}
-function vpsMergedStoreOverview(name){let local=v510KnownStoreRows().some(x=>x.name===name);return local?v510StoreOverview(name):(vpsRemoteStoreCache()?.getOverview?.(name)||v510StoreOverview(name))}
+function vpsMergedStoreOverview(name){return vpsHasLocalStoreData(name)?v510StoreOverview(name):(vpsRemoteStoreCache()?.getOverview?.(name)||v510StoreOverview(name))}
 function vpsSetActiveStore(name,opts={}){
  if(v510SetActiveStore(name,opts))return true;
  name=String(name||"").trim();if(!name||!(vpsRemoteStoreCache()?.getStores?.()||[]).some(x=>x?.name===name))return false;
