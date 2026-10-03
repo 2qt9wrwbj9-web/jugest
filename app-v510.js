@@ -115,8 +115,7 @@ class JugestApp extends HTMLElement{
   }
   // Explicit future import entry point. It only fills drafts; it never judges or saves.
   acceptMachineRows(rows,{append=false}={}){
-    if(!Array.isArray(rows)||!rows.length||rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new TypeError('台データを1台以上の配列で渡してください。');
-    if(rows.some(row=>global.JUGESTJudgement.FIELDS.some(key=>row[key]!=null&&!['string','number'].includes(typeof row[key]))))throw new TypeError('入力値は文字列または数値で渡してください。');
+    global.JUGESTJudgementPageInput.validateImportRows(rows,global.JUGESTJudgement);
     const drafts=rows.map(row=>this.newObservedRow(global.JUGESTJudgement.inputRow(row)));
     if(append){this.observed.rows.push(...drafts);this.observed.mode='parallel'}
     else if(drafts.length===1){this.observed.single=drafts[0];this.observed.mode='single'}

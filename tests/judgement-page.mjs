@@ -396,3 +396,61 @@ test('pure draft construction preserves normalized inputs, fresh error objects a
  assert.deepEqual([...current.storage.map],saved);assert.deepEqual([...current.storage.idb],idb);
  assert.deepEqual(plain(current.ctx.observedCalls),{judge:0,reverse:0,autosave:0,queuedSave:0});
 });
+
+
+test('import shape validation preserves error precedence and rejects invalid rows before any state or storage changes',async()=>{
+ const current=await observedBoot(),old=await observedBoot();installLegacyJudgementPage(old.app,old.ctx);
+ const helper=current.ctx.JUGESTJudgementPageInput;
+ assert.equal(typeof helper?.validateImportRows,'function','import shape validation must be independently available');
+ for(const runtime of [current,old])runtime.ctx.JudgementProbe.instrument();
+ const shape='台データを1台以上の配列で渡してください。',type='入力値は文字列または数値で渡してください。';
+ const invalid=[
+  [undefined,shape],[null,shape],[{},shape],[[],shape],[[null],shape],[[[]],shape],[[1],shape],
+  [[{bb:false}],type],[[{diff:{}}],type],[[{games:1n}],type],[[{machine:()=>{}}],type],
+  [[{bb:false},null],shape],[[reviewSample,{rb:[]}],type]
+ ];
+ const before=plain(current.app.observed),domain=state(current.ctx),saved=[...current.storage.map],idb=[...current.storage.idb];
+ for(const [rows,message] of invalid){
+  assert.throws(()=>helper.validateImportRows(rows,current.ctx.JUGESTJudgement),e=>e.name==='TypeError'&&e.message===message);
+  for(const runtime of [current,old])assert.throws(()=>runtime.app.acceptMachineRows(rows),e=>e.name==='TypeError'&&e.message===message);
+  assert.deepEqual(plain(current.app.observed),before);assert.deepEqual(plain(old.app.observed),before);
+ }
+ assert.throws(()=>helper.validateImportRows([],undefined),e=>e.message===shape,'invalid array must be rejected before model field access');
+ for(const rows of [[{}],[{games:NaN,diff:Infinity,unknown:{}}],[{bb:0,rb:'0',diff:null}],Array(2)])assert.equal(helper.validateImportRows(rows,current.ctx.JUGESTJudgement),undefined);
+ assert.equal(state(current.ctx),domain);assert.deepEqual([...current.storage.map],saved);assert.deepEqual([...current.storage.idb],idb);
+ assert.deepEqual(plain(current.ctx.observedCalls),{judge:0,reverse:0,autosave:0,queuedSave:0});
+});
+
+test('append and replace imports preserve normalization count, IDs, final state, HTML, history and storage',async()=>{
+ const current=await observedBoot(),old=await observedBoot();installLegacyJudgementPage(old.app,old.ctx);
+ const histories=new Map(),normalizations=new Map();
+ for(const runtime of [current,old]){
+  const history=[],calls=[];histories.set(runtime,history);normalizations.set(runtime,calls);
+  runtime.ctx.history.pushState=s=>history.push(plain(s));runtime.ctx.history.replaceState=s=>history.push(plain(s));
+  const model=runtime.ctx.JUGESTJudgement;
+  runtime.ctx.JUGESTJudgement={...model,inputRow(value){calls.push(plain(value));return model.inputRow(value)}};
+  runtime.ctx.JudgementProbe.instrument();
+ }
+ const steps=[
+  [[reviewSample],{}],
+  [[{...reviewSample,tableNo:3065,diff:0}],{append:true}],
+  [[{machine:'my',games:' 7859 ',bb:0,rb:0,diff:null,tableNo:''}],{append:false}],
+  [[{...reviewSample,diff:-200},{...reviewSample,diff:''}],{append:false}],
+  [[{}],{append:true}]
+ ];
+ let imported=0;
+ for(const [rows,options] of steps){
+  const inputBefore=structuredClone(rows),returns=[];
+  for(const runtime of [current,old])returns.push(runtime.app.acceptMachineRows(rows,options));
+  imported+=rows.length;
+  assert.deepEqual(rows,inputBefore);assert.deepEqual(plain(returns[0]),plain(returns[1]));
+  assert.deepEqual(plain(current.app.observed),plain(old.app.observed));
+  assert.equal(current.app.mount.innerHTML,old.app.mount.innerHTML);
+  assert.deepEqual(histories.get(current),histories.get(old));assert.deepEqual(normalizations.get(current),normalizations.get(old));
+  assert.equal(normalizations.get(current).length,imported*2,'preserve both existing inputRow passes');
+  assert.deepEqual([...current.storage.map],[...old.storage.map]);assert.deepEqual([...current.storage.idb],[...old.storage.idb]);
+  assert.equal(state(current.ctx),state(old.ctx));
+ }
+ assert.equal(current.ctx.observedCalls.judge,0);assert.equal(current.ctx.observedCalls.autosave,0);assert.equal(current.ctx.observedCalls.queuedSave,0);
+ assert.deepEqual(plain(current.ctx.observedCalls),plain(old.ctx.observedCalls));
+});

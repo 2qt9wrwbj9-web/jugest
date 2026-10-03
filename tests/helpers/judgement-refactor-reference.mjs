@@ -5,6 +5,15 @@ export function installLegacyJudgementPage(app,global){
   renderObservedSettingsButton(){return `<button type="button" class="icon-btn" data-vps-settings-gear data-observed-action="settings" aria-label="設定"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h-.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4h-.1a1.7 1.7 0 0 0-1.7.6Z"></path></svg></button>`},
   renderObservedSettings(){return `<section class="panel observed-display-settings"><h2>開発者向け</h2><label class="observed-debug-setting"><input type="checkbox" role="switch" data-observed-debug-toggle ${this.observed.debug?'checked':''}><span><b>高度なデバッグ情報を表示</b><small>判別エンジンの検証用情報を表示します。通常はOFFで問題ありません。</small></span></label></section>`},
   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}},
+  acceptMachineRows(rows,{append=false}={}){
+    if(!Array.isArray(rows)||!rows.length||rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new TypeError('台データを1台以上の配列で渡してください。');
+    if(rows.some(row=>global.JUGESTJudgement.FIELDS.some(key=>row[key]!=null&&!['string','number'].includes(typeof row[key]))))throw new TypeError('入力値は文字列または数値で渡してください。');
+    const drafts=rows.map(row=>this.newObservedRow(global.JUGESTJudgement.inputRow(row)));
+    if(append){this.observed.rows.push(...drafts);this.observed.mode='parallel'}
+    else if(drafts.length===1){this.observed.single=drafts[0];this.observed.mode='single'}
+    else{this.observed.rows=drafts;this.observed.mode='parallel'}
+    this.observed.selectedId=null;this.navigate('judgement');return drafts.map(row=>row.id);
+  },
   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))},
   isObservedRowEmpty(row){return global.JUGESTJudgement.FIELDS.every(key=>String(row.input[key]??'').trim()==='')},
   renderObservedPage(){
