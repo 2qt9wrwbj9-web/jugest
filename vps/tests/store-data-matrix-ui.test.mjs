@@ -30,3 +30,8 @@ test('store data UI contains matrix filters, sticky axes, tap detail and hides t
   for(const token of ['data-vps-matrix-period','vps-matrix-cell','vps-matrix-detail','position:sticky','機種 / 台番','store-data-screen.vps-matrix-active .machine-list','平均G'])assert.ok(source.includes(token),token);
   assert.ok(source.includes("[...source.dates].reverse()"),'dates should be chronological left to right');
 });
+
+test('matrix detail taps preserve the current horizontal and vertical scroll position',async()=>{
+  const source=await readFile(new URL('../../vps-ui-audit-store.mjs',import.meta.url),'utf8');
+  for(const token of ["cell.closest?.('.vps-matrix-wrap')",'scrollLeft=matrixScroll.left','scrollTop=matrixScroll.top'])assert.ok(source.includes(token),token);
+});

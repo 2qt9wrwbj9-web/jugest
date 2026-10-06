@@ -2,7 +2,7 @@ import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
 import {aggregateStoreRows,machineStoreSummaries,exclusionReasonLabel,normalizeMachineSelection,machineFilterStorageKey,filterMachineSummaries,mergeStoreRows,formatExpectedSetting,settingHeatColor,settingHeatTextColor} from './vps-ui-audit-utils.mjs';
 
 let app=null,root=null,observer=null,scheduled=false,analyticsClient=null;
-let preKey='',preData=null,preBusy=false,preError='',rawCache={key:'',days:[]},matrixCell=null;
+let preKey='',preData=null,preBusy=false,preError='',rawCache={key:'',days:[]},matrixCell=null,matrixScroll=null;
 
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function bridge(){return globalThis.JUGEST_CORE_BRIDGE||null}
@@ -84,10 +84,10 @@ function reconcileStoreData(){
   const screen=root?.querySelector('.store-data-screen');if(!screen)return;screen.classList.add('vps-matrix-active');
   const shop=activeShop(),date=String(screen.querySelector('[data-store-date]')?.value||'').trim(),rows=storeRows(shop,date,true),period=readMatrixPeriod(shop),source=matrixSource(shop,period);
   const overall=aggregateStoreRows(rows),availableSummaries=source.machines.length?source.machines:machineStoreSummaries(rows),available=availableSummaries.map(row=>String(row.machine)),selected=readMachineSelection('data',shop,available),currentMachines=filterMachineSummaries(machineStoreSummaries(rows),selected),key=`${shop}|${date}|${period}|${source.loadedDays}/${source.dates.length}|${source.flat.length}|${overall.totalDiff}|${JSON.stringify(selected)}|${matrixCell?.shop===shop?`${matrixCell.date}:${matrixCell.machine}:${matrixCell.tableNo}`:''}`;
-  let node=screen.querySelector('[data-vps-store-data-summary]');if(node?.dataset.key===key)return;const wasOpen=preserveFilterOpen(node,'data');
+  let node=screen.querySelector('[data-vps-store-data-summary]');if(node?.dataset.key===key){if(matrixScroll?.shop===shop)matrixScroll=null;return}const wasOpen=preserveFilterOpen(node,'data');
   const periodOptions=[7,14,30,60,120].map(value=>`<option value="${value}" ${String(value)===period?'selected':''}>${value}日</option>`).join('');
   const html=`<section class="vps-audit-summary" data-vps-store-data-summary data-key="${esc(key)}"><div class="vps-audit-machine-title">全台データ</div><div class="vps-audit-kpis">${kpi('総差枚',fmtDiff(overall.totalDiff))}${kpi('平均差枚',fmtDiff(overall.avgDiff))}${kpi('平均G',fmtGames(overall.avgGames))}${kpi('平均出率',fmtRate(overall.actualRate))}</div><div class="vps-matrix-head"><div><b>期待設定ヒートマップ</b><small>${source.loadedDays}/${source.dates.length}日 読込済み</small></div><label class="vps-matrix-period"><small>表示期間</small><select data-vps-matrix-period>${periodOptions}</select></label></div>${machineFilterHtml('data',availableSummaries,selected)}${matrixDetailHtml(source,shop)}${matrixHtml(source,selected)}<div class="vps-audit-machine-title">機種別データ</div><div class="vps-audit-machines">${machineCards(currentMachines)||'<div class="vps-audit-muted">選択中の機種はありません。</div>'}</div></section>`;
-  node?.remove();screen.querySelector('.data-toolbar')?.insertAdjacentHTML('afterend',html);restoreFilterOpen(screen,'data',wasOpen);
+  node?.remove();screen.querySelector('.data-toolbar')?.insertAdjacentHTML('afterend',html);restoreFilterOpen(screen,'data',wasOpen);if(matrixScroll?.shop===shop){const wrap=screen.querySelector('.vps-matrix-wrap');if(wrap){wrap.scrollLeft=matrixScroll.left;wrap.scrollTop=matrixScroll.top}matrixScroll=null}
 }
 
 function trendRows(shop,screen){
@@ -142,7 +142,7 @@ function handleMachineFilterChange(event){
   if(scope&&shop)writeMachineSelection(scope,shop,available,selected);schedule();
 }
 function handleMachineFilterClick(event){
-  const cell=event?.target?.closest?.('[data-vps-matrix-cell]');if(cell){matrixCell={shop:activeShop(),date:String(cell.dataset.date||''),machine:String(cell.dataset.machine||''),tableNo:String(cell.dataset.tableNo||'')};schedule();return}
+  const cell=event?.target?.closest?.('[data-vps-matrix-cell]');if(cell){const wrap=cell.closest?.('.vps-matrix-wrap'),shop=activeShop();matrixScroll={shop,left:Number(wrap?.scrollLeft)||0,top:Number(wrap?.scrollTop)||0};matrixCell={shop,date:String(cell.dataset.date||''),machine:String(cell.dataset.machine||''),tableNo:String(cell.dataset.tableNo||'')};schedule();return}
   const button=event?.target?.closest?.('[data-vps-machine-action]');if(!button)return;
   const panel=button.closest('[data-vps-machine-filter]'),scope=String(panel?.dataset?.vpsMachineFilter||''),shop=activeShop(),boxes=[...(panel?.querySelectorAll?.('[data-vps-machine-choice]')||[])],available=boxes.map(box=>String(box.value)),selected=button.dataset.vpsMachineAction==='all'?available:[];
   event.preventDefault();for(const box of boxes)box.checked=selected.includes(String(box.value));if(scope&&shop)writeMachineSelection(scope,shop,available,selected);schedule();
