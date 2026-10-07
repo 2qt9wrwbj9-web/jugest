@@ -46,6 +46,8 @@ test('source patch injects the independent pachinko module exactly once',()=>{
   const root=fileURLToPath(new URL('../..',import.meta.url)),source=readFileSync(`${root}/index.html`,'utf8');const once=patchJugestIndexSource(source),twice=patchJugestIndexSource(once);assert.match(once,/vps-ui-pachinko\.mjs/);assert.equal(twice.match(/vps-ui-pachinko\.mjs/g)?.length,1);assert.equal(patch.PACHINKO_UI_MODULE_TAG,'<script type="module" src="./vps-ui-pachinko.mjs"></script>');
 });
 
-test('pachinko styles constrain the outer screen and make only the matrix horizontally scrollable',()=>{
-  assert.match(ui.STYLE,/\.pachinko-data-screen\{[^}]*max-width:100%[^}]*overflow:hidden/);assert.match(ui.STYLE,/\.p-table-scroll\{[^}]*overflow:auto/);assert.match(ui.STYLE,/@media\(max-width:560px\)/);
+test('pachinko styles reuse the existing JUGEST blue-white visual system and keep only the matrix horizontally scrollable',()=>{
+  assert.match(ui.STYLE,/\.pachinko-data-screen\{[\s\S]*--p-accent:#315bea/);
+  assert.match(ui.STYLE,/--p-panel:rgba\(255,255,255,\.97\)/);assert.match(ui.STYLE,/--p-border:#e2e8f3/);assert.match(ui.STYLE,/--p-shadow:0 8px 28px rgba\(35,61,112,\.055\)/);
+  assert.match(ui.STYLE,/\.pachinko-data-screen\{[\s\S]*max-width:100%;min-width:0;overflow:hidden/);assert.match(ui.STYLE,/\.p-table-scroll\{[^}]*overflow:auto/);assert.match(ui.STYLE,/\.p-summary-grid article\{[^}]*border-radius:20px[^}]*box-shadow:var\(--p-shadow\)/);assert.match(ui.STYLE,/\.p-refresh\{[^}]*background:var\(--p-accent\)[^}]*border-radius:16px/);assert.match(ui.STYLE,/@media\(max-width:560px\)/);
 });
