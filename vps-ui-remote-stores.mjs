@@ -36,10 +36,11 @@ function emit(target){
 
 export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
   if(!client||typeof client.listStores!=='function')throw new TypeError('client is required');
-  let stores=[];
+  let stores=[],generation=0;
   const datesById=new Map(),daysByKey=new Map(),pending=new Map();
   const byName=name=>stores.find(store=>store.name===String(name||'').trim())||null;
   const dayKey=(id,date)=>`${id}|${date}`;
+  function clear(){generation++;stores=[];datesById.clear();daysByKey.clear();pending.clear();emit(eventTarget)}
 
   async function ensureDay(store,date,{notify=true}={}){
     const target=String(date||store?.latestDate||'').trim();
@@ -47,6 +48,7 @@ export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
     const key=dayKey(store.id,target);
     if(daysByKey.has(key))return daysByKey.get(key);
     if(pending.has(key))return pending.get(key);
+    const current=generation;
     const work=Promise.resolve(client.getStoreDayById(store.id,target)).then(async payload=>{
       const normalized=normalizeDay(store,payload,target);
       if(normalized.rows.length&&typeof client.judgeMachines==='function'){
@@ -59,29 +61,36 @@ export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
           }
         }catch{}
       }
+      if(current!==generation)return null;
       daysByKey.set(key,normalized);
       if(notify)emit(eventTarget);
       return normalized;
-    }).finally(()=>pending.delete(key));
+    }).catch(error=>{if(current===generation&&[401,403].includes(error.status))clear();throw error}).finally(()=>{if(pending.get(key)===work)pending.delete(key)});
     pending.set(key,work);
     return work;
   }
 
   async function refresh(){
+    const current=generation;
+    try{
     const listed=await client.listStores();
+    if(current!==generation)return [];
     const next=(Array.isArray(listed)?listed:[]).filter(publicPiaStore).map(normalizeStore).filter(x=>x.id&&x.name);
     stores=next.sort((a,b)=>a.name.localeCompare(b.name,'ja'));
     await Promise.all(stores.map(async store=>{
       const payload=await client.getStoreDaysById(store.id,{limit:120});
+      if(current!==generation)return;
       const dates=(Array.isArray(payload?.days)?payload.days:[]).map(x=>String(x?.date||'')).filter(Boolean).sort((a,b)=>b.localeCompare(a));
       datesById.set(store.id,dates);
       if(dates[0])await ensureDay(store,dates[0],{notify:false});
     }));
+    if(current!==generation)return [];
     emit(eventTarget);
     return stores.map(x=>({...x}));
+    }catch(error){if(current===generation&&[401,403].includes(error.status))clear();throw error}
   }
   return Object.freeze({
-    refresh,
+    refresh,clear,
     getStores:()=>stores.map(x=>({...x})),
     getDates(name,limit=120){
       const store=byName(name);if(!store)return [];
@@ -105,11 +114,16 @@ export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
   });
 }
 if(typeof window!=='undefined'&&typeof document!=='undefined'){
-  const cache=createRemoteStoreCache({client:createVpsAnalyticsClient(),eventTarget:globalThis});
+  const cache=createRemoteStoreCache({client:createVpsAnalyticsClient({piaOnly:true}),eventTarget:globalThis});
   globalThis.JUGEST_VPS_REMOTE_STORES=cache;
-  const refresh=()=>cache.refresh().catch(error=>console.warn('PIA remote store refresh',error));
+  const refresh=()=>cache.refresh().catch(()=>{});
   void refresh();
   globalThis.addEventListener?.('pageshow',refresh);
+  globalThis.addEventListener?.('jugest:pia-access-changed',event=>{
+    if(!event.detail?.active)cache.clear();
+    // The independent Receiver owner may still be authorized after cookie logout.
+    void refresh();
+  });
   document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
 }
 

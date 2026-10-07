@@ -7,13 +7,21 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "JUGEST_PIA_ACCESS_MODE=public node --test tests/*.test.mjs",
+    "test": "JUGEST_ACCESS_ENABLED=0 JUGEST_PIA_ACCESS_MODE=public node --test tests/*.test.mjs",
     "migrate": "node scripts/migrate.mjs",
     "enqueue": "node scripts/enqueue.mjs",
     "status": "node scripts/status.mjs",
     "coordinator": "node src/main.mjs",
     "web": "node src/web-main.mjs",
     "deploy": "node scripts/deploy-vps.mjs",
-    "deploy:status": "node scripts/deploy-status.mjs"
+    "deploy:status": "node scripts/deploy-status.mjs",
+    "access:migrate": "node scripts/access-admin.mjs migrate",
+    "admin:bootstrap": "node scripts/access-admin.mjs bootstrap",
+    "admin:recover": "node scripts/access-admin.mjs recover",
+    "admin:revoke": "node scripts/access-admin.mjs revoke",
+    "admin:status": "node scripts/access-admin.mjs status"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "14.0.3"
   }
 }
