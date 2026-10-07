@@ -1,0 +1,70 @@
+{
+  "fixture_format": "original public API response bytes except scoped CSV extraction on Oct6",
+  "models": [
+    "OUMI5_SPECIAL_ALTA",
+    "TOKYO_GHOUL_399",
+    "TOKYO_GHOUL_999"
+  ],
+  "snapshots": [
+    {
+      "file": "2026-10-05-ranking.json.gz",
+      "raw_sha256": "2293ab3a0fb436c18a5875ce5941cd93adc54f5843405ac8332686d40c8c9086",
+      "raw_bytes": 3009489,
+      "server_date_time": {
+        "date": "2026-10-05",
+        "time": "02:06:09"
+      },
+      "observed_at": null,
+      "provenance": {
+        "source": "public_pia_getRankingTop",
+        "historical": true,
+        "observed_at_unknown": true
+      }
+    },
+    {
+      "file": "2026-10-06-ranking.json.gz",
+      "raw_sha256": "f16f124e445e7afd75cf1d2581b2ac2737f61b5ed8f4a8e09de8bcc54757b96d",
+      "raw_bytes": 441548,
+      "server_date_time": {
+        "date": "2026-10-06",
+        "time": "20:44:24"
+      },
+      "observed_at": null,
+      "provenance": {
+        "source": "archived_public_raw_csv",
+        "scopeModelKeys": [
+          "OUMI5_SPECIAL_ALTA"
+        ],
+        "source_csv_sha256": "c8e7f30dd2c4324249ce775fe5434dd9791e7acae5b037a6a9e8ef707cea9a6f",
+        "source_api_sha256": "94585de2e4b60cb4a14f9c24357a495404f5aa520343fcf35882eb3634300af2",
+        "all_business_dates_blank": true,
+        "source_csv_library_id": "libfile_149174782f5081919e30312273456964",
+        "observed_at_unknown": true,
+        "source_api_hash_verification": "reported by archived audit; original full API bytes not available"
+      }
+    },
+    {
+      "file": "2026-10-07-ranking.json.gz",
+      "raw_sha256": "f3e463dde895a4999f7b532fc1d1a5a3ceb85293aca0b07966342ce2fce30149",
+      "raw_bytes": 2115596,
+      "server_date_time": {
+        "date": "2026-10-07",
+        "time": "23:43:44"
+      },
+      "observed_at": "2026-10-07T14:43:44.794579Z",
+      "provenance": {
+        "source": "public_pia_getRankingTop",
+        "historical": true
+      }
+    }
+  ],
+  "same_day_comparison": {
+    "file": "2026-10-07-earlier-ranking.json.gz",
+    "raw_sha256": "4cde179e4a5a54981f5d8d669cb75c21b126dc7982664bf85d2b040c657d83ab",
+    "server_date_time": {
+      "date": "2026-10-07",
+      "time": "22:51:52"
+    },
+    "observed_at_unknown": true
+  }
+}

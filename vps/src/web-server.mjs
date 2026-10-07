@@ -13,6 +13,7 @@ import {createAccessHandler} from './access/handler.mjs';
 import {readAccessConfig,assertPrivateAccessPath} from './access/config.mjs';
 import {renderAccessPage} from './access/pages.mjs';
 import {assertPiaSharingOwnership} from './store-access.mjs';
+import {createPachinkoHandler} from './pachinko/handler.mjs';
 
 const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes','data','static','raw','backup','backups']);
 const BLOCKED_DATA_EXTENSION=/\.(?:json|jsonl|ndjson|csv|sqlite(?:-wal|-shm)?|sqlite3|db|bak|backup|gz|zip)$/i;
@@ -77,12 +78,12 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true}),accessConfig=readAccessConfig()}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,pachinkoDbPath=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true}),accessConfig=readAccessConfig()}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
   const access=createAccessHandler({config:accessConfig});
-  assertPrivateAccessPath(access.config,absoluteRoot,[relayDbPath,canonicalDbPath]);
+  assertPrivateAccessPath(access.config,absoluteRoot,[relayDbPath,canonicalDbPath,pachinkoDbPath]);
   if(access.config)assertPiaSharingOwnership();
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
@@ -95,9 +96,16 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   const backfillHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()&&typeof rawRoot==='string'&&rawRoot.trim()
     ?createDeviceBackfillHandler({relayDbPath,canonicalDbPath,rawRoot})
     :null;
+  const pachinkoHandler=typeof pachinkoDbPath==='string'&&pachinkoDbPath.trim()
+    ?createPachinkoHandler({dbPath:pachinkoDbPath,relayDbPath,authenticatePia:access.authenticate})
+    :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/access'||url.pathname.startsWith('/api/access/'))return await access.handle(req,res);
+    if(url.pathname==='/api/pachinko'||url.pathname.startsWith('/api/pachinko/')){
+      if(!pachinkoHandler){send(res,503,JSON.stringify({ok:false,code:'pachinko_preparation_required'}),{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});return}
+      return await pachinkoHandler(req,res);
+    }
     const accessPage={'/admin/login':'login','/admin/register':'register','/admin':'admin','/pia/access':'access','/pia':'pia'}[url.pathname];
     if(accessPage){
       if(!['GET','HEAD'].includes(req.method)){send(res,405,'Method Not Allowed\n',{'allow':'GET, HEAD'});return}

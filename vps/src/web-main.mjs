@@ -4,6 +4,8 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createWebServer} from './web-server.mjs';
 import {startCoordinatorProcess} from './coordinator-supervisor.mjs';
 import {startPiaPublicCollectorScheduler} from './collectors/pia-scheduler.mjs';
+import {readPachinkoConfig} from './pachinko/config.mjs';
+import {startPachinkoCollectorScheduler} from './pachinko/collector.mjs';
 
 const DEFAULT_WEB_ROOT=fileURLToPath(new URL('../..',import.meta.url));
 const DEFAULT_RELAY_DB='/var/lib/jugest/relay.sqlite';
@@ -26,15 +28,18 @@ export function readWebConfig(env=process.env){
 
 export async function runWebServer({
   config=readWebConfig(),
+  pachinkoConfig=undefined,
   logger=message=>console.log(message),
   startCoordinator=options=>startCoordinatorProcess({...options,logger}),
-  startPiaCollector=options=>startPiaPublicCollectorScheduler({...options,logger})
+  startPiaCollector=options=>startPiaPublicCollectorScheduler({...options,logger}),
+  startPachinkoCollector=options=>startPachinkoCollectorScheduler({...options,logger})
 }={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
-  if(typeof startCoordinator!=='function')throw new TypeError('startCoordinator must be a function');
+  if(typeof startCoordinator!=='function'||typeof startPachinkoCollector!=='function')throw new TypeError('start functions must be functions');
   const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled=false}=config;
+  const pConfig=pachinkoConfig===undefined?readPachinkoConfig(process.env,{canonicalDbPath,relayDbPath,rootDir}):pachinkoConfig;
 
-  let coordinatorRuntime=null,piaCollectorRuntime=null;
+  let coordinatorRuntime=null,piaCollectorRuntime=null,pachinkoCollectorRuntime=null;
   if(canonicalDbPath){
     coordinatorRuntime=await startCoordinator({dbPath:canonicalDbPath,installSignalHandlers:false});
   }
@@ -44,6 +49,7 @@ export async function runWebServer({
     relayDbPath,
     canonicalDbPath,
     rawRoot,
+    pachinkoDbPath:pConfig?.dbPath??null,
     enterCollectorBarrier:coordinatorRuntime?.enterCollectorBarrier??(async()=>({ok:true,noCoordinator:true}))
   });
 
@@ -71,6 +77,11 @@ export async function runWebServer({
     server.once('close',()=>{try{piaCollectorRuntime.stop?.()}catch{}});
   }
 
+  if(pConfig?.collectorEnabled){
+    pachinkoCollectorRuntime=startPachinkoCollector({dbPath:pConfig.dbPath,archiveRoot:pConfig.archiveRoot,timeoutMs:pConfig.timeoutMs,retryMs:pConfig.retryMs,windowStartMinutes:pConfig.windowStartMinutes,windowEndMinutes:pConfig.windowEndMinutes});
+    server.once('close',()=>{Promise.resolve(pachinkoCollectorRuntime.stop?.()).catch(error=>{try{logger(JSON.stringify({level:'error',event:'pachinko_collector_stop_failed',message:String(error?.message??error)}))}catch{}})});
+  }
+
   const address=server.address();
   logger(JSON.stringify({
     level:'info',
@@ -82,7 +93,9 @@ export async function runWebServer({
     canonicalDbPath:canonicalDbPath?path.resolve(canonicalDbPath):null,
     rawRoot:rawRoot?path.resolve(rawRoot):null,
     coordinatorMode:canonicalDbPath?'web-supervised':'disabled',
-    piaCollectorMode:canonicalDbPath&&rawRoot&&piaCollectorEnabled?'enabled':'disabled'
+    piaCollectorMode:canonicalDbPath&&rawRoot&&piaCollectorEnabled?'enabled':'disabled',
+    pachinkoMode:pConfig?.dbPath?'read-only-api':'disabled',
+    pachinkoCollectorMode:pConfig?.collectorEnabled?'enabled':'disabled'
   }));
   return server;
 }
