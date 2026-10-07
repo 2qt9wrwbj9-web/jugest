@@ -3,7 +3,7 @@ import {readFileSync,realpathSync,existsSync,lstatSync} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {openPachinkoDatabase,migratePachinko} from '../src/pachinko/schema.mjs';
 import {importPachinkoSnapshot,reestimatePachinkoRecords,getPachinkoMatrix} from '../src/pachinko/store.mjs';
 import {collectPachinkoOnce} from '../src/pachinko/collector.mjs';
@@ -63,5 +63,11 @@ export async function main(argv=process.argv.slice(2)){
   }finally{db.close()}
 }
 
-const direct=process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href;
+export function isDirectExecution(argv1=process.argv[1]){
+  if(!argv1)return false;
+  const modulePath=fileURLToPath(import.meta.url),entryPath=path.resolve(argv1);
+  if(modulePath===entryPath)return true;
+  try{return realpathSync(modulePath)===realpathSync(entryPath)}catch{return import.meta.url===pathToFileURL(entryPath).href}
+}
+const direct=isDirectExecution();
 if(direct)main().catch(error=>{console.error(String(error?.message||error));process.exitCode=1});

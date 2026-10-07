@@ -39,6 +39,14 @@ test('safe DB path resolves symlinked parent directories before production-path 
   }finally{rmSync(dir,{recursive:true,force:true})}
 });
 
+test('CLI executes normally when invoked through the production-style current symlink',()=>{
+  const dir=mkdtempSync(path.join(tmpdir(),'pachinko-cli-entry-link-'));try{
+    const link=path.join(dir,'pachinko-current.mjs');symlinkSync(SCRIPT,link);const db=path.join(dir,'p.sqlite');
+    const result=spawnSync(process.execPath,[link,'migrate','--db',db],{cwd:ROOT,encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).schemaVersion,2);
+  }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
 test('backfill validates all raw hashes before creating or migrating the destination DB',()=>{
   const dir=workspace();try{
     const manifestPath=path.join(dir,'manifest.json'),bad=JSON.parse(readFileSync(manifestPath,'utf8'));bad.snapshots[2].raw_sha256='0'.repeat(64);writeFileSync(manifestPath,JSON.stringify(bad));const db=path.join(dir,'must-not-exist.sqlite');
