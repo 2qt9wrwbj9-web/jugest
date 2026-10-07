@@ -43,4 +43,11 @@ export function canAccessStoreRow(row,channelId,options){
   return canAccessStoreMetadata(storeMetadata(row?.source_metadata_json),channelId,options);
 }
 
+// Enabled invitation sharing must never coexist with legacy all-receivers PIA access.
+// Disabled sharing leaves the original public/owner policy unchanged.
+export function assertPiaSharingOwnership(options={}){
+  const mode=String(options.piaAccessMode??process.env.JUGEST_PIA_ACCESS_MODE??'owner').trim().toLowerCase();
+  if(mode!=='owner'||!ownerChannelIds(configuredOwnerChannels(options)).size)throw new Error('pia_sharing_requires_owner_mode_and_allowlist');
+}
+
 export const __test={PIA_SOURCE,DEFAULT_OWNER_CHANNEL_FILE,ownerChannelIds,readOwnerChannelFile,configuredOwnerChannels};

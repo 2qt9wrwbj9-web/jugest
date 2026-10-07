@@ -26,6 +26,8 @@ jobs:
       - run: node --check vps-ui-historical-comparison.mjs
       - run: node --check vps-store-reset.mjs
       - run: node --test tests/vps-browser-analytics.mjs tests/vps-browser-analysis-static.mjs
+      - run: npm ci
+        working-directory: vps
       - run: npm test
         working-directory: vps
       - run: npm test

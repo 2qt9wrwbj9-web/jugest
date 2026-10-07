@@ -9,6 +9,7 @@ import {enrichStoredStoreReadPayload,getActiveStoreModel} from './research/store
 import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-external-judge.mjs';
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateReceiver,authenticateAssistantRead,assistantReadKeyStatus,rotateAssistantReadKey,revokeAssistantReadKey} from './assistant-read-key.mjs';
+import {canReadPiaRoute} from './access/handler.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -16,7 +17,7 @@ const JUDGE_VERSION='external-juggler-browser-parity-v1';
 const JUGGLER_MACHINE_KEY_SET=new Set(JUGGLER_MACHINE_KEYS);
 function sendJson(req,res,status,payload,extra={}){const body=Buffer.from(JSON.stringify(payload));res.writeHead(status,{'content-type':'application/json; charset=utf-8','content-length':String(body.length),'cache-control':'no-store','x-content-type-options':'nosniff',...extra});if(String(req.method||'GET').toUpperCase()==='HEAD')res.end();else res.end(body)}
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
-function authorizedStore(db,storeId,channelId){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
+function authorizedStore(db,storeId,channelId,piaOnly=false){const row=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
 function isJudgeMachinesRoute(parts){return !!parts&&parts.length===4&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='judge'&&parts[3]==='machines'}
 function isAssistantKeyRoute(parts){return !!parts&&parts.length===3&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='assistant-key'}
@@ -60,7 +61,7 @@ function auditStoreRead(db,storeId,payload){
   }catch{return payload}
 }
 
-export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus}={}){
+export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus,authenticatePia=()=>null}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
   if(typeof canonicalDbPath!=='string'||!canonicalDbPath.trim())throw new TypeError('canonicalDbPath is required');
   if(typeof resourceStatusBuilder!=='function')throw new TypeError('resourceStatusBuilder must be a function');
@@ -71,7 +72,7 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
     const assistantKeyRoute=isAssistantKeyRoute(parts);
     if(assistantKeyRoute){
       if(!['GET','POST','DELETE'].includes(method)){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, POST, DELETE'});return}
-      const owner=await authenticateReceiver(req,relayDbPath);if(!owner){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+      const owner=await authenticateReceiver(req,relayDbPath);if(!owner){sendJson(req,res,authenticatePia(req)?403:401,{ok:false,code:'unauthorized'});return}
       if(method==='GET'){sendJson(req,res,200,{ok:true,...await assistantReadKeyStatus(relayDbPath,owner.channelId)});return}
       if(method==='POST'){sendJson(req,res,200,{ok:true,...await rotateAssistantReadKey(relayDbPath,owner.channelId)});return}
       sendJson(req,res,200,{ok:true,...await revokeAssistantReadKey(relayDbPath,owner.channelId)});return;
@@ -79,8 +80,10 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
     const judgeRoute=isJudgeMachinesRoute(parts);
     if(judgeRoute){if(method!=='POST'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'POST'});return}}
     else if(method!=='GET'&&method!=='HEAD'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, HEAD'});return}
-    const auth=await authenticateReceiver(req,relayDbPath)||await authenticateAssistantRead(req,relayDbPath);
+    const auth=await authenticateReceiver(req,relayDbPath)||await authenticateAssistantRead(req,relayDbPath)||authenticatePia(req);
     if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+    const piaOnly=auth.kind==='admin'||auth.kind==='pia-viewer';
+    if(piaOnly&&!canReadPiaRoute(parts,method)){sendJson(req,res,403,{ok:false,code:'pia_view_scope_denied'});return}
     if(auth.authType==='assistant-read'&&!assistantReadRouteAllowed(parts,method)){sendJson(req,res,403,{ok:false,code:'assistant_read_scope_denied'});return}
     if(judgeRoute){
       let body;try{body=await readJsonBody(req)}catch(error){const tooLarge=error?.code==='body_too_large';sendJson(req,res,tooLarge?413:400,{ok:false,code:tooLarge?'body_too_large':'bad_json'});return}
@@ -98,11 +101,11 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       }
       if(parts.length===3&&parts[2]==='stores'){
         const rows=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all();
-        const stores=rows.flatMap(row=>{const metadata=storeMetadata(row.source_metadata_json);if(!canAccessStoreMetadata(metadata,auth.channelId))return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at,source:String(metadata.source||''),visibility:metadata.visibility==='public'?'public':'private'}]});
+        const stores=rows.flatMap(row=>{const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,auth.channelId))return [];const latest=db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at,source:String(metadata.source||''),visibility:metadata.visibility==='public'?'public':'private'}]});
         sendJson(req,res,200,{ok:true,stores});return;
       }
       if(parts[2]!=='stores'||parts.length<4){sendJson(req,res,404,{ok:false,code:'not_found'});return}
-      const storeId=parts[3],access=authorizedStore(db,storeId,auth.channelId);if(!access.store){sendJson(req,res,access.status,{ok:false,code:access.status===403?'forbidden':'store_not_found'});return}
+      const storeId=parts[3],access=authorizedStore(db,storeId,auth.channelId,piaOnly);if(!access.store){sendJson(req,res,access.status,{ok:false,code:access.status===403?'forbidden':'store_not_found'});return}
       if(parts.length===5&&parts[4]==='days'){
         const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||60)));
         const rows=db.prepare(`SELECT d.business_date,d.parser_version,d.quality_status,COUNT(m.machine_key) AS machine_count FROM store_days d LEFT JOIN machine_day_data m ON m.store_id=d.store_id AND m.business_date=d.business_date WHERE d.store_id=? AND d.quality_status='valid' GROUP BY d.store_id,d.business_date ORDER BY d.business_date DESC LIMIT ?`).all(storeId,limit).reverse();

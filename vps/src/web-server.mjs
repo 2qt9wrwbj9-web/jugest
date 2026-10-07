@@ -9,8 +9,13 @@ import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
 import {createMcpHandler,judgeMachinesPublic} from './mcp-handler.mjs';
 import {createOAuthHandler} from './oauth-handler.mjs';
 import {patchJugestIndexSource} from './ui-source-patch.mjs';
+import {createAccessHandler} from './access/handler.mjs';
+import {readAccessConfig,assertPrivateAccessPath} from './access/config.mjs';
+import {renderAccessPage} from './access/pages.mjs';
+import {assertPiaSharingOwnership} from './store-access.mjs';
 
-const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes']);
+const BLOCKED_TOP_LEVEL=new Set(['.git','.github','vps','docs','tests','research','probes','data','static','raw','backup','backups']);
+const BLOCKED_DATA_EXTENSION=/\.(?:json|jsonl|ndjson|csv|sqlite(?:-wal|-shm)?|sqlite3|db|bak|backup|gz|zip)$/i;
 const MIME_TYPES=new Map([
   ['.html','text/html; charset=utf-8'],
   ['.css','text/css; charset=utf-8'],
@@ -48,6 +53,7 @@ function requestPath(rawUrl){
   const segments=pathname.split('/').filter(Boolean);
   if(segments.some(segment=>segment==='.'||segment==='..'||segment.startsWith('.')))return null;
   if(segments.length&&BLOCKED_TOP_LEVEL.has(segments[0]))return null;
+  if(segments.some(segment=>BLOCKED_DATA_EXTENSION.test(segment)))return null;
   return segments;
 }
 
@@ -66,16 +72,21 @@ async function resolveStaticFile(rootDir,segments){
   try{resolved=await realpath(target)}catch{return null}
   const prefix=root.endsWith(path.sep)?root:`${root}${path.sep}`;
   if(resolved!==root&&!resolved.startsWith(prefix))return null;
+  const resolvedSegments=path.relative(root,resolved).split(path.sep);
+  if(BLOCKED_TOP_LEVEL.has(resolvedSegments[0])||resolvedSegments.some(segment=>segment.startsWith('.')||BLOCKED_DATA_EXTENSION.test(segment)))return null;
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true})}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true}),accessConfig=readAccessConfig()}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
+  const access=createAccessHandler({config:accessConfig});
+  assertPrivateAccessPath(access.config,absoluteRoot,[relayDbPath,canonicalDbPath]);
+  if(access.config)assertPiaSharingOwnership();
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
-    ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath})
+    ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath,authenticatePia:access.authenticate})
     :null;
   const mcpHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createMcpHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath})
@@ -86,6 +97,18 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
     :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
+    if(url.pathname==='/api/access'||url.pathname.startsWith('/api/access/'))return await access.handle(req,res);
+    const accessPage={'/admin/login':'login','/admin/register':'register','/admin':'admin','/pia/access':'access','/pia':'pia'}[url.pathname];
+    if(accessPage){
+      if(!['GET','HEAD'].includes(req.method)){send(res,405,'Method Not Allowed\n',{'allow':'GET, HEAD'});return}
+      if(accessPage==='admin'||accessPage==='pia'){
+        const principal=access.authenticate(req);
+        if(!principal||(accessPage==='admin'&&principal.kind!=='admin')){
+          send(res,principal?403:401,accessPage==='admin'?'<p>管理者の本人確認が必要だよ。<a href="/admin/login">ログイン</a></p>':'<p>閲覧権限が必要だよ。<a href="/pia/access">招待コードを入力</a></p>',{'content-type':'text/html; charset=utf-8','cache-control':'no-store'});return;
+        }
+      }
+      send(res,200,renderAccessPage(accessPage),{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"});return;
+    }
     if(url.pathname==='/.well-known/oauth-protected-resource'||url.pathname==='/.well-known/oauth-authorization-server'||url.pathname==='/oauth/register'||url.pathname==='/oauth/authorize'||url.pathname==='/oauth/token'){
       if(!oauthHandler){
         send(res,404,'Not Found\n',{'content-type':'text/plain; charset=utf-8'});

@@ -25,28 +25,35 @@ export function readRelayReceiver(storage=globalThis.localStorage){
 export function createVpsAnalyticsClient({
   fetchFn=globalThis.fetch?.bind(globalThis),
   storage=globalThis.localStorage,
-  baseUrl=DEFAULT_BASE_URL
+  baseUrl=DEFAULT_BASE_URL,
+  piaOnly=false
 }={}){
   if(typeof fetchFn!=='function')throw new TypeError('fetchFn is required');
   const base=String(baseUrl||DEFAULT_BASE_URL).replace(/\/+$/,'');
 
   async function request(path,{method='GET',body=null}={}){
     const receiver=readRelayReceiver(storage);
-    if(!receiver)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
+    const cookieRead=piaOnly&&method==='GET'&&/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2})?$)/.test(path);
+    if(!receiver&&!cookieRead)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
     let response;
     try{
-      response=await fetchFn(`${base}${path}`,{
+      const options={
         method,
         headers:{
           accept:'application/json',
           ...(body!=null?{'content-type':'application/json'}:{}),
-          'x-jugest-channel-id':receiver.channelId,
-          authorization:`Bearer ${receiver.receiverToken}`
+          ...(receiver?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
         },
         ...(body!=null?{body}:{}),
         cache:'no-store',
         credentials:'same-origin'
-      });
+      };
+      response=await fetchFn(`${base}${path}`,options);
+      // Only the three read routes can retry with a PIA HttpOnly cookie.
+      if(cookieRead&&receiver&&response.status===401){
+        await response.body?.cancel?.();
+        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json'}});
+      }
     }catch(error){
       throw makeError(`VPS解析APIへ接続できませんでした: ${String(error?.message||error)}`,'vps_network_error');
     }

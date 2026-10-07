@@ -12,6 +12,7 @@ const AUDIT_STORE_UI_MODULE_TAG='<script type="module" src="./vps-ui-audit-store
 const COLLECTOR_CREDENTIALS_MODULE_TAG='<script type="module" src="./vps-ui-collector-credentials.mjs?v=collector-chatgpt-2"></script>';
 const RELEASE_VERSION_MODULE_TAG='<script type="module" src="./vps-release-version.mjs?v=602-historical-audit-1"></script>';
 const REMOTE_STORES_MODULE_TAG='<script type="module" src="./vps-ui-remote-stores.mjs"></script>';
+const PIA_ACCESS_MODULE_TAG='<script type="module" src="./vps-ui-pia-access.mjs"></script>';
 const REMOTE_STORE_HELPER=`function vpsRemoteStoreCache(){return globalThis.JUGEST_VPS_REMOTE_STORES||null}
 function vpsHasLocalStoreData(name){return v510StoreDates(name,1).length>0}
 function vpsMergedStoreRows(){
@@ -106,7 +107,7 @@ function v510RecordBase(snap,entryType){
     const additions=[BACKFILL_BRIDGE,JUDGED_STORE_DAY_BRIDGE,STORE_RESET_BRIDGE,COLLECTOR_CREDENTIALS_BRIDGE].filter(token=>!source.includes(token)).join('\n');
     source=source.replace(BRIDGE_ANCHOR,`${BRIDGE_ANCHOR}\n${additions}`);
   }
-  for(const tag of [MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,COLLECTOR_CREDENTIALS_MODULE_TAG,REMOTE_STORES_MODULE_TAG,RELEASE_VERSION_MODULE_TAG]){
+  for(const tag of [MODULE_TAG,HISTORICAL_UI_MODULE_TAG,STORE_RESET_MODULE_TAG,RESOURCE_UI_MODULE_TAG,AUDIT_STORE_UI_MODULE_TAG,COLLECTOR_CREDENTIALS_MODULE_TAG,REMOTE_STORES_MODULE_TAG,PIA_ACCESS_MODULE_TAG,RELEASE_VERSION_MODULE_TAG]){
     if(source.includes(tag))continue;
     if(!/<\/body>/i.test(source))throw new Error('JUGEST body anchor not found');
     source=source.replace(/<\/body>/i,`${tag}\n</body>`);
