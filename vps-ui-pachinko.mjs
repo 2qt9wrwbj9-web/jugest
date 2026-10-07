@@ -35,8 +35,25 @@ function renderDetail(st){
   const counters=['special','special_1','special_2','special_2d','special_out','special_safe','out','safe'];
   return `<section class="p-detail" data-pachinko-detail><div class="p-detail-head"><div><small>台詳細</small><h2>${esc(r.machine_no)}番 ${esc(modelLabel(r.machine_model_key))}</h2></div><button type="button" data-pachinko-close-detail>閉じる</button></div><div class="p-kvs">${kv('営業日',date)}${kv('推定K',`${formatPachinkoK(r.estimated_k,r.estimator_status)} 回/250玉`)}${kv('推定状態',statusLabel(r.estimator_status))}${kv('推定方法',`${r.estimator_id||'—'} / v${r.estimator_version||'—'}`)}${kv('観測量',`${formatPachinkoCount(r.sample_size)}回 / ${r.confidence||'—'}`)}${kv('start',formatPachinkoCount(raw.start))}${kv('final_start',formatPachinkoCount(raw.final_start))}${kv('差玉',formatPachinkoDiff(raw.difference))}${kv('設置ID',r.store_machine_id)}${kv('機種コード',r.sis_machine_code)}${kv('日付状態',assignment?.date_status||r.date_status||'未確定')}${kv('復元方式',assignment?.date_assignment_method||r.date_assignment_method||'—')}</div><details class="p-details"><summary>rawカウンタ</summary><div class="p-kvs">${counters.map(key=>kv(key,formatPachinkoCount(raw[key]))).join('')}</div><p>out / safe / special_out / special_safe はPIA APIの10玉相当カウンタ。special_2 / special_2d はLT・RUSH等へ固定解釈していません。</p></details><details class="p-details"><summary>取得元・provenance</summary><div class="p-kvs">${kv('snapshot',snap?.snapshot_id??'—')}${kv('PIAサーバー日時',sourceDate(snap))}${kv('観測時刻',snap?.observed_at||'不明')}${kv('取込時刻',snap?.imported_at||'—')}${kv('raw SHA-256',snap?.raw_sha256||'—')}</div><pre>${esc(JSON.stringify(snap?.provenance||{},null,2))}</pre></details></section>`;
 }
-function renderSummary(matrix,date){
-  const summaries=selectedSummary(matrix,date);return `<div class="p-summary-grid">${MODEL_ORDER.map(key=>{const model=(matrix.models||[]).find(x=>x.key===key),s=summaries.find(x=>x.machine_model_key===key),status=s?.estimator_status||model?.estimatorStatus||'unverified';const hasRows=Number(s?.total_machine_count)>0;return `<article><div><b>${esc(modelLabel(key))}</b><span class="p-status ${esc(status)}">${esc(statusLabel(status))}</span></div><strong>${formatPachinkoK(hasRows?s?.pooled_k:null,status)}</strong><small>回/250玉</small><p>${hasRows?`${s.valid_machine_count}/${s.total_machine_count}台有効 · start ${formatPachinkoCount(s.total_start)} · 差玉 ${formatPachinkoDiff(s.total_difference)}`:'この日の日付確定データなし'}</p></article>`}).join('')}</div>`;
+function avgPerMachine(total,count){const t=Number(total),c=Number(count);return Number.isFinite(t)&&Number.isFinite(c)&&c>0?t/c:null}
+function roundSigned(value){const n=Number(value);return Number.isFinite(n)?(n<0?-Math.round(-n):Math.round(n)):null}
+function summaryMetrics(s,status){
+  const hasRows=Number(s?.total_machine_count)>0;
+  return {
+    hasRows,
+    rotation:formatPachinkoK(hasRows?s?.pooled_k:null,status),
+    activity:formatPachinkoCount(hasRows?roundSigned(avgPerMachine(s.total_start,s.total_machine_count)):null),
+    difference:formatPachinkoDiff(hasRows?roundSigned(avgPerMachine(s.total_difference,s.total_machine_count)):null)
+  };
+}
+function metricCard(label,value,unit=''){return `<article class="p-metric-card"><small>${esc(label)}</small><div><strong>${esc(value)}</strong>${unit?`<span>${esc(unit)}</span>`:''}</div></article>`}
+function renderSummary(matrix,date,filter=''){
+  const summaries=selectedSummary(matrix,date),models=matrix.models||[];
+  if(filter){
+    const model=models.find(x=>x.key===filter),s=summaries.find(x=>x.machine_model_key===filter),status=s?.estimator_status||model?.estimatorStatus||'unverified',m=summaryMetrics(s,status);
+    return `<section class="p-selected-summary"><div class="p-summary-head"><div><small>機種サマリー</small><h2>${esc(modelLabel(filter))}</h2></div><span class="p-status ${esc(status)}">${esc(statusLabel(status))}</span></div>${m.hasRows?`<div class="p-summary-grid">${metricCard('平均回転率',m.rotation,'回/250玉')}${metricCard('平均稼働',m.activity,'回')}${metricCard('平均差玉',m.difference)}</div><p class="p-summary-note">回転率 ${formatPachinkoCount(s.valid_machine_count)}/${formatPachinkoCount(s.total_machine_count)}台算出可能</p>`:'<div class="p-empty">この日の日付確定データはありません。</div>'}</section>`;
+  }
+  return `<section class="p-summary-compare"><div class="p-summary-head"><div><small>機種比較</small><h2>${esc(date)}</h2></div></div><div class="p-compare-scroll"><table><thead><tr><th>機種</th><th>平均回転率</th><th>平均稼働</th><th>平均差玉</th></tr></thead><tbody>${MODEL_ORDER.map(key=>{const model=models.find(x=>x.key===key),s=summaries.find(x=>x.machine_model_key===key),status=s?.estimator_status||model?.estimatorStatus||'unverified',m=summaryMetrics(s,status);return `<tr><th><b>${esc(modelLabel(key))}</b><span class="p-status ${esc(status)}">${esc(statusLabel(status))}</span></th><td>${m.hasRows?`${esc(m.rotation)}<small>回/250玉</small>`:'—'}</td><td>${m.hasRows?`${esc(m.activity)}<small>回</small>`:'—'}</td><td>${m.hasRows?esc(m.difference):'—'}</td></tr>`}).join('')}</tbody></table></div></section>`;
 }
 function renderTable(matrix,selectedDate){
   const records=buildRecordMap(matrix),dates=matrix.dates||[],roster=matrix.roster||[];
@@ -50,7 +67,7 @@ function renderUndated(matrix){
 export function renderPachinkoScreenState(st){
   ensureLoad(st.app);
   const matrix=st.matrix,selected=st.selectedDate||matrix?.dates?.[0]||'';
-  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p><div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${selected?renderSummary(matrix,selected):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
+  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p><div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${selected?renderSummary(matrix,selected,st.filter):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
 }
 const STYLE=`
 .pachinko-data-screen{
@@ -82,13 +99,25 @@ const STYLE=`
 .p-loading,.p-error,.p-empty{padding:20px;border-radius:20px;background:var(--p-panel);border:1px solid var(--p-border);box-shadow:var(--p-shadow);margin:12px 0;color:var(--p-muted-strong);font-size:12px;line-height:1.55}
 .p-empty{text-align:center;border-style:dashed;background:rgba(255,255,255,.65)}
 .p-error{background:#fff8f8;border-color:#f0d4d8;color:#9a3c47;box-shadow:none}
-.p-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 14px}
-.p-summary-grid article{min-width:0;padding:16px;border:1px solid var(--p-border);border-radius:20px;background:var(--p-panel);box-shadow:var(--p-shadow)}
-.p-summary-grid article>div{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.p-summary-grid article>div>b{font-size:12px;color:var(--p-title);font-weight:900}
-.p-summary-grid strong{display:inline-block;font-size:27px;line-height:1.1;margin-top:11px;color:var(--p-title);letter-spacing:-.03em}
-.p-summary-grid strong+small{margin-left:5px;color:var(--p-muted);font-size:10px;font-weight:700}
-.p-summary-grid p{font-size:11px;line-height:1.5;margin:8px 0 0;color:var(--p-muted);overflow-wrap:anywhere}
+.p-selected-summary,.p-summary-compare{margin:12px 0 14px}
+.p-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 8px}
+.p-summary-head small{display:block;color:var(--p-accent);font-size:10px;font-weight:900;letter-spacing:.08em}
+.p-summary-head h2{margin:3px 0 0;color:var(--p-title);font-size:19px;line-height:1.25}
+.p-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0}
+.p-summary-grid article{min-width:0;padding:14px;border:1px solid var(--p-border);border-radius:18px;background:var(--p-panel);box-shadow:var(--p-shadow)}
+.p-metric-card>small{display:block;color:var(--p-muted);font-size:10px;font-weight:800;line-height:1.3}
+.p-metric-card>div{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;margin-top:7px}
+.p-metric-card strong{display:inline-block;font-size:24px;line-height:1.05;color:var(--p-title);letter-spacing:-.03em;font-weight:900}
+.p-metric-card span{color:var(--p-muted);font-size:9px;font-weight:750}
+.p-summary-note{font-size:10px;line-height:1.5;color:var(--p-muted);margin:7px 2px 0}
+.p-compare-scroll{overflow:auto;border:1px solid var(--p-border);border-radius:18px;background:var(--p-panel);box-shadow:var(--p-shadow);-webkit-overflow-scrolling:touch}
+.p-summary-compare table{width:100%;min-width:510px;border-collapse:collapse;font-size:11px}
+.p-summary-compare th,.p-summary-compare td{padding:10px 11px;border-bottom:1px solid var(--p-border);text-align:right;white-space:nowrap;color:var(--p-title)}
+.p-summary-compare tr:last-child th,.p-summary-compare tr:last-child td{border-bottom:0}
+.p-summary-compare thead th{background:#f9fbff;color:var(--p-muted-strong);font-size:9px;font-weight:850}
+.p-summary-compare thead th:first-child,.p-summary-compare tbody th{text-align:left}
+.p-summary-compare tbody th{min-width:128px}.p-summary-compare tbody th b{display:block;font-size:11px;font-weight:900}.p-summary-compare tbody th .p-status{margin-top:4px}
+.p-summary-compare td{font-size:14px;font-weight:900}.p-summary-compare td small{display:block;font-size:8px;color:var(--p-muted);font-weight:700;margin-top:2px}
 .p-status{display:inline-flex;align-items:center;min-height:22px;font-size:9px;font-weight:850;border-radius:999px;padding:4px 7px;background:#eef1f6;color:#68758d}
 .p-status.verified{background:#e9f8f1;color:#168a5c}.p-status.provisional{background:#fff5dc;color:#9a6a08}
 .p-table-scroll{width:100%;max-width:100%;overflow:auto;border:1px solid var(--p-border);border-radius:20px;background:var(--p-panel);box-shadow:var(--p-shadow);overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
@@ -114,7 +143,7 @@ const STYLE=`
 .p-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.p-detail-head small{display:block;color:var(--p-accent);font-size:10px;font-weight:900;letter-spacing:.08em}.p-detail-head h2{margin:4px 0 0;color:var(--p-title);font-size:20px}.p-detail-head button{border:0;background:var(--p-accent-soft);color:var(--p-accent);border-radius:14px;min-height:38px;padding:8px 12px;font-size:11px;font-weight:850}
 .p-kvs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.p-kv{padding:10px 11px;border:1px solid #edf0f6;border-radius:12px;background:var(--p-panel-soft);min-width:0}.p-kv small,.p-kv b{display:block;overflow-wrap:anywhere}.p-kv small{color:var(--p-muted);font-size:9px;font-weight:700}.p-kv b{color:var(--p-title);font-size:12px;margin-top:4px;font-weight:850}
 .p-details{margin-top:10px;border-top:1px solid var(--p-border);padding-top:10px}.p-details summary{color:var(--p-accent);font-size:11px;font-weight:850;cursor:pointer;padding:4px 0}.p-details p{font-size:11px;line-height:1.55;color:var(--p-muted)}.p-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:10px;color:var(--p-muted-strong);background:var(--p-panel-soft);border-radius:12px;padding:10px;max-height:240px;overflow:auto}
-@media(max-width:560px){.p-summary-grid{grid-template-columns:1fr}.p-summary-grid article{padding:14px 15px}.p-undated-list{grid-template-columns:1fr}.p-kvs{grid-template-columns:1fr}.p-section-head{align-items:start;flex-direction:column}.p-section-head span{max-width:none}.p-title-row{align-items:stretch}.p-title-row .store-title{font-size:20px}.p-refresh{padding-inline:14px}.p-table-scroll{border-radius:16px}.p-detail{border-radius:18px;padding:15px}}
+@media(max-width:560px){.p-selected-summary .p-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.p-selected-summary .p-summary-grid article{padding:11px 9px;border-radius:16px}.p-selected-summary .p-metric-card strong{font-size:20px}.p-selected-summary .p-metric-card span{font-size:8px}.p-summary-compare{margin-top:10px}.p-compare-scroll{border-radius:16px}.p-undated-list{grid-template-columns:1fr}.p-kvs{grid-template-columns:1fr}.p-section-head{align-items:start;flex-direction:column}.p-section-head span{max-width:none}.p-title-row{align-items:stretch}.p-title-row .store-title{font-size:20px}.p-refresh{padding-inline:14px}.p-table-scroll{border-radius:16px}.p-detail{border-radius:18px;padding:15px}}
 `;
 
 function patchApp(){
