@@ -24,6 +24,10 @@ function styleText(){return `
   .store-data-screen .vps-audit-machine-grid>.vps-audit-kpi{grid-column:span 2;min-width:0;padding:8px;overflow-wrap:anywhere}
   .store-data-screen .vps-audit-machine-grid>.vps-audit-kpi:nth-child(-n+2){grid-column:span 3}
 }
+/* All-store KPIs: 3 cards on the first row, 2 equal-width cards on the second row. */
+.store-data-screen .vps-audit-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+.store-data-screen .vps-audit-kpis>.vps-audit-kpi{grid-column:span 2;min-width:0}
+.store-data-screen .vps-audit-kpis>.vps-audit-kpi:nth-child(n+4){grid-column:span 3}
 `}
 function ensureStyle(){if(!root||root.querySelector('style[data-vps-audit-store]'))return;const style=document.createElement('style');style.dataset.vpsAuditStore='';style.textContent=styleText();root.append(style)}
 
