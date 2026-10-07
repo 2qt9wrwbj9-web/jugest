@@ -13,9 +13,10 @@ function mapSettingFromPosterior(q){
 }
 export function aggregateStoreRows(rows=[]){
   const list=Array.isArray(rows)?rows:[],gameRows=list.map(row=>finite(row?.games)).filter(value=>value!==null&&value>0),diffRows=list.filter(observedDiffRow),totalGames=diffRows.reduce((sum,row)=>sum+Number(row.games),0),totalDiff=diffRows.reduce((sum,row)=>sum+Number(row.diff),0);
+  const winCount=list.filter(row=>{const diff=finite(row?.diff);return diff!==null&&diff>=0}).length,winRate=list.length?100*winCount/list.length:null;
   const settings=list.map(row=>mapSettingFromPosterior(row?.q)).filter(value=>value!==null);
   return Object.freeze({
-    rowCount:list.length,diffCount:diffRows.length,totalGames,totalDiff:diffRows.length?totalDiff:null,
+    rowCount:list.length,diffCount:diffRows.length,winCount,winRate,totalGames,totalDiff:diffRows.length?totalDiff:null,
     avgGames:gameRows.length?gameRows.reduce((sum,value)=>sum+value,0)/gameRows.length:null,
     avgDiff:diffRows.length?totalDiff/diffRows.length:null,
     actualRate:totalGames>0?100*(1+totalDiff/(3*totalGames)):null,
