@@ -25,9 +25,12 @@ test('settings: Passkey admin management, inline OTP redemption, unlimited viewi
   const db=openDatabase(canonicalDbPath);migrate(db);
   db.prepare('INSERT INTO stores(id,name,source_metadata_json,created_at,updated_at) VALUES(?,?,?,?,?)').run('pia:35','PIAテスト店舗',JSON.stringify({source:'pia-public-ranking-top',visibility:'public'}),'2026-10-06','2026-10-06');
   db.exec("INSERT INTO store_days(store_id,business_date,quality_status,created_at,updated_at) VALUES('pia:35','2026-10-05','valid','2026-10-06','2026-10-06');");
-  db.prepare('INSERT INTO machine_day_data VALUES(?,?,?,?)').run('pia:35','2026-10-05','1',JSON.stringify({tableNo:'3090',machine:'my',games:5000,bb:20,rb:18,diff:900}));db.close();
+  db.prepare('INSERT INTO machine_day_data VALUES(?,?,?,?)').run('pia:35','2026-10-05','1',JSON.stringify({tableNo:'3090',machine:'my',games:5000,bb:20,rb:18,diff:0}));
+  db.exec("INSERT INTO store_days(store_id,business_date,quality_status,created_at,updated_at) VALUES('pia:35','2026-10-04','valid','2026-10-06','2026-10-06');");
+  db.prepare('INSERT INTO machine_day_data VALUES(?,?,?,?)').run('pia:35','2026-10-04','1',JSON.stringify({tableNo:'3090',machine:'my',games:4000,bb:12,rb:11,diff:-50}));db.close();
   const relay=createRelayStore('juggler-relay-v1',{dbPath:relayDbPath,root:'jugest'});
   await relay.setJSON('channel/settings-test-owner',{receiverHash:createHash('sha256').update('settings-owner-test-token').digest('hex'),revokedAt:0});
+  await relay.setJSON('channel/settings-test-unrelated',{receiverHash:createHash('sha256').update('settings-unrelated-test-token').digest('hex'),revokedAt:0});
   handler=createWebHandler({rootDir:fileURLToPath(new URL('../../..',import.meta.url)),canonicalDbPath,relayDbPath,rawRoot:join(dir,'raw'),accessConfig:{dbPath,origin,rpID:'localhost',allowLocalhost:true,now:()=>clock}});
   const {chromium}=await import(process.env.JUGEST_PLAYWRIGHT_MODULE||'playwright');
   const browser=await chromium.launch({headless:true,...(process.env.JUGEST_CHROMIUM_EXECUTABLE?{executablePath:resolve(process.env.JUGEST_CHROMIUM_EXECUTABLE)}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});t.after(()=>browser.close());
@@ -54,12 +57,32 @@ test('settings: Passkey admin management, inline OTP redemption, unlimited viewi
   assert.equal(await panel.locator('#invite-label').inputValue(),'<img src=x onerror=alert(1)>','background app render must preserve the active settings operation');
   releaseIssue();await panel.locator('#secret-card').waitFor({state:'visible'});
   const code=await panel.locator('#issued-secret').inputValue();assert.equal(await panel.locator('img').count(),0);
-  const guest=await device();await guest.page.goto(origin+'/');await settings(guest.page);
+  const guest=await device();
+  await guest.context.addInitScript(()=>localStorage.setItem('jugglerRelayReceiver:v1',JSON.stringify({linked:true,channelId:'settings-test-unrelated',receiverToken:'settings-unrelated-test-token'})));
+  await guest.page.goto(origin+'/');await settings(guest.page);
   let guestPanel=guest.page.locator('[data-pia-settings]');await guestPanel.locator('#invite-code').waitFor();assert.equal(await guestPanel.locator('#issue-invite').count(),0);
   await guestPanel.locator('#invite-code').fill(code);await guestPanel.locator('#redemption button').click();await guestPanel.locator('#machine-data .machine').waitFor();
   assert.match(await guestPanel.locator('#viewer-status').innerText(),/閲覧権限：有効.*無期限/);
   assert.match(await guestPanel.locator('#machine-data').innerText(),/3090/);assert.equal(new URL(guest.page.url()).pathname,'/');
   await guest.page.waitForFunction(()=>globalThis.JUGEST_VPS_REMOTE_STORES?.getStores().some(s=>s.id==='pia:35'));
+  // The served app combines sharing with the latest production store UI.
+  await guest.page.locator('[data-vps-settings-close]').click();
+  await guest.page.locator('.bottom-nav [data-workspace="store"]').click();
+  await guest.page.locator('[data-open-store-selector]').click();
+  await guest.page.locator('[data-store-name="PIAテスト店舗"]').click();
+  await guest.page.locator('.segmented [data-action="store-data"]').click();
+  const summary=guest.page.locator('[data-vps-store-data-summary]');await summary.waitFor();
+  assert.deepEqual(await summary.locator('.vps-matrix thead th').allTextContents(),['機種 / 台番','10/5','10/4']);
+  assert.deepEqual(await summary.locator('.vps-audit-kpis small').allTextContents(),['総差枚','平均差枚','平均G','勝率','平均出率']);
+  assert.equal(await summary.locator('.vps-audit-kpis .vps-audit-kpi').nth(3).locator('b').innerText(),'100.0% (1/1)');
+  for(const width of [320,375,390]){
+    await guest.page.setViewportSize({width,height:844});
+    const cards=await summary.locator('.vps-audit-kpis>.vps-audit-kpi').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {top:r.top,width:r.width}}));
+    assert.equal(cards[0].top,cards[1].top);assert.equal(cards[1].top,cards[2].top);
+    assert.equal(cards[3].top,cards[4].top);assert.ok(cards[3].top>cards[2].top);
+    assert.ok(Math.abs(cards[3].width-cards[4].width)<1);
+  }
+  await settings(guest.page);guestPanel=guest.page.locator('[data-pia-settings]');await guestPanel.locator('#machine-data .machine').waitFor();
   assert.equal((await guest.context.request.get(origin+'/api/access/admin/state')).status(),403);
   assert.equal((await guest.context.request.post(origin+'/api/access/admin/invites',{headers:{origin,'x-jugest-access':'1'},data:{viewerHours:null}})).status(),403);
   assert.equal((await guest.context.request.post(origin+'/api/vps/judge/machines',{data:{machines:[]}})).status(),403);

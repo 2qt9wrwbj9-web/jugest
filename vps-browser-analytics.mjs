@@ -42,17 +42,19 @@ export function createVpsAnalyticsClient({
         headers:{
           accept:'application/json',
           ...(body!=null?{'content-type':'application/json'}:{}),
-          ...(receiver?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
+          ...(receiver&&!cookieRead?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
         },
         ...(body!=null?{body}:{}),
         cache:'no-store',
         credentials:'same-origin'
       };
       response=await fetchFn(`${base}${path}`,options);
-      // Only the three read routes can retry with a PIA HttpOnly cookie.
-      if(cookieRead&&receiver&&response.status===401){
+      // A valid unrelated Receiver must not mask a PIA sharing grant.
+      // Only these three reads prefer the cookie, then fall back to the
+      // independently authenticated owner when no usable access cookie exists.
+      if(cookieRead&&receiver&&[401,403].includes(response.status)){
         await response.body?.cancel?.();
-        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json'}});
+        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json','x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}});
       }
     }catch(error){
       throw makeError(`VPS解析APIへ接続できませんでした: ${String(error?.message||error)}`,'vps_network_error');

@@ -2,6 +2,35 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createVpsAnalyticsClient} from '../../vps-browser-analytics.mjs';
 import {createRemoteStoreCache} from '../../vps-ui-remote-stores.mjs';
+import {accessFixture,CHANNEL,TOKEN} from './helpers/access-fixture.mjs';
+import {createRelayStore} from '../src/relay-store.mjs';
+import {createHash} from 'node:crypto';
+import {dirname,join} from 'node:path';
+
+test('normal PIA client uses the viewer grant even with a valid unrelated Receiver, and honors stop',async t=>{
+  const f=await accessFixture(t);
+  const relay=createRelayStore('juggler-relay-v1',{dbPath:join(dirname(f.dbPath),'relay.sqlite'),root:'jugest'});
+  await relay.setJSON('channel/unrelated-receiver',{receiverHash:createHash('sha256').update('unrelated-test-token').digest('hex'),revokedAt:0});
+  const invite=f.store.issueInvite({createdBy:f.admin.id,viewerHours:null}),viewer=f.store.redeemInvite(invite.code);
+  const storage={getItem(){return JSON.stringify({linked:true,channelId:'unrelated-receiver',receiverToken:'unrelated-test-token'})}};
+  const client=createVpsAnalyticsClient({piaOnly:true,storage,baseUrl:f.base+'/api/vps',fetchFn:(url,options)=>fetch(url,{...options,headers:{...options.headers,cookie:'__Host-jugest_pia='+viewer.token}})});
+  assert.deepEqual((await client.listStores()).map(s=>s.id),['pia:35']);
+  assert.deepEqual((await client.getStoreDaysById('pia:35')).days.map(d=>d.date),['2026-10-05']);
+  assert.equal((await client.getStoreDayById('pia:35','2026-10-05')).day.machines[0].tableNo,'3090');
+  await assert.rejects(client.getStoreDayById('private','2026-10-05'),e=>e.status===403);
+  assert.equal((await f.request('/api/access/admin/state',{cookie:'__Host-jugest_pia='+viewer.token})).status,403);
+  f.store.revokeViewerSession(viewer.id,f.admin.id);
+  assert.deepEqual(await client.listStores(),[]);
+  await assert.rejects(client.getStoreDayById('pia:35','2026-10-05'),e=>e.status===403);
+});
+
+test('normal PIA client preserves an existing owner without an access cookie',async t=>{
+  const f=await accessFixture(t);
+  const storage={getItem(){return JSON.stringify({linked:true,channelId:CHANNEL,receiverToken:TOKEN})}};
+  const client=createVpsAnalyticsClient({piaOnly:true,storage,baseUrl:f.base+'/api/vps'});
+  assert.ok((await client.listStores()).some(s=>s.id==='pia:35'));
+  assert.equal((await client.getStoreDayById('pia:35','2026-10-05')).day.machines[0].tableNo,'3090');
+});
 
 test('PIA-only browser client reads through HttpOnly cookies without Collector credentials',async()=>{
   const calls=[];
@@ -14,15 +43,15 @@ test('PIA-only browser client reads through HttpOnly cookies without Collector c
   await assert.rejects(()=>client.getDefaultAnalysis('PIA'),e=>e.code==='vps_credentials_unavailable');
 });
 
-test('PIA cookie fallback does not replace an existing owner but permits a stale Receiver browser to use its viewer cookie',async()=>{
+test('PIA sharing remains usable with a stale Receiver without sending its rejected credentials',async()=>{
   let count=0;
   const storage={getItem(){return JSON.stringify({linked:true,channelId:'owner',receiverToken:'stale'})}};
   const client=createVpsAnalyticsClient({piaOnly:true,storage,fetchFn:async(url,options)=>{
     count++;
-    if(count===1){assert.equal(options.headers.authorization,'Bearer stale');return new Response(JSON.stringify({ok:false,code:'receiver_unauthorized'}),{status:401})}
-    assert.equal(options.headers.authorization,undefined);return new Response(JSON.stringify({ok:true,stores:[]}));
+    if(options.headers.authorization)return new Response(JSON.stringify({ok:false,code:'receiver_unauthorized'}),{status:401});
+    return new Response(JSON.stringify({ok:true,stores:[{id:'pia:35'}]}));
   }});
-  await client.listStores();assert.equal(count,2);
+  assert.deepEqual(await client.listStores(),[{id:'pia:35'}]);assert.equal(count,1);
 });
 
 test('remote PIA cache clears acquired data after lost permission and rejects an in-flight stale response',async()=>{
