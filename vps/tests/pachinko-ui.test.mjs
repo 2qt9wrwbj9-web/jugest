@@ -25,6 +25,16 @@ test('client reports preparation and auth failures in Japanese without leaking r
   }
 });
 
+test('date toolbar matches the normal store date-select pattern and keeps newest date selected',()=>{
+  const matrix={dates:['2026-10-06','2026-10-05'],roster:Array.from({length:48},(_,i)=>({machine_no:String(1101+i)}))};
+  const html=ui.renderDateToolbar(matrix,'2026-10-06');assert.match(html,/class="data-toolbar p-date-toolbar"/);assert.match(html,/<small>日付<\/small><select data-pachinko-date-select>/);assert.ok(html.indexOf('2026-10-06')<html.indexOf('2026-10-05'));assert.match(html,/value="2026-10-06" selected/);assert.match(html,/>48台<\/span>/);
+});
+
+test('store selector ordering uses displayed Japanese store names',()=>{
+  const names=['Z店','PIA大船-S','アビバ関内','PIA大船-P','123ホール'];
+  const sorted=[...names].sort(ui.compareStoreNames);assert.deepEqual(sorted,[...names].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true,sensitivity:'base'})));
+});
+
 test('matrix renderer keeps newest date first, escapes labels and never renders provisional candidate K',()=>{
   const matrix={models:[{key:'OUMI5_SPECIAL_ALTA',estimatorStatus:'verified'},{key:'TOKYO_GHOUL_399',estimatorStatus:'provisional'},{key:'TOKYO_GHOUL_999',estimatorStatus:'provisional'}],dates:['2026-10-06','2026-10-05'],roster:[{identity:'sea',machine_model_key:'OUMI5_SPECIAL_ALTA',machine_no:'1101<script>',store_machine_id:'1'},{identity:'ghoul',machine_model_key:'TOKYO_GHOUL_999',machine_no:'999',store_machine_id:'2'}],records:[{record_id:1,business_date:'2026-10-06',identity:'sea',machine_model_key:'OUMI5_SPECIAL_ALTA',start:1500,estimated_k:20.294776,estimator_status:'verified',confidence:'B'},{record_id:2,business_date:'2026-10-06',identity:'ghoul',machine_model_key:'TOKYO_GHOUL_999',start:2200,estimated_k:null,estimator_status:'provisional',confidence:null}]};
   const html=ui.renderTable(matrix,'2026-10-06');assert.ok(html.indexOf('10-06')<html.indexOf('10-05'));assert.match(html,/20\.3/);assert.match(html,/追加検証中/);assert.doesNotMatch(html,/32\.4/);assert.doesNotMatch(html,/<script>/);assert.match(html,/1101&lt;script&gt;/);const map=buildRecordMap(matrix);assert.equal(map.get('sea\u00002026-10-06').record_id,1);

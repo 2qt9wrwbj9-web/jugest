@@ -55,10 +55,15 @@ function renderSummary(matrix,date,filter=''){
   }
   return `<section class="p-summary-compare"><div class="p-summary-head"><div><small>機種比較</small><h2>${esc(date)}</h2></div></div><div class="p-compare-scroll"><table><thead><tr><th>機種</th><th>平均回転率</th><th>平均稼働</th><th>平均差玉</th></tr></thead><tbody>${MODEL_ORDER.map(key=>{const model=models.find(x=>x.key===key),s=summaries.find(x=>x.machine_model_key===key),status=s?.estimator_status||model?.estimatorStatus||'unverified',m=summaryMetrics(s,status);return `<tr><th><b>${esc(modelLabel(key))}</b><span class="p-status ${esc(status)}">${esc(statusLabel(status))}</span></th><td>${m.hasRows?`${esc(m.rotation)}<small>回/250玉</small>`:'—'}</td><td>${m.hasRows?`${esc(m.activity)}<small>回</small>`:'—'}</td><td>${m.hasRows?esc(m.difference):'—'}</td></tr>`}).join('')}</tbody></table></div></section>`;
 }
+function renderDateToolbar(matrix,selectedDate){
+  const dates=matrix?.dates||[],count=(matrix?.roster||[]).length;
+  if(!dates.length)return '';
+  return `<div class="data-toolbar p-date-toolbar"><label><small>日付</small><select data-pachinko-date-select>${dates.map(d=>`<option value="${esc(d)}" ${d===selectedDate?'selected':''}>${esc(d)}</option>`).join('')}</select></label><span>${formatPachinkoCount(count)}台</span></div>`;
+}
 function renderTable(matrix,selectedDate){
   const records=buildRecordMap(matrix),dates=matrix.dates||[],roster=matrix.roster||[];
   if(!dates.length)return '<div class="p-empty">営業日を安全に復元できた履歴はまだありません。</div>';
-  return `<div class="p-table-scroll" data-pachinko-table-scroll><table class="p-matrix"><thead><tr><th class="p-seat">台番 / 機種</th>${dates.map(d=>`<th><button type="button" data-pachinko-date="${esc(d)}" class="${d===selectedDate?'selected':''}">${esc(d.slice(5))}</button></th>`).join('')}</tr></thead><tbody>${roster.map(machine=>`<tr><th class="p-seat"><b>${esc(machine.machine_no)}番</b><small>${esc(modelLabel(machine.machine_model_key))}</small></th>${dates.map(date=>{const r=records.get(`${machine.identity}\u0000${date}`);if(!r)return '<td class="p-no-data">—</td>';return `<td><button type="button" class="p-cell ${r.estimator_status}" data-pachinko-record="${r.record_id}" data-pachinko-record-date="${esc(date)}"><b>${formatPachinkoK(r.estimated_k,r.estimator_status)}</b><small>${r.estimator_status==='verified'?`${formatPachinkoCount(r.start)}回 / ${esc(r.confidence||'—')}`:statusLabel(r.estimator_status)}</small></button></td>`}).join('')}</tr>`).join('')}</tbody></table></div>`;
+  return `<div class="p-table-scroll" data-pachinko-table-scroll><table class="p-matrix"><thead><tr><th class="p-seat">台番 / 機種</th>${dates.map(d=>`<th><span class="p-date-head ${d===selectedDate?'selected':''}" data-pachinko-date-head="${esc(d)}">${esc(d.slice(5))}</span></th>`).join('')}</tr></thead><tbody>${roster.map(machine=>`<tr><th class="p-seat"><b>${esc(machine.machine_no)}番</b><small>${esc(modelLabel(machine.machine_model_key))}</small></th>${dates.map(date=>{const r=records.get(`${machine.identity}\u0000${date}`),selected=date===selectedDate?' selected':'';if(!r)return `<td class="p-no-data${selected}">—</td>`;return `<td class="p-day-col${selected}"><button type="button" class="p-cell ${r.estimator_status}" data-pachinko-record="${r.record_id}" data-pachinko-record-date="${esc(date)}"><b>${formatPachinkoK(r.estimated_k,r.estimator_status)}</b><small>${r.estimator_status==='verified'?`${formatPachinkoCount(r.start)}回 / ${esc(r.confidence||'—')}`:statusLabel(r.estimator_status)}</small></button></td>`}).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 function renderUndated(matrix){
   const snapshotByModel=modelSnapshotMap(matrix),records=matrix.undated?.records||[];if(!matrix.undated?.occurrence_count)return '';
@@ -67,7 +72,7 @@ function renderUndated(matrix){
 export function renderPachinkoScreenState(st){
   ensureLoad(st.app);
   const matrix=st.matrix,selected=st.selectedDate||matrix?.dates?.[0]||'';
-  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p><div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${selected?renderSummary(matrix,selected,st.filter):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
+  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p><div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${renderDateToolbar(matrix,selected)}${selected?renderSummary(matrix,selected,st.filter):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
 }
 const STYLE=`
 .pachinko-data-screen{
@@ -127,8 +132,10 @@ const STYLE=`
 .p-matrix .p-seat{position:sticky;left:0;z-index:2;min-width:118px;max-width:118px;text-align:left;padding:9px 10px;background:#fbfcff}
 .p-matrix thead .p-seat{z-index:4;background:#f6f8fe}
 .p-seat b{display:block;color:var(--p-title);font-size:12px;font-weight:900}.p-seat small{display:block;color:var(--p-muted);font-size:10px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.p-matrix thead button{min-height:42px;border:0;background:transparent;color:var(--p-muted-strong);padding:10px 13px;white-space:nowrap;font-size:11px;font-weight:800;border-radius:0}
-.p-matrix thead button.selected{color:var(--p-accent);font-weight:900;text-decoration:none;background:var(--p-accent-soft);box-shadow:inset 0 -2px 0 var(--p-accent)}
+.p-date-toolbar{margin:10px 0 12px}.p-date-toolbar label{min-width:150px}
+.p-date-head{display:block;min-height:42px;color:var(--p-muted-strong);padding:12px 13px 9px;white-space:nowrap;font-size:11px;font-weight:800}
+.p-date-head.selected{color:var(--p-accent);font-weight:900;background:var(--p-accent-soft);box-shadow:inset 0 -2px 0 var(--p-accent)}
+.p-matrix td.selected,.p-matrix .p-day-col.selected{background:#fbfcff}
 .p-cell{border:0;background:transparent;min-width:96px;padding:8px 9px;color:var(--p-ink);border-radius:0}
 .p-cell b,.p-cell small{display:block}.p-cell b{font-size:18px;color:var(--p-title);font-weight:900}.p-cell small{font-size:10px;color:var(--p-muted);margin-top:2px}.p-cell.provisional b{color:var(--p-muted);opacity:1}
 .p-no-data{min-width:96px;color:#a8b1c2}
@@ -151,26 +158,35 @@ function patchApp(){
   const oldSub=proto.renderSubscreen,oldClick=proto.onClick,oldChange=proto.onChange;
   proto.renderSubscreen=function(){if(this.state?.workspace==='store'&&this.state?.screen==='pachinko'){const st=stateOf(this);st.app=this;return renderPachinkoScreenState(st)}return oldSub.call(this)};
   proto.onClick=function(event){
-    const p=event.target.closest?.('[data-pachinko-store],[data-pachinko-filter],[data-pachinko-date],[data-pachinko-record],[data-pachinko-refresh],[data-pachinko-close-detail]');
+    const p=event.target.closest?.('[data-pachinko-store],[data-pachinko-filter],[data-pachinko-record],[data-pachinko-refresh],[data-pachinko-close-detail]');
     if(p){
       if(p.hasAttribute('data-pachinko-store')){this.state.storeSelectorOpen=false;this.navigate('store','pachinko');const st=stateOf(this);st.loaded=false;st.matrix=null;st.error='';ensureLoad(this);return}
       if(p.hasAttribute('data-pachinko-filter')){const st=stateOf(this);st.filter=p.dataset.pachinkoFilter||'';st.loaded=false;st.matrix=null;st.selectedDate='';void refresh(this,{keepScroll:false});return}
-      if(p.hasAttribute('data-pachinko-date')){const st=stateOf(this);st.selectedDate=p.dataset.pachinkoDate||'';st.detail=null;rerender(this);return}
       if(p.hasAttribute('data-pachinko-record')){void openDetail(this,Number(p.dataset.pachinkoRecord),{date:p.dataset.pachinkoRecordDate||'',snapshotId:p.dataset.pachinkoSnapshotId||null});return}
       if(p.hasAttribute('data-pachinko-refresh')){void refresh(this);return}
       if(p.hasAttribute('data-pachinko-close-detail')){const st=stateOf(this);st.detail=null;st.detailError='';rerender(this);return}
     }
     return oldClick.call(this,event)
   };
-  proto.onChange=function(event){return oldChange.call(this,event)};
+  proto.onChange=function(event){
+    const date=event.target.closest?.('[data-pachinko-date-select]');
+    if(date){const st=stateOf(this);st.selectedDate=date.value||'';st.detail=null;rerender(this);return}
+    return oldChange.call(this,event)
+  };
+}
+function visibleStoreRowName(row){return String(row?.querySelector?.('.store-row-main b')?.textContent||'').trim()}
+function compareStoreNames(a,b){return String(a||'').localeCompare(String(b||''),'ja',{numeric:true,sensitivity:'base'})}
+function sortStoreSelectorRows(list){
+  const rows=[...list.querySelectorAll(':scope > .store-row')],sorted=[...rows].sort((a,b)=>compareStoreNames(visibleStoreRowName(a),visibleStoreRowName(b)));
+  if(rows.some((row,i)=>row!==sorted[i]))for(const row of sorted)list.append(row);
 }
 function reconcileStoreSelector(){
   const app=document.querySelector('jugest-app'),root=app?.shadowRoot,list=root?.querySelector('.store-list[data-store-list]');if(!app||!list)return;
   for(const row of list.querySelectorAll('[data-store-name]'))if(row.dataset.storeName==='PIA大船1'){const b=row.querySelector('.store-row-main b');if(b&&b.textContent!=='PIA大船-S')b.textContent='PIA大船-S'}
   const q=String(app.state?.storeQuery||'').trim().toLocaleLowerCase('ja-JP'),show=!q||'pia大船-p'.toLocaleLowerCase('ja-JP').includes(q)||'大船'.includes(q);
-  let row=list.querySelector('[data-pachinko-store]');if(!show){row?.remove();return}if(!row){row=document.createElement('button');row.type='button';row.className='store-row';row.dataset.pachinkoStore=PACHINKO_STORE_ID;row.innerHTML='<span class="store-row-main"><b>PIA大船-P</b><small>パチンコ回転率データ</small></span><span class="store-badge ok">P</span><span class="chev">›</span>';list.append(row)}
+  let row=list.querySelector('[data-pachinko-store]');if(!show){row?.remove();sortStoreSelectorRows(list);return}if(!row){row=document.createElement('button');row.type='button';row.className='store-row';row.dataset.pachinkoStore=PACHINKO_STORE_ID;row.innerHTML='<span class="store-row-main"><b>PIA大船-P</b><small>パチンコ回転率データ</small></span><span class="store-badge ok">P</span><span class="chev">›</span>';list.append(row)}sortStoreSelectorRows(list)
 }
 function boot(){customElements.whenDefined('jugest-app').then(()=>{patchApp();const app=document.querySelector('jugest-app');if(!app?.shadowRoot)return;const observer=new MutationObserver(()=>reconcileStoreSelector());observer.observe(app.shadowRoot,{childList:true,subtree:true});reconcileStoreSelector();globalThis.addEventListener?.('jugest:pia-access-changed',event=>{if(event.detail?.active===false){clearState(app);if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')rerender(app)}else if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)});document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible'&&app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)});globalThis.addEventListener?.('pageshow',()=>{if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)})})}
 if(typeof window!=='undefined'&&typeof document!=='undefined'&&typeof customElements!=='undefined')boot();
 
-export const __test={stateOf,clearState,renderSummary,renderTable,renderUndated,renderDetail,snapshotForDetail,assignmentForDetail,STYLE};
+export const __test={stateOf,clearState,renderSummary,renderDateToolbar,renderTable,renderUndated,renderDetail,snapshotForDetail,assignmentForDetail,visibleStoreRowName,compareStoreNames,sortStoreSelectorRows,STYLE};
