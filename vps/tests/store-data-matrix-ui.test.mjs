@@ -46,6 +46,7 @@ test('store data UI contains matrix filters, sticky axes, tap detail and hides t
     '.store-data-screen .vps-audit-kpis>.vps-audit-kpi{grid-column:span 2',
     '.store-data-screen .vps-audit-kpis>.vps-audit-kpi:nth-child(n+4){grid-column:span 3'
   ])assert.ok(source.includes(token),token);
+  assert.ok(source.includes("${kpi('総差枚',fmtDiff(overall.totalDiff))}${kpi('平均差枚',fmtDiff(overall.avgDiff))}${kpi('平均G',fmtGames(overall.avgGames))}${kpi('勝率',fmtWinRate(overall))}${kpi('平均出率',fmtRate(overall.actualRate))}"),'summary KPI order should put win rate on the wide second row');
 });
 
 test('matrix detail taps preserve the current horizontal and vertical scroll position',async()=>{
