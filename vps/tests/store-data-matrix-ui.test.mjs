@@ -14,6 +14,18 @@ test('store data summaries include average games for all rows and each machine',
   assert.equal(my.avgGames,5000);
 });
 
+test('store win rate uses every machine as denominator and counts zero diff as a win',()=>{
+  const summary=aggregateStoreRows([
+    {diff:120},
+    {diff:0},
+    {diff:-1},
+    {diff:null}
+  ]);
+  assert.equal(summary.rowCount,4);
+  assert.equal(summary.winCount,2);
+  assert.equal(summary.winRate,50);
+});
+
 test('setting heat uses four fixed readable ranges',()=>{
   assert.equal(settingHeatColor(2.49),'#ffffff');
   assert.equal(settingHeatColor(2.5),'#60a5fa');
@@ -27,8 +39,8 @@ test('setting heat uses four fixed readable ranges',()=>{
 
 test('store data UI contains matrix filters, sticky axes, tap detail and hides the legacy machine list',async()=>{
   const source=await readFile(new URL('../../vps-ui-audit-store.mjs',import.meta.url),'utf8');
-  for(const token of ['data-vps-matrix-period','vps-matrix-cell','vps-matrix-detail','position:sticky','機種 / 台番','store-data-screen.vps-matrix-active .machine-list','平均G'])assert.ok(source.includes(token),token);
-  assert.ok(source.includes("[...source.dates].reverse()"),'dates should be chronological left to right');
+  for(const token of ['data-vps-matrix-period','vps-matrix-cell','vps-matrix-detail','position:sticky','機種 / 台番','store-data-screen.vps-matrix-active .machine-list','平均G','勝率','fmtWinRate(overall)'])assert.ok(source.includes(token),token);
+  assert.ok(source.includes("dates=[...source.dates].sort((a,b)=>String(b).localeCompare(String(a)))"),'dates should be newest first left to right');
 });
 
 test('matrix detail taps preserve the current horizontal and vertical scroll position',async()=>{
