@@ -302,6 +302,44 @@ test('full to sea-only CSV to full uses per-model anchors and never dates a two-
     assert.equal(db.prepare("SELECT count(*) n FROM p_transitions WHERE reason='removed_machine' AND machine_model_key<>?").get(SEA).n,0);
   });
 });
+test('a saved not-ready previous-day snapshot is the comparison base for tomorrow instead of a stale anchor',()=>{
+  fixture(({db})=>{
+    const first=ingest(db,payload('2026-10-05'));
+    const stalled=ingest(db,payload('2026-10-06'));
+    assert.equal(stalled.assignedCount,0);assert.equal(stalled.collectionReady,false);
+    assert.equal(db.prepare('SELECT snapshot_id FROM p_model_anchors WHERE model_key=?').get(G999).snapshot_id,first.snapshotId);
+    const next=ingest(db,payload('2026-10-07',2),{bootstrapWindowEdges:true});
+    assert.equal(next.collectionReady,true);assert.equal(next.assignedCount,6);
+    assert.equal(next.diagnostics.modelResults.find(r=>r.machine_model_key===G999).previous_snapshot_id,stalled.snapshotId);
+    const rows=db.prepare('SELECT business_date,previous_snapshot_id,current_snapshot_id FROM p_machine_days WHERE machine_model_key=? ORDER BY business_date').all(G999);
+    assert.deepEqual(rows.map(r=>r.business_date),['2026-09-06','2026-10-06']);
+    assert.ok(rows.every(r=>r.previous_snapshot_id===stalled.snapshotId&&r.current_snapshot_id===next.snapshotId));
+    assert.equal(db.prepare('SELECT snapshot_id FROM p_model_anchors WHERE model_key=?').get(G999).snapshot_id,next.snapshotId);
+    const reimport=ingest(db,payload('2026-10-07',2),{bootstrapWindowEdges:true});assert.equal(reimport.status,'duplicate');
+    assert.equal(db.prepare('SELECT COUNT(*) n FROM p_machine_days WHERE machine_model_key=?').get(G999).n,2);
+  });
+});
+test('previous-day recovery never silently backfills the skipped day and preserves machine-specific safety',()=>{
+  fixture(({db})=>{
+    ingest(db,payload('2026-10-05'));
+    const stalled=ingest(db,payload('2026-10-06'));
+    const ambiguous=ingest(db,payload('2026-10-07',3),{bootstrapWindowEdges:true});
+    assert.equal(ambiguous.assignedCount,0);
+    assert.equal(ambiguous.diagnostics.modelResults.find(x=>x.machine_model_key===G999).previous_snapshot_id,stalled.snapshotId);
+    assert.deepEqual(db.prepare('SELECT business_date FROM p_machine_days').all(),[]);
+  });
+});
+test('a historical import earlier than a dated anchor never bypasses the backward-date guard',()=>{
+  fixture(({db})=>{
+    const seeded=ingest(db,payload('2026-10-06',2));
+    const anchored=ingest(db,payload('2026-10-07',3));assert.equal(anchored.assignedCount,3);
+    ingest(db,payload('2026-10-04'));
+    const old=ingest(db,payload('2026-10-05',2));
+    assert.equal(old.assignedCount,0);
+    assert.equal(db.prepare('SELECT snapshot_id FROM p_model_anchors WHERE model_key=?').get(G999).snapshot_id,anchored.snapshotId);
+    assert.deepEqual(db.prepare('SELECT DISTINCT business_date FROM p_machine_days ORDER BY business_date').all().map(r=>r.business_date),['2026-10-06']);
+  });
+});
 test('same-day update and next-day not-ready import keep last good anchor until a later complete retry',()=>{
   fixture(({db})=>{
     const first=ingest(db,payload('2026-10-05'));

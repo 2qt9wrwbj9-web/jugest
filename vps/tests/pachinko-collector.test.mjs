@@ -5,7 +5,9 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {gunzipSync} from 'node:zlib';
 import {openPachinkoDatabase,migratePachinko} from '../src/pachinko/schema.mjs';
-import {fetchPachinkoSnapshot,collectPachinkoOnce,shouldAttemptPachinkoCollection,startPachinkoCollectorScheduler,jstPachinkoClock} from '../src/pachinko/collector.mjs';
+import {fetchPachinkoSnapshot,collectPachinkoOnce,runPachinkoCollectorTick,shouldAttemptPachinkoCollection,startPachinkoCollectorScheduler,jstPachinkoClock} from '../src/pachinko/collector.mjs';
+import {importPachinkoSnapshot} from '../src/pachinko/store.mjs';
+import {identifyPachinkoModel} from '../src/pachinko/models.mjs';
 import {readPachinkoConfig} from '../src/pachinko/config.mjs';
 import {runWebServer} from '../src/web-main.mjs';
 
@@ -32,6 +34,37 @@ test('scheduler window, once-per-server-day and cooldown are independent from sl
 
 test('successful initial full collection seeds all models and marks day complete',async t=>{
   const dir=await mkdtemp(path.join(tmpdir(),'pachinko-once-'));t.after(()=>rm(dir,{recursive:true,force:true}));const dbPath=path.join(dir,'p.sqlite'),db=openPachinkoDatabase(dbPath);migratePachinko(db);const f=await latest();try{const result=await collectPachinkoOnce(db,{archiveRoot:path.join(dir,'raw'),now:new Date('2026-10-07T14:43:44Z'),fetchImpl:async()=>response(f.text)});assert.equal(result.collectionReady,true);const s=db.prepare('SELECT * FROM p_collector_state').get();assert.equal(s.last_collected_server_date,'2026-10-07');assert.equal(s.last_error,null)}finally{db.close()}
+});
+
+test('automated next-day tick recovers Ghoul 999 from the retained not-ready previous-day source',async t=>{
+  const dir=await mkdtemp(path.join(tmpdir(),'pachinko-999-autoforward-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+  const dbPath=path.join(dir,'p.sqlite'),db=openPachinkoDatabase(dbPath);migratePachinko(db);
+  const original=(await latest()).payload;
+  try{
+    const first=importPachinkoSnapshot(db,{payload:original});assert.equal(first.status,'seeded');
+    const stalled={...original,server_date_time:{date:'2026-10-08',time:'01:45:00'}};
+    const second=importPachinkoSnapshot(db,{payload:stalled});assert.equal(second.assignedCount,0);
+    assert.equal(second.status,'not_ready');
+    assert.equal(db.prepare("SELECT server_date FROM p_model_anchors WHERE model_key='TOKYO_GHOUL_999'").get().server_date,'2026-10-07');
+    const groups=new Map(),other=[];
+    for(const row of stalled.ranking){const model=identifyPachinkoModel(row);if(!model){other.push(row);continue}const key=`${model.key}|${row.store_machine_id}|${row.machine_no}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
+    const nextRows=[...other];let ordinal=0;
+    for(const rows of groups.values()){
+      if(rows.length===30)nextRows.push(...rows.slice(1));else nextRows.push(...rows);
+      const last=rows.at(-1);nextRows.push({...last,start:last.start+1,final_start:last.final_start+100000+ordinal++});
+    }
+    const current={...stalled,server_date_time:{date:'2026-10-09',time:'01:45:00'},ranking:nextRows};
+    const result=await runPachinkoCollectorTick({dbPath,archiveRoot:path.join(dir,'raw'),now:new Date('2026-10-08T16:45:00.000Z'),fetchImpl:async()=>response(JSON.stringify(current))});
+    assert.equal(result.reason,'due');assert.equal(result.result.collectionReady,true);
+    const ghoulDays=db.prepare("SELECT business_date,COUNT(*) n FROM p_machine_days WHERE machine_model_key='TOKYO_GHOUL_999' GROUP BY business_date ORDER BY business_date").all();
+    assert.deepEqual(ghoulDays.map(r=>[r.business_date,r.n]),[['2026-09-08',48],['2026-10-08',48]]);
+    const latest=db.prepare('SELECT diagnostics_json FROM p_snapshots ORDER BY id DESC LIMIT 1').get();
+    const model=JSON.parse(latest.diagnostics_json).modelResults.find(r=>r.machine_model_key==='TOKYO_GHOUL_999');
+    assert.equal(model.previous_snapshot_id,second.snapshotId);
+    const state=db.prepare('SELECT last_collected_server_date,last_error FROM p_collector_state').get();
+    assert.equal(state.last_collected_server_date,'2026-10-09');assert.equal(state.last_error,null);
+    assert.equal(db.prepare('PRAGMA foreign_key_check').all().length,0);
+  }finally{db.close()}
 });
 
 test('scheduler suppresses overlapping ticks',async t=>{

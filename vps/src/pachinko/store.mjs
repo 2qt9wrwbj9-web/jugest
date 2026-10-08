@@ -109,6 +109,12 @@ export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance
     const setAnchor=db.prepare('INSERT INTO p_model_anchors(model_key,snapshot_id,server_date) VALUES(?,?,?) ON CONFLICT(model_key) DO UPDATE SET snapshot_id=excluded.snapshot_id,server_date=excluded.server_date');
     const snapshotById=db.prepare('SELECT * FROM p_snapshots WHERE id=?'),snapshotCache=new Map();
     const anchorSnapshot=id=>{if(!snapshotCache.has(id))snapshotCache.set(id,snapshotById.get(id));return snapshotCache.get(id)};
+    // A model's prior observation may have been retained with not_ready status.
+    // Do not skip that day and create a false acquisition gap: an exact one-day
+    // comparison can still independently prove the next day's delta.
+    const previousDaySnapshot=db.prepare(`SELECT s.* FROM p_snapshots s WHERE s.store_id=? AND s.server_date=?
+      AND EXISTS(SELECT 1 FROM json_each(s.scope_model_keys_json) AS scope WHERE scope.value=?)
+      ORDER BY s.server_time DESC,s.id DESC LIMIT 1`);
     let assignedCount=0;const businessDates=new Set();
     const addDay=db.prepare('INSERT INTO p_machine_days(store_id,business_date,identity,machine_no,store_machine_id,machine_model_key,record_id,previous_snapshot_id,current_snapshot_id,date_status,date_assignment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
     const existingDay=db.prepare('SELECT record_id FROM p_machine_days WHERE store_id=? AND business_date=? AND machine_no=?');
@@ -120,7 +126,10 @@ export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance
         for(const group of currentModelGroups)transitions.push({previousSnapshotId:null,...group,reason:'initial_snapshot',diagnostics:{}});
         continue;
       }
-      const previousId=anchor.snapshot_id,priorDate=anchor.server_date,priorSnapshot=anchorSnapshot(previousId);
+      const precedingDate=new Date((dayNumber(meta.snapshotDate)-1)*86400000).toISOString().slice(0,10);
+      const latestPrior=anchor.server_date<precedingDate?previousDaySnapshot.get(PACHINKO_STORE_ID,precedingDate,key):null;
+      const priorSnapshot=latestPrior??anchorSnapshot(anchor.snapshot_id);
+      const previousId=priorSnapshot.id,priorDate=priorSnapshot.server_date;
       const priorRows=payloadOf(priorSnapshot).ranking.filter(row=>identifyPachinkoModel(row)?.key===key);
       const previous={status:0,server_date_time:{date:priorDate,time:'00:00:00'},ranking:priorRows};
       const derived=derivePachinkoDay(previous,payload,{scopeModelKeys:[key]});

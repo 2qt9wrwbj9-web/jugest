@@ -20,6 +20,12 @@ bootstrapは機種ごとに管理し、全台分がそろった連続30日を一
 
 大海のKはAPI内の運用検証済み（verified）。喰種399/999は追加検証中（provisional）、正式なestimated_kはnull。A/B/C/Dは通常回転数の観測量であり、正しさの確率や設定判別confidenceではない。等価ボーダー・期待値・翌日予測はこの機能に含めない。
 
+## 自動取得と翌日判定の回復
+
+本番ではパチンコ専用CollectorをWebサービス内で有効化しており、設定された朝の取得窓（既定はJST 00:30〜06:00）で1日1回を目指す。判定保留のraw snapshotも保存済みであれば、翌日の比較時に「直前のサーバー日・同じ機種」のsnapshotを選べる。前日の取得が保留でも、同一設置の履歴が1件進んでいると証明できれば、該当機種の前日1件を日付化する。判定保留の過去日を自動reconcileで一括再登録する機能ではない。
+
+既存の確定anchorと同じ営業日内に複数snapshotがあっても、anchorより新しい保留日がない限りanchorの安全性を優先する。前日snapshotがない取得ギャップや設置入替は従来どおり保留・再seedとし、飛ばした日の営業日を捏造しない。bootstrap未完了で30履歴がそろっている機種は、日々の正常なローリング比較で古い端の復元も継続する。
+
 ## 日付reconcile CLI
 
 既存snapshotの再照合は `pachinko.mjs reconcile-dates` を使う。既定はdry-runでDB変更をrollbackする。実書き込みには `--apply` が必要で、本番DBではさらに `--allow-production` が必要。既存の日付と異なるrecordを上書きせず conflict として停止側に倒す。
