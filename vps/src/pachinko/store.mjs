@@ -38,13 +38,15 @@ function retainedOccurrences(previous,current,gap){
   const before=groupRows(previous),after=groupRows(current);
   for(const [identity,rows] of after){
     const prior=before.get(identity);if(!prior)continue;
-    if(prior.reduce((n,row)=>n+row.occurrence_count,0)!==rows.reduce((n,row)=>n+row.occurrence_count,0))continue;
+    const previousCount=prior.reduce((n,row)=>n+row.occurrence_count,0),currentCount=rows.reduce((n,row)=>n+row.occurrence_count,0);
+    const sameWindow=previousCount===currentCount,growingWindow=gap===1&&previousCount>0&&previousCount<30&&currentCount===previousCount+1;
+    if(!sameWindow&&!growingWindow)continue;
     const oldCounts=new Map(prior.map(row=>[row.id,row])),newCounts=new Map(rows.map(row=>[row.id,row]));
     const added=rows.reduce((n,row)=>n+Math.max(0,row.occurrence_count-(oldCounts.get(row.id)?.occurrence_count??0)),0);
     const removed=prior.reduce((n,row)=>n+Math.max(0,row.occurrence_count-(newCounts.get(row.id)?.occurrence_count??0)),0);
     // An unchanged next-day zero multiset can hide a replacement. A same-day
     // duplicate observation has no new day to infer and can retain its evidence.
-    if(!(added===1&&removed===1)&&!(gap===0&&added===0&&removed===0))continue;
+    if(!(sameWindow&&added===1&&removed===1)&&!(growingWindow&&added===1&&removed===0)&&!(gap===0&&sameWindow&&added===0&&removed===0))continue;
     for(const row of rows){
       const old=oldCounts.get(row.id);if(!old)continue;
       // A removed identical occurrence may have been the dated one; consume

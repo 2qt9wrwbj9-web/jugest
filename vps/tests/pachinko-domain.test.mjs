@@ -113,6 +113,65 @@ test('first history is undated and only exact consecutive multiset replacement a
   for(const a of r.assignments){assert.equal(a.raw.final_start,31);assert.equal(a.date_status,'derived');assert.equal(a.date_assignment_method,'consecutive_snapshot_multiset_previous_day');}
   for(const a of r.removedAssignments){assert.equal(a.raw.final_start,1);assert.equal(a.business_date,'2026-09-05');assert.equal(a.date_assignment_method,'consecutive_snapshot_multiset_previous_day');assert.equal(a.date_assignment_edge,'window_start');}
 });
+test('short history growing from two to three rows safely dates the added record without inventing a removed old edge',()=>{
+  const previous=payload('2026-10-07',1,{count:2}),current=payload('2026-10-08',1,{count:3});
+  const result=api().derivePachinkoDay(previous,current);
+  assert.equal(result.businessDate,'2026-10-07');assert.equal(result.diagnostics.ready,true);
+  assert.equal(result.diagnostics.rollingCount,0);assert.equal(result.diagnostics.growingCount,3);assert.equal(result.diagnostics.oneAddCoverage,1);
+  assert.equal(result.assignments.length,3);assert.equal(result.removedAssignments.length,0);
+  assert.ok(result.assignments.every(a=>a.raw.final_start===3&&a.date_assignment_method==='consecutive_snapshot_multiset_previous_day'));
+});
+test('full rolling windows and short growing windows can independently satisfy the same model coverage threshold',()=>{
+  const before=payload('2026-10-07'),after=payload('2026-10-08',2);
+  before.ranking=before.ranking.filter(row=>row.sis_machine_code!=='00022'||row.final_start<=2);
+  after.ranking=after.ranking.filter(row=>row.sis_machine_code!=='00022').concat(before.ranking.filter(row=>row.sis_machine_code==='00022'),raw(G399,3));
+  const result=api().derivePachinkoDay(before,after);
+  assert.equal(result.diagnostics.ready,true);assert.equal(result.assignments.length,3);
+  assert.equal(result.diagnostics.rollingCount,2);assert.equal(result.diagnostics.growingCount,1);
+  assert.equal(result.removedAssignments.length,2);
+  assert.ok(result.assignments.find(a=>a.machine_model_key===G399&&a.raw.final_start===3));
+  fixture(({db})=>{
+    ingest(db,before);const saved=ingest(db,after,{bootstrapWindowEdges:true});
+    assert.equal(saved.assignedCount,5);assert.equal(saved.collectionReady,true);
+    const matrix=api().getPachinkoMatrix(db);assert.equal(matrix.records.filter(r=>r.business_date==='2026-10-07').length,3);
+    assert.equal(matrix.records.filter(r=>r.machine_model_key===G399).length,1);
+    assert.equal(matrix.records.find(r=>r.machine_model_key===G399).estimated_k,null);
+  });
+});
+test('short history does not infer dates from ambiguous growth, replacements, same-day updates or changed installations',()=>{
+  const previous=payload('2026-10-07',1,{keys:[G399],count:2});
+  const cases=[
+    payload('2026-10-08',1,{keys:[G399],count:4}),
+    payload('2026-10-08',2,{keys:[G399],count:3}),
+    payload('2026-10-08',1,{keys:[G399],count:3,patches:{[G399]:{store_machine_id:9999}}}),
+    payload('2026-10-09',1,{keys:[G399],count:3}),
+    payload('2026-10-07',1,{keys:[G399],count:3})
+  ];
+  for(const current of cases){const result=api().derivePachinkoDay(previous,current,{scopeModelKeys:[G399]});assert.equal(result.diagnostics.ready,false);assert.equal(result.assignments.length,0);assert.equal(result.removedAssignments.length,0)}
+});
+test('the thirtieth growing history is dated once, then a full window begins ordinary rolling',()=>{
+  fixture(({db})=>{
+    const scope={scopeModelKeys:[G399]};
+    ingest(db,payload('2026-10-07',1,{keys:[G399],count:29}),{provenance:scope,bootstrapWindowEdges:true});
+    const grown=ingest(db,payload('2026-10-08',1,{keys:[G399],count:30}),{provenance:scope,bootstrapWindowEdges:true});
+    assert.equal(grown.assignedCount,1);assert.equal(api().getPachinkoMatrix(db,{modelKey:G399}).records.length,1);
+    const rolled=ingest(db,payload('2026-10-09',2,{keys:[G399],count:30}),{provenance:scope,bootstrapWindowEdges:true});
+    assert.equal(rolled.assignedCount,2);
+    const rows=db.prepare('SELECT business_date FROM p_machine_days WHERE machine_model_key=? ORDER BY business_date').all(G399).map(x=>x.business_date);
+    assert.deepEqual(rows,['2026-09-08','2026-10-07','2026-10-08']);
+  });
+});
+test('short history dates are retained on the next growing snapshot',()=>{
+  fixture(({db})=>{
+    ingest(db,payload('2026-10-07',1,{keys:[G399],count:2}),{provenance:{scopeModelKeys:[G399]}});
+    const second=ingest(db,payload('2026-10-08',1,{keys:[G399],count:3}),{provenance:{scopeModelKeys:[G399]}});
+    const third=ingest(db,payload('2026-10-09',1,{keys:[G399],count:4}),{provenance:{scopeModelKeys:[G399]}});
+    assert.equal(second.assignedCount,1);assert.equal(third.assignedCount,1);
+    const known=db.prepare('SELECT dated_occurrence_count FROM p_snapshot_members WHERE snapshot_id=? AND record_id=(SELECT id FROM p_records WHERE machine_model_key=? AND final_start=3)').get(third.snapshotId,G399);
+    assert.equal(known.dated_occurrence_count,1);
+    const matrix=api().getPachinkoMatrix(db,{modelKey:G399});assert.deepEqual(matrix.dates,['2026-10-08','2026-10-07']);assert.equal(matrix.records.length,2);
+  });
+});
 test('multiset comparison counts repeated identical zero history and preserves one added record',()=>{
   const zero=raw(SEA,0,{special:0,start:0,final_start:0,special_1:0,special_2:0,special_2d:0,special_out:0,special_safe:0,out:0,safe:0,difference:0});
   const a=seaPayload('2026-10-05',Array(30).fill(zero));

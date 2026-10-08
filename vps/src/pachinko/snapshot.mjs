@@ -76,7 +76,7 @@ function shiftPachinkoDate(date,days){
 export function derivePachinkoDay(previous,current,options={}){
   const currentPayload=current?.payload??current,previousPayload=previous?.payload??previous;
   const now=validatePachinkoSnapshot(currentPayload,{...options,scopeModelKeys:options.scopeModelKeys??current?.scopeModelKeys??options.provenance?.scopeModelKeys});
-  const diagnostics={ready:false,snapshotDate:now.snapshotDate,scopeModelKeys:now.scopeModelKeys,comparableCount:0,rollingCount:0,noChangeCount:0,newMachineCount:0,removedMachineCount:0,oneAddCoverage:0,populationCoverage:0,minimumCoverage:0.95};
+  const diagnostics={ready:false,snapshotDate:now.snapshotDate,scopeModelKeys:now.scopeModelKeys,comparableCount:0,rollingCount:0,growingCount:0,noChangeCount:0,newMachineCount:0,removedMachineCount:0,oneAddCoverage:0,populationCoverage:0,minimumCoverage:0.95};
   const result={businessDate:null,assignments:[],removedAssignments:[],diagnostics,transitions:[]};
   if(!previousPayload){result.transitions=[...now.groups.values()].map(group=>transition(group,'initial_snapshot'));return result}
   const prior=validatePachinkoSnapshot(previousPayload,{...options,scopeModelKeys:options.previousScopeModelKeys??previous?.scopeModelKeys??now.scopeModelKeys});
@@ -94,14 +94,18 @@ export function derivePachinkoDay(previous,current,options={}){
       result.transitions.push(transition(group,installed?'installation_changed':moved?'machine_no_changed':'new_machine'));continue;
     }
     diagnostics.comparableCount++;
-    if(before.rows.length!==group.rows.length){result.transitions.push(transition(group,'history_window_changed',{previousCount:before.rows.length,currentCount:group.rows.length}));continue}
     const diff=differences(before.rows,group.rows);
-    if(diff.added.length===1&&diff.removed.length===1){
-      diagnostics.rollingCount++;
-      candidates.push({group,windowSize:before.rows.length,added:diff.added[0],removed:diff.removed[0]});
+    const rolling=before.rows.length===group.rows.length&&diff.added.length===1&&diff.removed.length===1;
+    // New installations accumulate their first 30 histories without a removal.
+    // The exact previous multiset must survive unchanged and grow by just one.
+    const growing=before.rows.length>0&&before.rows.length<30&&group.rows.length===before.rows.length+1&&diff.added.length===1&&diff.removed.length===0;
+    if(rolling||growing){
+      if(rolling)diagnostics.rollingCount++;else diagnostics.growingCount++;
+      candidates.push({group,windowSize:before.rows.length,added:diff.added[0],removed:rolling?diff.removed[0]:null});
     }else{
       if(diff.added.length===0&&diff.removed.length===0)diagnostics.noChangeCount++;
-      result.transitions.push(transition(group,diff.added.length===0&&diff.removed.length===0?'no_change':'multiple_or_unbalanced_difference',{addedCount:diff.added.length,removedCount:diff.removed.length}));
+      const reason=before.rows.length!==group.rows.length?'history_window_changed':diff.added.length===0&&diff.removed.length===0?'no_change':'multiple_or_unbalanced_difference';
+      result.transitions.push(transition(group,reason,{previousCount:before.rows.length,currentCount:group.rows.length,addedCount:diff.added.length,removedCount:diff.removed.length}));
     }
   }
   for(const [key,group] of prev)if(!next.has(key)){diagnostics.removedMachineCount++;result.transitions.push(transition(group,'removed_machine'))}
@@ -111,13 +115,13 @@ export function derivePachinkoDay(previous,current,options={}){
     if(after.some(group=>prev.has(group.identity)))population+=Math.max(before.length,after.length);
   }
   diagnostics.populationCount=population;
-  diagnostics.oneAddCoverage=diagnostics.comparableCount?diagnostics.rollingCount/diagnostics.comparableCount:0;
+  diagnostics.oneAddCoverage=diagnostics.comparableCount?(diagnostics.rollingCount+diagnostics.growingCount)/diagnostics.comparableCount:0;
   diagnostics.populationCoverage=population?diagnostics.comparableCount/population:0;
   diagnostics.ready=diagnostics.comparableCount>0&&diagnostics.oneAddCoverage>=0.95&&diagnostics.populationCoverage>=0.95;
   if(diagnostics.ready){
     result.businessDate=prior.snapshotDate;
     result.assignments=candidates.map(({group,added})=>({...transition(group,'candidate'),...added,date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day'})).map(({reason,diagnostics:unused,...assignment})=>assignment);
-    result.removedAssignments=candidates.filter(candidate=>candidate.windowSize===30).map(({group,removed,windowSize})=>({...transition(group,'candidate'),...removed,business_date:shiftPachinkoDate(prior.snapshotDate,-windowSize),date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day',date_assignment_edge:'window_start'})).map(({reason,diagnostics:unused,...assignment})=>assignment);
+    result.removedAssignments=candidates.filter(candidate=>candidate.windowSize===30&&candidate.removed).map(({group,removed,windowSize})=>({...transition(group,'candidate'),...removed,business_date:shiftPachinkoDate(prior.snapshotDate,-windowSize),date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day',date_assignment_edge:'window_start'})).map(({reason,diagnostics:unused,...assignment})=>assignment);
     diagnostics.windowStartCandidateCount=result.removedAssignments.length;
   }else{
     diagnostics.windowStartCandidateCount=0;
