@@ -1,6 +1,6 @@
 import {gzipSync,gunzipSync} from 'node:zlib';
 import {MODELS,PACHINKO_STORE,PACHINKO_STORE_ID,identifyPachinkoModel} from './models.mjs';
-import {estimatePachinko,poolPachinkoEstimates,PACHINKO_NUMERIC_FIELDS,pachinkoInteger} from './estimator.mjs';
+import {estimatePachinko,estimatePachinkoCandidate,poolPachinkoEstimates,poolPachinkoCandidates,PACHINKO_NUMERIC_FIELDS,pachinkoInteger} from './estimator.mjs';
 import {canonicalPachinkoJson,pachinkoMachineIdentity,pachinkoRecordFingerprint,pachinkoSha256,validatePachinkoSnapshot,derivePachinkoDay} from './snapshot.mjs';
 
 const DERIVED_FIELDS=['normal_out','normal_safe','net_consumption','estimated_k','estimator_id','estimator_version','estimator_status','sample_size','confidence'];
@@ -15,9 +15,10 @@ function snapshotMeta(snapshot){
     provenance:parse(snapshot.provenance_json),scopeModelKeys:parse(snapshot.scope_model_keys_json),collector_version:snapshot.collector_version,
     status:snapshot.status,collectionReady:!!snapshot.collection_ready,business_date:snapshot.business_date,assigned_count:snapshot.assigned_count,diagnostics:parse(snapshot.diagnostics_json)};
 }
+function candidateFor(row){return estimatePachinkoCandidate(row.machine_model_key,parse(row.raw_json))}
 function compact(row,day=null){
   return {record_id:row.id,business_date:day?.business_date??null,...Object.fromEntries(MACHINE_FIELDS.map(key=>[key,row[key]])),
-    start:row.start,difference:row.difference,...Object.fromEntries(DERIVED_FIELDS.map(key=>[key,row[key]])),
+    start:row.start,difference:row.difference,...Object.fromEntries(DERIVED_FIELDS.map(key=>[key,row[key]])),...candidateFor(row),
     date_status:day?.date_status??null,date_assignment_method:day?.date_assignment_method??null,
     previous_snapshot_id:day?.previous_snapshot_id??null,current_snapshot_id:day?.current_snapshot_id??null};
 }
@@ -223,10 +224,13 @@ function safeSum(rows,key){const value=rows.reduce((sum,row)=>sum+row[key],0);re
 function summaryFor(rows,model){
   const valid=rows.filter(row=>row.estimated_k!==null&&Number.isFinite(row.estimated_k)&&row.estimated_k>0&&row.estimator_status==='verified');
   const values=valid.map(row=>row.estimated_k).sort((a,b)=>a-b);
+  const candidates=rows.map(row=>({...row,...candidateFor(row)})).filter(row=>row.estimator_status==='provisional'&&row.candidate_k!==null);
+  const candidatePooled=candidates.length&&rows.every(row=>row.estimator_status==='provisional')?poolPachinkoCandidates(model.key,candidates):null;
   const statuses=new Set(rows.map(row=>row.estimator_status));
   return {machine_model_key:model.key,total_machine_count:rows.length,valid_machine_count:valid.length,total_start:safeSum(rows,'start'),total_difference:safeSum(rows,'difference'),
     positive_count:rows.filter(row=>row.difference>0).length,non_negative_count:rows.filter(row=>row.difference>=0).length,
-    pooled_k:poolPachinkoEstimates(model.key,valid),
+    pooled_k:poolPachinkoEstimates(model.key,valid),candidate_pooled_k:candidatePooled,
+    candidate_valid_machine_count:candidates.length,candidate_method_id:model.candidateMethodId??null,candidate_method_version:model.candidateMethodVersion??null,
     simple_mean_k:values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null,
     median_k:values.length?(values[Math.floor((values.length-1)/2)]+values[Math.floor(values.length/2)])/2:null,
     estimator_status:statuses.size===1?[...statuses][0]:statuses.size===0?model.estimatorStatus:'mixed'};
@@ -262,6 +266,21 @@ export function getPachinkoMatrix(db,options={}){
   const modelSnapshots=displayModels.map(model=>({machine_model_key:model.key,snapshot:snapshotMeta(displaySnapshots.get(model.key))}));
   const readMembers=db.prepare('SELECT r.*,m.snapshot_id,m.occurrence_count,m.dated_occurrence_count FROM p_snapshot_members m JOIN p_records r ON r.id=m.record_id WHERE m.snapshot_id=? AND r.machine_model_key=? ORDER BY CAST(r.machine_no AS INTEGER),r.store_machine_id,r.id');
   const latestRows=displayModels.flatMap(model=>{const snapshot=displaySnapshots.get(model.key);return snapshot?readMembers.all(snapshot.id,model.key):[]});
+  // Historical rolling-window pool: use each model's single latest snapshot,
+  // including repeated equal-value occurrences, not 30 dates nor a naïve K mean.
+  const historySummaries=displayModels.map(model=>{
+    const rows=latestRows.filter(row=>row.machine_model_key===model.key);
+    const candidates=rows.map(row=>({...row,...candidateFor(row)})).filter(row=>row.candidate_k!==null);
+    const machineCounts=new Map();for(const row of rows)machineCounts.set(row.identity,(machineCounts.get(row.identity)??0)+row.occurrence_count);
+    const complete=rows.length>0&&rows.every(row=>row.estimator_status==='provisional');
+    return {machine_model_key:model.key,snapshot_id:displaySnapshots.get(model.key)?.id??null,
+      history_count:rows.reduce((n,row)=>n+row.occurrence_count,0),machine_count:machineCounts.size,
+      minimum_histories_per_machine:machineCounts.size?Math.min(...machineCounts.values()):0,
+      maximum_histories_per_machine:machineCounts.size?Math.max(...machineCounts.values()):0,
+      candidate_valid_history_count:candidates.reduce((n,row)=>n+row.occurrence_count,0),
+      candidate_pooled_k:complete?poolPachinkoCandidates(model.key,candidates):null,
+      candidate_method_id:model.candidateMethodId??null,candidate_method_version:model.candidateMethodVersion??null};
+  });
   const undatedRows=latestRows.map(row=>({...row,occurrence_count:row.occurrence_count-row.dated_occurrence_count})).filter(row=>row.occurrence_count>0);
   const undatedSamples=[];
   const undatedModels=MODELS.filter(model=>!modelKey||model.key===modelKey).map(model=>{
@@ -271,7 +290,7 @@ export function getPachinkoMatrix(db,options={}){
   const undated={record_count:undatedRows.length,occurrence_count:undatedRows.reduce((sum,row)=>sum+row.occurrence_count,0),models:undatedModels,
     records:undatedSamples.map(row=>({...compact(row),snapshot_id:row.snapshot_id,occurrence_count:row.occurrence_count})),sample_limit:UNDATED_LIMIT,per_model_sample_limit:UNDATED_LIMIT,truncated:undatedModels.some(model=>model.truncated)};
   const rosterMap=new Map([...dated,...latestRows].map(row=>[row.identity,{...Object.fromEntries(MACHINE_FIELDS.map(key=>[key,row[key]])),snapshot_id:row.snapshot_id??null}]));
-  return {store:PACHINKO_STORE,models:MODELS,dates,records,summaries,roster:[...rosterMap.values()].sort(machineOrder),undated,latestSnapshot:snapshotMeta(latest),modelSnapshots};
+  return {store:PACHINKO_STORE,models:MODELS,dates,records,summaries,historySummaries,roster:[...rosterMap.values()].sort(machineOrder),undated,latestSnapshot:snapshotMeta(latest),modelSnapshots};
 }
 
 export function getPachinkoRecord(db,recordId){
@@ -280,7 +299,7 @@ export function getPachinkoRecord(db,recordId){
   const snapshots=db.prepare('SELECT s.*,m.occurrence_count,m.dated_occurrence_count FROM p_snapshot_members m JOIN p_snapshots s ON s.id=m.snapshot_id WHERE m.record_id=? ORDER BY s.server_date DESC,s.server_time DESC,s.id DESC').all(id).map(row=>({...snapshotMeta(row),occurrence_count:row.occurrence_count,dated_occurrence_count:row.dated_occurrence_count}));
   const snapshotById=db.prepare('SELECT * FROM p_snapshots WHERE id=?');
   const assignments=db.prepare('SELECT * FROM p_machine_days WHERE record_id=? ORDER BY business_date DESC').all(id).map(day=>({...day,previous_snapshot:snapshotMeta(snapshotById.get(day.previous_snapshot_id)),current_snapshot:snapshotMeta(snapshotById.get(day.current_snapshot_id))}));
-  const derived={...Object.fromEntries(DERIVED_FIELDS.map(key=>[key,record[key]])),diagnostics:parse(record.diagnostics_json)};
+  const derived={...Object.fromEntries(DERIVED_FIELDS.map(key=>[key,record[key]])),...candidateFor(record),diagnostics:parse(record.diagnostics_json)};
   return {...compact(record,assignments[0]),fingerprint:record.fingerprint,raw:parse(record.raw_json),derived,snapshots,snapshot:snapshots[0]??null,date_assignments:assignments};
 }
 

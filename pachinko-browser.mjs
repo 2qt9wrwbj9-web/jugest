@@ -11,6 +11,7 @@ export function escapePachinkoHtml(value){return String(value??'').replace(/[&<>
 export function statusLabel(value){return STATUS_LABELS[value]||'未検証'}
 export function modelLabel(key){return MODEL_LABELS[key]||String(key||'')}
 export function formatPachinkoK(value,status='verified'){const n=Number(value);return status==='verified'&&Number.isFinite(n)&&n>0?n.toFixed(1):'—'}
+export function formatPachinkoCandidateK(value){const n=Number(value);return value!==null&&value!==undefined&&Number.isFinite(n)&&n>0?n.toFixed(1):'—'}
 export function formatPachinkoCount(value){if(value===null||value===undefined||value===''||typeof value==='boolean')return '—';const n=Number(value);return Number.isFinite(n)?Math.trunc(n).toLocaleString('ja-JP'):'—'}
 export function formatPachinkoDiff(value){if(value===null||value===undefined||value===''||typeof value==='boolean')return '—';const n=Number(value);return Number.isFinite(n)?`${n>=0?'+':''}${Math.trunc(n).toLocaleString('ja-JP')}玉`:'—'}
 export function selectedSummary(matrix,date){return (matrix?.summaries||[]).find(row=>row.business_date===date)?.models||[]}

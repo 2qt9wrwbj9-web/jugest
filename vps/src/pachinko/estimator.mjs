@@ -77,3 +77,34 @@ export function estimatePachinko(modelKey,raw){
     estimator_id:model?.estimatorId??null,estimator_version:model?.estimatorVersion??null,
     sample_size:sample,diagnostics};
 }
+
+// Candidate values are explicitly separate from verified estimates. The PIA
+// special-state counter scope is not independently calibrated for Ghoul yet.
+// Never persist these into p_records.estimated_k or mark their status verified.
+const GH_CANDIDATE_METHODS=new Map(MODELS.filter(m=>m.estimatorStatus==='provisional'&&m.candidateMethodId).map(m=>[m.key,{id:m.candidateMethodId,version:m.candidateMethodVersion}]));
+export function estimatePachinkoCandidate(modelKey,raw){
+  const method=GH_CANDIDATE_METHODS.get(modelKey);
+  const unavailable={candidate_k:null,candidate_method_id:method?.id??null,candidate_method_version:method?.version??null};
+  if(!method||identifyPachinkoModel(raw)?.key!==modelKey)return unavailable;
+  const {values,diagnostics}=inspectPachinkoRaw(raw);
+  const {start,out,safe,special_out,special_safe}=values;
+  if(diagnostics.length||!Number.isSafeInteger(start)||start<=0)return unavailable;
+  const net=out-special_out-safe+special_safe;
+  if(!Number.isSafeInteger(net)||net<=0)return unavailable;
+  const k=25*start/net;
+  return {...unavailable,candidate_k:Number.isFinite(k)&&k>0?k:null};
+}
+export function poolPachinkoCandidates(modelKey,rows){
+  const method=GH_CANDIDATE_METHODS.get(modelKey);
+  if(!method||!Array.isArray(rows)||!rows.length)return null;
+  let starts=0,net=0;
+  for(const row of rows){
+    const weight=row.occurrence_count??1;
+    if(row.machine_model_key!==modelKey||row.estimator_status!=='provisional'||row.candidate_method_id!==method.id||row.candidate_method_version!==method.version||
+      !Number.isSafeInteger(weight)||weight<=0||!Number.isSafeInteger(row.start)||row.start<=0||
+      !Number.isSafeInteger(row.net_consumption)||row.net_consumption<=0||!Number.isFinite(row.candidate_k)||row.candidate_k<=0)return null;
+    starts+=row.start*weight;net+=row.net_consumption*weight;
+  }
+  const k=25*starts/net;
+  return Number.isSafeInteger(starts)&&Number.isSafeInteger(net)&&net>0&&Number.isFinite(k)&&k>0?k:null;
+}

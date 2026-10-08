@@ -35,11 +35,27 @@ test('store selector ordering uses displayed Japanese store names',()=>{
   const sorted=[...names].sort(ui.compareStoreNames);assert.deepEqual(sorted,[...names].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true,sensitivity:'base'})));
 });
 
-test('matrix renderer keeps newest date first, escapes labels and never renders provisional candidate K',()=>{
+test('matrix renderer keeps newest date first, escapes labels and only renders separately supplied candidate K',()=>{
   const matrix={models:[{key:'OUMI5_SPECIAL_ALTA',estimatorStatus:'verified'},{key:'TOKYO_GHOUL_399',estimatorStatus:'provisional'},{key:'TOKYO_GHOUL_999',estimatorStatus:'provisional'}],dates:['2026-10-06','2026-10-05'],roster:[{identity:'sea',machine_model_key:'OUMI5_SPECIAL_ALTA',machine_no:'1101<script>',store_machine_id:'1'},{identity:'ghoul',machine_model_key:'TOKYO_GHOUL_999',machine_no:'999',store_machine_id:'2'}],records:[{record_id:1,business_date:'2026-10-06',identity:'sea',machine_model_key:'OUMI5_SPECIAL_ALTA',start:1500,estimated_k:20.294776,estimator_status:'verified',confidence:'B'},{record_id:2,business_date:'2026-10-06',identity:'ghoul',machine_model_key:'TOKYO_GHOUL_999',start:2200,estimated_k:null,estimator_status:'provisional',confidence:null}]};
   const html=ui.renderTable(matrix,'2026-10-06');assert.ok(html.indexOf('10-06')<html.indexOf('10-05'));assert.match(html,/20\.3/);assert.match(html,/追加検証中/);assert.doesNotMatch(html,/32\.4/);assert.doesNotMatch(html,/<script>/);assert.match(html,/1101&lt;script&gt;/);const map=buildRecordMap(matrix);assert.equal(map.get('sea\u00002026-10-06').record_id,1);
 });
 
+test('candidate K is visibly provisional in Ghoul matrix, summary, 30-history and record detail',()=>{
+  const candidate={record_id:80,business_date:'2026-10-07',identity:'g999',machine_model_key:'TOKYO_GHOUL_999',machine_no:'2030',store_machine_id:'5010',start:3000,difference:30000,estimated_k:null,estimator_status:'provisional',candidate_k:32.371052815,candidate_method_id:'tokyo-ghoul-999-normal-consumption-10-candidate',candidate_method_version:'1',confidence:null};
+  const model={key:'TOKYO_GHOUL_999',estimatorStatus:'provisional'};
+  const matrix={models:[model],dates:['2026-10-07'],roster:[candidate],records:[candidate],
+    summaries:[{business_date:'2026-10-07',models:[{machine_model_key:model.key,total_machine_count:48,candidate_valid_machine_count:48,total_start:120192,total_difference:30460,pooled_k:null,candidate_pooled_k:32.010567919,estimator_status:'provisional'}]}],
+    historySummaries:[{machine_model_key:model.key,history_count:1440,machine_count:48,minimum_histories_per_machine:30,maximum_histories_per_machine:30,candidate_valid_history_count:1440,candidate_pooled_k:32.398616973}],
+    modelSnapshots:[{machine_model_key:model.key,snapshot:{server_date:'2026-10-08'}}],undated:{occurrence_count:1,models:[{machine_model_key:model.key,occurrence_count:1,snapshot_id:5}],records:[{...candidate,snapshot_id:5,occurrence_count:1}]}};
+  const html=ui.renderTable(matrix,'2026-10-07');assert.match(html,/>32\.4<\/b>/);assert.match(html,/暫定/);assert.doesNotMatch(html,/実データ検証済み/);
+  const summary=ui.renderSummary(matrix,'2026-10-07','TOKYO_GHOUL_999');
+  assert.match(summary,/暫定平均回転率/);assert.match(summary,/32\.0/);assert.match(summary,/暫定加重K 32\.4/);
+  assert.match(summary,/1,440件/);assert.match(summary,/30〜30履歴/);assert.match(summary,/メーカーのカウンター定義/);
+  const all=ui.renderSummary(matrix,'2026-10-07','');assert.match(all,/32\.0/);assert.match(all,/暫定/);
+  const undated=ui.renderUndated(matrix);assert.match(undated,/>32\.4<\/b>/);
+  const st={detail:{...candidate,raw:{start:3000,final_start:70,special:10,special_1:11,special_2:5,special_2d:1,special_out:100,special_safe:1000,out:3000,safe:2000,difference:-10000},snapshots:[{snapshot_id:5,server_date:'2026-10-08'}],snapshot:{snapshot_id:5,server_date:'2026-10-08'},date_assignments:[]},detailDate:'',detailSnapshotId:5,detailLoading:false,detailError:''};
+  const detail=ui.renderDetail(st);assert.match(detail,/暫定K/);assert.match(detail,/32\.4/);assert.match(detail,/tokyo-ghoul-999-normal-consumption-10-candidate/);assert.match(detail,/独立実測/);
+});
 test('filtered summary shows only the selected model with average rotation, activity and difference',()=>{
   const matrix={models:[{key:'OUMI5_SPECIAL_ALTA',estimatorStatus:'verified'},{key:'TOKYO_GHOUL_399',estimatorStatus:'provisional'},{key:'TOKYO_GHOUL_999',estimatorStatus:'provisional'}],summaries:[{business_date:'2026-10-06',models:[{machine_model_key:'OUMI5_SPECIAL_ALTA',total_machine_count:48,valid_machine_count:46,total_start:48951,total_difference:-45480,pooled_k:20.294776,estimator_status:'verified'}]}],modelSnapshots:[{machine_model_key:'OUMI5_SPECIAL_ALTA',snapshot:{server_date:'2026-10-07',server_time:'23:43:44'}},{machine_model_key:'TOKYO_GHOUL_399',snapshot:{server_date:'2026-10-07',server_time:'23:43:44'}}],undated:{occurrence_count:25,models:[{machine_model_key:'TOKYO_GHOUL_399',snapshot_id:9,occurrence_count:24,truncated:false}],records:[{record_id:7,snapshot_id:9,machine_model_key:'TOKYO_GHOUL_399',machine_no:'1025',start:1320,estimated_k:null,estimator_status:'provisional',occurrence_count:2}]}};
   const summary=ui.renderSummary(matrix,'2026-10-06','OUMI5_SPECIAL_ALTA');

@@ -6,11 +6,11 @@ export const MODELS=Object.freeze([
     estimatorStatus:'verified',estimatorReason:'API内の状態分離と実データ統計を検証済み。公式フィールド定義と独立実測の照合は未完了。',
     estimatorId:'sea-normal-consumption-10',estimatorVersion:'1',formName:'P大海物語5スペシャル ALTA',denomination:4},
   {key:'TOKYO_GHOUL_399',displayName:'喰種399',apiName:'ｅ東京喰種Ｗ',sisMachineCode:'00022',
-    estimatorStatus:'provisional',estimatorReason:'チャージ抽選と普図時短RUSHの通常回転・玉分離を独立検証していないためKは未計算。',
-    estimatorId:'tokyo-ghoul-399-unverified',estimatorVersion:'1',formName:'e東京喰種W',denomination:4},
+    estimatorStatus:'provisional',estimatorReason:'通常時の打込/払出カウンターから暫定Kを算出。PIA公式のカウンター定義と独立実測との照合は未完了。',
+    estimatorId:'tokyo-ghoul-399-unverified',estimatorVersion:'1',candidateMethodId:'tokyo-ghoul-399-normal-consumption-10-candidate',candidateMethodVersion:'1',formName:'e東京喰種W',denomination:4},
   {key:'TOKYO_GHOUL_999',displayName:'喰種999',apiName:'ｅ東京喰種ＭＷ',sisMachineCode:'00406',
-    estimatorStatus:'provisional',estimatorReason:'図柄揃い・チャージの異なる抽選と普図時短RUSHの玉分離を独立検証していないためKは未計算。',
-    estimatorId:'tokyo-ghoul-999-unverified',estimatorVersion:'1',formName:'e東京喰種MW',denomination:4}
+    estimatorStatus:'provisional',estimatorReason:'通常時の打込/払出カウンターから暫定Kを算出。PIA公式のカウンター定義と独立実測との照合は未完了。',
+    estimatorId:'tokyo-ghoul-999-unverified',estimatorVersion:'1',candidateMethodId:'tokyo-ghoul-999-normal-consumption-10-candidate',candidateMethodVersion:'1',formName:'e東京喰種MW',denomination:4}
 ].map(Object.freeze));
 
 export function normalizePachinkoName(value){

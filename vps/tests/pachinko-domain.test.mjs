@@ -62,6 +62,48 @@ test('verified sea estimator keeps normal counters separate and uses the indepen
   assert.equal(e.estimated_k,20);assert.equal(e.estimator_status,'verified');assert.equal(e.sample_size,1000);assert.equal(e.confidence,'B');
   assert.ok(e.estimator_id);assert.ok(e.estimator_version);
 });
+test('Ghoul 399 and 999 expose separate explicit candidate K without upgrading verified fields',()=>{
+  const d=api();
+  for(const modelKey of [G399,G999]){
+    const row=raw(modelKey,0),verified=d.estimatePachinko(modelKey,row),candidate=d.estimatePachinkoCandidate(modelKey,row);
+    assert.equal(verified.estimated_k,null);assert.equal(verified.confidence,null);assert.equal(verified.estimator_status,'provisional');
+    assert.equal(candidate.candidate_k,20);assert.match(candidate.candidate_method_id,new RegExp(modelKey===G399?'399':'999'));
+    assert.equal(candidate.candidate_method_version,'1');
+    assert.equal(d.estimatePachinkoCandidate(SEA,raw(SEA,0)).candidate_k,null);
+    assert.equal(d.estimatePachinkoCandidate(modelKey,raw(SEA,0)).candidate_k,null);
+    for(const patch of [{start:null},{start:0},{out:100},{special_out:1700},{special_safe:900},{difference:1},{start:'bad'},{out:850,difference:0}]){
+      assert.equal(d.estimatePachinkoCandidate(modelKey,raw(modelKey,0,patch)).candidate_k,null,JSON.stringify(patch));
+    }
+    const m=d.MODELS.find(x=>x.key===modelKey),a={machine_model_key:modelKey,estimator_status:'provisional',start:1000,net_consumption:1250,candidate_k:20,candidate_method_id:m.candidateMethodId,candidate_method_version:m.candidateMethodVersion};
+    assert.equal(d.poolPachinkoCandidates(modelKey,[a,{...a,start:2000,net_consumption:2600,candidate_k:25*2000/2600}]),25*3000/3850);
+    assert.equal(d.poolPachinkoCandidates(modelKey,[a,{...a,candidate_method_id:'other'}]),null);
+    assert.equal(d.poolPachinkoCandidates(modelKey,[a,{...a,machine_model_key:SEA}]),null);
+    assert.equal(d.poolPachinkoCandidates(modelKey,[{...a,estimator_status:'verified'}]),null);
+    assert.equal(d.poolPachinkoCandidates(modelKey,[{...a,start:1000,net_consumption:1250,occurrence_count:30}]),20);
+  }
+});
+test('Ghoul dated rows and latest snapshot history show separate candidate K and weighted pools, while stored K stays null',()=>{
+  fixture(({db})=>{
+    const first=ingest(db,payload('2026-10-05',1));
+    const next=ingest(db,payload('2026-10-06',2));
+    assert.equal(next.assignedCount,3);
+    for(const key of [G399,G999]){
+      const matrix=api().getPachinkoMatrix(db,{modelKey:key});
+      const entry=matrix.records[0];assert.ok(entry.candidate_k>0);assert.equal(entry.estimated_k,null);assert.equal(entry.estimator_status,'provisional');
+      const summary=matrix.summaries[0].models[0];
+      assert.equal(summary.candidate_valid_machine_count,1);assert.equal(summary.valid_machine_count,0);
+      assert.equal(summary.candidate_pooled_k,entry.candidate_k);assert.equal(summary.pooled_k,null);
+      const hist=matrix.historySummaries[0];assert.equal(hist.history_count,30);assert.equal(hist.minimum_histories_per_machine,30);assert.equal(hist.maximum_histories_per_machine,30);
+      const rows=Array.from({length:30},(_,n)=>raw(key,n+2));
+      const start=rows.reduce((sum,r)=>sum+r.start,0),net=rows.reduce((sum,r)=>sum+(r.out-r.special_out-r.safe+r.special_safe),0);
+      assert.equal(hist.candidate_pooled_k,25*start/net);
+      assert.equal(hist.candidate_valid_history_count,30);
+      const detail=api().getPachinkoRecord(db,entry.record_id);assert.equal(detail.candidate_k,entry.candidate_k);assert.equal(detail.derived.candidate_k,entry.candidate_k);
+      const physical=db.prepare('SELECT estimated_k,estimator_status FROM p_records WHERE id=?').get(entry.record_id);assert.deepEqual({...physical},{estimated_k:null,estimator_status:'provisional'});
+    }
+    const sea=api().getPachinkoMatrix(db,{modelKey:SEA});assert.equal(sea.records[0].candidate_k,null);assert.equal(sea.records[0].estimated_k,api().estimatePachinko(SEA,raw(SEA,31)).estimated_k);
+  });
+});
 test('sea sample bands measure starts and both Ghoul methods remain provisional with null K',()=>{
   for(const [start,want] of [[1999,'B'],[2000,'A'],[1000,'B'],[999,'C'],[500,'C'],[499,'D']])assert.equal(api().estimatePachinko(SEA,raw(SEA,0,{start})).confidence,want);
   for(const key of [G399,G999]){

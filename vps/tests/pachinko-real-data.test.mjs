@@ -44,6 +44,35 @@ test('archived public API bytes reproduce separate cohorts and the audited raw r
   assert.equal(identifyPachinkoModel({store_id:35,sis_machine_code:'unknown',name:'e Re:ゼロ 鬼がかり2'}),null);
 });
 
+test('independent candidate formulas match archived Ghoul cohorts without changing persisted status',t=>{
+  const db=database(t);
+  ingest(db,fixtures[0]);
+  const older=getPachinkoMatrix(db);
+  const gh399Older=older.historySummaries.find(x=>x.machine_model_key==='TOKYO_GHOUL_399');
+  assert.equal(gh399Older.history_count,720);assert.equal(gh399Older.machine_count,24);
+  assert.ok(gh399Older.candidate_pooled_k>16.5&&gh399Older.candidate_pooled_k<18.5);
+  for(const f of fixtures.slice(1))ingest(db,f);
+  const current=getPachinkoMatrix(db);
+  const pairs=[['TOKYO_GHOUL_399',15.688138816258617,24,12],['TOKYO_GHOUL_999',32.398616973020694,1440,48]];
+  for(const [key,expected,count,machines] of pairs){
+    const snap=current.historySummaries.find(x=>x.machine_model_key===key);
+    assert.equal(snap.history_count,count);assert.equal(snap.machine_count,machines);
+    assert.equal(snap.candidate_valid_history_count,count);
+    near(snap.candidate_pooled_k,expected,1e-8);
+    const model=getPachinkoMatrix(db,{modelKey:key});
+    assert.equal(model.historySummaries.length,1);
+    const undated=model.undated.records;
+    assert.ok(undated.length>0&&undated.every(x=>x.estimated_k===null&&x.estimator_status==='provisional'));
+    assert.ok(undated.every(x=>x.candidate_k>0&&x.candidate_method_id.includes(key==='TOKYO_GHOUL_399'?'399':'999')));
+    const detail=getPachinkoRecord(db,undated[0].record_id);
+    assert.equal(detail.candidate_k,undated[0].candidate_k);
+    assert.equal(detail.derived.estimated_k,null);
+    assert.equal(db.prepare('SELECT estimated_k FROM p_records WHERE id=?').get(detail.record_id).estimated_k,null);
+  }
+  const sea=current.historySummaries.find(x=>x.machine_model_key==='OUMI5_SPECIAL_ALTA');
+  assert.equal(sea.candidate_pooled_k,null);
+  assert.equal(db.prepare('PRAGMA foreign_key_check').all().length,0);
+});
 test('first rolling window remains undated and full original raw bytes are retained',t=>{
   const db=database(t),result=ingest(db,fixtures[0]),matrix=getPachinkoMatrix(db);
   assert.equal(result.assignedCount,0);assert.deepEqual(matrix.dates,[]);assert.equal(matrix.records.length,0);
