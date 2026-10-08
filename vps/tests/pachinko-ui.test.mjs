@@ -30,6 +30,54 @@ test('date toolbar matches the normal store date-select pattern and keeps newest
   const html=ui.renderDateToolbar(matrix,'2026-10-06');assert.match(html,/class="data-toolbar p-date-toolbar"/);assert.match(html,/<small>日付<\/small><select data-pachinko-date-select>/);assert.ok(html.indexOf('2026-10-06')<html.indexOf('2026-10-05'));assert.match(html,/value="2026-10-06" selected/);assert.match(html,/>48台<\/span>/);
 });
 
+test('PIA大船-P uses the same store overview then data navigation as slot stores, without registering a fake slot shop',()=>{
+  const savedCustomElements=globalThis.customElements,savedStorage=globalThis.localStorage;
+  const selections=[];
+  class FakeApp{
+    constructor(){this.state={workspace:'store',screen:'hub',activeStore:'PIA大船1',storeSelectorOpen:true};this.nativeClicks=0;}
+    renderStore(){return '<div>native-slot-store</div><span>PIA大船1</span>'}
+    renderSubscreen(){return '<div>native-slot-subscreen</div><span>PIA大船1</span>'}
+    onClick(){this.nativeClicks++}
+    onChange(){}
+    navigate(workspace,screen='hub'){this.state.workspace=workspace;this.state.screen=screen;this.state.storeSelectorOpen=false}
+  }
+  const target=attribute=>({
+    dataset:{pachinkoStore:'pia:35-p',storeName:'PIA大船1'},
+    hasAttribute:name=>name===attribute,
+    closest(selector){return selector.includes(`[${attribute}]`)?this:null}
+  });
+  try{
+    globalThis.customElements={get:name=>name==='jugest-app'?FakeApp:null};
+    globalThis.localStorage={setItem:(key,value)=>selections.push([key,value])};
+    ui.patchApp();ui.patchApp();
+    const app=new FakeApp();
+    assert.match(app.renderStore(),/native-slot-store/);assert.match(app.renderStore(),/PIA大船-S/);
+    app.onClick({target:target('data-pachinko-store')});
+    assert.equal(app.state.screen,'hub');assert.equal(app.state.workspace,'store');
+    assert.equal(app.state.activeStore,'PIA大船1');assert.equal(ui.isPachinkoStoreSelected(app),true);
+    assert.equal(app.nativeClicks,0);assert.equal(app.state.storeSelectorOpen,false);
+    const st=ui.stateOf(app);st.loaded=true;st.matrix={dates:['2026-10-07'],latestSnapshot:{server_date:'2026-10-08'},historySummaries:[{machine_count:48},{machine_count:12},{machine_count:48}]};
+    const overview=app.renderStore();
+    assert.match(overview,/PIA大船-P/);assert.match(overview,/data-open-store-selector/);
+    assert.match(overview,/日付確定/);assert.match(overview,/108台/);
+    assert.match(overview,/data-action="store-data"/);assert.match(overview,/店舗内ナビ/);
+    const action={closest:selector=>selector.includes('[data-action="store-data"]')?{}:null};
+    app.onClick({target:action});
+    assert.equal(app.state.screen,'data');
+    const page=app.renderSubscreen();
+    assert.match(page,/pachinko-data-screen/);assert.match(page,/PIA大船-P/);
+    assert.match(page,/data-workspace="store"/);assert.match(page,/data-action="store-data"/);
+    assert.doesNotMatch(page,/native-slot-subscreen/);
+    app.onClick({target:target('data-store-name')});
+    assert.equal(ui.isPachinkoStoreSelected(app),false);
+    assert.equal(app.nativeClicks,1);
+    assert.match(app.renderStore(),/native-slot-store/);assert.match(app.renderStore(),/PIA大船-S/);
+    assert.equal(selections.at(-1)[1],'S');
+  }finally{
+    if(savedCustomElements===undefined)delete globalThis.customElements;else globalThis.customElements=savedCustomElements;
+    if(savedStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=savedStorage;
+  }
+});
 test('store selector ordering uses displayed Japanese store names',()=>{
   const names=['Z店','PIA大船-S','アビバ関内','PIA大船-P','123ホール'];
   const sorted=[...names].sort(ui.compareStoreNames);assert.deepEqual(sorted,[...names].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true,sensitivity:'base'})));

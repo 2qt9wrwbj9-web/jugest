@@ -3,6 +3,22 @@ import {createPachinkoClient,PACHINKO_STORE_ID,MODEL_ORDER,MODEL_LABELS,escapePa
 const STATE=new WeakMap();
 const client=createPachinkoClient();
 const FILTERS=[['','全機種'],...MODEL_ORDER.map(key=>[key,MODEL_LABELS[key]])];
+const PACHINKO_STORE_NAME='PIA大船-P';
+const PACHINKO_STORE_CHOICE_KEY='jugest.pia-ofuna-p.selected-v1';
+function isPachinkoStoreSelected(app){return app?._pachinkoStoreSelected===true}
+function slotStoreTitle(app,html){return app?.state?.workspace==='store'&&app?.state?.activeStore==='PIA大船1'?html.replace('<span>PIA大船1</span>','<span>PIA大船-S</span>'):html}
+function setPachinkoStoreSelected(app,selected){
+  app._pachinkoStoreSelected=!!selected;
+  try{globalThis.localStorage?.setItem?.(PACHINKO_STORE_CHOICE_KEY,selected?'P':'S')}catch{}
+}
+function pachinkoStoreTabs(active){return `<div class="segmented" aria-label="店舗内ナビ"><button class="${active==='overview'?'on':''}" type="button" data-workspace="store">概要</button><button class="${active==='data'?'on':''}" type="button" data-action="store-data">台</button></div>`}
+function renderPachinkoOverview(st){
+  const matrix=st.matrix,history=matrix?.historySummaries||[];
+  const newest=history.reduce((sum,item)=>sum+(Number(item.machine_count)||0),0);
+  const last=matrix?.latestSnapshot?.server_date||'—';
+  return `<section class="workspace pachinko-store-overview"><div class="kicker">STORE</div><button class="store-title" type="button" data-open-store-selector aria-label="店舗を切り替える"><span>${PACHINKO_STORE_NAME}</span><span class="store-down">⌄</span></button><p class="lead store-meta">パチンコ・4円・250玉貸し・等価交換</p>${pachinkoStoreTabs('overview')}<div class="store-overview-stats"><div><small>日付確定</small><b>${matrix?.dates?.length??'—'}日</b></div><div><small>最新台数</small><b>${matrix?newest:'—'}台</b></div><div><small>対象機種</small><b>3機種</b></div></div>${st.loading&&!matrix?'<div class="info-card">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="error-panel">${esc(st.error)}</div>`:''}<div class="info-card"><b>パチンコ台データ</b><span>最新取得日 ${esc(last)}。大海5SP・東京喰種399・999の履歴、回転率を確認できます。</span></div><div class="action-grid"><button class="action wide" type="button" data-action="store-data">台データを見る</button></div></section>`;
+}
+
 function stateOf(app){
   if(!STATE.has(app))STATE.set(app,{loading:false,loaded:false,error:'',matrix:null,filter:'',selectedDate:'',detail:null,detailLoading:false,detailError:'',detailDate:'',detailSnapshotId:null,generation:0});
   return STATE.get(app);
@@ -77,7 +93,7 @@ function renderUndated(matrix){
 export function renderPachinkoScreenState(st){
   ensureLoad(st.app);
   const matrix=st.matrix,selected=st.selectedDate||matrix?.dates?.[0]||'';
-  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p><div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${renderDateToolbar(matrix,selected)}${selected?renderSummary(matrix,selected,st.filter):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
+  return `<section class="workspace pachinko-data-screen"><style>${STYLE}</style><button class="back-row" type="button" data-workspace="store">‹ 店舗</button><div class="kicker">STORE / PACHINKO</div><div class="p-title-row"><button class="store-title compact" type="button" data-open-store-selector><span>PIA大船-P</span><span class="store-down">⌄</span></button><button type="button" class="p-refresh" data-pachinko-refresh ${st.loading?'disabled':''}>更新</button></div><p class="p-venue">4円・250玉貸し・等価交換 / Kは回/250玉。差玉とは別指標です。</p>${pachinkoStoreTabs('data')}<div class="p-filters" role="group" aria-label="機種フィルタ">${FILTERS.map(([key,label])=>`<button type="button" data-pachinko-filter="${esc(key)}" class="${st.filter===key?'selected':''}">${esc(label)}</button>`).join('')}</div>${st.loading&&!matrix?'<div class="p-loading">PIA大船-Pを読み込み中…</div>':''}${st.error?`<div class="p-error">${esc(st.error)}${/権限/.test(st.error)?' 「設定」→PIAデータ閲覧も確認してね。':''}</div>`:''}${matrix?`${renderDateToolbar(matrix,selected)}${selected?renderSummary(matrix,selected,st.filter):''}${renderTable(matrix,selected)}${renderUndated(matrix)}${renderDetail(st)}`:''}</section>`;
 }
 const STYLE=`
 .pachinko-data-screen{
@@ -161,17 +177,34 @@ const STYLE=`
 
 function patchApp(){
   const App=customElements.get('jugest-app');if(!App||App.prototype.__jugestPachinkoPatched)return;const proto=App.prototype;proto.__jugestPachinkoPatched=true;
-  const oldSub=proto.renderSubscreen,oldClick=proto.onClick,oldChange=proto.onChange;
-  proto.renderSubscreen=function(){if(this.state?.workspace==='store'&&this.state?.screen==='pachinko'){const st=stateOf(this);st.app=this;return renderPachinkoScreenState(st)}return oldSub.call(this)};
+  const oldStore=proto.renderStore,oldSub=proto.renderSubscreen,oldClick=proto.onClick,oldChange=proto.onChange;
+  proto.renderStore=function(){
+    if(this.state?.workspace==='store'&&isPachinkoStoreSelected(this)){
+      const st=stateOf(this);st.app=this;ensureLoad(this);return renderPachinkoOverview(st);
+    }
+    return slotStoreTitle(this,oldStore.call(this));
+  };
+  proto.renderSubscreen=function(){
+    if(this.state?.workspace==='store'&&isPachinkoStoreSelected(this)&&['data','pachinko'].includes(this.state?.screen)){
+      const st=stateOf(this);st.app=this;return renderPachinkoScreenState(st);
+    }
+    return slotStoreTitle(this,oldSub.call(this));
+  };
   proto.onClick=function(event){
     const p=event.target.closest?.('[data-pachinko-store],[data-pachinko-filter],[data-pachinko-record],[data-pachinko-refresh],[data-pachinko-close-detail]');
     if(p){
-      if(p.hasAttribute('data-pachinko-store')){this.state.storeSelectorOpen=false;this.navigate('store','pachinko');const st=stateOf(this);st.loaded=false;st.matrix=null;st.error='';ensureLoad(this);return}
+      if(p.hasAttribute('data-pachinko-store')){
+        setPachinkoStoreSelected(this,true);
+        const st=stateOf(this);st.loaded=false;st.matrix=null;st.filter='';st.selectedDate='';st.error='';
+        this.navigate('store','hub');return;
+      }
       if(p.hasAttribute('data-pachinko-filter')){const st=stateOf(this);st.filter=p.dataset.pachinkoFilter||'';st.loaded=false;st.matrix=null;st.selectedDate='';void refresh(this,{keepScroll:false});return}
       if(p.hasAttribute('data-pachinko-record')){void openDetail(this,Number(p.dataset.pachinkoRecord),{date:p.dataset.pachinkoRecordDate||'',snapshotId:p.dataset.pachinkoSnapshotId||null});return}
       if(p.hasAttribute('data-pachinko-refresh')){void refresh(this);return}
       if(p.hasAttribute('data-pachinko-close-detail')){const st=stateOf(this);st.detail=null;st.detailError='';rerender(this);return}
     }
+    if(event.target.closest?.('[data-store-name]'))setPachinkoStoreSelected(this,false);
+    if(isPachinkoStoreSelected(this)&&this.state?.workspace==='store'&&event.target.closest?.('[data-action="store-data"]')){this.navigate('store','data');return}
     return oldClick.call(this,event)
   };
   proto.onChange=function(event){
@@ -188,11 +221,39 @@ function sortStoreSelectorRows(list){
 }
 function reconcileStoreSelector(){
   const app=document.querySelector('jugest-app'),root=app?.shadowRoot,list=root?.querySelector('.store-list[data-store-list]');if(!app||!list)return;
-  for(const row of list.querySelectorAll('[data-store-name]'))if(row.dataset.storeName==='PIA大船1'){const b=row.querySelector('.store-row-main b');if(b&&b.textContent!=='PIA大船-S')b.textContent='PIA大船-S'}
   const q=String(app.state?.storeQuery||'').trim().toLocaleLowerCase('ja-JP'),show=!q||'pia大船-p'.toLocaleLowerCase('ja-JP').includes(q)||'大船'.includes(q);
-  let row=list.querySelector('[data-pachinko-store]');if(!show){row?.remove();sortStoreSelectorRows(list);return}if(!row){row=document.createElement('button');row.type='button';row.className='store-row';row.dataset.pachinkoStore=PACHINKO_STORE_ID;row.innerHTML='<span class="store-row-main"><b>PIA大船-P</b><small>パチンコ回転率データ</small></span><span class="store-badge ok">P</span><span class="chev">›</span>';list.append(row)}sortStoreSelectorRows(list)
+  // PIA大船1 remains the real slot store key. Only its user-facing label is -S.
+  // Native search filters on that key, so add its ordinary row under the alias query.
+  const slotS=app.state?.stores?.find(store=>store.name==='PIA大船1');
+  if(slotS&&q&&'pia大船-s'.includes(q)&&!list.querySelector('[data-store-name="PIA大船1"]')){
+    const alias=document.createElement('button');alias.className='store-row';alias.type='button';alias.dataset.storeName='PIA大船1';
+    alias.innerHTML=`<span class="store-row-main"><b>PIA大船-S</b><small>${slotS.latestDate?`最終 ${esc(slotS.latestDate)}`:slotS.registered?'データ未取得':'URL未登録'}</small></span><span class="store-badge ${slotS.error?'error':slotS.registered?'ok':'warning'}">${slotS.error?'エラー':slotS.registered?'登録済':'URL未登録'}</span><span class="chev">›</span>`;
+    list.append(alias)
+  }
+  for(const row of list.querySelectorAll('[data-store-name]'))if(row.dataset.storeName==='PIA大船1'){
+    const b=row.querySelector('.store-row-main b');if(b&&b.textContent!=='PIA大船-S')b.textContent='PIA大船-S';
+  }
+  const selected=isPachinkoStoreSelected(app);
+  for(const native of list.querySelectorAll('[data-store-name]'))if(selected){
+    native.classList.remove('selected');const chevron=native.querySelector('.chev');if(chevron&&chevron.textContent==='✓')chevron.textContent='›';
+  }
+  let row=list.querySelector('[data-pachinko-store]');if(!show){row?.remove();if(list.querySelector('.store-row'))list.querySelector(':scope > .empty')?.remove();sortStoreSelectorRows(list);return}
+  if(!row){row=document.createElement('button');row.type='button';row.className='store-row';row.dataset.pachinkoStore=PACHINKO_STORE_ID;row.innerHTML='<span class="store-row-main"><b>PIA大船-P</b><small>パチンコ回転率データ</small></span><span class="store-badge ok">P</span><span class="chev">›</span>';list.append(row)}
+  row.classList.toggle('selected',selected);const chev=row.querySelector('.chev');if(chev&&chev.textContent!==(selected?'✓':'›'))chev.textContent=selected?'✓':'›';
+  list.querySelector(':scope > .empty')?.remove();sortStoreSelectorRows(list)
 }
-function boot(){customElements.whenDefined('jugest-app').then(()=>{patchApp();const app=document.querySelector('jugest-app');if(!app?.shadowRoot)return;const observer=new MutationObserver(()=>reconcileStoreSelector());observer.observe(app.shadowRoot,{childList:true,subtree:true});reconcileStoreSelector();globalThis.addEventListener?.('jugest:pia-access-changed',event=>{if(event.detail?.active===false){clearState(app);if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')rerender(app)}else if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)});document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible'&&app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)});globalThis.addEventListener?.('pageshow',()=>{if(app.state?.workspace==='store'&&app.state?.screen==='pachinko')void refresh(app)})})}
+function boot(){customElements.whenDefined('jugest-app').then(()=>{
+  patchApp();const app=document.querySelector('jugest-app');if(!app?.shadowRoot)return;
+  try{app._pachinkoStoreSelected=globalThis.localStorage?.getItem?.(PACHINKO_STORE_CHOICE_KEY)==='P'}catch{app._pachinkoStoreSelected=false}
+  const observer=new MutationObserver(()=>reconcileStoreSelector());observer.observe(app.shadowRoot,{childList:true,subtree:true});reconcileStoreSelector();
+  globalThis.addEventListener?.('jugest:pia-access-changed',event=>{
+    if(event.detail?.active===false){clearState(app);if(app.state?.workspace==='store'&&isPachinkoStoreSelected(app))rerender(app)}
+    else if(app.state?.workspace==='store'&&isPachinkoStoreSelected(app))void refresh(app)
+  });
+  document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible'&&app.state?.workspace==='store'&&isPachinkoStoreSelected(app))void refresh(app)});
+  globalThis.addEventListener?.('pageshow',()=>{if(app.state?.workspace==='store'&&isPachinkoStoreSelected(app))void refresh(app)});
+  if(app.state?.workspace==='store'&&isPachinkoStoreSelected(app))app.render();
+})}
 if(typeof window!=='undefined'&&typeof document!=='undefined'&&typeof customElements!=='undefined')boot();
 
-export const __test={stateOf,clearState,renderSummary,renderDateToolbar,renderTable,renderUndated,renderDetail,snapshotForDetail,assignmentForDetail,visibleStoreRowName,compareStoreNames,sortStoreSelectorRows,STYLE};
+export const __test={stateOf,clearState,renderSummary,renderDateToolbar,renderTable,renderUndated,renderDetail,renderPachinkoOverview,pachinkoStoreTabs,isPachinkoStoreSelected,setPachinkoStoreSelected,patchApp,snapshotForDetail,assignmentForDetail,visibleStoreRowName,compareStoreNames,sortStoreSelectorRows,STYLE};
