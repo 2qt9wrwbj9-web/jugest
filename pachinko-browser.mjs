@@ -39,6 +39,7 @@ export function createPachinkoClient({fetchFn=globalThis.fetch?.bind(globalThis)
   return Object.freeze({
     async listStores(){const p=await request('/stores');return Array.isArray(p.stores)?p.stores:[]},
     async getMatrix({storeId=PACHINKO_STORE_ID,modelKey='',limit=30}={}){const params=new URLSearchParams({limit:String(Math.min(30,Math.max(1,Math.trunc(Number(limit)||30))))});if(modelKey)params.set('model',modelKey);return request(`/stores/${encodeURIComponent(storeId)}/matrix?${params}`)},
+    async getYutimeRanking({storeId=PACHINKO_STORE_ID}={}){return request(`/stores/${encodeURIComponent(storeId)}/yutime`)},
     async getRecord(recordId,{storeId=PACHINKO_STORE_ID}={}){const id=Number(recordId);if(!Number.isSafeInteger(id)||id<=0)throw makeError('recordIdが不正です。','invalid_pachinko_record_id');const p=await request(`/stores/${encodeURIComponent(storeId)}/records/${id}`);return p.record}
   });
 }

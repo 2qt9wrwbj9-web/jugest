@@ -68,6 +68,12 @@ test('PIA大船-P uses the same store overview then data navigation as slot stor
     assert.match(page,/pachinko-data-screen/);assert.match(page,/PIA大船-P/);
     assert.match(page,/data-workspace="store"/);assert.match(page,/data-action="store-data"/);
     assert.doesNotMatch(page,/native-slot-subscreen/);
+    st.yutimeLoaded=true;st.yutime={business_date:'2026-10-07',available:true,rows:[{rank:1,machine_no:'1124',record_id:44,final_start:430,above_yutime_threshold:false}]};
+    app.onClick({target:target('data-pachinko-yutime')});
+    assert.equal(app.state.screen,'yutime');
+    assert.match(app.renderSubscreen(),/前日最終スタート順/);
+    const toData={closest:selector=>selector.includes('[data-action="store-data"]')?{}:null};
+    app.onClick({target:toData});assert.equal(app.state.screen,'data');
     app.onClick({target:target('data-store-name')});
     assert.equal(ui.isPachinkoStoreSelected(app),false);
     assert.equal(app.nativeClicks,1);
@@ -77,6 +83,25 @@ test('PIA大船-P uses the same store overview then data navigation as slot stor
     if(savedCustomElements===undefined)delete globalThis.customElements;else globalThis.customElements=savedCustomElements;
     if(savedStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=savedStorage;
   }
+});
+test('yutime page shows yesterday-only final-start ranking and makes no exact remaining-spin claim',()=>{
+  const mock={app:null,yutimeLoaded:true,yutimeLoading:false,yutimeError:'',detail:null,
+    yutime:{business_date:'2026-10-07',available:true,machine_count:2,excluded_count:0,rows:[
+      {rank:1,machine_no:'1124',record_id:44,final_start:430,start:625,above_yutime_threshold:false},
+      {rank:2,machine_no:'1097',record_id:9,final_start:1309,start:958,above_yutime_threshold:true}
+    ]}};
+  const html=ui.renderPachinkoYutimeState(mock);
+  assert.match(html,/前日最終スタート順/);assert.match(html,/2026-10-07/);
+  assert.match(html,/1124番/);assert.match(html,/430回/);assert.match(html,/1097番/);
+  assert.match(html,/1,309回/);assert.match(html,/遊タイム状態要確認/);
+  assert.match(html,/ラムクリア/);assert.match(html,/data-pachinko-record-date="2026-10-07"/);
+  assert.doesNotMatch(html,/950\s*[-−]\s*430/);assert.doesNotMatch(html,/残り\d+回/);
+  const missing=ui.renderPachinkoYutimeState({...mock,yutime:{business_date:'2026-10-08',latest_available_date:'2026-10-07',available:false,rows:[]}});
+  assert.match(missing,/前日分の確定データがありません/);assert.match(missing,/2026-10-07/);
+  assert.doesNotMatch(missing,/1124番/);
+  const overview=ui.renderPachinkoOverview({matrix:null,loading:false,error:''});
+  assert.match(overview,/data-pachinko-yutime/);assert.match(overview,/遊タイム宵越しランキング/);
+  assert.match(ui.pachinkoStoreTabs('yutime'),/class="on" type="button" data-pachinko-yutime/);
 });
 test('store selector ordering uses displayed Japanese store names',()=>{
   const names=['Z店','PIA大船-S','アビバ関内','PIA大船-P','123ホール'];

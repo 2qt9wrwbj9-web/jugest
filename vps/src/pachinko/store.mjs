@@ -293,6 +293,41 @@ export function getPachinkoMatrix(db,options={}){
   return {store:PACHINKO_STORE,models:MODELS,dates,records,summaries,historySummaries,roster:[...rosterMap.values()].sort(machineOrder),undated,latestSnapshot:snapshotMeta(latest),modelSnapshots};
 }
 
+// A previous-day reference ranking, not a verified remaining-yutime counter.
+// Reject stale/future substitutions: missing yesterday must stay unavailable.
+export function pachinkoPreviousJstDate(now=new Date()){
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw new Error('invalid_pachinko_clock');
+  return new Date(now.getTime()+9*3600_000-86400_000).toISOString().slice(0,10);
+}
+
+export function getPachinkoYutimeRanking(db,{now=new Date()}={}){
+  const businessDate=pachinkoPreviousJstDate(now);
+  const rows=db.prepare(`
+    SELECT d.machine_no,d.store_machine_id,d.identity,d.date_status,d.date_assignment_method,
+           r.id AS record_id,r.final_start,r.start,r.special
+      FROM p_machine_days d
+      JOIN p_records r ON r.id=d.record_id
+     WHERE d.store_id=? AND d.machine_model_key=? AND d.business_date=?
+       AND d.date_status IN ('derived','verified')
+     ORDER BY r.final_start DESC, CAST(d.machine_no AS INTEGER) ASC
+  `).all(PACHINKO_STORE_ID,'OUMI5_SPECIAL_ALTA',businessDate);
+  const valid=rows.filter(row=>Number.isSafeInteger(row.final_start)&&row.final_start>=0);
+  const last=db.prepare("SELECT MAX(business_date) AS date FROM p_machine_days WHERE store_id=? AND machine_model_key=? AND business_date<=?")
+    .get(PACHINKO_STORE_ID,'OUMI5_SPECIAL_ALTA',businessDate)?.date??null;
+  return {
+    store_id:PACHINKO_STORE_ID,machine_model_key:'OUMI5_SPECIAL_ALTA',
+    business_date:businessDate,latest_available_date:last,available:valid.length>0,
+    machine_count:valid.length,excluded_count:rows.length-valid.length,
+    rows:valid.map((row,index)=>({
+      rank:index+1,machine_no:row.machine_no,store_machine_id:row.store_machine_id,
+      record_id:row.record_id,final_start:row.final_start,start:row.start,
+      hit_count:row.special,date_status:row.date_status,
+      date_assignment_method:row.date_assignment_method,
+      above_yutime_threshold:row.final_start>=950
+    }))
+  };
+}
+
 export function getPachinkoRecord(db,recordId){
   const id=pachinkoInteger(recordId);if(id===null||id<=0)throw new Error('invalid_pachinko_record_id');
   const record=db.prepare('SELECT * FROM p_records WHERE id=?').get(id);if(!record)return null;

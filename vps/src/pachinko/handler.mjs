@@ -1,5 +1,5 @@
 import {openPachinkoDatabase} from './schema.mjs';
-import {getPachinkoMatrix,getPachinkoRecord} from './store.mjs';
+import {getPachinkoMatrix,getPachinkoRecord,getPachinkoYutimeRanking} from './store.mjs';
 import {MODELS,PACHINKO_STORE,PACHINKO_STORE_ID} from './models.mjs';
 import {authenticateReceiver} from '../assistant-read-key.mjs';
 import {canAccessStoreMetadata} from '../store-access.mjs';
@@ -11,7 +11,7 @@ function errorCode(error){const msg=String(error?.message||error);if(msg.startsW
 function parseLimit(url){const raw=url.searchParams.get('limit');if(raw===null)return 30;if(!/^\d+$/u.test(raw))throw new Error('invalid_pachinko_limit');const n=Number(raw);if(!Number.isSafeInteger(n))throw new Error('invalid_pachinko_limit');return n}
 async function defaultReceiver(req,relayDbPath){return relayDbPath?await authenticateReceiver(req,relayDbPath):null}
 
-export function createPachinkoHandler({dbPath,relayDbPath=null,authenticatePia=()=>null,authorizeReceiver=defaultReceiver,accessOptions={}}={}){
+export function createPachinkoHandler({dbPath,relayDbPath=null,authenticatePia=()=>null,authorizeReceiver=defaultReceiver,accessOptions={},clock=()=>new Date()}={}){
   if(typeof dbPath!=='string'||!dbPath.trim())throw new TypeError('dbPath is required');
   if(typeof authenticatePia!=='function'||typeof authorizeReceiver!=='function')throw new TypeError('pachinko_auth_functions_required');
   return async function pachinkoHandler(req,res){
@@ -33,6 +33,9 @@ export function createPachinkoHandler({dbPath,relayDbPath=null,authenticatePia=(
       }
       if(p[2]!=='stores'||p.length<4){send(req,res,404,{ok:false,code:'not_found'});return}
       const storeId=p[3];if(storeId!==PACHINKO_STORE_ID){send(req,res,404,{ok:false,code:'store_not_found'});return}
+      if(p.length===5&&p[4]==='yutime'){
+        send(req,res,200,{ok:true,...getPachinkoYutimeRanking(db,{now:clock()})});return;
+      }
       if(p.length===5&&p[4]==='matrix'){
         const modelKey=String(url.searchParams.get('model')||'');const limit=parseLimit(url);
         const matrix=getPachinkoMatrix(db,{storeId,modelKey,limit});send(req,res,200,{ok:true,...matrix});return;
