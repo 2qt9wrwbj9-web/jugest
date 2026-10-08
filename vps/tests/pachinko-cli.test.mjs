@@ -63,6 +63,18 @@ test('backfill imports the committed manifest in listed order and replay is idem
   }finally{rmSync(dir,{recursive:true,force:true})}
 });
 
+test('reconcile-dates is dry-run by default, applies only with --apply, and is idempotent',()=>{
+  const dir=workspace();try{
+    const dbPath=path.join(dir,'p.sqlite'),manifestPath=path.join(dir,'manifest.json');
+    const seeded=run('backfill','--db',dbPath,'--manifest',manifestPath);assert.equal(seeded.status,0,seeded.stderr);
+    const before=openPachinkoDatabase(dbPath,{readOnly:true});let beforeDays;try{beforeDays=before.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key='OUMI5_SPECIAL_ALTA'").get().n}finally{before.close()}
+    const preview=run('reconcile-dates','--db',dbPath,'--model','OUMI5_SPECIAL_ALTA');assert.equal(preview.status,0,preview.stderr);assert.equal(JSON.parse(preview.stdout).dryRun,true);
+    const unchanged=openPachinkoDatabase(dbPath,{readOnly:true});try{assert.equal(unchanged.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key='OUMI5_SPECIAL_ALTA'").get().n,beforeDays)}finally{unchanged.close()}
+    const applied=run('reconcile-dates','--db',dbPath,'--model','OUMI5_SPECIAL_ALTA','--apply');assert.equal(applied.status,0,applied.stderr);assert.equal(JSON.parse(applied.stdout).dryRun,false);assert.ok(JSON.parse(applied.stdout).inserted>0);
+    const again=run('reconcile-dates','--db',dbPath,'--model','OUMI5_SPECIAL_ALTA','--apply');assert.equal(again.status,0,again.stderr);assert.equal(JSON.parse(again.stdout).inserted,0);
+  }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
 test('manifest paths cannot traverse or symlink outside the manifest directory',()=>{
   const dir=workspace();try{const manifestPath=path.join(dir,'manifest.json'),manifest=JSON.parse(readFileSync(manifestPath,'utf8'));manifest.snapshots[0].file='../outside.json.gz';writeFileSync(manifestPath,JSON.stringify(manifest));assert.throws(()=>validateBackfillManifest(manifestPath),/manifest_path_escape/)}finally{rmSync(dir,{recursive:true,force:true})}
 });

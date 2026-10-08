@@ -69,11 +69,15 @@ function differences(previous,current){
   for(const [key,entry] of before){const count=entry.count-(after.get(key)?.count??0);for(let n=0;n<count;n++)removed.push({fingerprint:key,raw:entry.raw})}
   return {added,removed};
 }
+function shiftPachinkoDate(date,days){
+  const time=Date.parse(`${date}T00:00:00.000Z`);if(!Number.isFinite(time)||!Number.isSafeInteger(days))throw new Error('invalid_pachinko_date_shift');
+  return new Date(time+days*86400000).toISOString().slice(0,10);
+}
 export function derivePachinkoDay(previous,current,options={}){
   const currentPayload=current?.payload??current,previousPayload=previous?.payload??previous;
   const now=validatePachinkoSnapshot(currentPayload,{...options,scopeModelKeys:options.scopeModelKeys??current?.scopeModelKeys??options.provenance?.scopeModelKeys});
   const diagnostics={ready:false,snapshotDate:now.snapshotDate,scopeModelKeys:now.scopeModelKeys,comparableCount:0,rollingCount:0,noChangeCount:0,newMachineCount:0,removedMachineCount:0,oneAddCoverage:0,populationCoverage:0,minimumCoverage:0.95};
-  const result={businessDate:null,assignments:[],diagnostics,transitions:[]};
+  const result={businessDate:null,assignments:[],removedAssignments:[],diagnostics,transitions:[]};
   if(!previousPayload){result.transitions=[...now.groups.values()].map(group=>transition(group,'initial_snapshot'));return result}
   const prior=validatePachinkoSnapshot(previousPayload,{...options,scopeModelKeys:options.previousScopeModelKeys??previous?.scopeModelKeys??now.scopeModelKeys});
   const scope=now.scopeModelKeys.filter(key=>prior.scopeModelKeys.includes(key));
@@ -94,7 +98,7 @@ export function derivePachinkoDay(previous,current,options={}){
     const diff=differences(before.rows,group.rows);
     if(diff.added.length===1&&diff.removed.length===1){
       diagnostics.rollingCount++;
-      candidates.push({...transition(group,'candidate'),...diff.added[0],date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day'});
+      candidates.push({group,windowSize:before.rows.length,added:diff.added[0],removed:diff.removed[0]});
     }else{
       if(diff.added.length===0&&diff.removed.length===0)diagnostics.noChangeCount++;
       result.transitions.push(transition(group,diff.added.length===0&&diff.removed.length===0?'no_change':'multiple_or_unbalanced_difference',{addedCount:diff.added.length,removedCount:diff.removed.length}));
@@ -104,15 +108,20 @@ export function derivePachinkoDay(previous,current,options={}){
   let population=0;
   for(const modelKey of scope){
     const before=[...prev.values()].filter(group=>group.machine_model_key===modelKey),after=[...next.values()].filter(group=>group.machine_model_key===modelKey);
-    // A wholly new installation is unresolved separately; a response missing most
-    // of an existing model must not shrink the comparable population denominator.
     if(after.some(group=>prev.has(group.identity)))population+=Math.max(before.length,after.length);
   }
   diagnostics.populationCount=population;
   diagnostics.oneAddCoverage=diagnostics.comparableCount?diagnostics.rollingCount/diagnostics.comparableCount:0;
   diagnostics.populationCoverage=population?diagnostics.comparableCount/population:0;
   diagnostics.ready=diagnostics.comparableCount>0&&diagnostics.oneAddCoverage>=0.95&&diagnostics.populationCoverage>=0.95;
-  if(diagnostics.ready){result.businessDate=prior.snapshotDate;result.assignments=candidates.map(({reason,diagnostics:unused,...assignment})=>assignment)}
-  else for(const candidate of candidates)result.transitions.push(transition(candidate,'insufficient_population_coverage',{oneAddCoverage:diagnostics.oneAddCoverage,populationCoverage:diagnostics.populationCoverage}));
+  if(diagnostics.ready){
+    result.businessDate=prior.snapshotDate;
+    result.assignments=candidates.map(({group,added})=>({...transition(group,'candidate'),...added,date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day'})).map(({reason,diagnostics:unused,...assignment})=>assignment);
+    result.removedAssignments=candidates.filter(candidate=>candidate.windowSize===30).map(({group,removed,windowSize})=>({...transition(group,'candidate'),...removed,business_date:shiftPachinkoDate(prior.snapshotDate,-windowSize),date_status:'derived',date_assignment_method:'consecutive_snapshot_multiset_previous_day',date_assignment_edge:'window_start'})).map(({reason,diagnostics:unused,...assignment})=>assignment);
+    diagnostics.windowStartCandidateCount=result.removedAssignments.length;
+  }else{
+    diagnostics.windowStartCandidateCount=0;
+    for(const candidate of candidates)result.transitions.push(transition(candidate.group,'insufficient_population_coverage',{oneAddCoverage:diagnostics.oneAddCoverage,populationCoverage:diagnostics.populationCoverage}));
+  }
   return result;
 }

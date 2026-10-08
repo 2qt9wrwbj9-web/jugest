@@ -66,7 +66,7 @@ export async function collectPachinkoOnce(db,{archiveRoot,fetchImpl=fetch,timeou
   const observedAt=now.toISOString();writeState(db,{last_attempt_at:observedAt,updated_at:observedAt});
   try{
     const fetched=await fetchPachinkoSnapshot({fetchImpl,timeoutMs,archiveRoot,observedAt});
-    const result=importPachinkoSnapshot(db,{payload:fetched.payload,rawText:fetched.rawText,observedAt,collectorVersion:PACHINKO_COLLECTOR_VERSION,provenance:{source:'pia-public-ranking-top',visibility:'public',endpoint:PACHINKO_ENDPOINT,publicStoreId:35,request:{machine_type:'P',store_id:'35',limit:'20000'}}});
+    const result=importPachinkoSnapshot(db,{payload:fetched.payload,rawText:fetched.rawText,observedAt,collectorVersion:PACHINKO_COLLECTOR_VERSION,bootstrapWindowEdges:true,provenance:{source:'pia-public-ranking-top',visibility:'public',endpoint:PACHINKO_ENDPOINT,publicStoreId:35,request:{machine_type:'P',store_id:'35',limit:'20000'}}});
     if(result.collectionReady)writeState(db,{last_success_at:observedAt,last_error:null,last_collected_server_date:fetched.meta.serverDate,updated_at:observedAt});
     else writeState(db,{last_error:`not_ready:${result.status}`,updated_at:observedAt});
     return {...result,serverDate:fetched.meta.serverDate,serverTime:fetched.meta.serverTime,rowCount:fetched.meta.rowCount,machineCount:fetched.meta.machineCount};

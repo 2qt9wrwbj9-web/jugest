@@ -5,11 +5,11 @@ import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {openPachinkoDatabase,migratePachinko} from '../src/pachinko/schema.mjs';
-import {importPachinkoSnapshot,reestimatePachinkoRecords,getPachinkoMatrix} from '../src/pachinko/store.mjs';
+import {importPachinkoSnapshot,reestimatePachinkoRecords,getPachinkoMatrix,reconcilePachinkoBusinessDates} from '../src/pachinko/store.mjs';
 import {collectPachinkoOnce} from '../src/pachinko/collector.mjs';
 
 const sha=value=>createHash('sha256').update(value).digest('hex');
-function args(argv){const [command,...rest]=argv,out={command};for(let i=0;i<rest.length;i++){const token=rest[i];if(!token.startsWith('--'))throw new Error(`unexpected_argument:${token}`);const key=token.slice(2);if(key==='allow-production'){out[key]=true;continue}const value=rest[++i];if(value===undefined||value.startsWith('--'))throw new Error(`missing_value:${key}`);out[key]=value}return out}
+function args(argv){const [command,...rest]=argv,out={command};for(let i=0;i<rest.length;i++){const token=rest[i];if(!token.startsWith('--'))throw new Error(`unexpected_argument:${token}`);const key=token.slice(2);if(key==='allow-production'||key==='apply'){out[key]=true;continue}const value=rest[++i];if(value===undefined||value.startsWith('--'))throw new Error(`missing_value:${key}`);out[key]=value}return out}
 function isInside(child,parent){const c=path.resolve(child),p=path.resolve(parent),prefix=p.endsWith(path.sep)?p:`${p}${path.sep}`;return c===p||c.startsWith(prefix)}
 function destinationIdentity(value){const resolved=path.resolve(value);let cursor=resolved;const tail=[];while(!existsSync(cursor)){const parent=path.dirname(cursor);if(parent===cursor)break;tail.unshift(path.basename(cursor));cursor=parent}try{return path.join(realpathSync(cursor),...tail)}catch{return resolved}}
 export function assertSafeWritablePath(value,{allowProduction=false,requiredCode='explicit_path_required'}={}){
@@ -41,7 +41,7 @@ export function validateBackfillManifest(manifestPath){
 
 export async function main(argv=process.argv.slice(2)){
   const a=args(argv),command=a.command;if(!command)throw new Error('command_required');
-  const allowed=new Set(['status','migrate','reestimate','import','backfill','collect']);if(!allowed.has(command))throw new Error(`unknown_command:${command}`);
+  const allowed=new Set(['status','migrate','reestimate','import','backfill','collect','reconcile-dates']);if(!allowed.has(command))throw new Error(`unknown_command:${command}`);
   const dbPath=assertSafeDbPath(a.db,{allowProduction:a['allow-production']===true});
   // Validate every external input before opening a writable database. A bad
   // manifest/import must not create or migrate even a scratch database.
@@ -57,6 +57,7 @@ export async function main(argv=process.argv.slice(2)){
     migratePachinko(db);
     if(command==='migrate'){output({ok:true,schemaVersion:db.prepare('PRAGMA user_version').get().user_version});return}
     if(command==='reestimate'){output({ok:true,...reestimatePachinkoRecords(db)});return}
+    if(command==='reconcile-dates'){const modelKeys=a.model?[a.model]:['OUMI5_SPECIAL_ALTA'];const result=reconcilePachinkoBusinessDates(db,{modelKeys,dryRun:a.apply!==true});output({ok:true,...result});return}
     if(command==='import'){output({ok:true,...importPachinkoSnapshot(db,prepared)});return}
     if(command==='backfill'){const results=[];for(const item of prepared.items)results.push(importPachinkoSnapshot(db,{payload:item.payload,rawText:item.rawText,observedAt:item.observedAt,provenance:item.provenance,collectorVersion:'pachinko-backfill-v1'}));output({ok:true,imported:results});return}
     if(command==='collect'){const result=await collectPachinkoOnce(db,{archiveRoot});output({ok:true,...result});return}

@@ -44,7 +44,7 @@ function ingest(db,data,extra={}){return api().importPachinkoSnapshot(db,{payloa
 
 test('independent domain exports the complete consumer interface',()=>{
   const d=api();
-  for(const name of ['identifyPachinkoModel','estimatePachinko','validatePachinkoSnapshot','derivePachinkoDay','pachinkoRecordFingerprint','pachinkoMachineIdentity','migratePachinko','openPachinkoDatabase','importPachinkoSnapshot','getPachinkoMatrix','getPachinkoRecord','reestimatePachinkoRecords'])assert.equal(typeof d[name],'function',name);
+  for(const name of ['identifyPachinkoModel','estimatePachinko','validatePachinkoSnapshot','derivePachinkoDay','pachinkoRecordFingerprint','pachinkoMachineIdentity','migratePachinko','openPachinkoDatabase','importPachinkoSnapshot','getPachinkoMatrix','getPachinkoRecord','reestimatePachinkoRecords','pachinkoBootstrapStatus','reconcilePachinkoBusinessDates'])assert.equal(typeof d[name],'function',name);
 });
 test('exact store, padded code and normalized name identify three distinct 4-yen models',()=>{
   const d=api();assert.equal(d.MODELS.length,3);
@@ -109,8 +109,9 @@ test('raw fingerprints include unknown fields and installation identity but igno
 test('first history is undated and only exact consecutive multiset replacement assigns the previous day',()=>{
   const d=api();assert.equal(d.derivePachinkoDay(null,payload('2026-10-05')).businessDate,null);
   const r=d.derivePachinkoDay(payload('2026-10-05'),payload('2026-10-06',2));
-  assert.equal(r.businessDate,'2026-10-05');assert.equal(r.assignments.length,3);assert.equal(r.diagnostics.ready,true);
+  assert.equal(r.businessDate,'2026-10-05');assert.equal(r.assignments.length,3);assert.equal(r.removedAssignments.length,3);assert.equal(r.diagnostics.ready,true);
   for(const a of r.assignments){assert.equal(a.raw.final_start,31);assert.equal(a.date_status,'derived');assert.equal(a.date_assignment_method,'consecutive_snapshot_multiset_previous_day');}
+  for(const a of r.removedAssignments){assert.equal(a.raw.final_start,1);assert.equal(a.business_date,'2026-09-05');assert.equal(a.date_assignment_method,'consecutive_snapshot_multiset_previous_day');assert.equal(a.date_assignment_edge,'window_start');}
 });
 test('multiset comparison counts repeated identical zero history and preserves one added record',()=>{
   const zero=raw(SEA,0,{special:0,start:0,final_start:0,special_1:0,special_2:0,special_2d:0,special_out:0,special_safe:0,out:0,safe:0,difference:0});
@@ -148,6 +149,34 @@ test('replacement, moved machine and removal produce transitions without connect
 test('explicit partial model scope does not invent removals for missing other models',()=>{
   const result=api().derivePachinkoDay(payload('2026-10-05'),payload('2026-10-06',2,{keys:[SEA]}),seaScope);
   assert.equal(result.assignments.length,1);assert.equal(result.businessDate,'2026-10-05');assert.ok(result.transitions.every(t=>t.machine_model_key===SEA));
+});
+test('bootstrap mode dates both rolling-window edges and normal mode keeps only the newest edge',()=>{
+  fixture(({db})=>{
+    ingest(db,payload('2026-10-05',1,{keys:[SEA]}),{provenance:seaScope,bootstrapWindowEdges:true});
+    const second=ingest(db,payload('2026-10-06',2,{keys:[SEA]}),{provenance:seaScope,bootstrapWindowEdges:true});assert.equal(second.assignedCount,2);
+    const days=db.prepare('SELECT business_date,date_assignment_method FROM p_machine_days ORDER BY business_date').all();
+    assert.deepEqual(days.map(x=>x.business_date),['2026-09-05','2026-10-05']);assert.equal(days[0].date_assignment_method,'consecutive_snapshot_multiset_previous_day');assert.equal(days[1].date_assignment_method,'consecutive_snapshot_multiset_previous_day');
+    const third=ingest(db,payload('2026-10-07',3,{keys:[SEA]}),{provenance:seaScope});assert.equal(third.assignedCount,1);assert.equal(db.prepare("SELECT count(*) n FROM p_machine_days WHERE business_date<'2026-10-05'").get().n,1);
+  });
+});
+test('bootstrap status becomes complete after 30 contiguous full days and then stops adding old window edges',()=>{
+  fixture(({db})=>{
+    const base=Date.parse('2026-01-01T00:00:00Z'),date=n=>new Date(base+n*86400000).toISOString().slice(0,10);
+    for(let n=0;n<32;n++)ingest(db,payload(date(n),n+1,{keys:[SEA]}),{provenance:seaScope,bootstrapWindowEdges:true});
+    const status=api().pachinkoBootstrapStatus(db,SEA,{expectedMachineCount:1});assert.equal(status.complete,true);assert.ok(status.contiguousDays>=30);
+    const oldEdges=db.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key=? AND business_date<'2026-01-01'").get(SEA).n;
+    assert.equal(oldEdges,30);assert.equal(db.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key=? AND business_date>='2026-01-01'").get(SEA).n,31);
+  });
+});
+test('historical reconcile is idempotent and can add old edges without overwriting known days',()=>{
+  fixture(({db})=>{
+    for(let n=0;n<4;n++)ingest(db,payload(`2026-10-0${5+n}`,n+1,{keys:[SEA]}),{provenance:seaScope});
+    assert.equal(db.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key=?").get(SEA).n,3);
+    const preview=api().reconcilePachinkoBusinessDates(db,{modelKeys:[SEA],dryRun:true});assert.equal(preview.inserted,3);assert.equal(db.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key=?").get(SEA).n,3);
+    const applied=api().reconcilePachinkoBusinessDates(db,{modelKeys:[SEA],dryRun:false});assert.equal(applied.inserted,3);assert.equal(db.prepare("SELECT count(*) n FROM p_machine_days WHERE machine_model_key=?").get(SEA).n,6);
+    assert.deepEqual(db.prepare("SELECT business_date FROM p_machine_days WHERE business_date<'2026-10-05' ORDER BY business_date").all().map(x=>x.business_date),['2026-09-05','2026-09-06','2026-09-07']);
+    const again=api().reconcilePachinkoBusinessDates(db,{modelKeys:[SEA],dryRun:false});assert.equal(again.inserted,0);assert.equal(again.conflicts,0);
+  });
 });
 test('migration is independent, repeatable and refuses a canonical database or a future schema',()=>{
   fixture(({db})=>{

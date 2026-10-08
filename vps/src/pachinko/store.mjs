@@ -56,7 +56,22 @@ function retainedOccurrences(previous,current,gap){
   return retained;
 }
 
-export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance={},collectorVersion='pachinko-domain-v1'}={}){
+function dayNumber(date){const n=Date.parse(`${date}T00:00:00.000Z`);return Number.isFinite(n)?Math.trunc(n/86400000):null}
+export function pachinkoBootstrapStatus(db,modelKey,{expectedMachineCount,requiredDays=30,minimumCoverage=1}={}){
+  if(!MODELS.some(model=>model.key===modelKey))throw new Error('invalid_pachinko_model');
+  const expected=Number(expectedMachineCount);if(!Number.isSafeInteger(expected)||expected<1)throw new Error('invalid_pachinko_expected_machine_count');
+  if(!Number.isSafeInteger(requiredDays)||requiredDays<1||requiredDays>365)throw new Error('invalid_pachinko_required_days');
+  const need=Math.ceil(expected*minimumCoverage),rows=db.prepare('SELECT business_date,COUNT(DISTINCT identity) n FROM p_machine_days WHERE store_id=? AND machine_model_key=? GROUP BY business_date ORDER BY business_date').all(PACHINKO_STORE_ID,modelKey);
+  let run=0,best=0,last=null,completedThrough=null;
+  for(const row of rows){
+    if(Number(row.n)<need){run=0;last=null;continue}
+    const day=dayNumber(row.business_date);if(day===null){run=0;last=null;continue}
+    run=last!==null&&day===last+1?run+1:1;last=day;if(run>best)best=run;if(run>=requiredDays)completedThrough=row.business_date;
+  }
+  return {complete:best>=requiredDays,requiredDays,contiguousDays:best,minimumMachinesPerDay:need,expectedMachineCount:expected,completedThrough};
+}
+
+export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance={},collectorVersion='pachinko-domain-v1',bootstrapWindowEdges=false}={}){
   if(!provenance||typeof provenance!=='object'||Array.isArray(provenance))throw new TypeError('invalid_pachinko_provenance');
   const meta=validatePachinkoSnapshot(payload,{provenance});
   const raw=rawText??JSON.stringify(payload);if(typeof raw!=='string')throw new TypeError('pachinko_raw_text_required');
@@ -88,57 +103,50 @@ export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance
     const readMembers=db.prepare('SELECT r.id,r.identity,r.machine_model_key,m.occurrence_count,m.dated_occurrence_count FROM p_snapshot_members m JOIN p_records r ON r.id=m.record_id WHERE m.snapshot_id=?');
     const priorMemberCache=new Map(),knownOccurrences=new Map(),newAssignments=new Map();
     const anchors=new Map(db.prepare('SELECT * FROM p_model_anchors').all().map(anchor=>[anchor.model_key,anchor]));
-    const anchorGroups=new Map(),modelResults=[],transitions=[];
+    const modelResults=[],transitions=[];
     const setAnchor=db.prepare('INSERT INTO p_model_anchors(model_key,snapshot_id,server_date) VALUES(?,?,?) ON CONFLICT(model_key) DO UPDATE SET snapshot_id=excluded.snapshot_id,server_date=excluded.server_date');
     const snapshotById=db.prepare('SELECT * FROM p_snapshots WHERE id=?'),snapshotCache=new Map();
     const anchorSnapshot=id=>{if(!snapshotCache.has(id))snapshotCache.set(id,snapshotById.get(id));return snapshotCache.get(id)};
-    for(const key of meta.scopeModelKeys){
-      const anchor=anchors.get(key);
-      if(!anchor){
-        setAnchor.run(key,snapshotId,meta.snapshotDate);modelResults.push({machine_model_key:key,status:'seeded',ready:true,previous_snapshot_id:null});
-        for(const group of meta.groups.values())if(group.machine_model_key===key)transitions.push({previousSnapshotId:null,...group,reason:'initial_snapshot',diagnostics:{}});
-      }else{
-        if(!anchorGroups.has(anchor.server_date))anchorGroups.set(anchor.server_date,[]);anchorGroups.get(anchor.server_date).push(key);
-      }
-    }
     let assignedCount=0;const businessDates=new Set();
     const addDay=db.prepare('INSERT INTO p_machine_days(store_id,business_date,identity,machine_no,store_machine_id,machine_model_key,record_id,previous_snapshot_id,current_snapshot_id,date_status,date_assignment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
-    for(const [priorDate,keys] of anchorGroups){
-      const priorRows=keys.flatMap(key=>payloadOf(anchorSnapshot(anchors.get(key).snapshot_id)).ranking.filter(row=>identifyPachinkoModel(row)?.key===key));
-      const previous={status:0,server_date_time:{date:priorDate,time:'00:00:00'},ranking:priorRows};
-      const derived=derivePachinkoDay(previous,payload,{scopeModelKeys:keys});
-      const gap=derived.diagnostics.dayGap;
-      for(const key of keys){
-        const previousId=anchors.get(key).snapshot_id;
-        if(!priorMemberCache.has(previousId))priorMemberCache.set(previousId,readMembers.all(previousId));
-        const carried=retainedOccurrences(priorMemberCache.get(previousId).filter(row=>row.machine_model_key===key),currentMembers.filter(row=>row.machine_model_key===key),gap);
-        for(const [id,count] of carried)knownOccurrences.set(id,count);
+    const existingDay=db.prepare('SELECT record_id FROM p_machine_days WHERE store_id=? AND business_date=? AND machine_no=?');
+    const markKnownInSnapshot=db.prepare('UPDATE p_snapshot_members SET dated_occurrence_count=MIN(occurrence_count,dated_occurrence_count+1) WHERE snapshot_id=? AND record_id=?');
+    for(const key of meta.scopeModelKeys){
+      const anchor=anchors.get(key),currentModelGroups=[...meta.groups.values()].filter(group=>group.machine_model_key===key);
+      if(!anchor){
+        setAnchor.run(key,snapshotId,meta.snapshotDate);modelResults.push({machine_model_key:key,status:'seeded',ready:true,previous_snapshot_id:null,bootstrap:pachinkoBootstrapStatus(db,key,{expectedMachineCount:currentModelGroups.length})});
+        for(const group of currentModelGroups)transitions.push({previousSnapshotId:null,...group,reason:'initial_snapshot',diagnostics:{}});
+        continue;
       }
-      for(const transition of derived.transitions)transitions.push({...transition,previousSnapshotId:anchors.get(transition.machine_model_key).snapshot_id});
+      const previousId=anchor.snapshot_id,priorDate=anchor.server_date,priorSnapshot=anchorSnapshot(previousId);
+      const priorRows=payloadOf(priorSnapshot).ranking.filter(row=>identifyPachinkoModel(row)?.key===key);
+      const previous={status:0,server_date_time:{date:priorDate,time:'00:00:00'},ranking:priorRows};
+      const derived=derivePachinkoDay(previous,payload,{scopeModelKeys:[key]});
+      const gap=derived.diagnostics.dayGap;
+      if(!priorMemberCache.has(previousId))priorMemberCache.set(previousId,readMembers.all(previousId));
+      const carried=retainedOccurrences(priorMemberCache.get(previousId).filter(row=>row.machine_model_key===key),currentMembers.filter(row=>row.machine_model_key===key),gap);
+      for(const [id,count] of carried)knownOccurrences.set(id,count);
+      for(const transition of derived.transitions)transitions.push({...transition,previousSnapshotId:previousId});
       let conflicts=false;
-      for(const assignment of derived.assignments){
-        const recordId=getRecord.get(assignment.fingerprint).id,previousId=anchors.get(assignment.machine_model_key).snapshot_id;
-        const existingDay=db.prepare('SELECT record_id FROM p_machine_days WHERE store_id=? AND business_date=? AND machine_no=?').get(PACHINKO_STORE_ID,derived.businessDate,assignment.machine_no);
-        if(existingDay){
-          if(existingDay.record_id!==recordId){conflicts=true;transitions.push({...assignment,previousSnapshotId:previousId,reason:'day_conflict',diagnostics:{existingRecordId:existingDay.record_id,incomingRecordId:recordId}})}
+      const bootstrapBefore=pachinkoBootstrapStatus(db,key,{expectedMachineCount:currentModelGroups.length});
+      const candidateAssignments=[...derived.assignments.map(assignment=>({...assignment,business_date:derived.businessDate,bootstrapEdge:false})),...(!bootstrapWindowEdges||bootstrapBefore.complete?[]:derived.removedAssignments.map(assignment=>({...assignment,bootstrapEdge:true})))];
+      for(const assignment of candidateAssignments){
+        const recordId=getRecord.get(assignment.fingerprint)?.id;if(!recordId)throw new Error('pachinko_assignment_record_missing');
+        const date=assignment.business_date,existing=existingDay.get(PACHINKO_STORE_ID,date,assignment.machine_no);
+        if(existing){
+          if(existing.record_id!==recordId){conflicts=true;transitions.push({...assignment,previousSnapshotId:previousId,reason:'day_conflict',diagnostics:{existingRecordId:existing.record_id,incomingRecordId:recordId,businessDate:date,bootstrapEdge:assignment.bootstrapEdge}})}
           continue;
         }
-        addDay.run(PACHINKO_STORE_ID,derived.businessDate,assignment.identity,assignment.machine_no,assignment.store_machine_id,assignment.machine_model_key,recordId,previousId,snapshotId,assignment.date_status,assignment.date_assignment_method);
-        newAssignments.set(recordId,(newAssignments.get(recordId)??0)+1);
-        assignedCount++;businessDates.add(derived.businessDate);
+        addDay.run(PACHINKO_STORE_ID,date,assignment.identity,assignment.machine_no,assignment.store_machine_id,assignment.machine_model_key,recordId,previousId,snapshotId,assignment.date_status,assignment.date_assignment_method);
+        if(assignment.bootstrapEdge)markKnownInSnapshot.run(previousId,recordId);else newAssignments.set(recordId,(newAssignments.get(recordId)??0)+1);
+        assignedCount++;businessDates.add(date);
       }
-      for(const key of keys){
-        const previousGroups=validatePachinkoSnapshot(previous,{scopeModelKeys:keys}).groups;
-        const currentModelGroups=[...meta.groups.values()].filter(group=>group.machine_model_key===key);
-        const hasComparable=currentModelGroups.some(group=>previousGroups.has(group.identity));
-        const whollyNew=gap===1&&!hasComparable;
-        const ready=!conflicts&&(derived.diagnostics.ready||gap>1||gap===0||whollyNew);
-        const status=conflicts?'day_conflict':derived.diagnostics.ready?'derived':gap>1?'gap_seeded':gap===0?'same_day':whollyNew?'installation_seeded':gap<0?'backwards_date':'not_ready';
-        // A retry with unchanged or partially updated history keeps the prior
-        // day. Same-day raw is preserved but does not replace that day's anchor.
-        if(ready&&gap!==0)setAnchor.run(key,snapshotId,meta.snapshotDate);
-        modelResults.push({machine_model_key:key,status,ready,previous_snapshot_id:anchors.get(key).snapshot_id,diagnostics:derived.diagnostics});
-      }
+      const previousGroups=validatePachinkoSnapshot(previous,{scopeModelKeys:[key]}).groups;
+      const hasComparable=currentModelGroups.some(group=>previousGroups.has(group.identity)),whollyNew=gap===1&&!hasComparable;
+      const ready=!conflicts&&(derived.diagnostics.ready||gap>1||gap===0||whollyNew);
+      const status=conflicts?'day_conflict':derived.diagnostics.ready?'derived':gap>1?'gap_seeded':gap===0?'same_day':whollyNew?'installation_seeded':gap<0?'backwards_date':'not_ready';
+      if(ready&&gap!==0)setAnchor.run(key,snapshotId,meta.snapshotDate);
+      modelResults.push({machine_model_key:key,status,ready,previous_snapshot_id:previousId,diagnostics:derived.diagnostics,bootstrap:pachinkoBootstrapStatus(db,key,{expectedMachineCount:currentModelGroups.length})});
     }
     const writeKnown=db.prepare('UPDATE p_snapshot_members SET dated_occurrence_count=? WHERE snapshot_id=? AND record_id=?');
     for(const [id,count] of members){const known=Math.min(count,(knownOccurrences.get(id)??0)+(newAssignments.get(id)??0));if(known)writeKnown.run(known,snapshotId,id)}
@@ -151,6 +159,53 @@ export function importPachinkoSnapshot(db,{payload,rawText,observedAt,provenance
     db.prepare('UPDATE p_snapshots SET status=?,collection_ready=?,business_date=?,assigned_count=?,diagnostics_json=? WHERE id=?').run(status,collectionReady?1:0,businessDate,assignedCount,JSON.stringify(diagnostics),snapshotId);
     return {snapshotId,status,businessDate,assignedCount,collectionReady,diagnostics};
   });
+}
+
+
+export function reconcilePachinkoBusinessDates(db,{modelKeys=['OUMI5_SPECIAL_ALTA'],requiredDays=30,dryRun=true}={}){
+  if(!Array.isArray(modelKeys)||!modelKeys.length||new Set(modelKeys).size!==modelKeys.length||modelKeys.some(key=>!MODELS.some(model=>model.key===key)))throw new Error('invalid_pachinko_model_scope');
+  if(!Number.isSafeInteger(requiredDays)||requiredDays<1||requiredDays>365)throw new Error('invalid_pachinko_required_days');
+  const run=()=>{
+    const getRecord=db.prepare('SELECT id FROM p_records WHERE fingerprint=?'),existingDay=db.prepare('SELECT record_id FROM p_machine_days WHERE store_id=? AND business_date=? AND machine_no=?');
+    const addDay=db.prepare('INSERT INTO p_machine_days(store_id,business_date,identity,machine_no,store_machine_id,machine_model_key,record_id,previous_snapshot_id,current_snapshot_id,date_status,date_assignment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+    const markKnown=db.prepare('UPDATE p_snapshot_members SET dated_occurrence_count=MIN(occurrence_count,dated_occurrence_count+1) WHERE snapshot_id=? AND record_id=?');
+    const setAnchor=db.prepare('INSERT INTO p_model_anchors(model_key,snapshot_id,server_date) VALUES(?,?,?) ON CONFLICT(model_key) DO UPDATE SET snapshot_id=excluded.snapshot_id,server_date=excluded.server_date');
+    const allSnapshots=db.prepare("SELECT s.* FROM p_snapshots s WHERE s.store_id=? AND EXISTS(SELECT 1 FROM json_each(s.scope_model_keys_json) scope WHERE scope.value=?) ORDER BY s.server_date,s.server_time,s.id");
+    const result={dryRun,requiredDays,inserted:0,existing:0,conflicts:0,models:[]};
+    for(const key of modelKeys){
+      const rawSnapshots=allSnapshots.all(PACHINKO_STORE_ID,key),byDate=new Map();for(const snapshot of rawSnapshots)byDate.set(snapshot.server_date,snapshot);
+      const snapshots=[...byDate.values()].sort((a,b)=>a.server_date.localeCompare(b.server_date)||a.server_time.localeCompare(b.server_time)||a.id-b.id);
+      if(!snapshots.length){result.models.push({machine_model_key:key,snapshotCount:0,inserted:0,conflicts:0,bootstrap:null});continue}
+      const latestMeta=validatePachinkoSnapshot(payloadOf(snapshots.at(-1)),{scopeModelKeys:[key]}),expectedMachineCount=[...latestMeta.groups.values()].filter(group=>group.machine_model_key===key).length;
+      const modelResult={machine_model_key:key,snapshotCount:snapshots.length,pairs:0,readyPairs:0,inserted:0,addedInserted:0,removedInserted:0,existing:0,conflicts:0,bootstrapBefore:pachinkoBootstrapStatus(db,key,{expectedMachineCount,requiredDays}),bootstrap:null};
+      for(let i=1;i<snapshots.length;i++){
+        const previousSnapshot=snapshots[i-1],currentSnapshot=snapshots[i];
+        if(dayNumber(currentSnapshot.server_date)-dayNumber(previousSnapshot.server_date)!==1)continue;
+        modelResult.pairs++;
+        const previousPayload={status:0,server_date_time:{date:previousSnapshot.server_date,time:previousSnapshot.server_time},ranking:payloadOf(previousSnapshot).ranking.filter(row=>identifyPachinkoModel(row)?.key===key)};
+        const currentPayload=payloadOf(currentSnapshot),derived=derivePachinkoDay(previousPayload,currentPayload,{scopeModelKeys:[key]});
+        if(!derived.diagnostics.ready)continue;modelResult.readyPairs++;
+        const bootstrap=pachinkoBootstrapStatus(db,key,{expectedMachineCount,requiredDays});
+        const candidates=[...derived.assignments.map(assignment=>({...assignment,business_date:derived.businessDate,bootstrapEdge:false})),...(bootstrap.complete?[]:derived.removedAssignments.map(assignment=>({...assignment,bootstrapEdge:true})))];
+        let pairConflict=false;
+        for(const assignment of candidates){
+          const recordId=getRecord.get(assignment.fingerprint)?.id;if(!recordId)throw new Error('pachinko_assignment_record_missing');
+          const found=existingDay.get(PACHINKO_STORE_ID,assignment.business_date,assignment.machine_no);
+          if(found){
+            if(found.record_id===recordId){result.existing++;modelResult.existing++;continue}
+            result.conflicts++;modelResult.conflicts++;pairConflict=true;continue;
+          }
+          addDay.run(PACHINKO_STORE_ID,assignment.business_date,assignment.identity,assignment.machine_no,assignment.store_machine_id,assignment.machine_model_key,recordId,previousSnapshot.id,currentSnapshot.id,assignment.date_status,assignment.date_assignment_method);
+          markKnown.run(assignment.bootstrapEdge?previousSnapshot.id:currentSnapshot.id,recordId);
+          result.inserted++;modelResult.inserted++;if(assignment.bootstrapEdge)modelResult.removedInserted++;else modelResult.addedInserted++;
+        }
+        if(!pairConflict)setAnchor.run(key,currentSnapshot.id,currentSnapshot.server_date);
+      }
+      modelResult.bootstrap=pachinkoBootstrapStatus(db,key,{expectedMachineCount,requiredDays});result.models.push(modelResult);
+    }
+    return result;
+  };
+  db.exec('BEGIN IMMEDIATE;');try{const result=run();db.exec(dryRun?'ROLLBACK;':'COMMIT;');return result}catch(error){try{db.exec('ROLLBACK;')}catch{}throw error}
 }
 
 function safeSum(rows,key){const value=rows.reduce((sum,row)=>sum+row[key],0);return Number.isSafeInteger(value)?value:null}
