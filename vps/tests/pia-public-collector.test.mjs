@@ -97,6 +97,18 @@ test('validation rejects partial rolling history',()=>{
   data.ranking.pop();
   assert.throws(()=>validatePiaSnapshot(data,{minMachineCount:2}),/30-row rolling history/);
 });
+test('missing diff saves a partial observation while retaining the baseline and retry cadence',async()=>{
+ const f=await fixture();try{
+  let data=snapshot('2026-09-21',{advance:false});const fetchImpl=async()=>response(data);
+  await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-21T21:10:00Z'});
+  data=snapshot('2026-09-22');for(const row of data.ranking)if(row.final_start===31)row.difference=null;
+  const partial=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-22T21:10:00Z'});
+  assert.equal(partial.status,'not_ready');assert.equal(f.db.prepare('SELECT last_snapshot_date FROM source_collector_state').get().last_snapshot_date,'2026-09-21');
+  assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T21:50:00Z')}).attempt,true);
+  data=snapshot('2026-09-22');const complete=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2,nowIso:'2026-09-22T21:50:00Z'});
+  assert.equal(complete.status,'ingested');assert.equal(complete.ingest.integrity.status,'complete');
+ }finally{await f.close()}
+});
 
 test('midnight source date lag waits 30 minutes and preserves the baseline until yesterday can be ingested',async()=>{
   const f=await fixture();

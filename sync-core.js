@@ -183,8 +183,17 @@ function readJSON(key,fallback=null){
   try{return JSON.parse(s)}catch{throw new Error('端末の保存データを読み出せなかったよ。バックアップを確認してね（'+key+'）')}
 }
 function writeJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function storedObject(value,key){if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('保存済みデータの形式が壊れているよ。同期を止めたよ（'+key+'）');return value}
+function validateStoredState(st){
+  storedObject(st,STATE_KEY);
+  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory','cmpData'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
+  for(const key of ['data','liveSessions','rev','v4HybridProfiles'])if(key in st)storedObject(st[key],key);
+  return st;
+}
 function clientState(){
-  let x=readJSON(CLIENT_KEY,{})||{};
+  let x=storedObject(readJSON(CLIENT_KEY,{}),CLIENT_KEY);
+  if('sectionMeta' in x)storedObject(x.sectionMeta,'sectionMeta');
+  if('link' in x&&x.link!==null)storedObject(x.link,'link');
   if(!x.deviceId)x.deviceId='dev-'+b64url(randomBytes(10));
   x.sectionMeta=obj(x.sectionMeta);
   return x;
@@ -266,11 +275,11 @@ async function writeAnalysisSnapshots(snaps){
   await idbPut(ANALYSIS_INDEX_KEY,index);
 }
 async function buildLocalPackage(meta){
-  const st=readJSON(STATE_KEY,{})||{},seed=+st.savedAt||now(),deviceId=meta.deviceId;
+  const st=validateStoredState(readJSON(STATE_KEY,{})),seed=+st.savedAt||now(),deviceId=meta.deviceId;
   st.sessions=ensureSyncIds(st.sessions,deviceId,'session');
   st.v4MoveHistory=ensureSyncIds(st.v4MoveHistory,deviceId,'move');
   writeJSON(STATE_KEY,st);
-  const hana=readJSON(HANA_KEY,{})||{};
+  const hana=storedObject(readJSON(HANA_KEY,{}),HANA_KEY);
   const judgeSection={
     data:st.data||{},liveSessions:st.liveSessions||{},rev:st.rev||{},cmpData:st.cmpData||[],cmpSeq:+st.cmpSeq||1
   };
@@ -278,7 +287,9 @@ async function buildLocalPackage(meta){
     judge:sectionEnvelope(meta,'judge',judgeSection,seed),
     hana:sectionEnvelope(meta,'hana',hana,seed)
   };
-  const externalDays=arr(await idbGet(EXTERNAL_KEY));
+  const savedExternal=await idbGet(EXTERNAL_KEY);
+  if(savedExternal!==null&&!Array.isArray(savedExternal))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
+  const externalDays=savedExternal??[];
   const analysisSnapshots=await readAnalysisSnapshots();
   saveClient(meta);
   return{schema:SYNC_SCHEMA,version:SYNC_VERSION,appVersion:APP_VERSION,generatedAt:new Date().toISOString(),sourceDevice:deviceId,
@@ -369,7 +380,9 @@ async function api(body){
     if(payloadText.length>SYNC_TRANSPORT_DIRECT_CHARS){
       const chunks=splitJsonChunks(payloadText),start=await apiRaw({action:'pushStart',syncId:body.syncId,authToken:body.authToken,baseRevision:body.baseRevision,totalChunks:chunks.length,totalBytes:payloadText.length});
       for(let i=0;i<chunks.length;i++)await apiRaw({action:'pushChunk',syncId:body.syncId,authToken:body.authToken,uploadId:start.uploadId,index:i,totalChunks:chunks.length,chunk:chunks[i]});
-      return await apiRaw({action:'pushCommit',syncId:body.syncId,authToken:body.authToken,uploadId:start.uploadId});
+      const committed=await apiRaw({action:'pushCommit',syncId:body.syncId,authToken:body.authToken,uploadId:start.uploadId});
+      if(committed.revision!==body.baseRevision+1)throw Object.assign(new Error('同期APIの分割保存を確認できなかったよ。再試行してね'),{status:502});
+      return committed;
     }
   }
   const x=await apiRaw(body);

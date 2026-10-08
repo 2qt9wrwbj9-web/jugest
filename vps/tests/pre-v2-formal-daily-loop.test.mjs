@@ -86,6 +86,55 @@ test('legacy formal predictions generated after target start cannot enter prospe
    assert.equal(r.reason,'historical_prediction');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
  }finally{f.db.close()}
 });
+test('a correction arriving during judgement holds the formal day before any evidence is committed',async()=>{
+ const f=setup();try{
+  saveOperationalTarget(f.db);
+  const r=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>{saveOperationalTarget(f.db,{hash:'during-judgement'});return{date:'2026-09-11',rows:judgedRows()}}});
+  assert.equal(r.reason,'outcome_changed_during_evaluation');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
+ }finally{f.db.close()}
+});
+test('formal judgement uses the current canonical target instead of a stale caller copy',async()=>{
+ const f=setup();try{
+  saveOperationalTarget(f.db);const corrected={...makeDays(11).at(-1).machines[0],bb:45,rb:40,diff:3000};
+  f.db.prepare('UPDATE machine_day_data SET payload_json=? WHERE store_id=? AND business_date=? AND machine_key=?').run(JSON.stringify(corrected),'s1','2026-09-11','0');
+  let seen;
+  await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async input=>{seen=input.days.at(-1).machines[0];return{date:input.targetDate,rows:judgedRows()}}});
+  assert.deepEqual(seen,corrected);
+ }finally{f.db.close()}
+});
+test('formal generation crossing JST midnight freezes the next future target with its completion time',async()=>{
+ const f=setup(),RealDate=globalThis.Date;let clock=RealDate.parse('2026-09-12T14:59:59Z');
+ class FakeDate extends RealDate{constructor(...args){super(...(args.length?args:[clock]))}static now(){return clock}}
+ try{
+  saveOperationalTarget(f.db);globalThis.Date=FakeDate;
+  const result=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',operational:true,judgementRunner:async()=>{clock=RealDate.parse('2026-09-12T15:00:01Z');return{date:'2026-09-11',rows:judgedRows()}}});
+  assert.equal(result.nextTargetDate,'2026-09-14');
+  const saved=f.db.prepare("SELECT created_at FROM pre_v2_formal_predictions WHERE target_date='2026-09-14' LIMIT 1").get();assert.equal(saved.created_at,'2026-09-12T15:00:01.000Z');
+ }finally{globalThis.Date=RealDate;f.db.close()}
+});
+test('a running legacy trial with already-scored late predictions is held without altering its evidence',async()=>{
+ const f=setup();try{
+  f.db.exec("UPDATE pre_v2_formal_predictions SET created_at='2026-09-11T01:00:00Z'");
+  await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-11T12:00:00Z',judgementRunner:async input=>({date:input.targetDate,rows:judgedRows()})});
+  const original=f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all();
+  const result=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(12),throughDate:'2026-09-12',nowIso:'2026-09-13T02:00:00Z',operational:true,judgementRunner:async()=>{throw new Error('must hold')}});
+  assert.equal(result.reason,'historical_prediction');assert.deepEqual(f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all(),original);
+  assert.equal(f.db.prepare("SELECT state FROM prediction_evaluation_state WHERE series<>'live'").get().state,'historical');
+ }finally{f.db.close()}
+});
+test('an interrupted formal state publication resumes from committed evidence without scoring twice',async()=>{
+ const f=setup();try{
+  saveOperationalTarget(f.db);
+  f.db.exec("CREATE TRIGGER fixture_complete_failure BEFORE UPDATE ON prediction_evaluation_state WHEN NEW.series<>'live' AND NEW.state='complete' BEGIN SELECT RAISE(ABORT,'fixture_complete_failed'); END");
+  const args={storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>({date:'2026-09-11',rows:judgedRows()})};
+  await assert.rejects(advanceFormalLiveTrialDay(f.db,args),/fixture_complete_failed/);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,1);
+  f.db.exec('DROP TRIGGER fixture_complete_failure');
+  await advanceFormalLiveTrialDay(f.db,args);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,1);
+  assert.equal(f.db.prepare("SELECT state FROM prediction_evaluation_state WHERE series<>'live'").get().state,'complete');
+ }finally{f.db.close()}
+});
 
 test('formal daily loop scores the frozen target and freezes the next unseen day with frozen models',async()=>{
   const f=setup();

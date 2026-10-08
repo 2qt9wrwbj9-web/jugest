@@ -203,7 +203,7 @@ export async function collectPiaPublicOnce(db,{rawRoot,fetchImpl=fetch,nowIso=ne
     parserBuild:PIA_PARSER_BUILD,revision:1,day:derived.day,rawText:snapshot.rawText,nowIso,
     sourceMetadata:{visibility:'public',publicStoreId:35,endpoint:PIA_ENDPOINT,snapshotDate:snapshot.snapshotDate,historyWindowDays:30}
   });
-  if(!ingest.accepted||!ingest.integrity.eligibleForAnalysis){
+  if(!ingest.accepted||!ingest.integrity.eligibleForEvaluation){
     writeState(db,{collector_id:PIA_COLLECTOR_ID,last_attempt_at:nowIso,last_result:'not_ready',last_error:`検品待ち: ${ingest.integrity.issues.join(' / ')}`,updated_at:nowIso});
     return {status:'not_ready',snapshotDate:snapshot.snapshotDate,integrity:ingest.integrity};
   }

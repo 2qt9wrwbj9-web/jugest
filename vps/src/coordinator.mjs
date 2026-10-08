@@ -5,6 +5,7 @@ import {claimNextJob,completeJob,deferJob,failJob,getJob,heartbeatJob,markJobRun
 import {spawnJobChild} from './child-runner.mjs';
 import {persistTaskMetric} from './analysis/task-metrics.mjs';
 import {bootstrapHistoricalComparisonRuns} from './analysis/historical-refresh-state.mjs';
+import {bootstrapPredictionEvaluations} from './analysis/prediction-refresh-state.mjs';
 
 const SYNTHETIC_WORKER=new URL('./jobs/synthetic.mjs',import.meta.url);
 const DAILY_ANALYSIS_WORKER=new URL('./jobs/daily-analysis.mjs',import.meta.url);
@@ -270,6 +271,10 @@ export class Coordinator{
 
   async _tick(){
     const at=iso(this.clock);
+    if(!this._predictionsBootstrapped&&(!this._predictionBootstrapAt||Date.parse(at)-this._predictionBootstrapAt>=60000)){
+      const bootstrap=bootstrapPredictionEvaluations(this.db,{nowIso:at});
+      this._predictionsBootstrapped=!bootstrap.hasMore;this._predictionBootstrapAt=Date.parse(at);
+    }
     this._bootstrapHistorical(at);
     const nowMs=Date.parse(at);
     const snapshot=await this.memoryReader();

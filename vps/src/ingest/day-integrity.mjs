@@ -25,17 +25,23 @@ export function numericValue(value){
 export function machineIdentity(row){
   return {key:String(row?.tableNo??row?.table_no??'').trim(),name:String(row?.sourceMachineName??row?.machineName??row?.machine??'').trim()};
 }
+export function integrityFingerprint(check){
+  if(!check)return null;
+  const {checkedAt,normalizedHash,...evidence}=check;return hashCanonical(evidence);
+}
 function parse(text){try{return JSON.parse(text)}catch{return null}}
 function keysForRows(rows){return rows.map(machineIdentity).map(x=>x.key).filter(Boolean).sort()}
 function recentInventory(db,storeId,date,allowExistingDay){
   const dates=db.prepare("SELECT business_date FROM store_days WHERE store_id=? AND business_date<=? AND quality_status='valid' ORDER BY business_date DESC LIMIT 7").all(storeId,date);
   const machineStmt=db.prepare('SELECT payload_json FROM machine_day_data WHERE store_id=? AND business_date=? ORDER BY machine_key');
   const sets=dates.filter(d=>allowExistingDay||d.business_date!==date).map(d=>({date:d.business_date,keys:keysForRows(machineStmt.all(storeId,d.business_date).map(row=>parse(row.payload_json)).filter(Boolean))}));
-  const same=sets.find(row=>row.date===date);if(same?.keys.length)return {keys:same.keys,basis:'previous_same_day'};
-  if(sets.length<3)return null;
-  const counts=new Map();for(const row of sets){const key=canonicalJson(row.keys),entry=counts.get(key)??{keys:row.keys,n:0};entry.n++;counts.set(key,entry)}
+  const same=sets.find(row=>row.date===date),prior=same?readDayIntegrity(db,{storeId,date}):null;
+  if(same?.keys.length&&prior?.expectedCount!==null&&prior?.expectedKeys?.length&&prior.inventoryBasis!=='unknown')return {keys:prior.expectedKeys,basis:'previous_same_day'};
+  const history=sets.filter(row=>row.date!==date);
+  if(history.length<3)return null;
+  const counts=new Map();for(const row of history){const key=canonicalJson(row.keys),entry=counts.get(key)??{keys:row.keys,n:0};entry.n++;counts.set(key,entry)}
   const stable=[...counts.values()].sort((a,b)=>b.n-a.n)[0];
-  return stable.n>=3&&stable.n/sets.length>=.75?{keys:stable.keys,basis:'stable_recent_inventory'}:null;
+  return stable.n>=3&&stable.n/history.length>=.75?{keys:stable.keys,basis:'stable_recent_inventory'}:null;
 }
 
 export function inspectDay(db,{storeId,date,day,nowIso=new Date().toISOString(),expectedMachineKeys=null,allowExistingDayInventory=true}={}){
@@ -75,7 +81,9 @@ export function inspectDay(db,{storeId,date,day,nowIso=new Date().toISOString(),
   const eligibleForAnalysis=!invalid&&!missingInventory&&!provisional&&!unpublished;
   const eligibleForEvaluation=eligibleForAnalysis&&missingFields.diff===0&&expectedCount!==null;
   const status=unpublished?'unpublished':invalid?'invalid':provisional?'provisional':missingInventory||missingFields.diff?'partial':expectedCount===null?'unverified':'complete';
-  return Object.freeze({version:'day-integrity-v1',status,inventoryBasis,expectedCount,actualCount:actualKeys.length,
+  const sourceDiagnostics={};for(const key of ['candidateRows','parsedRows','duplicateRows','conflictRows','invalidRows'])if(Number.isSafeInteger(quality[key])&&quality[key]>=0)sourceDiagnostics[key]=quality[key];
+  if(sourceDiagnostics.duplicateRows||sourceDiagnostics.conflictRows||sourceDiagnostics.invalidRows)issues.push('取得元の重複・不正行は別途記録（正規化後の台数とは別）');
+  return Object.freeze({version:'day-integrity-v1',status,inventoryBasis,expectedCount,actualCount:actualKeys.length,sourceDiagnostics,
     expectedKeys:expected,actualKeys,missingKeys,duplicateKeys,missingFields,badCounters,publicationStatus:provisional?'in_progress':unpublished?'unpublished':'final',
     eligibleForAnalysis,eligibleForEvaluation,issues,checkedAt:nowIso,inventoryHash:hashCanonical(actualKeys)});
 }

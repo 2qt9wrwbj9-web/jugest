@@ -1,5 +1,5 @@
 import {scoreLiveComparisonDay} from '../research/live-comparison.mjs';
-import {loadEvaluationDay,saveEvaluationState,readEvaluationState} from '../research/evaluation-state.mjs';
+import {loadEvaluationDay,saveEvaluationState,readEvaluationState,evaluationInputVersion} from '../research/evaluation-state.mjs';
 import {listLivePredictions} from '../research/live-comparison.mjs';
 import {describePredictionOutcome} from '../research/prediction-performance.mjs';
 
@@ -13,7 +13,8 @@ export function scoreAvailableComparisonDays(db,{storeId,throughDate,nowIso=new 
   let scored=0,excluded=0;const rows=[];
   for(const target of targets){
     const targetDate=target.target_date,previous=readEvaluationState(db,{storeId,targetDate});
-    if(previous&&['complete','corrected','historical'].includes(previous.state)&&previous.normalizedHash===target.normalized_payload_hash&&previous.details.lastPredictionId===target.max_id){
+    const inputVersion=evaluationInputVersion(db,{storeId,targetDate});
+    if(previous&&['complete','corrected','historical'].includes(previous.state)&&previous.details.inputVersion===inputVersion&&previous.details.lastPredictionId===target.max_id){
       const paired=previous.state==='complete'&&!previous.details.comparisonReason;
       if(paired)scored++;else excluded++;
       rows.push({targetDate,status:paired?'scored':'excluded',reason:previous.reason||previous.details.comparisonReason,cached:true});continue;
@@ -29,7 +30,7 @@ export function scoreAvailableComparisonDays(db,{storeId,throughDate,nowIso=new 
     const performance={};
     if(state==='complete')for(const p of listLivePredictions(db,{storeId,targetDate}))if(comparison.scores[p.engine]?.predictionId===p.id)performance[p.engine]=describePredictionOutcome(p.rankings,outcome.machines);
     saveEvaluationState(db,{storeId,targetDate,state,reason:hasScore?null:reason,normalizedHash:outcome.day.normalized_payload_hash,outcomeHash:outcome.outcomeInputHash,
-      details:{lastPredictionId:target.max_id,comparisonReason:reason,winner:comparison.winner,performance},nowIso});
+      details:{lastPredictionId:target.max_id,inputVersion:outcome.inputVersion,comparisonReason:reason,winner:comparison.winner,performance},nowIso});
     if(reason){excluded++;rows.push({targetDate,status:'excluded',reason})}
     else{scored++;rows.push({targetDate,status:'scored',winner:comparison.winner,outcomeInputHash:outcome.outcomeInputHash})}
   }

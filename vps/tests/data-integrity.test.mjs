@@ -14,7 +14,7 @@ const machine=(no,diff=0)=>({tableNo:String(no),machine:'my',sourceMachineName:'
 async function fixture(t){
   const dir=await mkdtemp(join(tmpdir(),'jugest-integrity-')),db=openDatabase(join(dir,'db.sqlite'));migrate(db);
   t.after(async()=>{db.close();await rm(dir,{recursive:true,force:true})});
-  const ingest=(machines,extra={})=>ingestCollectorDay(db,{rawRoot:join(dir,'raw'),source:'fixture',sourceStoreId:'s1',shop:'検品店',date:'2026-10-08',nowIso:AT,rawText:JSON.stringify(machines),day:{date:'2026-10-08',machines,...extra}});
+  const ingest=(machines,extra={},inputExtra={})=>ingestCollectorDay(db,{rawRoot:join(dir,'raw'),source:'fixture',sourceStoreId:'s1',shop:'検品店',date:'2026-10-08',nowIso:AT,rawText:JSON.stringify(machines),day:{date:'2026-10-08',machines,...extra},...inputExtra});
   return{db,dir,ingest};
 }
 
@@ -42,6 +42,22 @@ test('partial resend cannot replace the saved complete day',async t=>{
   assert.equal(bad.accepted,false);assert.equal(bad.integrity.status,'partial');
   assert.equal(f.db.prepare('SELECT normalized_payload_hash FROM store_days').get().normalized_payload_hash,good.normalizedHash);
   assert.equal(f.db.prepare('SELECT count(*) n FROM machine_day_data').get().n,2);
+});
+for(const legacy of [false,true])test(`resend cannot erase observed fields in ${legacy?'migrated':'unverified'} canonical data`,async t=>{
+  const f=await fixture(t);await f.ingest([machine(1,100),machine(2,200)]);
+  if(legacy)f.db.exec('DELETE FROM store_day_integrity');
+  const before=f.db.prepare('SELECT payload_json FROM machine_day_data ORDER BY machine_key').all();
+  const bad=await f.ingest([machine(1,null),machine(2,null)]);
+  assert.equal(bad.accepted,false);assert.deepEqual(f.db.prepare('SELECT payload_json FROM machine_day_data ORDER BY machine_key').all(),before);
+});
+test('verified inventory arriving with identical data schedules the held evaluation again',async t=>{
+  const f=await fixture(t);await f.ingest([machine(1,100),machine(2,200)]);
+  const prior=f.db.prepare('SELECT * FROM prediction_refresh_state').get();
+  f.db.prepare('UPDATE prediction_refresh_state SET completed_generation=generation,active_job_id=NULL').run();
+  f.db.prepare("UPDATE jobs SET state='succeeded'").run();
+  const out=await f.ingest([machine(1,100),machine(2,200)],{},{expectedMachineKeys:['1','2']});
+  assert.equal(out.changed,false);assert.equal(out.verificationChanged,true);assert.equal(out.integrity.status,'complete');
+  const after=f.db.prepare('SELECT * FROM prediction_refresh_state').get();assert.equal(after.generation,prior.generation+1);assert.ok(after.active_job_id);
 });
 test('confirmed corrected data replaces canonical rows once without duplicate aggregation',async t=>{
   const f=await fixture(t),quality={expectedMachineKeys:['1','2']};

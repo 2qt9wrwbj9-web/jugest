@@ -8,7 +8,7 @@ import {completeShadowPrediction,getShadowRefreshState,SHADOW_ENGINE_VERSION} fr
 import {persistLivePrediction} from '../research/live-comparison.mjs';
 import {deriveStoreMachineCount} from '../analysis/task-metrics.mjs';
 import {hashCanonical} from '../canonical-json.mjs';
-import {operationalTargetDate,isProspectivePrediction} from '../research/prediction-policy.mjs';
+import {operationalTargetDate,isProspectivePrediction,predictionHistoryHash} from '../research/prediction-policy.mjs';
 import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
 
 function decodeDescriptor(raw){
@@ -62,10 +62,10 @@ async function main(){
       prediction=persistLivePrediction(db,{
         storeId,targetDate,engine:'current_shadow',engineVersion,modelFingerprint:'',featureVersion:null,
         sourceFrontierDate:actualFrontier,
-        inputHash:hashCanonical({storeId,targetFrontierDate:actualFrontier,engineVersion,days}),
+        inputHash:predictionHistoryHash({storeId,frontierDate:actualFrontier,version:engineVersion,days}),
         rankings:result.rankings,createdAt:nowIso
       });
-      status='predicted';
+      status=prediction.conflict?'prediction_conflict':'predicted';
     }
     requestPredictionEvaluation(db,{storeId,nowIso});
     const completion=completeShadowPrediction(db,{storeId,jobId:descriptor.id,completedFrontierDate:actualFrontier,nowIso});

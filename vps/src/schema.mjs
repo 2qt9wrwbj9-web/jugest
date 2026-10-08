@@ -392,6 +392,9 @@ export function migrate(db){
   migrateDayIntegrity(db);
   migrateEvaluationState(db);
   migratePredictionRefresh(db);
+  db.exec(`CREATE TABLE IF NOT EXISTS store_operation_retries(
+    store_id TEXT NOT NULL,kind TEXT NOT NULL,requested_at TEXT NOT NULL,job_id INTEGER,
+    PRIMARY KEY(store_id,kind),FOREIGN KEY(store_id) REFERENCES stores(id));`);
   const jobColumns=db.prepare('PRAGMA table_info(jobs)').all().map(row=>row.name);
   if(!jobColumns.includes('failure_count'))db.exec('ALTER TABLE jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0;');
   const featureColumns=db.prepare('PRAGMA table_info(feature_refresh_state)').all().map(row=>row.name);

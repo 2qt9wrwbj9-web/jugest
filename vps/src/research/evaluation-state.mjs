@@ -1,5 +1,11 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
-import {inspectDay,readDayIntegrity,saveDayIntegrity} from '../ingest/day-integrity.mjs';
+import {inspectDay,readDayIntegrity,saveDayIntegrity,integrityFingerprint} from '../ingest/day-integrity.mjs';
+export function evaluationInputVersion(db,{storeId,targetDate,day=null,check=null}={}){
+  day??=db.prepare('SELECT normalized_payload_hash,source_hash,quality_status FROM store_days WHERE store_id=? AND business_date=?').get(storeId,targetDate);
+  if(!day)return null;
+  check??=readDayIntegrity(db,{storeId,date:targetDate});
+  return hashCanonical({normalizedHash:day.normalized_payload_hash,sourceHash:day.source_hash,qualityStatus:day.quality_status,integrity:integrityFingerprint(check)});
+}
 export function migrateEvaluationState(db){
   db.exec(`CREATE TABLE IF NOT EXISTS prediction_evaluation_state(
     store_id TEXT NOT NULL,target_date TEXT NOT NULL,series TEXT NOT NULL,
@@ -31,5 +37,5 @@ export function loadEvaluationDay(db,{storeId,targetDate,nowIso=new Date().toISO
   const outcomeRows=machines.map(row=>({machineKey:String(row.tableNo??row.table_no).trim(),outcomeScore:Number(row.diff),machineName:String(row.sourceMachineName??row.machineName??row.machine).trim()}));
   // Keep the existing score hash input exactly; identity is an additional gate.
   const outcomeInputHash=hashCanonical({storeId,targetDate,normalizedPayloadHash:String(day.normalized_payload_hash??''),sourceHash:String(day.source_hash??''),outcomeRows:outcomeRows.map(({machineKey,outcomeScore})=>({machineKey,outcomeScore}))});
-  return{state:'ready',reason:null,day,check,machines,outcomeRows,outcomeInputHash};
+  return{state:'ready',reason:null,day,check,machines,outcomeRows,outcomeInputHash,inputVersion:evaluationInputVersion(db,{storeId,targetDate,day,check})};
 }

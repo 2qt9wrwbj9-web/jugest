@@ -1,7 +1,8 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
-import {readEvaluationState} from './evaluation-state.mjs';
+import {readEvaluationState,evaluationInputVersion} from './evaluation-state.mjs';
 import {isProspectivePrediction,sameCandidateSet} from './prediction-policy.mjs';
 import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
+import {withSavepoint} from '../sqlite-savepoint.mjs';
 
 export const SCORER_VERSION='pre-shadow-scorer-v2';
 export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v2';
@@ -57,12 +58,14 @@ export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersio
   const version=requiredText(engineVersion,'engineVersion'),fingerprint=String(modelFingerprint??'').trim(),frontier=validDate(sourceFrontierDate,'sourceFrontierDate'),input=requiredText(inputHash,'inputHash'),at=validIso(createdAt);
   if(frontier>=target)throw new TypeError('sourceFrontierDate must be before targetDate');
   const normalized=normalizeRankings(rankings),payload=Object.freeze({rankings:normalized}),payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
+  return withSavepoint(db,'live_prediction_save',()=>{
   const result=db.prepare(`INSERT INTO store_prediction_snapshots(store_id,target_date,engine,engine_version,model_fingerprint,feature_version,source_frontier_date,input_hash,payload_json,payload_hash,created_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(store_id,target_date,engine,engine_version,model_fingerprint) DO NOTHING`)
     .run(id,target,kind,version,fingerprint,featureVersion==null?null:String(featureVersion),frontier,input,payloadJson,payloadHash,at);
   const row=db.prepare(`SELECT * FROM store_prediction_snapshots WHERE store_id=? AND target_date=? AND engine=? AND engine_version=? AND model_fingerprint=?`).get(id,target,kind,version,fingerprint);
   requestPredictionEvaluation(db,{storeId:id,nowIso:at,dirty:Number(result.changes||0)>0});
   return Object.freeze({inserted:Number(result.changes||0)>0,conflict:row.payload_hash!==payloadHash||row.input_hash!==input||row.source_frontier_date!==frontier,row:rowFromDb(row)});
+  });
 }
 
 export function listLivePredictions(db,{storeId,targetDate=null,engine=null}={}){
@@ -192,8 +195,7 @@ function comparisonRows(db,storeId,limit){
     const evaluation=readEvaluationState(db,{storeId,targetDate});
     if(evaluation&&evaluation.state!=='complete')excludedReason=evaluation.reason||evaluation.state;
     if(evaluation?.state==='complete'){
-      const day=db.prepare('SELECT normalized_payload_hash FROM store_days WHERE store_id=? AND business_date=?').get(storeId,targetDate);
-      if(day?.normalized_payload_hash!==evaluation.normalizedHash)excludedReason='outcome_hash_conflict';
+      if(evaluation.details.inputVersion!==evaluationInputVersion(db,{storeId,targetDate}))excludedReason='outcome_hash_conflict';
     }
     const winner=excludedReason?null:winnerFromScores(scores.pre_research,scores.current_shadow);
     return Object.freeze({targetDate,winner,excludedReason,scores:Object.freeze(scores),predictions:Object.freeze({

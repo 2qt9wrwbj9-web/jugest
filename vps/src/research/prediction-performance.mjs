@@ -1,4 +1,5 @@
 import {isProspectivePrediction,businessDateAt} from './prediction-policy.mjs';
+import {evaluationInputVersion} from './evaluation-state.mjs';
 const ENGINES=['current_shadow','pre_research'],TOP=[1,3,5,10];
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const stratum=row=>`${row.sourceMachineName??row.machineName??row.machine}|${row.games<2000?'low':row.games<5000?'medium':'high'}`;
@@ -42,10 +43,11 @@ export function buildPredictionPerformance(db,{storeId,nowIso=new Date().toISOSt
   }
   const saved=db.prepare(`SELECT e.*,d.normalized_payload_hash current_hash FROM prediction_evaluation_state e LEFT JOIN store_days d ON d.store_id=e.store_id AND d.business_date=e.target_date WHERE e.store_id=? AND series='live'`).all(storeId);
   const states=new Map(saved.map(r=>[r.target_date,{...r,details:JSON.parse(r.details_json)}]));
-  const rows=[...dates.values()].map(row=>{
+  for(const day of db.prepare('SELECT business_date FROM store_days WHERE store_id=? ORDER BY business_date DESC').all(storeId))if(!dates.has(day.business_date))dates.set(day.business_date,{targetDate:day.business_date,predictions:{}});
+  const rows=[...dates.values()].sort((a,b)=>b.targetDate.localeCompare(a.targetDate)).map(row=>{
     const e=states.get(row.targetDate),historical=Object.values(row.predictions).some(p=>!p.prospective);
-    const changed=e?.state==='complete'&&e.normalized_hash!==e.current_hash;
-    const state=changed?'corrected':historical?'historical':e?.state??(row.targetDate>=today?'waiting_result':'not_evaluated');
+    const changed=e?.state==='complete'&&e.details.inputVersion!==evaluationInputVersion(db,{storeId,targetDate:row.targetDate});
+    const state=!Object.keys(row.predictions).length?'not_predicted':changed?'corrected':historical?'historical':e?.state??(row.targetDate>=today?'waiting_result':'not_evaluated');
     const performance=state==='complete'?e.details.performance??{}:{};
     return{...row,state,reason:changed?'outcome_hash_conflict':historical?'historical_prediction':e?.reason??null,
       comparisonReason:e?.details.comparisonReason??null,winner:state==='complete'?e?.details.winner??null:null,performance};
@@ -53,9 +55,9 @@ export function buildPredictionPerformance(db,{storeId,nowIso=new Date().toISOSt
   const closed=rows.filter(row=>row.targetDate<today),periods={};
   for(const [name,n] of [['7',7],['30',30],['90',90],['all',Infinity]]){
     const period=closed.slice(0,n),evaluated=period.filter(row=>Object.keys(row.performance).length),paired=evaluated.filter(row=>row.performance.current_shadow&&row.performance.pre_research);
-    periods[name]={businessDays:period.length,predictedDays:period.filter(r=>Object.values(r.predictions).some(p=>p.prospective)).length,
+    periods[name]={businessDays:period.length,fromDate:period.at(-1)?.targetDate??null,throughDate:period[0]?.targetDate??null,predictedDays:period.filter(r=>Object.values(r.predictions).some(p=>p.prospective)).length,
       evaluatedDays:evaluated.length,evaluatedMachines:evaluated.reduce((n,row)=>n+Math.max(...Object.values(row.performance).map(v=>v.candidateCount)),0),
-      unavailableDays:period.length-evaluated.length,missingRate:period.length?(period.length-evaluated.length)/period.length:null,
+      unavailableDays:period.length-evaluated.length,unavailableRate:period.length?(period.length-evaluated.length)/period.length:null,
       engines:Object.fromEntries(ENGINES.map(engine=>[engine,aggregate(evaluated,engine)])),
       paired:{days:paired.length,newWins:paired.filter(r=>r.winner==='pre_research').length,currentWins:paired.filter(r=>r.winner==='current_shadow').length,ties:paired.filter(r=>r.winner==='tie').length}};
   }

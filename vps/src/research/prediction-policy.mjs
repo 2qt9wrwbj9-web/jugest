@@ -1,4 +1,12 @@
+import {hashCanonical} from '../canonical-json.mjs';
 export const PREDICTION_POLICY_VERSION='prospective-jst-v1';
+export function createRunClock(nowIso=new Date().toISOString()){
+  const anchor=Date.parse(nowIso),started=Date.now();if(!Number.isFinite(anchor))throw new TypeError('nowIso must be an ISO time');
+  return()=>new Date(anchor+Math.max(0,Date.now()-started)).toISOString();
+}
+export function predictionHistoryHash({storeId,frontierDate,version,days}){
+  return hashCanonical({storeId,frontierDate,version,days:days.map(day=>({date:day.date,parserBuild:day.parserBuild??'',sourceHash:day.sourceHash??'',normalizedHash:day.normalizedHash??'',machines:day.machines}))});
+}
 export function businessDateAt(nowIso=new Date().toISOString()){
   const ms=Date.parse(nowIso);if(!Number.isFinite(ms))throw new TypeError('nowIso must be an ISO time');
   return new Date(ms+9*3600000).toISOString().slice(0,10);

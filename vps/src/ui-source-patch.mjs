@@ -14,6 +14,33 @@ const RELEASE_VERSION_MODULE_TAG='<script type="module" src="./vps-release-versi
 const REMOTE_STORES_MODULE_TAG='<script type="module" src="./vps-ui-remote-stores.mjs"></script>';
 const PIA_ACCESS_MODULE_TAG='<script type="module" src="./vps-ui-pia-access.mjs"></script>';
 const PACHINKO_UI_MODULE_TAG='<script type="module" src="./vps-ui-pachinko.mjs"></script>';
+function patchStorageProtection(source){
+  if(source.includes('function vpsAssertStoredStateReadable()'))return source;
+  const anchor='function restoreSavedState(){';
+  if(!source.includes(anchor)){if(source.includes('function autoSaveState(){'))throw new Error('JUGEST storage restore anchor not found');return source}
+  const helper=`let vpsStorageReadError="",vpsExternalReadError="";
+function vpsAssertStoredStateReadable(){
+ if(vpsStorageReadError)throw new Error(vpsStorageReadError);
+ try{
+  for(const key of [STORAGE_KEY,"hanaJudgeStateV3","jugglerDeviceSync:v1"]){
+   let raw=localStorage.getItem(key);if(raw===null)continue;
+   let value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("保存形式が不正");
+   if(key===STORAGE_KEY)for(const field of ["shops","sessions","tags","modelForecasts","v4LayoutOverrides","v4MoveHistory","cmpData"])if(field in value&&!Array.isArray(value[field]))throw new Error("保存済み一覧が不正");
+  }
+ }catch(e){vpsStorageReadError="端末の保存データを読み出せなかったよ。自動保存と同期を止めたので、バックアップから復元して再読み込みしてね";throw new Error(vpsStorageReadError)}
+}
+`;
+  source=source.replace(anchor,`${helper}${anchor}\n try{vpsAssertStoredStateReadable()}catch(e){return false}`);
+  const changes=[
+    ['function autoSaveState(){','function autoSaveState(){\n try{vpsAssertStoredStateReadable()}catch(e){return false}'],
+    ['async function v510RunDeviceSync(onProgress){','async function v510RunDeviceSync(onProgress){\n vpsAssertStoredStateReadable();if(vpsExternalReadError)throw new Error(vpsExternalReadError);'],
+    ['function v510HanaWriteState(){','function v510HanaWriteState(){\n try{vpsAssertStoredStateReadable()}catch(e){return false}'],
+    ['  let saved=await externalDbGet();','  let saved=await externalDbGet();\n  if(saved!==null&&!Array.isArray(saved))throw new Error("保存済み店舗データの形式が不正");'],
+    [' }catch(e){console.error("external storage init",e)}',' }catch(e){vpsExternalReadError="店舗データを読み出せなかったよ。同期を止めたので、バックアップを確認してね";console.error("external storage init",e)}']
+  ];
+  for(const [from,to] of changes){if(!source.includes(from))throw new Error(`JUGEST storage safety anchor not found: ${from}`);source=source.replace(from,to)}
+  return source;
+}
 const REMOTE_STORE_HELPER=`function vpsRemoteStoreCache(){return globalThis.JUGEST_VPS_REMOTE_STORES||null}
 function vpsHasLocalStoreData(name){return v510StoreDates(name,1).length>0}
 function vpsMergedStoreRows(){
@@ -61,6 +88,7 @@ const STORE_RESET_HELPER=`async function vpsResetStoreAcquiredData(name){
 
 export function patchJugestIndexSource(input){
   let source=String(input??'');
+  source=patchStorageProtection(source);
   if(!source.includes('async function vpsResetStoreAcquiredData(name)')){
     if(!source.includes(BRIDGE_START))throw new Error('JUGEST bridge anchor (start) not found');
     source=source.replace(BRIDGE_START,`${STORE_RESET_HELPER}\n\n${BRIDGE_START}`);

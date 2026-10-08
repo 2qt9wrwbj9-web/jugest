@@ -7,7 +7,7 @@ import {scoreAvailableComparisonDays} from '../src/analysis/comparison-refresh.m
 import {inspectDay,saveDayIntegrity} from '../src/ingest/day-integrity.mjs';
 import {operationalTargetDate,isProspectivePrediction} from '../src/research/prediction-policy.mjs';
 import {buildPredictionPerformance} from '../src/research/prediction-performance.mjs';
-import {buildStoreReadPayload} from '../src/research/store-read-output.mjs';
+import {buildStoreReadPayload,persistStoreReadSnapshot} from '../src/research/store-read-output.mjs';
 const NOW='2026-10-09T02:00:00.000Z';
 const rows=[1,2,3].map((i)=>({tableNo:String(i),machine:'my',sourceMachineName:'マイジャグラーV',games:6000,bb:30,rb:20,diff:[1000,0,-1000][i-1]}));
 function setup(){const db=openDatabase(':memory:');migrate(db);for(const id of ['a','b'])db.prepare('INSERT INTO stores VALUES(?,?,?,?,?)').run(id,id,'{}',NOW,NOW);return db}
@@ -35,6 +35,29 @@ test('duplicate snapshot is immutable and differing resend reports a conflict',(
  const changed=persistLivePrediction(db,prediction('current_shadow',{inputHash:'changed',rankings:[{...prediction().rankings[0],score:999}]}));
  assert.equal(repeated.conflict,false);assert.equal(changed.conflict,true);assert.equal(changed.row.payloadHash,first.row.payloadHash);
  assert.throws(()=>persistLivePrediction(db,prediction('pre_research',{rankings:[prediction().rankings[0],prediction().rankings[0]]})),/duplicate/);
+ }finally{db.close()}
+});
+test('a corrected history cannot rewrite the forecast displayed for an already frozen target',()=>{
+ const db=setup();try{
+  const args={storeId:'a',modelFingerprint:'fp',model:{version:'store-read-model-v1',axes:[]},featureVersion:'v1',frontierDate:'2026-10-07',days:[{date:'2026-10-07',machines:rows}],nowIso:'2026-10-08T02:00:00Z'};
+  persistStoreReadSnapshot(db,args);const before=db.prepare('SELECT * FROM client_snapshots').get();
+  assert.throws(()=>persistStoreReadSnapshot(db,{...args,days:[{date:'2026-10-07',machines:rows.map(r=>({...r,diff:r.diff+100}))}]}),/prediction_snapshot_conflict/);
+  assert.deepEqual(db.prepare('SELECT * FROM client_snapshots').get(),before);
+ }finally{db.close()}
+});
+test('observation/check timestamps do not turn the same history resend into a conflicting forecast',()=>{
+ const db=setup();try{
+  const args={storeId:'a',modelFingerprint:'fp',model:{version:'store-read-model-v1',axes:[]},featureVersion:'v1',frontierDate:'2026-10-07',days:[{date:'2026-10-07',machines:rows,updatedAt:'2026-10-07T00:00:00Z',integrity:{checkedAt:'2026-10-07T00:00:00Z'}}],nowIso:'2026-10-08T02:00:00Z'};
+  persistStoreReadSnapshot(db,args);const before=listLivePredictions(db,{storeId:'a'})[0];
+  persistStoreReadSnapshot(db,{...args,days:args.days.map(d=>({...d,updatedAt:'2026-10-08T01:00:00Z',integrity:{checkedAt:'2026-10-08T01:00:00Z'}}))});
+  assert.equal(listLivePredictions(db,{storeId:'a'})[0].inputHash,before.inputHash);
+ }finally{db.close()}
+});
+test('prediction and evaluation registration roll back together when registration fails',()=>{
+ const db=setup();try{
+  db.exec("CREATE TRIGGER fixture_eval_failure BEFORE INSERT ON prediction_refresh_state BEGIN SELECT RAISE(ABORT,'fixture_register_failed'); END");
+  assert.throws(()=>persistLivePrediction(db,prediction()),/fixture_register_failed/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM store_prediction_snapshots').get().n,0);
  }finally{db.close()}
 });
 test('partial outcome is held without promoting a lower ranked available machine',()=>{
@@ -72,5 +95,23 @@ test('corrected data retains original evaluation but excludes it from current pe
  scoreAvailableComparisonDays(db,{storeId:'a',throughDate:'2026-10-08',nowIso:NOW});assert.deepEqual(db.prepare('SELECT * FROM store_prediction_scores').all(),first);
  assert.equal(buildPredictionPerformance(db,{storeId:'a',nowIso:NOW}).periods.all.evaluatedDays,0);assert.equal(buildComparisonSummary(db,{storeId:'a'}).live.days,0);
  assert.equal(listLivePredictions(db,{storeId:'a'}).length,2);
+ }finally{db.close()}
+});
+test('a changed raw source invalidates cached results while preserving original scores',()=>{
+ const db=setup();try{
+  persistLivePrediction(db,prediction());persistLivePrediction(db,prediction('pre_research'));day(db);scoreAvailableComparisonDays(db,{storeId:'a',throughDate:'2026-10-08',nowIso:NOW});
+  const original=db.prepare('SELECT * FROM store_prediction_scores').all();db.exec("UPDATE store_days SET source_hash='corrected-source'");
+  assert.equal(buildPredictionPerformance(db,{storeId:'a',nowIso:NOW}).periods.all.evaluatedDays,0);
+  assert.equal(buildComparisonSummary(db,{storeId:'a'}).live.days,0);
+  scoreAvailableComparisonDays(db,{storeId:'a',throughDate:'2026-10-08',nowIso:NOW});assert.deepEqual(db.prepare('SELECT * FROM store_prediction_scores').all(),original);
+  assert.equal(buildPredictionPerformance(db,{storeId:'a',nowIso:NOW}).rows[0].state,'corrected');
+ }finally{db.close()}
+});
+test('business-day windows include observed days without predictions and disclose their actual dates',()=>{
+ const db=setup();try{
+  persistLivePrediction(db,prediction());day(db);scoreAvailableComparisonDays(db,{storeId:'a',throughDate:'2026-10-08',nowIso:NOW});
+  for(const date of ['2026-10-01','2026-10-02','2026-10-03','2026-10-04','2026-10-05','2026-10-06','2026-10-07'])day(db,{date});
+  const result=buildPredictionPerformance(db,{storeId:'a',nowIso:NOW});assert.equal(result.periods['7'].businessDays,7);assert.equal(result.periods['7'].predictedDays,1);
+  assert.equal(result.periods['7'].fromDate,'2026-10-02');assert.equal(result.periods['7'].throughDate,'2026-10-08');assert.equal(result.periods.all.businessDays,8);
  }finally{db.close()}
 });

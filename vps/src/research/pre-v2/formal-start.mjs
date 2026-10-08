@@ -5,7 +5,7 @@ import {migrateFormalModelStore,persistFormalModelSnapshot} from './formal-model
 import {persistFormalPrediction,loadFormalPrediction} from './formal-prediction-store.mjs';
 import {startFormalTrial} from './trial.mjs';
 import {createTrialRecord,loadTrialRecord,nextTrialNumber} from './trial-store.mjs';
-import {operationalTargetDate} from '../prediction-policy.mjs';
+import {operationalTargetDate,isProspectivePrediction,createRunClock} from '../prediction-policy.mjs';
 
 export const PRE_V2_SCORER_VERSION='pre-v2-score-v1';
 
@@ -92,7 +92,7 @@ export function startFormalLiveTrial(db,{
   const challengerFp=requireText(challengerFingerprint,'challengerFingerprint');
   const version=requireText(featureVersion,'featureVersion');
   const frontier=requireDate(frontierDate,'frontierDate');
-  const at=requireIso(nowIso);
+  let at=requireIso(nowIso);const clock=createRunClock(at);
   const scorer=requireText(scorerVersion,'scorerVersion');
   const eligibleDays=requireDays(days,frontier);
 
@@ -101,6 +101,7 @@ export function startFormalLiveTrial(db,{
   const active=getActiveStoreModel(db,{storeId:store});
   if(!active)throw new Error(`active Champion model missing for store ${store}`);
   if(active.featureVersion!==version)throw new Error(`feature version mismatch: active=${active.featureVersion} requested=${version}`);
+  if(operational&&active.sourceFrontierDate>frontier)throw new Error('future_model_training_frontier');
   if(fingerprintModel(active.model)!==active.fingerprint)throw new Error('active Champion fingerprint does not match stored model');
   const challenger=loadResearchChallenger(db,{storeId:store,fingerprint:challengerFp});
   if(challenger.fingerprint===active.fingerprint)throw new Error('formal Challenger must be distinct from active Champion');
@@ -119,6 +120,7 @@ export function startFormalLiveTrial(db,{
   if(challengerPayload.status!=='ready'||!challengerPayload.rankings.length)throw new Error('research Challenger produced no formal prediction');
   if(championPayload.targetDate!==challengerPayload.targetDate)throw new Error('formal prediction target date mismatch');
   const targetDate=championPayload.targetDate;
+  if(operational){at=clock();if(!isProspectivePrediction({targetDate,sourceFrontierDate:frontier,createdAt:at}))throw new Error('formal prospective prediction deadline passed')}
   const championKeys=championPayload.rankings.map(row=>String(row.machineKey));
   const challengerKeys=challengerPayload.rankings.map(row=>String(row.machineKey));
   if(!sameSet(championKeys,challengerKeys))throw new Error('Champion and Challenger must predict the exact same machine set');

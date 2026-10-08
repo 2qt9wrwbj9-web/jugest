@@ -2,7 +2,7 @@ import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {requestStoreAnalysisRefresh} from '../analysis/refresh-state.mjs';
 import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
 import {archiveRawArtifact} from './raw-archive.mjs';
-import {inspectDay,saveDayIntegrity,saveIngestReceipt,readDayIntegrity} from './day-integrity.mjs';
+import {inspectDay,saveDayIntegrity,saveIngestReceipt,readDayIntegrity,integrityFingerprint,machineIdentity,numericValue} from './day-integrity.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 
@@ -51,7 +51,7 @@ export async function ingestCollectorDay(db,input={}){
     parserBuild,
     latestRevision:revision
   });
-  let changed=false,job=null,check=null,accepted=true;
+  let changed=false,verificationChanged=false,sourceChanged=false,job=null,check=null,accepted=true;
 
   db.exec('BEGIN IMMEDIATE');
   try{
@@ -63,17 +63,27 @@ export async function ingestCollectorDay(db,input={}){
         updated_at=excluded.updated_at`)
       .run(storeId,shop,sourceMetadata,nowIso,nowIso);
 
-    const previous=db.prepare('SELECT normalized_payload_hash,quality_status FROM store_days WHERE store_id=? AND business_date=?').get(storeId,businessDate);
+    const previous=db.prepare('SELECT normalized_payload_hash,source_hash,quality_status FROM store_days WHERE store_id=? AND business_date=?').get(storeId,businessDate);
     check=inspectDay(db,{storeId,date:businessDate,day,nowIso,expectedMachineKeys:input.expectedMachineKeys});
     const previousCheck=previous?readDayIntegrity(db,{storeId,date:businessDate}):null;
     // A failed/partial observation must not replace a known usable publication.
-    accepted=!(previous?.quality_status==='valid'&&(!check.eligibleForAnalysis||(previousCheck?.status==='complete'&&check.status!=='complete')));
+    const oldMachines=previous?db.prepare('SELECT payload_json FROM machine_day_data WHERE store_id=? AND business_date=?').all(storeId,businessDate).map(row=>JSON.parse(row.payload_json)):[];
+    const incoming=new Map(day.machines.map(row=>[machineIdentity(row).key,row]));
+    const lostObservedField=oldMachines.some(row=>{
+      const identity=machineIdentity(row),next=incoming.get(identity.key);
+      return next&&machineIdentity(next).name===identity.name&&['games','bb','rb','diff'].some(field=>numericValue(row[field])!==null&&numericValue(next[field])===null);
+    });
+    const explicitRoster=Array.isArray(input.expectedMachineKeys??day.quality?.expectedMachineKeys??day.expectedMachineKeys);
+    const lostUnconfirmedMachine=!explicitRoster&&oldMachines.some(row=>!incoming.has(machineIdentity(row).key));
+    accepted=!(previous?.quality_status==='valid'&&(!check.eligibleForAnalysis||(previousCheck?.status==='complete'&&check.status!=='complete')||lostObservedField||lostUnconfirmedMachine));
     saveIngestReceipt(db,{storeId,date:businessDate,normalizedHash,source,rawArtifactPath:artifact.path,accepted,check,nowIso});
     if(!accepted){
       db.exec('COMMIT');
       return {accepted:false,changed:false,storeId,businessDate,normalizedHash,rawSha256:artifact.sha256,rawArtifactPath:artifact.path,machineCount:day.machines.length,jobId:null,integrity:check};
     }
     changed=!previous||previous.normalized_payload_hash!==normalizedHash;
+    verificationChanged=integrityFingerprint(previousCheck)!==integrityFingerprint(check);
+    sourceChanged=previous?.source_hash!==artifact.sha256;
     const qualityStatus=check.eligibleForAnalysis?'valid':check.status==='invalid'?'invalid':check.status==='provisional'||check.status==='unpublished'?'pending':'partial';
 
     db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
@@ -100,10 +110,10 @@ export async function ingestCollectorDay(db,input={}){
       storeId,
       analysisVersion:ANALYSIS_VERSION,
       nowIso,
-      dirty:changed
+      dirty:changed||verificationChanged||sourceChanged
     }):{job:null};
     job=refresh.job;
-    requestPredictionEvaluation(db,{storeId,nowIso,dirty:changed});
+    requestPredictionEvaluation(db,{storeId,nowIso,dirty:changed||verificationChanged||sourceChanged});
     db.exec('COMMIT');
   }catch(error){
     try{db.exec('ROLLBACK')}catch{}
@@ -114,6 +124,8 @@ export async function ingestCollectorDay(db,input={}){
     accepted,
     integrity:check,
     changed,
+    verificationChanged,
+    sourceChanged,
     storeId,
     businessDate,
     normalizedHash,
