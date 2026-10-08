@@ -53,7 +53,7 @@ test('fresh FEATURE_BUILD installs baseline as the initial Active Champion and p
     const messages=await spawnAndWait({job:requested.job,dbPath:f.dbPath});
     const done=messages.find(x=>x.type==='complete');
     assert.ok(done?.researchJobId,'fresh store must enter research after feature build');
-    assert.equal(done.storeReadTargetDate,'2026-08-13');
+    assert.ok(done.storeReadTargetDate>'2026-08-13');
 
     const champion=getResearchChampion(f.db,{storeId:'s1'});
     const active=getActiveStoreModel(f.db,{storeId:'s1'});
@@ -63,7 +63,9 @@ test('fresh FEATURE_BUILD installs baseline as the initial Active Champion and p
     assert.equal(active.sourceFrontierDate,'2026-08-12');
 
     const snapshot=f.db.prepare("SELECT business_date,payload_json FROM client_snapshots WHERE store_id='s1' AND snapshot_type='store-read-active' AND version='store-read-v1'").get();
-    assert.equal(snapshot.business_date,'2026-08-13');
+    assert.equal(snapshot.business_date,done.storeReadTargetDate);
+    const frozen=f.db.prepare('SELECT target_date,created_at FROM store_prediction_snapshots LIMIT 1').get();
+    assert.ok(Date.parse(frozen.created_at)<Date.parse(`${frozen.target_date}T00:00:00+09:00`));
     const payload=JSON.parse(snapshot.payload_json);
     assert.equal(payload.modelFingerprint,active.fingerprint);
     assert.equal(payload.asOfDate,'2026-08-12');

@@ -102,7 +102,7 @@ test('daily analysis automatically starts one formal trial from a finalized dist
     const out=await executeDailyAnalysis({db:f.db,job:dailyJob(f.db),rootDir:'/unused',analysisRunner:async()=>fakeAnalysis(),nowIso:'2026-09-17T08:01:00.000Z'});
     assert.equal(out.formalTrialReason,'started');
     assert.equal(out.formalScoredTargetDate,null);
-    assert.equal(out.formalNextTargetDate,'2026-08-31');
+    assert.equal(out.formalNextTargetDate,'2026-09-18','delayed history must forecast a future JST day');
     assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_trials').get().n,1);
     assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM pre_v2_formal_predictions').get().n,2);
     const trial=f.db.prepare('SELECT champion_fingerprint,challenger_fingerprint,status FROM pre_v2_formal_trials').get();

@@ -5,6 +5,7 @@ import {migrateFormalModelStore,persistFormalModelSnapshot} from './formal-model
 import {persistFormalPrediction,loadFormalPrediction} from './formal-prediction-store.mjs';
 import {startFormalTrial} from './trial.mjs';
 import {createTrialRecord,loadTrialRecord,nextTrialNumber} from './trial-store.mjs';
+import {operationalTargetDate} from '../prediction-policy.mjs';
 
 export const PRE_V2_SCORER_VERSION='pre-v2-score-v1';
 
@@ -82,6 +83,7 @@ export function startFormalLiveTrial(db,{
   frontierDate,
   nowIso,
   scorerVersion=PRE_V2_SCORER_VERSION,
+  operational=false,
 }={}){
   requireDb(db);
   migrateFormalModelStore(db);
@@ -106,10 +108,12 @@ export function startFormalLiveTrial(db,{
   const championPayload=buildStoreReadPayload({
     storeId:store,modelFingerprint:active.fingerprint,model:active.model,featureVersion:version,
     frontierDate:frontier,days:eligibleDays,holdoutScore:active.holdoutScore,
+    targetDate:operational?operationalTargetDate({frontierDate:frontier,nowIso:at}):null,
   });
   const challengerPayload=buildStoreReadPayload({
     storeId:store,modelFingerprint:challenger.fingerprint,model:challenger.model,featureVersion:version,
     frontierDate:frontier,days:eligibleDays,holdoutScore:null,
+    targetDate:operational?operationalTargetDate({frontierDate:frontier,nowIso:at}):null,
   });
   if(championPayload.status!=='ready'||!championPayload.rankings.length)throw new Error('active Champion produced no formal prediction');
   if(challengerPayload.status!=='ready'||!challengerPayload.rankings.length)throw new Error('research Challenger produced no formal prediction');

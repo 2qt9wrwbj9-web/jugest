@@ -178,7 +178,9 @@ function mergePackages(local,remote){
   };
 }
 function readJSON(key,fallback=null){
-  try{const s=localStorage.getItem(key);return s?JSON.parse(s):fallback}catch{return fallback}
+  const s=localStorage.getItem(key);
+  if(s===null)return fallback;
+  try{return JSON.parse(s)}catch{throw new Error('端末の保存データを読み出せなかったよ。バックアップを確認してね（'+key+'）')}
 }
 function writeJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
 function clientState(){
@@ -226,7 +228,7 @@ async function decodeAnalysis(rec){
   }
   if(rec.codec==='json'&&typeof rec.text==='string')return JSON.parse(rec.text);
   if(rec.schema==='juggler-store-analysis-snapshot')return rec;
-  return null;
+  throw new Error('保存済み解析の形式を読み出せなかったよ。対応する端末で確認してね');
 }
 async function encodeAnalysis(snap){
   const text=JSON.stringify(snap),rawBytes=new Blob([text]).size;
@@ -240,9 +242,13 @@ async function encodeAnalysis(snap){
   return{codec:'json',text,rawBytes,storedBytes:rawBytes};
 }
 async function readAnalysisSnapshots(){
-  const idx=arr(await idbGet(ANALYSIS_INDEX_KEY)),out=[];
+  const stored=await idbGet(ANALYSIS_INDEX_KEY),idx=stored===null?[]:stored,out=[];
+  if(!Array.isArray(idx))throw new Error('保存済み解析の一覧が壊れているよ。バックアップを確認してね');
   for(const m of idx){
-    try{const s=await decodeAnalysis(await idbGet(ANALYSIS_PREFIX+m.id));if(s)out.push(s)}catch{}
+    if(!m?.id)throw new Error('保存済み解析の識別情報が不明だよ');
+    const s=await decodeAnalysis(await idbGet(ANALYSIS_PREFIX+m.id));
+    if(!s||s.schema!=='juggler-store-analysis-snapshot')throw new Error('保存済み解析の一部が欠けているよ。同期を止めてバックアップを確認してね');
+    out.push(s);
   }
   return out;
 }
@@ -340,8 +346,21 @@ function splitJsonChunks(text,maxChars=SYNC_TRANSPORT_CHUNK_CHARS){
 function joinJsonChunks(chunks){return arr(chunks).join('')}
 async function apiRaw(body){
   const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  let x={};try{x=await r.json()}catch{}
+  let x={};try{x=await r.json()}catch{throw Object.assign(new Error('同期APIの保存結果を確認できなかったよ。再試行してね'),{status:502})}
   if(!r.ok){const e=new Error(x.message||`同期APIエラー (${r.status})`);e.status=r.status;e.body=x;throw e}
+  if(!x||x.ok!==true)throw Object.assign(new Error('同期APIが保存成功を確認できなかったよ'),{status:502});
+  const invalid=()=>{throw Object.assign(new Error('同期APIの応答が不完全だよ。保存結果を確認して再試行してね'),{status:502})};
+  if(['pull','push','pushCommit','pullChunk'].includes(body.action)&&(!Number.isSafeInteger(x.revision)||x.revision<0))invalid();
+  if(body.action==='create'&&(!/^[A-Za-z0-9_-]{12,80}$/.test(x.syncId||'')||!/^[A-Za-z0-9_-]{20,100}$/.test(x.authToken||'')))invalid();
+  if(body.action==='push'&&x.revision!==body.baseRevision+1)invalid();
+  if(body.action==='pushStart'&&(!/^[A-Za-z0-9_-]{12,80}$/.test(x.uploadId||'')||x.totalChunks!==body.totalChunks))invalid();
+  if(body.action==='pushChunk'&&x.index!==body.index)invalid();
+  if(body.action==='pullChunk'&&(x.revision!==body.revision||x.index!==body.index||typeof x.chunk!=='string'))invalid();
+  if(body.action==='pull'&&!body.metaOnly){
+    if(x.chunked){if(!Number.isInteger(x.chunkTotal)||x.chunkTotal<1||x.chunkTotal>16)invalid()}
+    else if(x.revision>0&&(!x.payload||x.payload.v!==1||typeof x.payload.ct!=='string'||typeof x.payload.iv!=='string'))invalid();
+    else if(x.revision===0&&x.payload!==null)invalid();
+  }
   return x;
 }
 async function api(body){
@@ -379,6 +398,7 @@ async function syncNow(meta,onProgress=()=>{},hooks={}){
   for(let attempt=0;attempt<3;attempt++){
     onProgress(attempt?'更新競合を再調整してる…':'クラウドのデータを確認してる…');
     pull=await api({action:'pull',syncId:link.id,authToken:link.auth});
+    if(pull.revision<Number(meta.lastRevision||0))throw new Error('同期先の保存履歴が以前より古いよ。端末への反映を止めたよ');
     remote=pull.payload?await decryptPackage(pull.payload,link.key):null;
     const merged=mergePackages(local,remote);
     const encrypted=await encryptPackage(merged,link.key);

@@ -43,7 +43,7 @@ test('converged loop evaluates historical champions once and nominates the winne
     assert.equal(active.fingerprint,f.baseFp,'sealed holdout winner must remain Challenger until formal promotion');
     assert.equal(active.feature_version,'store-features-v1');assert.equal(active.source_frontier_date,'2026-08-30');
     const snapshot=f.db.prepare("SELECT business_date,payload_json FROM client_snapshots WHERE store_id='s1' AND snapshot_type='store-read-active' AND version='store-read-v1'").get();
-    assert.equal(snapshot.business_date,'2026-08-31');
+    assert.equal(snapshot.business_date,'2026-09-14','late history must not create a retroactive live forecast');
     const payload=JSON.parse(snapshot.payload_json);
     assert.equal(payload.modelFingerprint,f.baseFp,'live PRE snapshot must keep incumbent Champion before formal evidence');
 

@@ -4,6 +4,8 @@ import {scoreFormalTargetDay} from './formal-evaluation.mjs';
 import {loadFormalModelSnapshot,migrateFormalModelStore} from './formal-model-store.mjs';
 import {loadFormalPrediction,persistFormalPrediction} from './formal-prediction-store.mjs';
 import {loadTrialRecord,migratePreV2TrialStore} from './trial-store.mjs';
+import {operationalTargetDate,isProspectivePrediction,sameCandidateSet} from '../prediction-policy.mjs';
+import {loadEvaluationDay,saveEvaluationState} from '../evaluation-state.mjs';
 
 function requireDb(db){if(!db||typeof db.prepare!=='function'||typeof db.exec!=='function')throw new TypeError('database handle is required');return db}
 function requireText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
@@ -65,7 +67,7 @@ function sameMachineSet(a,b){
   return aa.length===bb.length&&aa.every((value,index)=>value===bb[index]);
 }
 
-function freezeNextPredictionPair(db,{record,days,frontierDate,nowIso}){
+function freezeNextPredictionPair(db,{record,days,frontierDate,nowIso,targetDate=null}){
   const trial=record.trial;
   const key={storeId:trial.storeId,lineageId:trial.lineageId,trialNumber:trial.trialNumber};
   const champion=loadFormalModelSnapshot(db,{...key,role:'champion'});
@@ -76,10 +78,12 @@ function freezeNextPredictionPair(db,{record,days,frontierDate,nowIso}){
   const championPayload=buildStoreReadPayload({
     storeId:trial.storeId,modelFingerprint:champion.modelFingerprint,model:champion.model,
     featureVersion:champion.featureVersion,frontierDate,days,
+    targetDate,
   });
   const challengerPayload=buildStoreReadPayload({
     storeId:trial.storeId,modelFingerprint:challenger.modelFingerprint,model:challenger.model,
     featureVersion:challenger.featureVersion,frontierDate,days,
+    targetDate,
   });
   if(championPayload.targetDate!==challengerPayload.targetDate)throw new Error('formal prediction target mismatch');
   if(!sameMachineSet(championPayload.rankings,challengerPayload.rankings))throw new Error('formal Champion and Challenger must rank the exact same machine set for each target day');
@@ -107,6 +111,7 @@ export async function advanceFormalLiveTrialDay(db,{
   rootDir,
   nowIso=new Date().toISOString(),
   judgementRunner=runExistingStoreDayJudgement,
+  operational=false,
 }={}){
   requireDb(db);
   const store=requireText(storeId,'storeId'),lineage=requireText(lineageId,'lineageId'),through=requireDate(throughDate,'throughDate');
@@ -117,6 +122,12 @@ export async function advanceFormalLiveTrialDay(db,{
   if(!record)return Object.freeze({reason:'no_running_trial',scoredTargetDate:null,nextTargetDate:null,trial:null});
 
   const key={storeId:store,lineageId:lineage,trialNumber:record.trial.trialNumber};
+  const series=`formal:${lineage}:${key.trialNumber}`;
+  if(operational){
+    const correction=db.prepare(`SELECT e.target_date FROM prediction_evaluation_state e JOIN store_days d ON d.store_id=e.store_id AND d.business_date=e.target_date WHERE e.store_id=? AND e.series=? AND e.state='complete' AND e.normalized_hash<>d.normalized_payload_hash LIMIT 1`).get(store,series);
+    if(correction){saveEvaluationState(db,{storeId:store,targetDate:correction.target_date,series,state:'corrected',reason:'formal_outcome_corrected',nowIso});return{reason:'formal_outcome_corrected',scoredTargetDate:null,nextTargetDate:null,trial:record}}
+    if(db.prepare("SELECT 1 FROM prediction_evaluation_state WHERE store_id=? AND series=? AND state='corrected'").get(store,series))return{reason:'formal_outcome_corrected',scoredTargetDate:null,nextTargetDate:null,trial:record};
+  }
   const pending=outstandingPredictionTarget(db,{...key,lastTargetDate:record.trial.lastTargetDate??null});
   if(pending&&pending>through){
     return Object.freeze({reason:'waiting_for_target',scoredTargetDate:null,nextTargetDate:pending,trial:record});
@@ -124,12 +135,21 @@ export async function advanceFormalLiveTrialDay(db,{
 
   let scoredTargetDate=null;
   if(pending){
+    let outcome=null;
+    if(operational){
+      outcome=loadEvaluationDay(db,{storeId:store,targetDate:pending,nowIso});
+      const predictions=['champion','challenger'].map(role=>loadFormalPrediction(db,{...key,targetDate:pending,role}));
+      const reason=predictions.some(p=>!isProspectivePrediction(p))?'historical_prediction':outcome.state!=='ready'?outcome.reason:
+        predictions.some(p=>!sameCandidateSet(p.rankings,outcome.machines))?'machine_identity_changed':null;
+      if(reason){saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:reason==='historical_prediction'?'historical':outcome.state==='waiting_result'?'waiting_result':'data_insufficient',reason,normalizedHash:outcome.day?.normalized_payload_hash,nowIso});return{reason,scoredTargetDate:null,nextTargetDate:pending,trial:record}}
+    }
     const truthDays=canonical.filter(day=>String(day.date||'')<=pending);
     if(!truthDays.some(day=>String(day.date||'')===pending))throw new Error(`frozen formal target is missing from canonical days: ${pending}`);
     const identity=storeIdentity(db,store);
     const judged=await judgementRunner({rootDir,shop:identity.shop,sourceStoreId:identity.storeId,days:truthDays,targetDate:pending});
     if(!judged||String(judged.date||'')!==pending||!Array.isArray(judged.rows))throw new Error(`formal judgement runner did not return exact target ${pending}`);
     const scored=scoreFormalTargetDay(db,{...key,targetDate:pending,judgedRows:judged.rows,nowIso});
+    if(operational)saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:'complete',normalizedHash:outcome.day.normalized_payload_hash,outcomeHash:outcome.outcomeInputHash,nowIso});
     record=scored.trial;
     scoredTargetDate=pending;
     if(record.trial.status!=='running'){
@@ -142,8 +162,8 @@ export async function advanceFormalLiveTrialDay(db,{
     return Object.freeze({reason:'waiting_for_target',scoredTargetDate,nextTargetDate:stillPending,trial:record});
   }
 
-  const next=nextDate(through);
-  const frozen=freezeNextPredictionPair(db,{record,days:canonical,frontierDate:through,nowIso});
+  const next=operational?operationalTargetDate({frontierDate:through,nowIso}):nextDate(through);
+  const frozen=freezeNextPredictionPair(db,{record,days:canonical,frontierDate:through,nowIso,targetDate:next});
   if(frozen.targetDate!==next)throw new Error(`formal next target mismatch: expected ${next}, got ${frozen.targetDate}`);
   return Object.freeze({reason:scoredTargetDate?'advanced':'prediction_frozen',scoredTargetDate,nextTargetDate:frozen.targetDate,trial:record});
 }

@@ -84,7 +84,9 @@ function createCanonicalSavedHook({canonicalDbPath,rawRoot}){
     const db=openDatabase(canonicalDbPath);
     try{
       migrate(db);
-      return await measureIngest(()=>ingestCollectorDay(db,{rawRoot,channelId:payload.channelId,sourceStoreId:payload.sourceStoreId,shop:payload.shop,date:payload.date,parserBuild:payload.parserBuild,day:payload.day,rawText:payload.rawText,revision:payload.revision,nowIso:new Date().toISOString()}),{storeId:payload.sourceStoreId,date:payload.date});
+      const result=await measureIngest(()=>ingestCollectorDay(db,{rawRoot,channelId:payload.channelId,sourceStoreId:payload.sourceStoreId,shop:payload.shop,date:payload.date,parserBuild:payload.parserBuild,day:payload.day,rawText:payload.rawText,revision:payload.revision,nowIso:new Date().toISOString()}),{storeId:payload.sourceStoreId,date:payload.date});
+      if(!result.accepted||!result.integrity.eligibleForAnalysis)throw Object.assign(new Error('取得データは保存したけど検品が完了していないよ。欠損・公開状態を確認して再取得してね'),{status:503,code:'canonical_day_incomplete'});
+      return result;
     }finally{db.close()}
   };
 }

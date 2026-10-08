@@ -8,6 +8,7 @@ import {activateStoreModel} from '../src/research/store-read-output.mjs';
 import {migratePreV2TrialStore} from '../src/research/pre-v2/trial-store.mjs';
 import {startFormalLiveTrial} from '../src/research/pre-v2/formal-start.mjs';
 import {advanceFormalLiveTrialDay} from '../src/research/pre-v2/formal-daily-loop.mjs';
+import {inspectDay,saveDayIntegrity} from '../src/ingest/day-integrity.mjs';
 
 function makeDays(lastDay=10,{extraMachineFrom=null}={}){
   const out=[];
@@ -56,6 +57,35 @@ function setup(){
   const started=startFormalLiveTrial(db,{storeId:'s1',lineageId:'pre-v2-live',challengerFingerprint:challenger.fingerprint,featureVersion:'store-feature-v1',days:history,frontierDate:'2026-09-10',nowIso:now});
   return{db,champion,challenger,started};
 }
+
+function saveOperationalTarget(db,{hash='h11',missingDiff=false}={}){
+  const date='2026-09-11',nowIso='2026-09-12T02:00:00Z',machines=makeDays(11).at(-1).machines.map((r,i)=>missingDiff&&i===0?{...r,diff:null}:r);
+  db.prepare("INSERT INTO store_days VALUES(?,?,?,'raw',?,'valid','fixture',?,?) ON CONFLICT(store_id,business_date) DO UPDATE SET normalized_payload_hash=excluded.normalized_payload_hash").run('s1',date,'fixture',hash,nowIso,nowIso);
+  db.prepare('DELETE FROM machine_day_data WHERE store_id=? AND business_date=?').run('s1',date);
+  machines.forEach((r,i)=>db.prepare('INSERT INTO machine_day_data VALUES(?,?,?,?)').run('s1',date,String(i),JSON.stringify(r)));
+  saveDayIntegrity(db,{storeId:'s1',date,normalizedHash:hash,check:inspectDay(db,{storeId:'s1',date,day:{machines,quality:{expectedMachineKeys:['101','102','103']}},nowIso}),nowIso});
+}
+
+test('operational formal loop holds missing outcomes and resumes without duplicate evidence; corrections halt the trial',async()=>{
+  const f=setup();try{
+    const args={storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',rootDir:'/unused',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>({date:'2026-09-11',rows:judgedRows()})};
+    saveOperationalTarget(f.db,{missingDiff:true});const held=await advanceFormalLiveTrialDay(f.db,args);
+    assert.equal(held.reason,'integrity_partial');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
+    saveOperationalTarget(f.db,{hash:'complete'});const completed=await advanceFormalLiveTrialDay(f.db,args);
+    assert.equal(completed.nextTargetDate,'2026-09-13');assert.equal(completed.scoredTargetDate,'2026-09-11');
+    await advanceFormalLiveTrialDay(f.db,args);const original=f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all();assert.equal(original.length,1);
+    saveOperationalTarget(f.db,{hash:'corrected'});const blocked=await advanceFormalLiveTrialDay(f.db,args);
+    assert.equal(blocked.reason,'formal_outcome_corrected');assert.deepEqual(f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all(),original);
+    assert.equal(f.db.prepare("SELECT fingerprint FROM active_store_models WHERE store_id='s1'").get().fingerprint,f.champion.fingerprint);
+  }finally{f.db.close()}
+});
+test('legacy formal predictions generated after target start cannot enter prospective statistics',async()=>{
+ const f=setup();try{
+   saveOperationalTarget(f.db);f.db.prepare("UPDATE pre_v2_formal_predictions SET created_at='2026-09-11T12:00:00Z'").run();
+   const r=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>{throw new Error('must not judge')}});
+   assert.equal(r.reason,'historical_prediction');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
+ }finally{f.db.close()}
+});
 
 test('formal daily loop scores the frozen target and freezes the next unseen day with frozen models',async()=>{
   const f=setup();

@@ -9,6 +9,7 @@ import {scoreAvailableComparisonDays} from './comparison-refresh.mjs';
 import {deriveStoreMachineCount} from './task-metrics.mjs';
 import {advanceFormalLiveTrialDay} from '../research/pre-v2/formal-daily-loop.mjs';
 import {maybeStartFinalizedFormalTrial} from '../research/pre-v2/formal-auto-start.mjs';
+import {requestPredictionEvaluation} from './prediction-refresh-state.mjs';
 
 const DEFAULT_OPTIONS=Object.freeze({period:'180',minG:'2000',maxDims:'1',minDays:'4'});
 const COMPONENT='store-analysis-default';
@@ -23,9 +24,9 @@ function requireDailyJob(job){
   return {storeId,analysisVersion};
 }
 
-async function runFormalDailyLoop(input){
+export async function runFormalDailyLoop(input){
   const {db,...options}=input;
-  const advanced=await advanceFormalLiveTrialDay(db,options);
+  const advanced=await advanceFormalLiveTrialDay(db,{...options,operational:true});
   if(advanced.reason!=='no_running_trial')return advanced;
   return maybeStartFinalizedFormalTrial(db,{
     storeId:options.storeId,
@@ -34,6 +35,7 @@ async function runFormalDailyLoop(input){
     days:options.days,
     frontierDate:options.throughDate,
     nowIso:options.nowIso,
+    operational:true,
   });
 }
 
@@ -124,6 +126,7 @@ export async function executeDailyAnalysis({db,job,rootDir,analysisRunner=runExi
     followupJob=requestStoreAnalysisRefresh(db,{storeId,analysisVersion,nowIso:at,dirty:false}).job;
     featureJob=requestStoreFeatureRefresh(db,{storeId,featureVersion:FEATURE_VERSION,frontierDate:latest,nowIso:at,dirty:true}).job;
     shadowJob=requestShadowPrediction(db,{storeId,frontierDate:latest,nowIso:at}).job;
+    requestPredictionEvaluation(db,{storeId,nowIso:at});
     db.exec('COMMIT');
   }catch(error){try{db.exec('ROLLBACK')}catch{}throw error}
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {readFileSync,realpathSync,existsSync,lstatSync} from 'node:fs';
+import {readFileSync,realpathSync,existsSync,lstatSync,readlinkSync} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -11,7 +11,17 @@ import {collectPachinkoOnce} from '../src/pachinko/collector.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 function args(argv){const [command,...rest]=argv,out={command};for(let i=0;i<rest.length;i++){const token=rest[i];if(!token.startsWith('--'))throw new Error(`unexpected_argument:${token}`);const key=token.slice(2);if(key==='allow-production'||key==='apply'){out[key]=true;continue}const value=rest[++i];if(value===undefined||value.startsWith('--'))throw new Error(`missing_value:${key}`);out[key]=value}return out}
 function isInside(child,parent){const c=path.resolve(child),p=path.resolve(parent),prefix=p.endsWith(path.sep)?p:`${p}${path.sep}`;return c===p||c.startsWith(prefix)}
-function destinationIdentity(value){const resolved=path.resolve(value);let cursor=resolved;const tail=[];while(!existsSync(cursor)){const parent=path.dirname(cursor);if(parent===cursor)break;tail.unshift(path.basename(cursor));cursor=parent}try{return path.join(realpathSync(cursor),...tail)}catch{return resolved}}
+function destinationIdentity(value,depth=0){
+  if(depth>32)throw new Error('unsafe_symlink_chain');
+  const resolved=path.resolve(value),root=path.parse(resolved).root,parts=resolved.slice(root.length).split(path.sep);let cursor=root;
+  for(let i=0;i<parts.length;i++){
+    const next=path.join(cursor,parts[i]);let info;
+    try{info=lstatSync(next)}catch(error){if(error.code==='ENOENT')return path.join(next,...parts.slice(i+1));throw error}
+    if(info.isSymbolicLink())return destinationIdentity(path.resolve(cursor,readlinkSync(next),...parts.slice(i+1)),depth+1);
+    cursor=next;
+  }
+  return cursor;
+}
 export function assertSafeWritablePath(value,{allowProduction=false,requiredCode='explicit_path_required'}={}){
   if(!value)throw new Error(requiredCode);const resolved=path.resolve(value),identity=destinationIdentity(resolved);
   if(!allowProduction&&(['/var/lib/jugest','/opt/jugest'].some(root=>isInside(identity,root))))throw new Error('production_path_requires_--allow-production');

@@ -3,6 +3,7 @@ import {buildLivePredictionRows} from './backtest.mjs';
 import {persistLivePrediction} from './live-comparison.mjs';
 import {scoreSample} from './model-search.mjs';
 import {enrichStoreReadRankings} from './store-read-explain.mjs';
+import {operationalTargetDate,isProspectivePrediction} from './prediction-policy.mjs';
 
 export const STORE_READ_SNAPSHOT_TYPE='store-read-active';
 export const STORE_READ_VERSION='store-read-v1';
@@ -34,14 +35,16 @@ export function enrichStoredStoreReadPayload({payload,activeModel,days}={}){
   if(!activeModel?.model||String(activeModel.fingerprint||'')!==String(payload.modelFingerprint||''))return payload;
   const storeId=required(payload.storeId??activeModel.storeId,'storeId'),targetDate=validDate(payload.targetDate,'targetDate'),rankings=Array.isArray(payload.rankings)?payload.rankings:[];
   if(!rankings.length)return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:Object.freeze([])});
-  const featureRows=buildLivePredictionRows({storeId,days,targetDate});
+  const featureRows=buildLivePredictionRows({storeId,days:days.filter(day=>String(day.date)<=String(payload.asOfDate??activeModel.sourceFrontierDate)),targetDate});
   const enriched=enrichStoreReadRankings({rankings,featureRows,model:activeModel.model});
   return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:enriched});
 }
 
-export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null}={}){
+export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,targetDate:requestedTarget=null}={}){
   const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate');
-  const targetDate=nextDate(frontier),featureRows=buildLivePredictionRows({storeId:id,days,targetDate});
+  const targetDate=validDate(requestedTarget??nextDate(frontier),'targetDate');
+  if(targetDate<=frontier)throw new TypeError('targetDate must be after frontierDate');
+  const featureRows=buildLivePredictionRows({storeId:id,days:days.filter(day=>String(day.date)<=frontier),targetDate});
   const coreRankings=featureRows.map(row=>({machineKey:row.machineKey,tableNo:row.tableNo,machineName:row.machineName,score:scoreSample(row,model)}))
     .sort((a,b)=>b.score-a.score||String(a.machineKey).localeCompare(String(b.machineKey))).map((row,index)=>Object.freeze({...row,rank:index+1}));
   const rankings=enrichStoreReadRankings({rankings:coreRankings,featureRows,model});
@@ -54,7 +57,11 @@ export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVer
 export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,nowIso=new Date().toISOString()}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate'),at=required(nowIso,'nowIso');
-  const payload=buildStoreReadPayload({storeId:id,modelFingerprint:fingerprint,model,featureVersion:version,frontierDate:frontier,days,holdoutScore});
+  const target=operationalTargetDate({frontierDate:frontier,nowIso:at});
+  const history=days.filter(day=>String(day.date)<=frontier);
+  if(history.some(day=>day.observedAt&&Date.parse(day.observedAt)>Date.parse(at)))throw new Error('prediction history contains data observed after generation');
+  const payload=buildStoreReadPayload({storeId:id,modelFingerprint:fingerprint,model,featureVersion:version,frontierDate:frontier,days:history,holdoutScore,targetDate:target});
+  if(!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:at}))throw new Error('prospective prediction deadline passed');
   const targetDate=payload.targetDate,payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at)
     VALUES(?,?,?,?,?,?,?)
@@ -64,7 +71,7 @@ export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,feat
   if(payload.rankings.length){
     persistLivePrediction(db,{
       storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
-      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days}),rankings:payload.rankings,createdAt:at
+      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days:history}),rankings:payload.rankings,createdAt:at
     });
   }
   return Object.freeze({payload,payloadHash,targetDate});

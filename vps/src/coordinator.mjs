@@ -13,7 +13,8 @@ const BACKTEST_WORKER=new URL('./jobs/backtest.mjs',import.meta.url);
 const MODEL_SEARCH_WORKER=new URL('./jobs/model-search.mjs',import.meta.url);
 const SHADOW_PREDICT_WORKER=new URL('./jobs/shadow-predict.mjs',import.meta.url);
 const HISTORICAL_COMPARE_WORKER=new URL('./jobs/historical-compare.mjs',import.meta.url);
-const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH','SHADOW_PREDICT','HISTORICAL_COMPARE']);
+const PREDICTION_EVALUATE_WORKER=new URL('./jobs/prediction-evaluate.mjs',import.meta.url);
+const RESEARCH_JOB_TYPES=new Set(['FEATURE_BUILD','AXIS_DISCOVERY','BACKTEST','MODEL_SEARCH','SHADOW_PREDICT','HISTORICAL_COMPARE','PREDICTION_EVALUATE']);
 
 function defaultWorkerPathForJob(job){
   if(job?.type==='DAILY_ANALYSIS')return DAILY_ANALYSIS_WORKER;
@@ -22,6 +23,7 @@ function defaultWorkerPathForJob(job){
   if(job?.type==='MODEL_SEARCH')return MODEL_SEARCH_WORKER;
   if(job?.type==='SHADOW_PREDICT')return SHADOW_PREDICT_WORKER;
   if(job?.type==='HISTORICAL_COMPARE')return HISTORICAL_COMPARE_WORKER;
+  if(job?.type==='PREDICTION_EVALUATE')return PREDICTION_EVALUATE_WORKER;
   return SYNTHETIC_WORKER;
 }
 function iso(clock){return clock().toISOString();}

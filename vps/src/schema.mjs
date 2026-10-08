@@ -1,3 +1,7 @@
+import {migrateDayIntegrity} from './ingest/day-integrity.mjs';
+import {migrateEvaluationState} from './research/evaluation-state.mjs';
+import {migratePredictionRefresh} from './analysis/prediction-refresh-state.mjs';
+
 export function migrate(db){
   db.exec(`
     CREATE TABLE IF NOT EXISTS stores (
@@ -385,6 +389,9 @@ export function migrate(db){
     );
     CREATE INDEX IF NOT EXISTS resource_samples_time_idx ON resource_samples(captured_at);
   `);
+  migrateDayIntegrity(db);
+  migrateEvaluationState(db);
+  migratePredictionRefresh(db);
   const jobColumns=db.prepare('PRAGMA table_info(jobs)').all().map(row=>row.name);
   if(!jobColumns.includes('failure_count'))db.exec('ALTER TABLE jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0;');
   const featureColumns=db.prepare('PRAGMA table_info(feature_refresh_state)').all().map(row=>row.name);

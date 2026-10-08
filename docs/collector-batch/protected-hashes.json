@@ -8,7 +8,7 @@
     "api/_relay-payload-0.js": "1a7a9008fea4db0ecfa39e7ff393e59094730c5b16ada78912290c86d0f0ef81",
     "api/_relay-payload-1.js": "711e17926190a15f58118e3571e89a24a6633a0278465d2d91f515f38c10ef98",
     "api/_relay-payload-2.js": "6ae97f899400263d0c88d60dc8e3a56e1ca302ebfe1c8aa7a68df1a971c16f5a",
-    "api/_sync-web.js": "041366c67657738e2d5fc36e022d32b1145edc488db4a41db01bb0fa76987c9a",
+    "api/_sync-web.js": "c410e768f3b7f93eb0ee86cfd84d0014fec9ad7bebb648f43c0cecf83fcfaa6a",
     "api/relay.js": "e77c18660ccb7b94b1a3eaa60881ed208e3de5e49d797271c0eeb2a11bee80ae",
     "api/sync.js": "781440783911eef7d0863d27d83151ac1e616f3ae2db004f30c70f19f87a02ea",
     "app-v510.css": "d33c950624c0375bfa119510ea47b5c42594078f4fa8e446340d83089c581e1c",
@@ -20,7 +20,7 @@
     "package.json": "4ac6be325cb1d7c1344430ca1155a98a4a0f679787872396e825d19e96cecde2",
     "relay-bridge.html": "026d4380f682d06bf3f37d78867093bec0fb11ba62480b39593a7cdeed7610e0",
     "site.webmanifest": "990f3fa2346e744dfb5cce7520af4dc4cce6a79292ae56e0e2e234244dbd8f40",
-    "sync-core.js": "abc391f2e7ca79a37cdba1f99e8fbfea54429df7a6d45be7feb6d89cda3c540d",
+    "sync-core.js": "a69f7822096524c41768480d13ac57ccee94e2a6161a15378bfc3a077279beed",
     "vercel.json": "e6b8ff140fa3a7b2eea2ede2b43b84be5713d438804b8a16f34c7de46411a419"
   },
   "jitterFiles": {
