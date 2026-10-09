@@ -1,0 +1,74 @@
+
+/* JUGEST Store UI v2 — presentation layer, scoped to slot store workspaces */
+.sv2-workspace{--sv2-line:#dfe6f1;--sv2-muted:#73819a;--sv2-ink:#192947;padding-bottom:calc(115px + env(safe-area-inset-bottom))}
+.sv2-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:1px 0 9px}
+.sv2-brand{display:grid;min-width:0;gap:3px}.sv2-kicker{font-size:9px;font-weight:900;color:#77859c;letter-spacing:.14em}
+.sv2-store-select{display:flex;align-items:center;gap:7px;min-width:0;text-align:left;border:0;background:transparent;padding:0;color:var(--sv2-ink);font-weight:900;font-size:24px;line-height:1.2}
+.sv2-store-select span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}.sv2-store-select i{font-style:normal;color:#315ee1;font-size:17px}
+.sv2-status{display:grid;gap:3px;text-align:right;justify-items:end}.sv2-status strong{color:#137d60;font-size:10px}.sv2-status strong.warn{color:#aa6030}.sv2-status small{color:var(--sv2-muted);font-size:9px}
+.sv2-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:3px;background:#edf1f9;border:1px solid var(--sv2-line);border-radius:12px;margin-bottom:11px}
+.sv2-tabs button{border:0;background:none;color:#687890;font-size:12px;font-weight:850;min-height:39px;min-width:0;border-radius:9px;padding:0 2px}
+.sv2-tabs button.active{background:#335fe1;color:#fff;box-shadow:0 2px 6px #335fe133}
+.sv2-subnav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;background:#eff3fa;border-radius:11px;padding:3px;margin:4px 0 11px}
+.sv2-subnav button{min-height:38px;border:0;background:none;border-radius:8px;color:#697991;font-size:11px;font-weight:850}
+.sv2-subnav button.active{color:#2d57be;background:#fff;box-shadow:0 1px 5px #1d30601b}
+.sv2-section-title{display:flex;align-items:center;justify-content:space-between;gap:7px;margin:6px 0 9px}.sv2-section-title b{font-size:13px;color:var(--sv2-ink)}.sv2-section-title small{font-size:9px;color:var(--sv2-muted);text-align:right}
+.sv2-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:5px 0 9px}
+.sv2-kpi{min-width:0;border:1px solid #ebeff5;border-radius:11px;background:#f5f7fb;padding:10px 8px;display:grid;gap:5px}
+.sv2-kpi small{font-size:9px;color:var(--sv2-muted);font-weight:750}.sv2-kpi b{font-size:16px;color:var(--sv2-ink);font-weight:900;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.sv2-card{border:1px solid var(--sv2-line);border-radius:14px;padding:12px;background:#fff;margin:9px 0}
+.sv2-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}.sv2-card-head b{font-size:13px;color:var(--sv2-ink)}.sv2-card-head small{font-size:10px;color:var(--sv2-muted)}
+.sv2-mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.sv2-mini-grid>div{min-width:0}
+.sv2-mini-grid small{display:block;color:var(--sv2-muted);font-size:9px;margin-bottom:5px}.sv2-mini-grid b{font-size:13px;color:var(--sv2-ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sv2-note{font-size:10px;color:var(--sv2-muted);line-height:1.5;margin:8px 0}
+.sv2-action{display:flex;justify-content:center;align-items:center;width:100%;min-height:39px;padding:8px;border-radius:10px;border:1px solid #cdd9f0;background:#f6f9ff;color:#2357be;font-size:11px;font-weight:850;margin-top:10px;box-sizing:border-box}
+.sv2-overview-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 0;border-top:1px solid #f0f2f7}
+.sv2-overview-row:first-of-type{border-top:0}.sv2-rank{display:grid;place-items:center;border-radius:7px;width:24px;height:26px;background:#eef3ff;color:#2754c0;font-weight:900;font-size:11px}
+.sv2-overview-row b{display:block;font-size:11px;color:var(--sv2-ink)}.sv2-overview-row small{display:block;color:var(--sv2-muted);font-size:9px;margin-top:2px}.sv2-overview-row strong{font-size:15px;font-variant-numeric:tabular-nums}
+.sv2-collector{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #e0e7f1;border-radius:12px;background:#f3f7ff;padding:11px 12px;margin:10px 0}
+.sv2-collector b{font-size:11px;color:var(--sv2-ink)}.sv2-collector small{display:block;color:var(--sv2-muted);font-size:10px;margin-top:4px;line-height:1.5}
+.sv2-inline-action{border:0;background:transparent;color:#2359c6;font-weight:850;padding:7px 3px;font-size:11px}
+.sv2-workspace.store-data-screen .data-toolbar{display:flex;justify-content:space-between;align-items:end;gap:9px;margin:5px 0}
+.sv2-workspace.store-data-screen .data-toolbar label{display:flex;align-items:center;gap:7px}
+.sv2-workspace.store-data-screen .vps-audit-summary{margin:3px 0 10px}
+.sv2-workspace.store-data-screen .vps-audit-kpis{display:flex;grid-template-columns:none;flex-wrap:nowrap;overflow-x:auto;gap:4px;margin:2px 0 7px}
+.sv2-workspace.store-data-screen .vps-audit-kpis>.vps-audit-kpi,.sv2-workspace.store-data-screen .vps-audit-kpis>.vps-audit-kpi:nth-child(n){flex:1 0 70px;grid-column:auto;padding:7px 5px;text-align:center}
+.sv2-workspace.store-data-screen .vps-audit-kpi b{font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.sv2-workspace.store-data-screen .vps-matrix-head{margin:8px 0 4px}.sv2-workspace.store-data-screen .vps-machine-filter{margin:4px 0 6px}
+.sv2-workspace.store-data-screen .vps-audit-machine-title{margin:10px 0 6px}
+.sv2-machine-table-scroll{overflow-x:auto;border:1px solid var(--sv2-line);border-radius:11px;background:#fff}
+.sv2-machine-table{border-collapse:collapse;min-width:480px;width:100%;font-size:10px}
+.sv2-machine-table th{background:#f3f6fc;color:#6a7993;font-size:9px;font-weight:800;text-align:right;white-space:nowrap}
+.sv2-machine-table th:first-child,.sv2-machine-table td:first-child{text-align:left;position:sticky;left:0;min-width:96px;max-width:115px;background:#fff;z-index:1}
+.sv2-machine-table th:first-child{background:#f3f6fc;z-index:2}
+.sv2-machine-table th,.sv2-machine-table td{padding:9px 6px;border-bottom:1px solid #edf1f7;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sv2-machine-table td{color:var(--sv2-ink);font-weight:700}
+.sv2-workspace.store-trend-screen .trend-controls{margin:5px 0 8px}
+.sv2-workspace.store-trend-screen .trend-summary{margin:6px 0 9px;padding:9px 11px}.sv2-workspace.store-trend-screen .trend-row{padding:9px 10px}
+.sv2-workspace.intelligence-screen .intel-controls{margin:7px 0 10px}
+.sv2-workspace.intelligence-screen .plan-controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.sv2-workspace.intelligence-screen .plan-controls label:first-child{grid-column:1/-1}
+.sv2-workspace.intelligence-screen .plan-controls>button{grid-column:1/-1;min-height:43px}
+.sv2-workspace.intelligence-screen .plan-controls input{min-height:39px;font-size:12px}
+.sv2-workspace.intelligence-screen .plan-mode-switch{margin:5px 0 8px}
+.sv2-plan-settings{border:1px solid var(--sv2-line);border-radius:12px;padding:9px 11px;margin:6px 0;background:#fff}
+.sv2-plan-settings summary{cursor:pointer;color:#23467f;font-size:11px;font-weight:850;min-height:26px;align-content:center}
+.sv2-plan-settings[open] summary{border-bottom:1px solid #edf0f6;padding-bottom:7px}
+.sv2-workspace.intelligence-screen .intel-hero{margin:8px 0 10px;padding:12px;border-radius:14px}
+.sv2-workspace.intelligence-screen .intel-hero strong{font-size:39px}
+.sv2-workspace.intelligence-screen .analysis-kpis{margin:8px 0 10px;gap:5px}
+.sv2-workspace.intelligence-screen .analysis-kpis>div{padding:10px 7px;border-radius:11px}
+.sv2-workspace.intelligence-screen .evidence-row{padding:9px}
+.sv2-workspace.intelligence-screen .intel-details{margin:5px 0}
+.sv2-workspace.intelligence-screen .replay-control{margin:5px 0 10px;padding:11px}
+.sv2-workspace.intelligence-screen .model-run{width:100%;min-height:43px;margin:5px 0}
+.sv2-workspace.intelligence-screen .model-metric{padding:9px}
+.sv2-workspace.intelligence-screen .section-label{margin:11px 0 6px}
+@media(max-width:359px){.sv2-store-select{font-size:21px}.sv2-kpis{gap:4px}.sv2-kpi{padding:8px 6px}.sv2-kpi b{font-size:14px}.sv2-workspace.intelligence-screen .plan-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+.sv2-workspace.intelligence-screen .analysis-controls{grid-template-columns:minmax(0,1fr)}
+.sv2-workspace.intelligence-screen .analysis-vps-contract{grid-column:1/-1;min-width:0;display:grid;gap:4px;padding:9px 11px;border:1px solid #e0e7f1;background:#f4f7fd;border-radius:12px}
+.sv2-workspace.intelligence-screen .analysis-vps-contract b{font-size:12px;line-height:1.4;word-break:normal}
+.sv2-workspace.intelligence-screen .analysis-vps-contract span{font-size:10px;color:#687892;line-height:1.5}
+.sv2-workspace.intelligence-screen .analysis-controls>button{min-height:42px}
