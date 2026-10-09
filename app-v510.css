@@ -309,3 +309,93 @@
 .rev-compact .judge-warning{margin-top:5px}
 @media(max-width:359px){.rev-compact .rev-odds{gap:3px}.rev-compact .rev-odds>div{display:grid;gap:1px}.rev-compact .rev-odds b{font-size:10px}.rev-compact .judge-result-top strong{font-size:28px}.rev-compact .judge-pills b{font-size:10px}.rev-compact .rev-probs-vals b{font-size:9px}}
 /* END reviewed live reverse compact styles */
+
+/* BEGIN reviewed live judgement compact styles */
+.judge-compact,.hana-compact{min-width:0}
+.judge-compact .live-compact-heading,.hana-compact .live-compact-heading{display:flex;align-items:center;gap:9px;margin:0 0 7px;min-height:34px}
+.judge-compact .live-compact-heading .back-row,.hana-compact .live-compact-heading .back-row{min-height:34px;margin:0;padding:0;font-size:11px}
+.judge-compact .live-compact-heading h1,.hana-compact .live-compact-heading h1{margin:0;font-size:23px;line-height:1.2}
+.judge-compact .live-compact-heading small,.hana-compact .live-compact-heading small{margin-left:auto;color:var(--accent);font-size:10px;font-weight:850}
+.judge-compact .live-tabs{margin:5px 0 9px}
+.judge-compact .live-tabs button{min-height:38px}
+.judge-compact .judge-context-details{margin:0 0 8px;min-width:0}
+.judge-compact .judge-context-details>summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;min-height:50px;padding:7px 10px;border:1px solid var(--line);background:var(--surface);border-radius:13px;min-width:0}
+.judge-compact .judge-context-details>summary::-webkit-details-marker{display:none}
+.judge-compact .judge-context-details>summary b{font-size:13px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;max-width:38%}
+.judge-compact .judge-context-details>summary small{font-size:9px;color:var(--muted);white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1}
+.judge-compact .judge-context-details>summary span{white-space:nowrap;color:var(--accent);font-size:10px;font-weight:800}
+.judge-compact .judge-context-details[open]>summary{border-radius:13px 13px 0 0}
+.judge-compact .judge-context{margin:0;border:1px solid var(--line);border-top:0;padding:9px;background:var(--surface);border-radius:0 0 13px 13px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+.judge-compact .judge-context>button,.judge-compact .judge-context>label{min-height:51px;padding:6px 9px;border-radius:10px}
+.judge-compact .judge-result{padding:10px 12px;margin:0 0 7px;border-radius:15px}
+.judge-compact .judge-result-top{align-items:center;gap:7px}
+.judge-compact .judge-result-top strong{font-size:30px}
+.judge-compact .judge-pills{gap:3px;flex-wrap:nowrap}
+.judge-compact .judge-pills span{min-width:0;padding:4px 5px;border-radius:9px}
+.judge-compact .judge-pills b{font-size:11px}
+.judge-compact .judge-pills small{font-size:8px}
+.live-compact-distribution{margin-top:8px}
+.live-compact-band{display:flex;overflow:hidden;width:100%;height:10px;border-radius:4px;background:var(--surface-2)}
+.live-compact-band span{display:block;flex:0 0 auto;height:100%;min-width:0}
+.live-compact-probs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;margin-top:4px;text-align:center}
+.live-compact-probs span{display:grid;min-width:0;gap:1px}
+.live-compact-probs small{font-size:9px;color:var(--muted)}
+.live-compact-probs b{font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.judge-compact .judge-g{padding:8px 12px;margin:0 0 6px}
+.judge-compact .judge-g input{height:44px;width:43%;font-size:19px}
+.judge-compact .judge-counter-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.judge-compact .judge-counter-groups>.metric-group{margin:0;min-width:0}
+.judge-compact .judge-counter-groups>.metric-group[data-metric-group="small"]{grid-column:1/-1}
+.judge-compact .metric-group>.section-label{margin:0 0 5px}
+.judge-compact .metric-grid{gap:5px}
+.judge-compact .metric-group:not([data-metric-group="small"]) .metric-grid{grid-template-columns:1fr}
+.judge-compact .metric-card{padding:7px;border-radius:12px}
+.judge-compact .metric-head{min-height:22px;gap:4px}
+.judge-compact .metric-head b{font-size:10px}
+.judge-compact .metric-control{grid-template-columns:34px minmax(0,1fr) 34px;gap:4px;margin-top:5px}
+.judge-compact .metric-control button,.judge-compact .metric-control input{min-width:0;height:38px}
+.judge-compact .metric-control input{font-size:15px}
+.judge-compact .metric-control button{font-size:17px}
+.judge-compact .record-save-cta{min-height:46px;margin-top:8px;border-radius:13px}
+.live-compact-rate{display:flex;align-items:center;justify-content:space-between;gap:8px;border-radius:10px;background:var(--surface-2);padding:7px 9px;margin-top:6px;font-size:10px}
+.live-compact-rate span{color:var(--muted)}
+.live-compact-rate strong{font-size:15px;font-variant-numeric:tabular-nums}
+.hana-compact .hana-toolbar{grid-template-columns:minmax(0,1.6fr) minmax(0,.7fr);margin:6px 0;gap:7px}
+.hana-compact .hana-toolbar select{min-height:43px}
+.hana-compact .hana-result{margin:7px 0;padding:10px 11px;border-radius:15px}
+.hana-compact .judge-result-top{align-items:center;gap:7px}
+.hana-compact .judge-result-top strong{font-size:31px}
+.hana-compact .judge-pills{flex-wrap:nowrap;gap:4px}
+.hana-compact .judge-pills span{min-width:0;padding:5px;border-radius:9px}
+.hana-compact .judge-pills b{font-size:11px}
+.hana-compact .hana-prob-strip{display:none}
+.hana-compact .hana-basic-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.hana-compact .hana-basic-grid label{min-width:0;gap:3px}
+.hana-compact .hana-basic-grid input{min-height:44px;padding:8px 9px;font-size:15px}
+.hana-compact .hana-bell-priority{margin-top:7px;border:1px solid var(--line);border-radius:13px;background:var(--surface);padding:9px}
+.hana-compact .hana-bell-priority .metric-card{border:0;box-shadow:none;padding:0;background:transparent}
+.hana-compact .hana-bell-priority .metric-control{grid-template-columns:44px minmax(0,1fr) 44px}
+.hana-compact .hana-bell-priority .metric-control button,.hana-compact .hana-bell-priority .metric-control input{height:42px}
+.hana-compact .hana-detail{margin:7px 0;padding:0 10px;border-radius:13px}
+.hana-compact .hana-detail>summary{padding:10px 2px}
+.hana-compact .hana-detail[open]>summary{margin-bottom:6px}
+.hana-compact .hana-detail .metric-grid{gap:5px;padding-bottom:7px}
+.hana-compact .hana-detail[open] .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hana-compact .hana-detail .metric-card{padding:7px;border-radius:11px}
+.hana-compact .hana-detail .metric-head{min-height:20px}
+.hana-compact .hana-detail .metric-control{grid-template-columns:32px minmax(0,1fr) 32px;gap:3px;margin-top:4px}
+.hana-compact .hana-detail .metric-control button,.hana-compact .hana-detail .metric-control input{min-width:0;height:38px}
+.hana-compact .hana-detail .metric-control input{font-size:14px}
+.hana-compact .hana-detail .live-compact-rate{margin:0 0 8px}
+.hana-compact .hana-actions{margin:7px 0;grid-template-columns:1fr 1.4fr}
+.hana-compact .hana-actions button{min-height:44px}
+@media(max-width:359px){
+ .judge-compact .judge-result-top strong,.hana-compact .judge-result-top strong{font-size:27px}
+ .judge-compact .judge-pills b,.hana-compact .judge-pills b{font-size:10px}
+ .judge-compact .metric-control{grid-template-columns:32px minmax(0,1fr) 32px;gap:3px}
+ .judge-compact .metric-card{padding:5px}
+ .judge-compact .judge-context-details>summary b{max-width:30%}
+ .live-compact-probs b{font-size:9px}
+ .hana-compact .hana-toolbar{grid-template-columns:minmax(0,1.5fr) minmax(0,.65fr)}
+}
+/* END reviewed live judgement compact styles */
