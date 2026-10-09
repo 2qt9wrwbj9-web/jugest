@@ -8,6 +8,8 @@ import {completeShadowPrediction,getShadowRefreshState,SHADOW_ENGINE_VERSION} fr
 import {persistLivePrediction} from '../research/live-comparison.mjs';
 import {deriveStoreMachineCount} from '../analysis/task-metrics.mjs';
 import {hashCanonical} from '../canonical-json.mjs';
+import {operationalTargetDate,isProspectivePrediction,predictionHistoryHash} from '../research/prediction-policy.mjs';
+import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
 
 function decodeDescriptor(raw){
   if(!raw)throw new TypeError('job descriptor is required');
@@ -51,19 +53,21 @@ async function main(){
       type:'task_start',taskKind:'SHADOW_PREDICT',phase:3,taskVersion:engineVersion,storeId,
       storeMachineCount:machineScale.count,machineCountMethod:machineScale.method,dayCount:days.length,rowCount,workloadUnits:rowCount
     });
-    const targetDate=nextDate(actualFrontier);
+    const targetDate=operationalTargetDate({frontierDate:actualFrontier,nowIso:new Date().toISOString()});
     const result=await runExistingStorePlan({rootDir,shop:loaded.store.name,sourceStoreId:storeId,days,targetDate});
     const nowIso=new Date().toISOString();
     let status='insufficient_data',prediction=null;
     if(result.available&&Array.isArray(result.rankings)&&result.rankings.length){
+      if(!isProspectivePrediction({targetDate,sourceFrontierDate:actualFrontier,createdAt:nowIso}))throw new Error('prospective shadow prediction deadline passed');
       prediction=persistLivePrediction(db,{
         storeId,targetDate,engine:'current_shadow',engineVersion,modelFingerprint:'',featureVersion:null,
         sourceFrontierDate:actualFrontier,
-        inputHash:hashCanonical({storeId,targetFrontierDate:actualFrontier,engineVersion,days}),
-        rankings:result.rankings,createdAt:nowIso
+        inputHash:predictionHistoryHash({storeId,frontierDate:actualFrontier,version:engineVersion,days}),
+        rankings:result.rankings,createdAt:nowIso,prospective:true
       });
-      status='predicted';
+      status=prediction.conflict?'prediction_conflict':'predicted';
     }
+    requestPredictionEvaluation(db,{storeId,nowIso});
     const completion=completeShadowPrediction(db,{storeId,jobId:descriptor.id,completedFrontierDate:actualFrontier,nowIso});
     peakRssMiB=Math.max(peakRssMiB,rssMiB());
     process.send?.({

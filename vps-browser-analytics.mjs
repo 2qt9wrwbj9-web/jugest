@@ -33,7 +33,7 @@ export function createVpsAnalyticsClient({
 
   async function request(path,{method='GET',body=null}={}){
     const receiver=readRelayReceiver(storage);
-    const cookieRead=piaOnly&&method==='GET'&&/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2})?$)/.test(path);
+    const cookieRead=piaOnly&&((method==='GET'&&(/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2})?$)/.test(path)||path==='/operations'||/^\/stores\/[^/]+\/(?:operations|performance)$/.test(path)))||(method==='POST'&&/^\/stores\/[^/]+\/operations\/retry$/.test(path)));
     if(!receiver&&!cookieRead)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
     let response;
     try{
@@ -42,6 +42,7 @@ export function createVpsAnalyticsClient({
         headers:{
           accept:'application/json',
           ...(body!=null?{'content-type':'application/json'}:{}),
+          ...(method==='POST'&&path.endsWith('/operations/retry')?{'x-jugest-operations':'1'}:{}),
           ...(receiver&&!cookieRead?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
         },
         ...(body!=null?{body}:{}),
@@ -50,11 +51,11 @@ export function createVpsAnalyticsClient({
       };
       response=await fetchFn(`${base}${path}`,options);
       // A valid unrelated Receiver must not mask a PIA sharing grant.
-      // Only these three reads prefer the cookie, then fall back to the
+      // Only the explicitly scoped PIA routes prefer the cookie, then fall back to the
       // independently authenticated owner when no usable access cookie exists.
       if(cookieRead&&receiver&&[401,403].includes(response.status)){
         await response.body?.cancel?.();
-        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json','x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}});
+        response=await fetchFn(`${base}${path}`,{...options,headers:{...options.headers,'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}});
       }
     }catch(error){
       throw makeError(`VPS解析APIへ接続できませんでした: ${String(error?.message||error)}`,'vps_network_error');
@@ -80,6 +81,10 @@ export function createVpsAnalyticsClient({
   }
 
   return Object.freeze({
+    async getOperations(){return request('/operations')},
+    async getStoreOperationsById(storeId){return request(`/stores/${encodeURIComponent(String(storeId))}/operations`)},
+    async getPredictionPerformanceById(storeId){return request(`/stores/${encodeURIComponent(String(storeId))}/performance`)},
+    async retryStoreOperation(storeId,{kind,date=null}={}){return request(`/stores/${encodeURIComponent(String(storeId))}/operations/retry`,{method:'POST',body:JSON.stringify({kind,date})})},
     async listStores(){
       const payload=await request('/stores');
       return Array.isArray(payload.stores)?payload.stores:[];

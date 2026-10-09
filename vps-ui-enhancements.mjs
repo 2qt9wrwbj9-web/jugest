@@ -1,4 +1,6 @@
 import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
+import {createOperationsController,operationsStyle} from './vps-ui-operations.mjs';
+const operationsController=createOperationsController({onUpdate:()=>schedule()});
 
 const RECEIVER_STORAGE_KEY='jugglerRelayReceiver:v1';
 const FAILURE_ACK_KEY='jugest:vps:analysis-failure-ack';
@@ -61,6 +63,7 @@ function styleText(){return `
 .vps-compare-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.vps-compare-kpi{background:#f7f9ff;border:1px solid #e0e6f4;border-radius:14px;padding:12px}.vps-compare-kpi small{display:block;color:#74809a;font-size:11px;margin-bottom:5px}.vps-compare-kpi strong{display:block;font-size:20px;color:#152142}.vps-compare-delta{font-weight:800;color:#315fd5}.vps-compare-table{width:100%;border-collapse:collapse;font-size:13px}.vps-compare-table th,.vps-compare-table td{border-bottom:1px solid #edf0f6;padding:9px 6px;text-align:right}.vps-compare-table th:first-child,.vps-compare-table td:first-child{text-align:left}.vps-compare-days{display:grid;gap:9px}.vps-compare-day{border:1px solid #e2e7f1;border-radius:14px;padding:12px}.vps-compare-day-head{display:flex;justify-content:space-between;gap:10px;font-weight:800}.vps-compare-day-meta{font-size:12px;color:#69758e;margin-top:6px;line-height:1.5}.vps-compare-debug{margin-top:10px;font-size:12px;color:#52617d}.vps-compare-debug summary{cursor:pointer;font-weight:700}.vps-compare-debug code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:7px;background:#f7f9ff;border-radius:10px;padding:9px}.vps-compare-empty{text-align:center;padding:18px 8px;color:#667189}.vps-compare-empty b{display:block;color:#172342;font-size:18px;margin-bottom:6px}
 .workspace[data-vps-pre-active]>.plan-controls~:not([data-vps-pre-plan]){display:none!important}.vps-pre-plan{margin-top:16px}.vps-pre-hero{background:#fff;border:1px solid #dfe5f3;border-radius:20px;padding:18px;box-shadow:0 8px 24px rgba(33,55,110,.05)}.vps-pre-hero-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.vps-pre-badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eaf0ff;color:#245fe7;font-size:11px;font-weight:900;letter-spacing:.08em}.vps-pre-hero h2{margin:8px 0 4px;font-size:22px;color:#101a38}.vps-pre-hero p{margin:0;color:#69758e;font-size:13px;line-height:1.5}.vps-pre-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}.vps-pre-meta div{background:#f7f9ff;border-radius:12px;padding:10px}.vps-pre-meta small{display:block;color:#7a8396;font-size:10px}.vps-pre-meta b{display:block;color:#172342;margin-top:3px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vps-pre-list{display:grid;gap:9px;margin-top:14px}.vps-pre-row{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid #e2e7f1;border-radius:14px;padding:11px}.vps-pre-row .rank{font-weight:900;color:#245fe7;text-align:center}.vps-pre-row b{display:block;color:#172342}.vps-pre-row small{display:block;color:#758098;margin-top:3px}.vps-pre-score{text-align:right;font-weight:900;color:#172342}.vps-plan-fallback{margin:12px 0;padding:11px 13px;border-radius:13px;background:#fff8e8;border:1px solid #f2dfaa;color:#6f5720;font-size:12px;line-height:1.5}.vps-plan-fallback b{display:block;margin-bottom:3px}.vps-pre-loading{padding:18px;border-radius:16px;background:#fff;border:1px solid #dfe5f3;color:#5f687e;text-align:center}
 .vps-auto-hidden{display:none!important}@media(max-width:560px){.vps-compare-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vps-settings-overlay h1{font-size:29px}.vps-pre-meta{grid-template-columns:1fr 1fr}}
+${operationsStyle()}
 `}
 
 function ensureStyle(){
@@ -117,7 +120,7 @@ function comparisonSettingsHtml(){
 }
 
 function settingsHubHtml(){
-  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-comparison><span><b>PRE版 精度比較</b><small>新版と現行版の翌日ランキングを実運用で比較</small></span><span class="vps-chev">›</span></button></section>${app?.renderObservedSettings?.()||''}</div>`;
+  return `<div class="vps-settings-wrap"><button class="vps-settings-back" type="button" data-vps-settings-close>‹ 戻る</button><div class="vps-settings-kicker">SETTINGS</div><h1>設定</h1><section class="vps-settings-card"><button type="button" class="vps-settings-row" data-vps-settings-collector><span><b>Collector連携</b><small>iPhoneキー・Shortcut接続・連携解除</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-collection><span><b>データ収集状況</b><small>取得・欠損・処理待ちと安全な再試行</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-performance><span><b>予測成績</b><small>事前保存した予測の答え合わせと推移</small></span><span class="vps-chev">›</span></button><button type="button" class="vps-settings-row" data-vps-settings-comparison><span><b>PRE版 精度比較</b><small>新版と現行版の翌日ランキングを実運用で比較</small></span><span class="vps-chev">›</span></button></section>${app?.renderObservedSettings?.()||''}</div>`;
 }
 
 function renderSettings(){
@@ -126,8 +129,8 @@ function renderSettings(){
   if(!settingsOpen){overlay?.remove();shell.classList.remove('vps-settings-open');return}
   shell.classList.add('vps-settings-open');
   if(!overlay){overlay=document.createElement('div');overlay.className='vps-settings-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','設定');shell.append(overlay)}
-  const html=settingsPage==='comparison'?comparisonSettingsHtml():settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
-  if(overlay._settingsHtml!==html){overlay.innerHTML=html;overlay._settingsHtml=html}
+  const html=['collection','performance'].includes(settingsPage)?operationsController.html():settingsPage==='comparison'?comparisonSettingsHtml():settingsPage==='collector'?collectorSettingsHtml():settingsHubHtml();
+  if(overlay._settingsHtml!==html){const scroll=overlay.scrollTop;overlay.innerHTML=html;overlay._settingsHtml=html;overlay.scrollTop=scroll}
 }
 
 async function loadComparison({force=false}={}){
@@ -273,7 +276,7 @@ async function collectorAction(kind){
   collectorBusy=true;collectorMessage='';renderSettings();
   try{if(kind==='ios')await b.createIosCollector?.();else if(kind==='pair')await b.createCollectorPair?.();else if(kind==='unlink')await b.unlinkCollector?.();await refreshCollectorAfterAction();collectorMessage=kind==='unlink'?'Collector連携を解除したよ':kind==='ios'?'iPhone Collector設定を更新したよ':'Collector連携コードを準備したよ'}
   catch(error){collectorMessage=`エラー: ${String(error?.message||error)}`}
-  finally{collectorBusy=false;renderSettings();schedule()}
+  finally{collectorBusy=false;refreshOperationsAccess();renderSettings();schedule()}
 }
 
 async function copyKey(){const key=String(bridge()?.getCollectorKey?.()||'');if(!key)return;try{await globalThis.navigator?.clipboard?.writeText?.(key);collectorMessage='iPhoneキーをコピーしたよ'}catch{collectorMessage='コピーできなかったので、キーを長押ししてコピーしてね'}renderSettings()}
@@ -313,6 +316,10 @@ function onClick(event){
   if(target.matches('[data-vps-settings-back]')){event.preventDefault();event.stopPropagation();settingsPage='hub';schedule();return}
   if(target.matches('[data-vps-settings-collector]')){event.preventDefault();event.stopPropagation();settingsPage='collector';schedule();return}
   if(target.matches('[data-vps-settings-comparison]')){event.preventDefault();event.stopPropagation();settingsPage='comparison';schedule();void loadComparison();return}
+  if(target.matches('[data-vps-settings-collection],[data-vps-settings-performance]')){event.preventDefault();event.stopPropagation();settingsPage=target.matches('[data-vps-settings-collection]')?'collection':'performance';schedule();void operationsController.open(settingsPage);return}
+  if(target.matches('[data-vps-op-refresh]')){event.preventDefault();event.stopPropagation();void operationsController.refresh();return}
+  if(target.matches('[data-vps-op-period]')){event.preventDefault();event.stopPropagation();operationsController.setPeriod(target.dataset.vpsOpPeriod);return}
+  if(target.matches('[data-vps-op-retry]')){event.preventDefault();event.stopPropagation();void operationsController.retry(target.dataset.storeId,target.dataset.vpsOpRetry,target.dataset.retryDate);return}
   if(target.matches('[data-vps-comparison-refresh]')){event.preventDefault();event.stopPropagation();void loadComparison({force:true});return}
   if(target.matches('[data-vps-collector-ios]')){event.preventDefault();event.stopPropagation();collectorAction('ios');return}
   if(target.matches('[data-vps-collector-pair]')){event.preventDefault();event.stopPropagation();collectorAction('pair');return}
@@ -329,6 +336,7 @@ function attach(candidate){
   app._runExternalNewPlan=key=>runExternalNewPlan(key);
   installVpsLegacyPlanRunner(app);
   root.addEventListener('click',onClick,true);
+  root.addEventListener('change',event=>{if(event.target?.matches?.('[data-vps-op-store]')){event.stopPropagation();void operationsController.selectStore(event.target.value)}},true);
   const unsubscribe=bridge()?.subscribe?.(()=>{
     root?.querySelector('[data-vps-backfill-card]')?.remove();const shop=activeShop();
     if(prePlanState&&prePlanState.shop!==shop){prePlanState=null;restorePlanButton()}
@@ -339,6 +347,9 @@ function attach(candidate){
 }
 
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
+function refreshOperationsAccess(){operationsController.invalidate();if(settingsOpen&&['collection','performance'].includes(settingsPage))void operationsController.refresh()}
+globalThis.addEventListener?.('jugest:pia-access-changed',refreshOperationsAccess);
+globalThis.addEventListener?.('storage',event=>{if(event.key===RECEIVER_STORAGE_KEY)refreshOperationsAccess()});
 boot();
 
 export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml,currentPlanMode,shouldInterceptPlanRun,installVpsLegacyPlanRunner,restoreVpsLegacyPlanRunner};

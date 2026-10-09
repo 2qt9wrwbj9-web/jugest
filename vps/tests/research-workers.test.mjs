@@ -46,9 +46,9 @@ test('FEATURE_BUILD refreshes tomorrow store-read snapshot with the retained act
     f.db.prepare(`INSERT INTO active_store_models(store_id,fingerprint,model_json,feature_version,source_frontier_date,holdout_score,activated_at,updated_at) VALUES(?,?,?,?,?,?,?,?)`).run('s1',fingerprint,canonicalJson(model),FEATURE_VERSION,'2026-08-23',2,NOW,NOW);
     const requested=requestFeatureRefresh(f.db,{storeId:'s1',featureVersion:FEATURE_VERSION,frontierDate:'2026-08-24',nowIso:NOW,dirty:true});
     const messages=await spawnAndWait({job:requested.job,workerPath:new URL('../src/jobs/feature-build.mjs',import.meta.url),dbPath:f.dbPath});
-    const done=messages.find(x=>x.type==='complete');assert.equal(done.storeReadTargetDate,'2026-08-25');
+    const done=messages.find(x=>x.type==='complete');assert.ok(done.storeReadTargetDate>'2026-08-25');
     const snapshot=f.db.prepare("SELECT business_date,payload_json FROM client_snapshots WHERE store_id='s1' AND snapshot_type='store-read-active' AND version='store-read-v1'").get();
-    assert.equal(snapshot.business_date,'2026-08-25');
+    assert.equal(snapshot.business_date,done.storeReadTargetDate);
     const payload=JSON.parse(snapshot.payload_json);assert.equal(payload.asOfDate,'2026-08-24');assert.equal(payload.modelFingerprint,fingerprint);assert.equal(payload.rankings[0].tableNo,'107');
   }finally{f.cleanup()}
 });

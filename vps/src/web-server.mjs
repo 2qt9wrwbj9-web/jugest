@@ -4,6 +4,7 @@ import {createReadStream} from 'node:fs';
 import {readFile,realpath,stat} from 'node:fs/promises';
 import {getGeneratedIcon} from './icon-assets.mjs';
 import {createVpsRelayHandler} from './relay-handler.mjs';
+import {createVpsSyncHandler} from './sync-handler.mjs';
 import {createAnalyticsHandler} from './analytics-handler.mjs';
 import {createDeviceBackfillHandler} from './device-backfill-handler.mjs';
 import {createMcpHandler,judgeMachinesPublic} from './mcp-handler.mjs';
@@ -86,6 +87,7 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   assertPrivateAccessPath(access.config,absoluteRoot,[relayDbPath,canonicalDbPath,pachinkoDbPath]);
   if(access.config)assertPiaSharingOwnership();
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
+  const syncHandler=relayDbPath?createVpsSyncHandler({dbPath:relayDbPath}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath,authenticatePia:access.authenticate})
     :null;
@@ -101,6 +103,10 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
     :null;
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
+    if(url.pathname==='/api/sync'){
+      if(!syncHandler){send(res,503,JSON.stringify({ok:false,code:'sync_storage_unavailable'}),{'content-type':'application/json; charset=utf-8'});return}
+      return await syncHandler(req,res);
+    }
     if(url.pathname==='/api/access'||url.pathname.startsWith('/api/access/'))return await access.handle(req,res);
     if(url.pathname==='/api/pachinko'||url.pathname.startsWith('/api/pachinko/')){
       if(!pachinkoHandler){send(res,503,JSON.stringify({ok:false,code:'pachinko_preparation_required'}),{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});return}

@@ -10,6 +10,8 @@ import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-externa
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateReceiver,authenticateAssistantRead,assistantReadKeyStatus,rotateAssistantReadKey,revokeAssistantReadKey} from './assistant-read-key.mjs';
 import {canReadPiaRoute} from './access/handler.mjs';
+import {buildOperationsOverview,buildStoreOperations,retryStoreOperation,callOwnedCollector} from './operations.mjs';
+import {buildPredictionPerformance} from './research/prediction-performance.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -23,9 +25,9 @@ function isJudgeMachinesRoute(parts){return !!parts&&parts.length===4&&parts[0]=
 function isAssistantKeyRoute(parts){return !!parts&&parts.length===3&&parts[0]==='api'&&parts[1]==='vps'&&parts[2]==='assistant-key'}
 function assistantReadRouteAllowed(parts,method){
   if(!['GET','HEAD'].includes(method)||!parts||parts[0]!=='api'||parts[1]!=='vps')return false;
-  if(parts.length===3&&parts[2]==='stores')return true;
+  if(parts.length===3&&['stores','operations'].includes(parts[2]))return true;
   if(parts[2]!=='stores'||parts.length<5)return false;
-  if(parts.length===5&&['days','legacy-plan'].includes(parts[4]))return true;
+  if(parts.length===5&&['days','legacy-plan','operations','performance'].includes(parts[4]))return true;
   if(parts.length===6&&parts[4]==='days')return true;
   return parts.length===6&&parts[4]==='research'&&['store-read','comparison'].includes(parts[5]);
 }
@@ -78,13 +80,21 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       sendJson(req,res,200,{ok:true,...await revokeAssistantReadKey(relayDbPath,owner.channelId)});return;
     }
     const judgeRoute=isJudgeMachinesRoute(parts);
+    const retryRoute=parts.length===6&&parts[2]==='stores'&&parts[4]==='operations'&&parts[5]==='retry';
     if(judgeRoute){if(method!=='POST'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'POST'});return}}
+    else if(retryRoute){if(method!=='POST'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'POST'});return}}
     else if(method!=='GET'&&method!=='HEAD'){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, HEAD'});return}
     const auth=await authenticateReceiver(req,relayDbPath)||await authenticateAssistantRead(req,relayDbPath)||authenticatePia(req);
     if(!auth){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
     const piaOnly=auth.kind==='admin'||auth.kind==='pia-viewer';
-    if(piaOnly&&!canReadPiaRoute(parts,method)){sendJson(req,res,403,{ok:false,code:'pia_view_scope_denied'});return}
+    if(piaOnly&&!canReadPiaRoute(parts,method)&&!(retryRoute&&auth.kind==='admin')){sendJson(req,res,403,{ok:false,code:'pia_view_scope_denied'});return}
     if(auth.authType==='assistant-read'&&!assistantReadRouteAllowed(parts,method)){sendJson(req,res,403,{ok:false,code:'assistant_read_scope_denied'});return}
+    if(retryRoute){
+      const origin=req.headers.origin;
+      let sameOrigin=!origin&&auth.authType==='receiver';
+      try{if(origin)sameOrigin=new URL(origin).host===req.headers.host}catch{}
+      if(!sameOrigin||req.headers['sec-fetch-site']==='cross-site'||req.headers['x-jugest-operations']!=='1'||!/^application\/json(?:;|$)/i.test(req.headers['content-type']??'')){sendJson(req,res,403,{ok:false,code:'operation_origin_denied'});return}
+    }
     if(judgeRoute){
       let body;try{body=await readJsonBody(req)}catch(error){const tooLarge=error?.code==='body_too_large';sendJson(req,res,tooLarge?413:400,{ok:false,code:tooLarge?'body_too_large':'bad_json'});return}
       if(!Array.isArray(body?.machines)){sendJson(req,res,400,{ok:false,code:'bad_machines'});return}
@@ -96,6 +106,15 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
     const db=openDatabase(canonicalDbPath);
     try{
       migrate(db);
+      if(parts.length===3&&parts[2]==='operations'){
+        const stores=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all().filter(row=>{const metadata=storeMetadata(row.source_metadata_json);return piaOnly?metadata.source==='pia-public-ranking-top':canAccessStoreMetadata(metadata,auth.channelId)});
+        let collectorTargets=[],collectorWarning=null;
+        if(!piaOnly&&auth.authType==='receiver'){
+          try{const result=await callOwnedCollector({relayDbPath,auth,token:String(req.headers.authorization??'').replace(/^Bearer\s+/i,''),action:'collectorStatus'});collectorTargets=result.iosTargets??[]}
+          catch{collectorWarning='iPhoneの取得対象一覧を確認できませんでした。以下は正式に保存された店舗の状態です。'}
+        }
+        sendJson(req,res,200,{ok:true,operations:buildOperationsOverview(db,{stores,auth,collectorTargets,collectorWarning})});return;
+      }
       if(parts.length===4&&parts[2]==='system'&&parts[3]==='resources'){
         try{sendJson(req,res,200,{ok:true,resources:await resourceStatusBuilder(db)});}catch(error){sendJson(req,res,503,{ok:false,code:'resource_telemetry_unavailable',message:String(error?.message??error)});}return;
       }
@@ -106,6 +125,28 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       }
       if(parts[2]!=='stores'||parts.length<4){sendJson(req,res,404,{ok:false,code:'not_found'});return}
       const storeId=parts[3],access=authorizedStore(db,storeId,auth.channelId,piaOnly);if(!access.store){sendJson(req,res,access.status,{ok:false,code:access.status===403?'forbidden':'store_not_found'});return}
+      if(parts.length===5&&parts[4]==='operations'){
+        const store=db.prepare('SELECT * FROM stores WHERE id=?').get(storeId);
+        sendJson(req,res,200,{ok:true,store:access.store,operations:buildStoreOperations(db,{store,auth})});return;
+      }
+      if(parts.length===5&&parts[4]==='performance'){
+        sendJson(req,res,200,{ok:true,store:access.store,performance:buildPredictionPerformance(db,{storeId})});return;
+      }
+      if(retryRoute){
+        try{
+          const body=await readJsonBody(req,{maxBytes:4096});
+          // Uploading the body can outlive a Receiver/session revocation.
+          const fresh=auth.authType==='receiver'?await authenticateReceiver(req,relayDbPath):authenticatePia(req);
+          if(!fresh||(auth.authType==='receiver'?fresh.channelId!==auth.channelId:fresh.kind!=='admin')){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+          const store=db.prepare('SELECT * FROM stores WHERE id=?').get(storeId);
+          const token=String(req.headers.authorization??'').replace(/^Bearer\s+/i,'');
+          const result=await retryStoreOperation(db,{store,auth:fresh,kind:body?.kind,date:body?.date,relayDbPath,token});
+          sendJson(req,res,202,{ok:true,...result});
+        }catch(error){
+          const status=error.status??(error.code==='body_too_large'?413:error.code==='bad_json'?400:503);
+          sendJson(req,res,status,{ok:false,code:error.code??'operation_retry_failed',message:error.status?error.message:'再試行を登録できませんでした。保存済みのデータは保持しています。'},status===429?{'retry-after':String(error.retryAfter??300)}:{});
+        }return;
+      }
       if(parts.length===5&&parts[4]==='days'){
         const limit=Math.min(366,Math.max(1,Math.trunc(Number(url.searchParams.get('limit'))||60)));
         const rows=db.prepare(`SELECT d.business_date,d.parser_version,d.quality_status,COUNT(m.machine_key) AS machine_count FROM store_days d LEFT JOIN machine_day_data m ON m.store_id=d.store_id AND m.business_date=d.business_date WHERE d.store_id=? AND d.quality_status='valid' GROUP BY d.store_id,d.business_date ORDER BY d.business_date DESC LIMIT ?`).all(storeId,limit).reverse();
