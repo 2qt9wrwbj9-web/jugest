@@ -44,16 +44,76 @@ function developerInfo(result){
   <details class="panel observed-details"><summary>技術情報を見る</summary><dl class="observed-input-summary">${pair('判別方式',result.method)}${pair('機種名',result.machineName)}${pair('内部機種キー',x.machine)}${pair('MCP判別識別子',result.engine.judgeVersion)}${pair('UIコード版',result.engine.uiVersion)}${pair('Bridgeコード版',result.engine.bridgeVersion)}${pair('判別の正','既存 externalJudge')}${pair('小役逆算の打ち方','unknown')}</dl><details><summary>使用テーブルJSON</summary><h3>使用した既存テーブル</h3><pre>${esc(JSON.stringify(table,null,2))}</pre></details><p class="observed-help">UI・Bridge・MCPの識別子はそれぞれ別のものです。単一の判別数学バージョンではありません。</p></details>
  </details>`;
 }
+/* Display-only interpolation. Existing judgement probabilities are untouched. */
+function equivalentSetting(observedProbability,denominators){
+ if(!Array.isArray(denominators)||denominators.length!==6||denominators.some(d=>!Number.isFinite(d)||d<=0))return{kind:'missing',label:'—'};
+ const p=denominators.map(d=>1/d),eps=1e-12;
+ if(p.some((v,i)=>i&&v+eps<p[i-1]))return{kind:'missing',label:'—'};
+ if(!Number.isFinite(observedProbability)||observedProbability<0)return{kind:'missing',label:'—'};
+ if(p.every(v=>Math.abs(v-p[0])<=eps))return{kind:'range',start:1,end:6,value:3.5,label:'設定差なし'};
+ if(observedProbability<p[0]-eps)return{kind:'below',value:1,label:'1未満'};
+ if(observedProbability>p[5]+eps)return{kind:'above',value:6,label:'6超'};
+ const matches=p.flatMap((v,i)=>Math.abs(v-observedProbability)<=eps?[i+1]:[]);
+ if(matches.length>1)return{kind:'range',start:matches[0],end:matches.at(-1),value:(matches[0]+matches.at(-1))/2,label:`${matches[0]}〜${matches.at(-1)}`};
+ if(matches.length===1)return{kind:'point',value:matches[0],label:String(matches[0])};
+ for(let i=0;i<5;i++){
+  if(p[i+1]-p[i]<=eps||observedProbability<p[i]||observedProbability>p[i+1])continue;
+  const value=i+1+(observedProbability-p[i])/(p[i+1]-p[i]);
+  return{kind:'point',value,label:value.toFixed(1)};
+ }
+ return{kind:'missing',label:'—'};
+}
+const factorPct=value=>((Math.max(1,Math.min(6,value))-1)*20).toFixed(3);
+function factorRow(name,odds,probability,denominators,color,estimated=false){
+ const eq=equivalentSetting(probability,denominators),available=eq.kind!=='missing';
+ const at=available?factorPct(eq.value):'0';
+ const start=eq.kind==='range'?factorPct(eq.start):'0';
+ const width=eq.kind==='range'?((eq.end-eq.start)*20).toFixed(3):at;
+ const side=eq.kind==='below'||eq.value<=1?'left':eq.kind==='above'||eq.value>=6?'right':'';
+ return `<div class="observed-factor-row" style="--factor-color:${color}">
+   <div class="observed-factor-value"><b>${esc(name)}</b><span>${esc(odds)}${estimated?'<small>推定</small>':''}</span></div>
+   <div class="observed-factor-plot" aria-label="${esc(name)} ${esc(odds)} 設定相当 ${esc(available?eq.label:'算出不可')}">
+    <span class="observed-factor-rail" aria-hidden="true"></span>
+    ${available?`<span class="observed-factor-fill" style="left:${start}%;width:${width}%" aria-hidden="true"></span>
+    <span class="observed-factor-marker ${eq.kind==='range'?'range':''}" style="left:${at}%" aria-hidden="true"></span>
+    <span class="observed-factor-label ${side}" style="left:${at}%">${esc(eq.label)}</span>`:
+    '<span class="observed-factor-unknown">算出不可</span>'}
+   </div></div>`;
+}
+function factorPanel(result){
+ const x=result.input,settings=result.engine?.table?.settings;
+ const rows=Array.isArray(settings)&&settings.length===6?settings:null;
+ const specs=key=>rows?rows.map(item=>Number(item?.[key])):[];
+ const bb=specs('b'),rb=specs('r'),g=specs('g');
+ const combined=rows?rows.map((_,i)=>bb[i]>0&&rb[i]>0?1/(1/bb[i]+1/rb[i]):NaN):[];
+ const estimated=Number.isFinite(result.estimatedGrape)&&result.estimatedGrape>0;
+ const factors=[
+  factorRow('BB',rate(x.games,x.bb),x.bb/x.games,bb,'#ef4444'),
+  factorRow('RB',rate(x.games,x.rb),x.rb/x.games,rb,'#3b82f6'),
+  factorRow('合算',rate(x.games,x.bb+x.rb),(x.bb+x.rb)/x.games,combined,'#8b5cf6'),
+  factorRow('ぶどう',estimated?grape(result.estimatedGrape):'未推定',estimated?1/result.estimatedGrape:NaN,g,'#22c55e',true)
+ ].join('');
+ const header=['設定','BB','RB','合算','ぶどう'];
+ const body=rows?rows.map((row,i)=>`<tr><th scope="row">${i+1}</th>${[bb[i],rb[i],combined[i],g[i]].map(v=>`<td>${grape(v)}</td>`).join('')}</tr>`).join(''):'<tr><td colspan="5">機種スペックを取得できませんでした。</td></tr>';
+ return `<section class="panel observed-factor-card"><h2>判別要素別の設定相当値</h2>
+  <dl class="observed-compact-summary">${pair('通常G',`${number(x.games,0)}G`)}${pair('BB',number(x.bb,0))}${pair('RB',number(x.rb,0))}${pair('差枚',x.diff==null?'未入力':`${x.diff>=0?'+':''}${number(x.diff,0)}枚`)}</dl>
+  <div class="observed-factor-axis" aria-hidden="true"><span></span><div>${Array.from({length:6},(_,i)=>`<span>${i+1}</span>`).join('')}</div></div>
+  <div class="observed-factor-rows">${factors}</div>
+  <p class="observed-help">設定相当値は機種スペックと各要素の確率を比較した参考値で、設定確率とは異なります。ぶどうは差枚からの推定値です。</p>
+  <h3 class="observed-spec-title">機種スペック表</h3>
+  <div class="observed-spec-scroll" role="region" aria-label="機種スペック表" tabindex="0"><table class="observed-spec-table"><thead><tr>${header.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+  <p class="observed-help">JUGEST既存の確率表を使用。グラフの設定間は実際の出現確率で補間し、判別の計算には加えていません。</p>
+  <details class="observed-factor-details observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',estimated?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl></details>
+ </section>`;
+}
 function result(result,{debug=false}={}){
  const x=result.input;
  return `<section class="observed-result" data-observed-result>
-  <section class="panel"><h2>${esc(result.machineName)}${x.tableNo?` · 台${esc(x.tableNo)}`:''}</h2>${summary(result)}<p class="observed-help">分布集中度は、設定確率がどれだけ一部の設定へ集中しているかを表す指標で、判別の的中率ではありません。</p>${result.warnings.map(w=>`<p class="observed-error" role="alert">${result.reverseWarn?'逆算警告：':''}${esc(w)}</p>`).join('')}</section>
-  <section class="panel"><h2>設定1〜6の確率</h2><div class="observed-distribution">${result.q.map((p,i)=>`<div class="observed-probability"><span>設定${i+1}</span><div class="observed-bar-track" aria-hidden="true"><div class="observed-bar" style="width:${p*100}%"></div></div><strong>${percent(p)}</strong></div>`).join('')}</div><p class="observed-help">すべての棒は0〜100%の共通スケールです。</p></section>
-  <section class="panel"><h2>入力データ</h2><dl class="observed-input-summary">${pair('通常G',`${number(x.games,0)}G`)}${pair('BB',number(x.bb,0))}${pair('RB',number(x.rb,0))}${pair('差枚',x.diff==null?'未入力':`${x.diff>=0?'+':''}${number(x.diff,0)}枚`)}${pair('BB確率',rate(x.games,x.bb))}${pair('RB確率',rate(x.games,x.rb))}${pair('合算',rate(x.games,x.bb+x.rb))}</dl><p class="observed-help">確率表記は入力値からの参考表示です。判別への再入力には使用していません。</p></section>
-  <details class="panel observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',Number.isFinite(result.estimatedGrape)?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl>
-  </details>
-  ${debug===true?developerInfo(result):''}
+ <section class="panel"><h2>${esc(result.machineName)}${x.tableNo?` · 台${esc(x.tableNo)}`:''}</h2>${summary(result)}<p class="observed-help">分布集中度は、設定確率がどれだけ一部の設定へ集中しているかを表す指標で、判別の的中率ではありません。</p>${result.warnings.map(w=>`<p class="observed-error" role="alert">${result.reverseWarn?'逆算警告：':''}${esc(w)}</p>`).join('')}</section>
+ <section class="panel"><h2>設定1〜6の確率</h2><div class="observed-distribution">${result.q.map((p,i)=>`<div class="observed-probability"><span>設定${i+1}</span><div class="observed-bar-track" aria-hidden="true"><div class="observed-bar" style="width:${p*100}%"></div></div><strong>${percent(p)}</strong></div>`).join('')}</div><p class="observed-help">すべての棒は0〜100%の共通スケールです。</p></section>
+ ${factorPanel(result)}
+ ${debug===true?developerInfo(result):''}
  </section>`;
 }
-global.JUGESTJudgementView=Object.freeze({fields,parallelEditor,parallelResults,summary,result});
+global.JUGESTJudgementView=Object.freeze({fields,parallelEditor,parallelResults,summary,result,equivalentSetting,factorPanel});
 })(typeof globalThis!=='undefined'?globalThis:this);
