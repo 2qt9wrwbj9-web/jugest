@@ -6,7 +6,7 @@
 
 ## 結論
 
-初回にP2を3件、実コードを使う独立fixtureで再現した。親担当の修正後、同じ条件を再検証し、3件とも解消した。今回の独立確認範囲では未解決のP1/P2はない。
+初回にP2を3件、最終差分の追加確認でP2を1件、実コードを使う独立fixtureで再現した。親担当の修正後、同じ条件を再検証し、4件とも解消した。今回の独立確認範囲では未解決のP1/P2はない。
 
 通常の権限範囲、POST保護、ジョブ統合、待機期間、未取得店舗、評価0件・実測0枚・訂正日の区別を別途確認した。これはコードとローカルAPI・controllerの結果であり、本番動作や390px実機画面の成功判定ではない。
 
@@ -83,3 +83,45 @@
 運用画面は最後にAPIから取得した状態を表示する。未通知のReceiver失効や店舗範囲変更を常時監視する画面ではない。既知のアクセス変更イベント、手動更新、再試行の拒否によりキャッシュを捨てることを今回確認した。取得先がまだ公開していない日は、架空の実績0・完全取得として数えていない。
 
 既存数式や正式試験の統計正当性・メモリ測定・全体回帰の最終成功はこのレビューの結論に含めない。対象コードの安全な範囲判定と今回の再現条件から、数学や本番について未実施の成功を推測しない。
+
+## 最終差分の再確認（2026-10-09 09:27 UTC）
+
+親担当から、lastCollectedAtを受理receiptの最大時刻へ変更し、台数・台不足が各店舗の最新営業日である説明を追加したとの連絡を受け、差分だけを追加確認した。
+
+通常の欠損再送は成功: 02:00の受理後に03:00の不足再送を拒否してもlastCollectedAtは02:00、lastAttemptは03:00、canonicalの元行は完全保持。同じデータを04:00に受理して再送した場合はlastCollectedAtが04:00に進む。追加説明「台数・台不足は各店舗の最新営業日。過去の取得待ちは別に表示します。」が実HTMLにあることも確認した。
+
+### O4 / P2 — 同じpayload hashの検品根拠変更で最終取得時刻が過去へ戻る
+
+この最終差分には表示時刻の残条件を1件再現した。過去営業日のデータを01:00に受理、最新営業日のデータを02:00に受理する。その後、dayは同一のまま外部の `input.expectedMachineKeys` を2台から3台へ増やし03:00に再送すると、保存済み2台を保護して正しく拒否するが、receiptは同一のnormalizedHashなのでdecisionがacceptedからquarantinedへ更新される。そのためaccepted receiptの最大時刻が01:00となり、canonicalの最新日updated_atは02:00のままなのにlastCollectedAtが01:00へ戻る。
+
+保存データの欠落や上書きは発生しない。問題は「最後に受理した取得時刻」の誤表示。単純な異なるhashの欠損再送は正常なため、通常の再送確認では見落とす条件だった。実装担当へ再現条件を送付済み。この担当はコードを変更していない。
+
+`store_days.updated_at` はcanonical-ingestで受理時だけ更新され、拒否時には更新されない。全営業日のMAX(updated_at)を受理時刻の根拠にすれば、同hash receiptのdecision変更と、後から取得した過去営業日の補完の双方を扱える。最新営業日だけのupdated_atでは直近に受理した過去日の補完を取り逃す条件が残る。
+
+追加証拠: `/workspace/scratch/2f9e5eaabf52/operations-review/accepted-time-final.mjs` / `.log`。通常拒否・受理再送はPASS、同hash外部検品根拠変更のケースでtimeMovedBackwards=true。初回O1〜O3の解消結論は維持するが、この時点ではO4が未解決のP2として1件ある。
+
+| 最終差分ファイル | SHA-256 |
+| --- | --- |
+| `vps/src/operations.mjs` | `3667a2dd211a49ba0405c53f280071f547e64f169588f305f3116c6d83a70818` |
+| `vps-ui-operations.mjs` | `7cc31362b10361ef08775daca2fb8feec71ed3bbea4c2c88d0898f35d52d4a4a` |
+| `vps-ui-enhancements.mjs` | `d22cca29bfb00498e1c61003df5466b11391735c896c4cf01f2a9c020ec1d492` |
+
+親担当からは、実SQLite/HTTPを使う390px Chromium E2Eで期間選択、結果待ち・欠損・訂正表示、retry202/1job、401後の非公開表示消去、overflowなし、pageErrorsなしがPASSしたとの連絡を受けた。これは親担当の検証結果として記録し、この担当が同E2Eを独立実行した結果には含めない。全体回帰の最終結果と本番動作は依然このレビューの範囲外。
+
+### O4修正後の独立再確認（2026-10-09 09:29 UTC）
+
+親担当が全営業日のMAX(store_days.updated_at)も取得時刻の根拠に追加し、native last_success_at / accepted receipt時刻 / canonical保存時刻の実時刻比較で最新を取る実装へ修正した。
+
+元の同hash・外部期待台集合変更の条件を再実行し、canonical最新日の02:00を保持してtimeMovedBackwards=falseとなることを確認した。さらに、最新営業日は10/8のまま過去営業日10/7を05:00に補完し、その同hash再送を06:00に拒否する条件を追加して、lastCollectedAt=05:00を保持することも確認した。通常の欠損再送拒否、同一データの受理再送、追加説明の表示も同時に再確認した。
+
+`accepted-time-confirmed.mjs` / `.log` の4ケースはexit 0。取得時刻と最新営業日の台数を混同せず、拒否再送時刻へ進まず、同hash receiptのdecision変更で過去へ戻らない。O4は解消。O1〜O4について、現確認範囲の未解決P1/P2はない。
+
+settings統合の最終変更 `globalThis.addEventListener?.(...)` は、ブラウザ上のアクセス変更イベント登録の動作を変えず、非ブラウザfixtureでEventTarget APIがない場合にも対応する変更と読取り確認した。実DOMの再検証は親担当のE2E結果へ留保する。
+
+| 最終再確認ファイル | SHA-256 |
+| --- | --- |
+| `vps/src/operations.mjs` | `2ee3e8cb7a03d2fd28b09dff67aed01415df24ce35f54e32d2dfea2bc62bccb4` |
+| `vps-ui-operations.mjs` | `7cc31362b10361ef08775daca2fb8feec71ed3bbea4c2c88d0898f35d52d4a4a` |
+| `vps-ui-enhancements.mjs` | `6e7fd9056f39f1311fc6d4177a05665faf8d2ac49c449b9973e8a25edc4a8bdf` |
+
+09:20 UTCの識別表は当時の検証版、上表は最後の差分検証版。時刻変更に関係しない前述5ファイルの識別値は変更されていない。全体回帰は担当外のままで、今回の追加検証をその代替にはしていない。本番変更・実装コード編集・commit/pushはこの担当では行っていない。

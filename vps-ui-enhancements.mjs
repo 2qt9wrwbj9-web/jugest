@@ -348,8 +348,8 @@ function attach(candidate){
 
 function boot(){const candidate=document.querySelector('jugest-app');if(attach(candidate))return;globalThis.setTimeout(boot,50)}
 function refreshOperationsAccess(){operationsController.invalidate();if(settingsOpen&&['collection','performance'].includes(settingsPage))void operationsController.refresh()}
-globalThis.addEventListener('jugest:pia-access-changed',refreshOperationsAccess);
-globalThis.addEventListener('storage',event=>{if(event.key===RECEIVER_STORAGE_KEY)refreshOperationsAccess()});
+globalThis.addEventListener?.('jugest:pia-access-changed',refreshOperationsAccess);
+globalThis.addEventListener?.('storage',event=>{if(event.key===RECEIVER_STORAGE_KEY)refreshOperationsAccess()});
 boot();
 
 export const __test={RECEIVER_STORAGE_KEY,FAILURE_ACK_KEY,BACKFILL_BATCH_SIZE,normalizeBackfillDays,comparisonMetricRows,comparisonDayHtml,prePlanHtml,currentPlanMode,shouldInterceptPlanRun,installVpsLegacyPlanRunner,restoreVpsLegacyPlanRunner};

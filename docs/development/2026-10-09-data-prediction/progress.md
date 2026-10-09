@@ -82,3 +82,12 @@
 - Chromium 153・390pxの実SQLite/HTTP画面操作は成功。期間選択、再試行202＋既存1job、待ち/欠損/訂正、401後表示消去、横はみ出しなし、pageErrorsなし。日本語フォントとWebKitはローカル依存を準備中、実iPhone Safariは未検証。
 - 架空180営業日×120台の実worker peak 103.52MiB/既存384MiB枠、初回476ms/キャッシュ174ms、DB+WAL20.32MiB。実データの最大負荷を保証する測定ではない。
 - 次の作業は最終全体回帰・日本語画面/WebKit確認・報告と再開記録更新・GitHub保存・draft PR。本番未変更。
+
+## 2026-10-09 18:47 JST 最終実装・検証完了
+
+- 最終テスト対象コードを local `112841b0f8bf40a56f2d461198e1e3107483139e` / tree `b91d208341e4594f6edca29de323c85eba976306` にcommit済み。以後は報告と証拠のみ。
+- root全体74/74コマンド工程、VPS595/595 test case、失敗0・skip0・exit0。最後の2失敗はNode fixture環境のevent APIと実時計fixtureの修正後に全体再検証済み。保護manifest全20件は元のまま。
+- Chromium153.0.8010.0とWebKit26.5の実SQLite/HTTP・390px操作を確認。日本語画面を目視し、期間・再試行・保留/訂正・認証失効後消去・横はみ出しなしを検証。実iPhoneは未検証。
+- 3独立担当で再現した問題は全て修正後確認。確認範囲内の未解決P1/P2なし。本番稼働の保証ではない。
+- REPORT.md / RESTART.md / evidence/test-results.json / evidence/changed-files.jsonを追加。初回調査と最新状態、完成と本番未検証を分離。次はこの報告を含む最終GitHub保存とdraft PR。
+- deploy/vpsは再読取でも `a461a080...`。本番未変更。旧同期保存先移行・実機・本番日次・旧trial方針等は本番前確認として残る。

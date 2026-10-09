@@ -1,0 +1,219 @@
+{
+  "generatedAtJst": "2026-10-09T18:48:51.198526+09:00",
+  "basis": "a461a08005d8533107879813db29a57027c139b5",
+  "testedLocalCodeCommit": "112841b0f8bf40a56f2d461198e1e3107483139e",
+  "testedCodeTree": "b91d208341e4594f6edca29de323c85eba976306",
+  "productionChanged": false,
+  "finalRegression": [
+    {
+      "scratchLog": "final-root-confirmed.log",
+      "command": "npm test",
+      "result": {
+        "passedCommandGroups": 74,
+        "totalCommandGroups": 74,
+        "unit": "command group, not test case"
+      },
+      "exitCode": 0,
+      "completedAtJst": "2026-10-09T18:29:52.472768+09:00",
+      "sha256": "2415084d6e7f52f0fd5ed56b3eda7ec9dc23867dd0152b0a3addf99ed714de51"
+    },
+    {
+      "scratchLog": "final-vps-confirmed.log",
+      "command": "npm --prefix vps test",
+      "result": {
+        "passedTests": 595,
+        "totalTests": 595,
+        "failed": 0,
+        "skipped": 0
+      },
+      "exitCode": 0,
+      "completedAtJst": "2026-10-09T18:29:42.684860+09:00",
+      "sha256": "c14bc906acfcbfd775a36f201deac82977aa13236cba40157dc597be8f8dfb5f"
+    }
+  ],
+  "independentReviews": [
+    {
+      "report": "review-reliability.md",
+      "sha256": "45798ac4070ef4f1b328dc50297be856cf9484ccc48125ad3688e81945092e47",
+      "unresolvedP1P2InReviewedScope": 0
+    },
+    {
+      "report": "review-forecast.md",
+      "sha256": "e30fd5ae3e9efe074b4e230b4d5028504a8c66105183d1092d419d09b3d20d9c",
+      "unresolvedP1P2InReviewedScope": 0
+    },
+    {
+      "report": "review-operations.md",
+      "sha256": "542753be8df1bd3a7674c1c5b17fa63613f999774242a4ed3368e5b0810abbe9",
+      "unresolvedP1P2InReviewedScope": 0
+    }
+  ],
+  "browserChecks": [
+    {
+      "engine": "chromium",
+      "version": "153.0.8010.0",
+      "width": 390,
+      "actualSqliteAndHttp": true,
+      "retryStatus": 202,
+      "coalescedJobs": 1,
+      "periods": true,
+      "pendingMissingCorrectedStates": true,
+      "revokedStateCleared": true,
+      "horizontalOverflow": false,
+      "pageErrors": [],
+      "screenshots": 3,
+      "synthetic": true,
+      "physicalIphone": false,
+      "completedAtJst": "2026-10-09T18:29:34.060943+09:00",
+      "logSha256": "e1b9d595670061e317e0fb31c364f856f422eb6272d704c75c4a1008678cc153"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.5",
+      "width": 390,
+      "actualSqliteAndHttp": true,
+      "retryStatus": 202,
+      "coalescedJobs": 1,
+      "periods": true,
+      "pendingMissingCorrectedStates": true,
+      "revokedStateCleared": true,
+      "horizontalOverflow": false,
+      "pageErrors": [],
+      "screenshots": 3,
+      "synthetic": true,
+      "physicalIphone": false,
+      "completedAtJst": "2026-10-09T18:32:34.975250+09:00",
+      "logSha256": "df41566223bd76770f264ef4b27e8ab91255c84de1ffd8146bf2d72abaee30a4"
+    }
+  ],
+  "webkitHostSetup": "Scratch-local shared libraries. PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 bypassed only installed-package-location validation; browser startup and all functional checks ran.",
+  "workerResourceMeasurement": {
+    "synthetic": true,
+    "days": 180,
+    "machinesPerDay": 120,
+    "rows": 21600,
+    "results": [
+      {
+        "label": "initial",
+        "type": "complete",
+        "status": "evaluated",
+        "resultHash": "30c5d4e6a5c16a6003ea1728b8b36ce36d27ad322090cbcb36870426765edd32",
+        "followupJobId": null,
+        "startRssMiB": 43.40234375,
+        "peakRssMiB": 103.51953125,
+        "endRssMiB": 101.37109375,
+        "durationMs": 476
+      },
+      {
+        "label": "cached",
+        "type": "complete",
+        "status": "evaluated",
+        "resultHash": "b23746937f4ffb3167d1bb426755520e2539513f187d40e1b7c29b28936a5e14",
+        "followupJobId": null,
+        "startRssMiB": 43.765625,
+        "peakRssMiB": 101.94140625,
+        "endRssMiB": 100.29296875,
+        "durationMs": 174
+      }
+    ],
+    "readDurationMs": 19.958487000000105,
+    "responseBytes": 561570,
+    "dbAndWalMiB": 20.316986083984375,
+    "parentPeakRssMiB": 103.296875,
+    "leaseMiB": 384
+  },
+  "resourceLogSha256": "35901f5adcf30aefdc1f5b20f451dcbcd7b73189130fa42f08f8926f403472f0",
+  "mathPreservation": {
+    "basis": "a461a08005d8533107879813db29a57027c139b5",
+    "unchanged": true,
+    "files": [
+      {
+        "path": "core-v510.js",
+        "sha256": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba"
+      },
+      {
+        "path": "app-v510.js",
+        "sha256": "77b32cf56c0da8df197e0fa01b59000a13455d8d187830d5addc143d02efad64"
+      },
+      {
+        "path": "index.html",
+        "sha256": "19dab18a5324a87774f46480dd5bb5a391880d467046eb2785580d391a95dc08"
+      },
+      {
+        "path": "hanahana-judge.js",
+        "sha256": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0"
+      },
+      {
+        "path": "missing-inference.js",
+        "sha256": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d"
+      },
+      {
+        "path": "judgement-model.js",
+        "sha256": "4b553bfc91afac0d4865c36807182dfc2d4e7b5a7f87b4093c7ee9151679d019"
+      },
+      {
+        "path": "ana-single-day.js",
+        "sha256": "29f0d754876c634cefa07ee00bb377115f23a70da6393c0bbfde1143d805581d"
+      },
+      {
+        "path": "build.mjs",
+        "sha256": "1a0f8986d1aed2620340d7501814832dc7b659d241f2ff6ace3b1a3428cffc5b"
+      },
+      {
+        "path": "docs/collector-batch/protected-hashes.json",
+        "sha256": "44b2a3070fd8559f4fa8a7d89af0c1542c9af4efed3a4ce4732da51a08a9798f"
+      },
+      {
+        "path": "vps/src/judge/juggler-external-judge.mjs",
+        "sha256": "d268fea4cddbbad21011a0f47221558d3acfdc0a22110ba3e843f7b99736bef7"
+      },
+      {
+        "path": "vps/src/research/model-search.mjs",
+        "sha256": "1f15d482d0ee69feeba988389931570a00fe686c4362f8f58ff200736e44ebb1"
+      },
+      {
+        "path": "vps/src/research/backtest.mjs",
+        "sha256": "66ed59a56925205242f32742caa29c3109b940447fbf749b4745704d7e3d864a"
+      },
+      {
+        "path": "vps/src/research/pre-v2/formal-evaluation.mjs",
+        "sha256": "a976d8e3ab63207a31e61698f0343cb89f504b1d46ea6471ab520313c9b8dd36"
+      },
+      {
+        "path": "vps/src/research/pre-v2/trial-store.mjs",
+        "sha256": "4686b8bfc9b8a8dbc00812db1b6a01b914bc818bdf760146b762757ce7ef842f"
+      },
+      {
+        "path": "vps/src/research/pre-v2/trial.mjs",
+        "sha256": "c0b226c3139e1d8a6aabe5f844d8120c771a0a9b001e282cc44f52e055d0109f"
+      },
+      {
+        "path": "vps/src/research/pre-v2/outcome.mjs",
+        "sha256": "175927583922b81be6bce1bbe54a10119d6510b494f1463bdb979324cfab7fe8"
+      },
+      {
+        "path": "vps/src/research/pre-v2/ndcg.mjs",
+        "sha256": "1cd21696107483bd0007a1ecff3d930cfbc40820f8239c7ccf02605ed3a28fc2"
+      }
+    ]
+  },
+  "mathLogSha256": "1c1358141af94397db92a36ea06c709457269a32befab4b7058aa6f4fdf7564e",
+  "protectedManifest": {
+    "path": "docs/collector-batch/protected-hashes.json",
+    "originalEntryCount": 20,
+    "manifestUnchanged": true,
+    "permittedSyncPatch": "docs/development/2026-10-09-data-prediction/reviewed-sync.patch",
+    "patchSha256": "2d39b3a63e98f71dfbc55e5da19414a7f8a37509d50354829333432bc0e3e408",
+    "validation": "Reverse the exact permitted two-file patch, then compare full bytes to the basis and all original hashes. Unknown changes fail."
+  },
+  "limitations": [
+    "No production deploy, migration or daily-cycle validation",
+    "Legacy Blob/native sync storage cutover not performed",
+    "No physical iPhone Safari, background Shortcut or real device quota test",
+    "No live private Blob CAS test",
+    "No power loss / OS crash / actual ENOSPC / raw archive fsync test",
+    "Synthetic ordinary-worker measurement is not a production or formal/research maximum-load guarantee",
+    "No long-term append-only retention policy",
+    "Cross-localStorage/IndexedDB persistence is not one atomic transaction"
+  ]
+}

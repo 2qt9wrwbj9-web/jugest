@@ -45,7 +45,13 @@ test('unknown inventory and no evaluations remain unknown rather than zero perce
 test('rejected incomplete resend is visible without replacing the complete saved day',async t=>{
  const f=await fixture(t);
  await ingestCollectorDay(f.db,{rawRoot:f.rawRoot,channelId:CHANNEL,sourceStoreId:'a',shop:'自分の店',date:'2026-10-08',day:{date:'2026-10-08',machines:[{tableNo:'1',machine:'my',sourceMachineName:'マイジャグラーV',games:5000,bb:20,rb:18,diff:null}],quality:{expectedMachineKeys:['1','2']}},rawText:'partial',nowIso:'2026-10-09T03:00:00Z'});
- const body=await (await fetch(`${f.base}/api/vps/stores/a/operations`,{headers:f.auth})).json();assert.equal(body.operations.state,'needs_review');assert.equal(body.operations.integrity.actualCount,2);assert.equal(body.operations.lastAttempt.decision,'quarantined');assert.equal(body.operations.lastAttempt.integrity.missingKeys.length,1);
+ const body=await (await fetch(`${f.base}/api/vps/stores/a/operations`,{headers:f.auth})).json();assert.equal(body.operations.state,'needs_review');assert.equal(body.operations.integrity.actualCount,2);assert.equal(body.operations.lastAttempt.decision,'quarantined');assert.equal(body.operations.lastAttempt.integrity.missingKeys.length,1);assert.equal(body.operations.lastCollectedAt,NOW);
+});
+test('a same-hash verification rejection cannot move the last successful collection time backward',async t=>{
+ const f=await fixture(t),machines=[1,2].map(i=>({tableNo:String(i),machine:'my',sourceMachineName:'マイジャグラーV',games:5000,bb:20,rb:18,diff:i===1?0:500}));
+ await ingestCollectorDay(f.db,{rawRoot:f.rawRoot,channelId:CHANNEL,sourceStoreId:'a',shop:'自分の店',date:'2026-10-07',day:{date:'2026-10-07',machines,quality:{expectedMachineKeys:['1','2']}},rawText:'older',nowIso:'2026-10-09T01:00:00Z'});
+ await ingestCollectorDay(f.db,{rawRoot:f.rawRoot,channelId:CHANNEL,sourceStoreId:'a',shop:'自分の店',date:'2026-10-08',day:{date:'2026-10-08',machines},expectedMachineKeys:['1','2','3'],rawText:'fixture',nowIso:'2026-10-09T03:00:00Z'});
+ const result=await (await fetch(`${f.base}/api/vps/stores/a/operations`,{headers:f.auth})).json();assert.equal(result.operations.lastAttempt.decision,'quarantined');assert.equal(result.operations.lastCollectedAt,NOW);assert.equal(result.operations.integrity.actualCount,2);
 });
 test('retry is owner scoped, bounded and coalesces existing jobs',async t=>{
  const f=await fixture(t),url=`${f.base}/api/vps/stores/a/operations/retry`,headers={...f.auth,'content-type':'application/json','x-jugest-operations':'1'};

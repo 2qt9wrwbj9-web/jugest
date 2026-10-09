@@ -22,6 +22,7 @@ export function buildStoreOperations(db,{store,auth,nowIso=new Date().toISOStrin
  const attempt=db.prepare('SELECT business_date,decision,check_json,last_seen_at FROM ingest_receipts WHERE store_id=? ORDER BY last_seen_at DESC LIMIT 1').get(store.id);
  const lastAttempt=attempt?{date:attempt.business_date,decision:attempt.decision,at:attempt.last_seen_at,integrity:parse(attempt.check_json),missingMachines:missingMachineCount(parse(attempt.check_json))}:null;
  const accepted=db.prepare("SELECT MAX(last_seen_at) at FROM ingest_receipts WHERE store_id=? AND decision='accepted'").get(store.id);
+ const savedAt=db.prepare('SELECT MAX(updated_at) at FROM store_days WHERE store_id=?').get(store.id)?.at;
  const native=metadata.source==='pia-public-ranking-top'?db.prepare('SELECT last_attempt_at,last_success_at,last_result,last_ingested_date FROM source_collector_state WHERE collector_id=?').get(`pia-public:${metadata.publicStoreId??35}`):null;
  const jobs=db.prepare(`SELECT id,type,state,failure_count,max_attempts,updated_at,last_error_class FROM jobs
  WHERE json_extract(payload_json,'$.storeId')=? AND type IN ('DAILY_ANALYSIS','PREDICTION_EVALUATE','SHADOW_PREDICT') ORDER BY id DESC LIMIT 30`).all(store.id);
@@ -32,7 +33,8 @@ export function buildStoreOperations(db,{store,auth,nowIso=new Date().toISOStrin
  const sourceFailed=native&&['fetch_error','collection_error'].includes(native.last_result);
  const state=sourceFailed?'collection_error':lastAttempt?.decision==='quarantined'?'needs_review':!latest?'not_collected':!integrity?'unverified':integrity.status;
  const retryDate=lastAttempt?.integrity.status!=='complete'?lastAttempt?.date:null;
- return{id:store.id,name:store.name,source:metadata.source??'unknown',state,latestDate:latest?.business_date??null,lastCollectedAt:native?.last_success_at??accepted?.at??latest?.updated_at??null,
+ const lastCollectedAt=[native?.last_success_at,accepted?.at,savedAt].filter(Boolean).sort((a,b)=>Date.parse(a)-Date.parse(b)).at(-1)??null;
+ return{id:store.id,name:store.name,source:metadata.source??'unknown',state,latestDate:latest?.business_date??null,lastCollectedAt,
   integrity,lastAttempt,missingMachines:missingMachineCount(integrity),
   sourceCollection:native?{lastAttemptAt:native.last_attempt_at,lastSuccessAt:native.last_success_at,result:native.last_result,lastIngestedDate:native.last_ingested_date}:null,
   lastAnalysisAt:lastAnalysis?.created_at??null,lastAnalysisDate:lastAnalysis?.target_date??null,
