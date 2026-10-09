@@ -71,7 +71,8 @@ export async function ingestCollectorDay(db,input={}){
     const incoming=new Map(day.machines.map(row=>[machineIdentity(row).key,row]));
     const lostObservedField=oldMachines.some(row=>{
       const identity=machineIdentity(row),next=incoming.get(identity.key);
-      return next&&machineIdentity(next).name===identity.name&&['games','bb','rb','diff'].some(field=>numericValue(row[field])!==null&&numericValue(next[field])===null);
+      const sameMachine=next&&((row.machine&&next.machine&&String(row.machine)===String(next.machine))||machineIdentity(next).name===identity.name);
+      return sameMachine&&['games','bb','rb','diff'].some(field=>numericValue(row[field])!==null&&numericValue(next[field])===null);
     });
     const explicitRoster=Array.isArray(input.expectedMachineKeys??day.quality?.expectedMachineKeys??day.expectedMachineKeys);
     const lostUnconfirmedMachine=!explicitRoster&&oldMachines.some(row=>!incoming.has(machineIdentity(row).key));

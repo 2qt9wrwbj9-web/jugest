@@ -50,6 +50,11 @@ for(const legacy of [false,true])test(`resend cannot erase observed fields in ${
   const bad=await f.ingest([machine(1,null),machine(2,null)]);
   assert.equal(bad.accepted,false);assert.deepEqual(f.db.prepare('SELECT payload_json FROM machine_day_data ORDER BY machine_key').all(),before);
 });
+test('same canonical machine with a different display alias still cannot erase observed diff',async t=>{
+ const f=await fixture(t);await f.ingest([machine(1,100)]);
+ const out=await f.ingest([{...machine(1,null),sourceMachineName:'マイジャグラー5'}]);assert.equal(out.accepted,false);
+ assert.equal(JSON.parse(f.db.prepare('SELECT payload_json FROM machine_day_data').get().payload_json).diff,100);
+});
 test('verified inventory arriving with identical data schedules the held evaluation again',async t=>{
   const f=await fixture(t);await f.ingest([machine(1,100),machine(2,200)]);
   const prior=f.db.prepare('SELECT * FROM prediction_refresh_state').get();

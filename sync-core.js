@@ -186,9 +186,25 @@ function writeJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
 function storedObject(value,key){if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('保存済みデータの形式が壊れているよ。同期を止めたよ（'+key+'）');return value}
 function validateStoredState(st){
   storedObject(st,STATE_KEY);
-  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory','cmpData'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
+  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
+  if('cmpData' in st){storedObject(st.cmpData,'cmpData');if(Object.values(st.cmpData).some(value=>!Array.isArray(value)))throw new Error('保存済み比較一覧の形式が壊れているよ')}
   for(const key of ['data','liveSessions','rev','v4HybridProfiles'])if(key in st)storedObject(st[key],key);
   return st;
+}
+function validateExternalDays(days){
+  if(!Array.isArray(days))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
+  for(const day of days){
+    if(!day||typeof day!=='object'||Array.isArray(day)||typeof day.shop!=='string'||!canon(day.shop)||!/^\d{4}-\d{2}-\d{2}$/.test(day.date??'')||!Number.isFinite(Date.parse(day.date+'T00:00:00Z'))||new Date(day.date+'T00:00:00Z').toISOString().slice(0,10)!==day.date||!Array.isArray(day.machines))throw new Error('保存済み店舗データの一部が壊れているよ。削除せず同期を止めたよ');
+  }
+  return days;
+}
+function validateSyncPackage(pkg){
+  const core=storedObject(pkg.core,'core');
+  for(const key of ['shops','sessions','tags','forecasts','layoutOverrides','moveHistory'])if(!Array.isArray(core[key])||core[key].some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('同期先の一覧データが不完全だよ（'+key+'）');
+  if(core.shops.some(row=>!canon(row.name))||core.tags.some(row=>!canon(row.name)))throw new Error('同期先の店舗・タグの識別情報が不完全だよ');
+  storedObject(core.sections,'sections');validateExternalDays(pkg.externalDays);
+  if(!Array.isArray(pkg.analysisSnapshots)||pkg.analysisSnapshots.some(row=>!row||row.schema!=='juggler-store-analysis-snapshot'))throw new Error('同期先の保存済み解析が不完全だよ');
+  return pkg;
 }
 function clientState(){
   let x=storedObject(readJSON(CLIENT_KEY,{}),CLIENT_KEY);
@@ -289,7 +305,7 @@ async function buildLocalPackage(meta){
   };
   const savedExternal=await idbGet(EXTERNAL_KEY);
   if(savedExternal!==null&&!Array.isArray(savedExternal))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
-  const externalDays=savedExternal??[];
+  const externalDays=validateExternalDays(savedExternal??[]);
   const analysisSnapshots=await readAnalysisSnapshots();
   saveClient(meta);
   return{schema:SYNC_SCHEMA,version:SYNC_VERSION,appVersion:APP_VERSION,generatedAt:new Date().toISOString(),sourceDevice:deviceId,
@@ -344,7 +360,7 @@ async function decryptPackage(payload,keyText){
   plain=await gunzipBytes(plain,payload.zip);
   const pkg=JSON.parse(new TextDecoder().decode(plain));
   if(pkg?.schema!==SYNC_SCHEMA)throw new Error('同期データの種類を認識できないよ');
-  return pkg;
+  return validateSyncPackage(pkg);
 }
 const SYNC_TRANSPORT_CHUNK_CHARS=700000;
 const SYNC_TRANSPORT_DIRECT_CHARS=2500000;

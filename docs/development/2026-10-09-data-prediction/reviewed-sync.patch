@@ -78,10 +78,10 @@ index 9361cc0..00d9bc4 100644
  export const config={path:'/api/sync',rateLimit:{windowLimit:60,windowSize:60,aggregateBy:['ip','domain']}};
  export const __test={pullSync,pushSync,pullChunkSync,pushStartSync,pushChunkSync,pushCommitSync,validPayload};
 diff --git a/sync-core.js b/sync-core.js
-index 349a187..0ad5cb5 100644
+index 349a187..f16f18e 100644
 --- a/sync-core.js
 +++ b/sync-core.js
-@@ -178,11 +178,22 @@ function mergePackages(local,remote){
+@@ -178,11 +178,38 @@ function mergePackages(local,remote){
    };
  }
  function readJSON(key,fallback=null){
@@ -94,9 +94,25 @@ index 349a187..0ad5cb5 100644
 +function storedObject(value,key){if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('保存済みデータの形式が壊れているよ。同期を止めたよ（'+key+'）');return value}
 +function validateStoredState(st){
 +  storedObject(st,STATE_KEY);
-+  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory','cmpData'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
++  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
++  if('cmpData' in st){storedObject(st.cmpData,'cmpData');if(Object.values(st.cmpData).some(value=>!Array.isArray(value)))throw new Error('保存済み比較一覧の形式が壊れているよ')}
 +  for(const key of ['data','liveSessions','rev','v4HybridProfiles'])if(key in st)storedObject(st[key],key);
 +  return st;
++}
++function validateExternalDays(days){
++  if(!Array.isArray(days))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
++  for(const day of days){
++    if(!day||typeof day!=='object'||Array.isArray(day)||typeof day.shop!=='string'||!canon(day.shop)||!/^\d{4}-\d{2}-\d{2}$/.test(day.date??'')||!Number.isFinite(Date.parse(day.date+'T00:00:00Z'))||new Date(day.date+'T00:00:00Z').toISOString().slice(0,10)!==day.date||!Array.isArray(day.machines))throw new Error('保存済み店舗データの一部が壊れているよ。削除せず同期を止めたよ');
++  }
++  return days;
++}
++function validateSyncPackage(pkg){
++  const core=storedObject(pkg.core,'core');
++  for(const key of ['shops','sessions','tags','forecasts','layoutOverrides','moveHistory'])if(!Array.isArray(core[key])||core[key].some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('同期先の一覧データが不完全だよ（'+key+'）');
++  if(core.shops.some(row=>!canon(row.name))||core.tags.some(row=>!canon(row.name)))throw new Error('同期先の店舗・タグの識別情報が不完全だよ');
++  storedObject(core.sections,'sections');validateExternalDays(pkg.externalDays);
++  if(!Array.isArray(pkg.analysisSnapshots)||pkg.analysisSnapshots.some(row=>!row||row.schema!=='juggler-store-analysis-snapshot'))throw new Error('同期先の保存済み解析が不完全だよ');
++  return pkg;
 +}
  function clientState(){
 -  let x=readJSON(CLIENT_KEY,{})||{};
@@ -106,7 +122,7 @@ index 349a187..0ad5cb5 100644
    if(!x.deviceId)x.deviceId='dev-'+b64url(randomBytes(10));
    x.sectionMeta=obj(x.sectionMeta);
    return x;
-@@ -226,7 +237,7 @@ async function decodeAnalysis(rec){
+@@ -226,7 +253,7 @@ async function decodeAnalysis(rec){
    }
    if(rec.codec==='json'&&typeof rec.text==='string')return JSON.parse(rec.text);
    if(rec.schema==='juggler-store-analysis-snapshot')return rec;
@@ -115,7 +131,7 @@ index 349a187..0ad5cb5 100644
  }
  async function encodeAnalysis(snap){
    const text=JSON.stringify(snap),rawBytes=new Blob([text]).size;
-@@ -240,9 +251,13 @@ async function encodeAnalysis(snap){
+@@ -240,9 +267,13 @@ async function encodeAnalysis(snap){
    return{codec:'json',text,rawBytes,storedBytes:rawBytes};
  }
  async function readAnalysisSnapshots(){
@@ -131,7 +147,7 @@ index 349a187..0ad5cb5 100644
    }
    return out;
  }
-@@ -260,11 +275,11 @@ async function writeAnalysisSnapshots(snaps){
+@@ -260,11 +291,11 @@ async function writeAnalysisSnapshots(snaps){
    await idbPut(ANALYSIS_INDEX_KEY,index);
  }
  async function buildLocalPackage(meta){
@@ -145,18 +161,27 @@ index 349a187..0ad5cb5 100644
    const judgeSection={
      data:st.data||{},liveSessions:st.liveSessions||{},rev:st.rev||{},cmpData:st.cmpData||[],cmpSeq:+st.cmpSeq||1
    };
-@@ -272,7 +287,9 @@ async function buildLocalPackage(meta){
+@@ -272,7 +303,9 @@ async function buildLocalPackage(meta){
      judge:sectionEnvelope(meta,'judge',judgeSection,seed),
      hana:sectionEnvelope(meta,'hana',hana,seed)
    };
 -  const externalDays=arr(await idbGet(EXTERNAL_KEY));
 +  const savedExternal=await idbGet(EXTERNAL_KEY);
 +  if(savedExternal!==null&&!Array.isArray(savedExternal))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
-+  const externalDays=savedExternal??[];
++  const externalDays=validateExternalDays(savedExternal??[]);
    const analysisSnapshots=await readAnalysisSnapshots();
    saveClient(meta);
    return{schema:SYNC_SCHEMA,version:SYNC_VERSION,appVersion:APP_VERSION,generatedAt:new Date().toISOString(),sourceDevice:deviceId,
-@@ -340,8 +357,21 @@ function splitJsonChunks(text,maxChars=SYNC_TRANSPORT_CHUNK_CHARS){
+@@ -327,7 +360,7 @@ async function decryptPackage(payload,keyText){
+   plain=await gunzipBytes(plain,payload.zip);
+   const pkg=JSON.parse(new TextDecoder().decode(plain));
+   if(pkg?.schema!==SYNC_SCHEMA)throw new Error('同期データの種類を認識できないよ');
+-  return pkg;
++  return validateSyncPackage(pkg);
+ }
+ const SYNC_TRANSPORT_CHUNK_CHARS=700000;
+ const SYNC_TRANSPORT_DIRECT_CHARS=2500000;
+@@ -340,8 +373,21 @@ function splitJsonChunks(text,maxChars=SYNC_TRANSPORT_CHUNK_CHARS){
  function joinJsonChunks(chunks){return arr(chunks).join('')}
  async function apiRaw(body){
    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -179,7 +204,7 @@ index 349a187..0ad5cb5 100644
    return x;
  }
  async function api(body){
-@@ -350,7 +380,9 @@ async function api(body){
+@@ -350,7 +396,9 @@ async function api(body){
      if(payloadText.length>SYNC_TRANSPORT_DIRECT_CHARS){
        const chunks=splitJsonChunks(payloadText),start=await apiRaw({action:'pushStart',syncId:body.syncId,authToken:body.authToken,baseRevision:body.baseRevision,totalChunks:chunks.length,totalBytes:payloadText.length});
        for(let i=0;i<chunks.length;i++)await apiRaw({action:'pushChunk',syncId:body.syncId,authToken:body.authToken,uploadId:start.uploadId,index:i,totalChunks:chunks.length,chunk:chunks[i]});
@@ -190,7 +215,7 @@ index 349a187..0ad5cb5 100644
      }
    }
    const x=await apiRaw(body);
-@@ -379,6 +411,7 @@ async function syncNow(meta,onProgress=()=>{},hooks={}){
+@@ -379,6 +427,7 @@ async function syncNow(meta,onProgress=()=>{},hooks={}){
    for(let attempt=0;attempt<3;attempt++){
      onProgress(attempt?'更新競合を再調整してる…':'クラウドのデータを確認してる…');
      pull=await api({action:'pull',syncId:link.id,authToken:link.auth});

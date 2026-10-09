@@ -128,6 +128,7 @@ export function startFormalLiveTrial(db,{
 
   db.exec('BEGIN IMMEDIATE;');
   try{
+    if(operational){at=clock();if(!isProspectivePrediction({targetDate,sourceFrontierDate:frontier,createdAt:at}))throw new Error('formal prospective prediction deadline passed while acquiring storage')}
     const runningRow=runningTrialRow(db,{storeId:store,lineageId:lineage});
     if(runningRow){
       const running=loadTrialRecord(db,{storeId:store,lineageId:lineage,trialNumber:Number(runningRow.trial_number)});
@@ -152,6 +153,7 @@ export function startFormalLiveTrial(db,{
     persistFormalModelSnapshot(db,{trial,role:'challenger',model:challenger.model,featureVersion:version,nowIso:at});
     const championSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('champion',championPayload),nowIso:at});
     const challengerSaved=persistFormalPrediction(db,{trial,prediction:targetPrediction('challenger',challengerPayload),nowIso:at});
+    if(operational&&!isProspectivePrediction({targetDate,sourceFrontierDate:frontier,createdAt:clock()}))throw new Error('formal prospective prediction deadline passed before commit');
     db.exec('COMMIT;');
     return Object.freeze({
       started:true,

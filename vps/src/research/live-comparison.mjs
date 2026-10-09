@@ -1,6 +1,6 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {readEvaluationState,evaluationInputVersion} from './evaluation-state.mjs';
-import {isProspectivePrediction,sameCandidateSet} from './prediction-policy.mjs';
+import {isProspectivePrediction,sameCandidateSet,createRunClock} from './prediction-policy.mjs';
 import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
 import {withSavepoint} from '../sqlite-savepoint.mjs';
 
@@ -51,19 +51,25 @@ function scoreRowFromDb(row){
   });
 }
 
-export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersion,modelFingerprint='',featureVersion=null,sourceFrontierDate,inputHash,rankings,createdAt=new Date().toISOString()}={}){
+export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersion,modelFingerprint='',featureVersion=null,sourceFrontierDate,inputHash,rankings,createdAt=new Date().toISOString(),prospective=false,clock=null}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=requiredText(storeId,'storeId'),target=validDate(targetDate,'targetDate'),kind=requiredText(engine,'engine');
   if(!ENGINES.has(kind))throw new TypeError('engine is invalid');
   const version=requiredText(engineVersion,'engineVersion'),fingerprint=String(modelFingerprint??'').trim(),frontier=validDate(sourceFrontierDate,'sourceFrontierDate'),input=requiredText(inputHash,'inputHash'),at=validIso(createdAt);
   if(frontier>=target)throw new TypeError('sourceFrontierDate must be before targetDate');
   const normalized=normalizeRankings(rankings),payload=Object.freeze({rankings:normalized}),payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
+  const currentTime=clock??createRunClock(at);
   return withSavepoint(db,'live_prediction_save',()=>{
   const result=db.prepare(`INSERT INTO store_prediction_snapshots(store_id,target_date,engine,engine_version,model_fingerprint,feature_version,source_frontier_date,input_hash,payload_json,payload_hash,created_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(store_id,target_date,engine,engine_version,model_fingerprint) DO NOTHING`)
     .run(id,target,kind,version,fingerprint,featureVersion==null?null:String(featureVersion),frontier,input,payloadJson,payloadHash,at);
+  if(prospective&&result.changes){
+    const persistedAt=currentTime();if(!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:persistedAt}))throw Object.assign(new Error('prospective prediction deadline passed while acquiring storage'),{code:'prediction_deadline_passed'});
+    db.prepare('UPDATE store_prediction_snapshots SET created_at=? WHERE id=?').run(persistedAt,result.lastInsertRowid);
+  }
   const row=db.prepare(`SELECT * FROM store_prediction_snapshots WHERE store_id=? AND target_date=? AND engine=? AND engine_version=? AND model_fingerprint=?`).get(id,target,kind,version,fingerprint);
   requestPredictionEvaluation(db,{storeId:id,nowIso:at,dirty:Number(result.changes||0)>0});
+  if(prospective&&result.changes&&!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:currentTime()}))throw Object.assign(new Error('prospective prediction deadline passed before commit'),{code:'prediction_deadline_passed'});
   return Object.freeze({inserted:Number(result.changes||0)>0,conflict:row.payload_hash!==payloadHash||row.input_hash!==input||row.source_frontier_date!==frontier,row:rowFromDb(row)});
   });
 }

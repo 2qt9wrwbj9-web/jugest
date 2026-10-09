@@ -72,7 +72,7 @@ export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,feat
   if(payload.rankings.length){
     const saved=persistLivePrediction(db,{
       storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
-      sourceFrontierDate:frontier,inputHash:predictionHistoryHash({storeId:id,frontierDate:frontier,version,days:history}),rankings:payload.rankings,createdAt:at
+      sourceFrontierDate:frontier,inputHash:predictionHistoryHash({storeId:id,frontierDate:frontier,version,days:history}),rankings:payload.rankings,createdAt:at,prospective:true,clock
     });
     if(saved.conflict)throw Object.assign(new Error('prediction_snapshot_conflict: 保存済みの予測を保持したよ'),{code:'prediction_snapshot_conflict'});
   }

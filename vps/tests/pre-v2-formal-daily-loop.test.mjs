@@ -112,6 +112,19 @@ test('formal generation crossing JST midnight freezes the next future target wit
   const saved=f.db.prepare("SELECT created_at FROM pre_v2_formal_predictions WHERE target_date='2026-09-14' LIMIT 1").get();assert.equal(saved.created_at,'2026-09-12T15:00:01.000Z');
  }finally{globalThis.Date=RealDate;f.db.close()}
 });
+test('formal storage lock crossing the prediction deadline cannot publish a backdated pair',async()=>{
+ const f=setup(),RealDate=globalThis.Date;let time=RealDate.parse('2026-09-12T14:59:59Z'),begins=0;
+ class FakeDate extends RealDate{constructor(...args){super(...(args.length?args:[time]))}static now(){return time}}
+ const original=f.db.exec.bind(f.db);
+ try{
+  saveOperationalTarget(f.db);globalThis.Date=FakeDate;
+  f.db.exec=sql=>{const result=original(sql);if(sql==='BEGIN IMMEDIATE;'&&++begins===2)time=RealDate.parse('2026-09-12T15:00:01Z');return result};
+  await assert.rejects(advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',operational:true,judgementRunner:async()=>({date:'2026-09-11',rows:judgedRows()})}),/deadline passed/);
+  assert.equal(f.db.prepare("SELECT COUNT(*) n FROM pre_v2_formal_predictions WHERE target_date='2026-09-13'").get().n,0);
+  f.db.exec=original;const retried=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',operational:true,judgementRunner:async()=>{throw new Error('already scored')}});
+  assert.equal(retried.nextTargetDate,'2026-09-14');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,1);
+ }finally{f.db.exec=original;globalThis.Date=RealDate;f.db.close()}
+});
 test('a running legacy trial with already-scored late predictions is held without altering its evidence',async()=>{
  const f=setup();try{
   f.db.exec("UPDATE pre_v2_formal_predictions SET created_at='2026-09-11T01:00:00Z'");

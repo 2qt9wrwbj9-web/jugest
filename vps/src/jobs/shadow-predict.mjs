@@ -63,7 +63,7 @@ async function main(){
         storeId,targetDate,engine:'current_shadow',engineVersion,modelFingerprint:'',featureVersion:null,
         sourceFrontierDate:actualFrontier,
         inputHash:predictionHistoryHash({storeId,frontierDate:actualFrontier,version:engineVersion,days}),
-        rankings:result.rankings,createdAt:nowIso
+        rankings:result.rankings,createdAt:nowIso,prospective:true
       });
       status=prediction.conflict?'prediction_conflict':'predicted';
     }

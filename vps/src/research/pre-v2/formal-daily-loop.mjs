@@ -105,8 +105,10 @@ function freezeNextPredictionPair(db,{record,days,frontierDate,nowIso,targetDate
 
   db.exec('BEGIN IMMEDIATE;');
   try{
+    if(clock){createdAt=clock();if(!isProspectivePrediction({targetDate:championPayload.targetDate,sourceFrontierDate:frontierDate,createdAt}))throw new Error('formal prospective prediction deadline passed while acquiring storage')}
     const savedChampion=persistFormalPrediction(db,{trial,prediction:championPrediction,nowIso:createdAt});
     const savedChallenger=persistFormalPrediction(db,{trial,prediction:challengerPrediction,nowIso:createdAt});
+    if(clock&&!isProspectivePrediction({targetDate:championPayload.targetDate,sourceFrontierDate:frontierDate,createdAt:clock()}))throw new Error('formal prospective prediction deadline passed before commit');
     db.exec('COMMIT;');
     return{targetDate:championPayload.targetDate,championPrediction:savedChampion.row,challengerPrediction:savedChallenger.row};
   }catch(error){

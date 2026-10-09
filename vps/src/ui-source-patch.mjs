@@ -25,7 +25,10 @@ function vpsAssertStoredStateReadable(){
   for(const key of [STORAGE_KEY,"hanaJudgeStateV3","jugglerDeviceSync:v1"]){
    let raw=localStorage.getItem(key);if(raw===null)continue;
    let value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("保存形式が不正");
-   if(key===STORAGE_KEY)for(const field of ["shops","sessions","tags","modelForecasts","v4LayoutOverrides","v4MoveHistory","cmpData"])if(field in value&&!Array.isArray(value[field]))throw new Error("保存済み一覧が不正");
+   if(key===STORAGE_KEY){
+    for(const field of ["shops","sessions","tags","modelForecasts","v4LayoutOverrides","v4MoveHistory"])if(field in value&&!Array.isArray(value[field]))throw new Error("保存済み一覧が不正");
+    if("cmpData" in value&&(!value.cmpData||typeof value.cmpData!=="object"||Array.isArray(value.cmpData)||Object.values(value.cmpData).some(rows=>!Array.isArray(rows))))throw new Error("保存済み比較一覧が不正");
+   }
   }
  }catch(e){vpsStorageReadError="端末の保存データを読み出せなかったよ。自動保存と同期を止めたので、バックアップから復元して再読み込みしてね";throw new Error(vpsStorageReadError)}
 }
@@ -36,7 +39,8 @@ function vpsAssertStoredStateReadable(){
     ['async function v510RunDeviceSync(onProgress){','async function v510RunDeviceSync(onProgress){\n vpsAssertStoredStateReadable();if(vpsExternalReadError)throw new Error(vpsExternalReadError);'],
     ['function v510HanaWriteState(){','function v510HanaWriteState(){\n try{vpsAssertStoredStateReadable()}catch(e){return false}'],
     ['  let saved=await externalDbGet();','  let saved=await externalDbGet();\n  if(saved!==null&&!Array.isArray(saved))throw new Error("保存済み店舗データの形式が不正");'],
-    [' }catch(e){console.error("external storage init",e)}',' }catch(e){vpsExternalReadError="店舗データを読み出せなかったよ。同期を止めたので、バックアップを確認してね";console.error("external storage init",e)}']
+    [' }catch(e){console.error("external storage init",e)}',' }catch(e){vpsExternalReadError="店舗データを読み出せなかったよ。同期を止めたので、バックアップを確認してね";console.error("external storage init",e)}'],
+    [' if(!autoSaveState())throw new Error("現在の入力を保存できないので、復元を開始できません");',' if(!vpsStorageReadError&&!autoSaveState())throw new Error("現在の入力を保存できないので、復元を開始できません");']
   ];
   for(const [from,to] of changes){if(!source.includes(from))throw new Error(`JUGEST storage safety anchor not found: ${from}`);source=source.replace(from,to)}
   return source;

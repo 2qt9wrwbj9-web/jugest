@@ -129,4 +129,47 @@ JUGEST_ACCESS_ENABLED=0 JUGEST_PIA_ACCESS_MODE=public node /workspace/scratch/2f
 
 ## 修正後の再レビュー
 
-未実施。親担当の修正完了通知後に、F1–F6、実生成完了時計、旧trialの理由表示、意味のある検品識別、期間母集団・実日付表示、中断回復のraceを再確認する。
+### e6a47cfの独立再確認
+
+対象: `e6a47cff4962753de1c5d8e960ffa7ebdcdf9171`。隔離再現scriptの期待値を安全側へ更新し、F1–F6を再実行した。実装ファイルは変更していない。API/UIは実装担当の継続作業中で、この回の完了判定に含めない。
+
+**F1/F3/F4/F5/F6は元の再現条件で対応済み。F2の元の判定await境界も対応済みだが、保存ロック待ちに未解決条件が残る。**
+
+| 項目 | 再確認結果 | 独立再現の証拠 |
+| --- | --- | --- |
+| F1 入力版 | 対応済み | 古い呼出しdaysを渡しても保存qが現在DBから独立計算したqと完全一致。現在hashでcomplete、証拠1日 |
+| F2 判定awaitの時計 | 対応済み | 14:59:59Z開始→15:00:01Z判定完了後、次targetは9/14へ移り、created_atは15:00:01Z。9/13へ後付けしない |
+| F3 旧trialの事後予測 | 対応済み | 旧9/11をhistorical_predictionで永続保留、daysProcessedは1のまま、9/12を追加しない |
+| F3 旧版記録不足 | 対応済み | 旧pair自体が事前でも版マーカーがなければlegacy_evaluation_unverifiedで停止し、旧証拠を保持 |
+| F4 固定PRE競合 | 対応済み | forecast:pre_researchにconflictを保存し、正式runnerが2回目も実行、generation=completed_generation=2へ正常完了 |
+| F5 source訂正cache | 対応済み | 同じnormalized資料のsource変更はcache成功にせずoutcome_hash_conflict。LIVE/performanceとも評価日数0 |
+| F5 判定中のsource訂正 | 対応済み | outcome_changed_during_evaluationで保留、正式証拠0 |
+| F5 中断後のsource訂正 | 対応済み | 証拠保存後のcomplete公開をfixture triggerで失敗させ、source変更後に回復。corrected/formal_outcome_correctedで停止し、元の証拠1件を完全保持 |
+| F6 検品根拠の改善 | 対応済み | 同じnormalized資料でもverificationChanged=true、世代3/completed2で新評価登録。その実行でcompleteへ再開 |
+| F6 同じ再送の時刻差 | 対応済み | 同じ検品根拠のcheckedAtだけを変更してもverificationChanged=false、世代を増やさない |
+| 世代race | 成功 | 正式処理中に追加依頼した世代2を、completed1のまま別follow-up jobへ引き継ぎ、依頼を失わない |
+| 営業日期間 | データ側対応済み | fromDate/throughDateが実際の保存対象日を返す。旧期間説明と最終営業日経過はUIの再確認待ち |
+
+`evaluationInputVersion`はnormalized hash、source hash、quality_status、`integrityFingerprint`を統合する。`integrityFingerprint`は検品全体からcheckedAt/normalizedHashを除き、公開状態・評価可否・期待台集合・台数・根拠区分を含む。LIVE cache、表示時の現在版確認、正式処理の前後・中断回復は同じ識別を使う。今回の意味のある検品・source識別のキー漏れは、上記再現条件では解消している。
+
+### F2残件 / P1 — 新pairの生成後、書込権取得の待ちがJST締切を跨ぐ
+
+`formal-daily-loop.mjs:96`は生成後のcreatedAtを読むが、保存の`BEGIN IMMEDIATE`は106行でその後に取得する。SQLiteの書込ロック待ちで対象日が開始しても、106–110行の保存中に時計・締切を再確認しない。`formal-start.mjs`やPREのsavepointによる最初のINSERTも、保存前に時刻を固定する同じ構造を持つ。
+
+隔離再現では、正式既存日の証拠保存を正常に通した後、新pair保存用の2回目の`BEGIN IMMEDIATE`でのみロック待ちを模し、時計を14:59:59Zから15:00:01Zへ進めた。その結果:
+
+```text
+実保存時刻        2026-09-12T15:00:01.000Z
+保存target        2026-09-13
+保存created_at    2026-09-12T14:59:59.000Z
+prospective       true
+```
+
+「事前予測は対象開始前に保存済み」という安全側assertは失敗した。実装担当へ即通知済み。最小修正は、書込権取得後に実clockで締切を再確認し、対象開始後なら取引をrollbackして保留または次対象日へ再生成すること。保存途中に時計を跨ぐ経路も、片方のpairだけを残さず取引全体で拒否する。保存済み予測の時刻を書換えて修復しない。
+
+### 再実行した検証
+
+- 既存関連15ファイルを独立実行し、**84/84成功**。前回の10ファイルにdata-integrity、formal-evaluation、trial-store-guard、outcome、relevance-ndcgを追加。
+- 隔離scriptは、元のF1–F6・営業日期間と追加4条件が安全側期待値で成功。末尾に追加した保存ロック待ち条件のみ安全側assertが失敗する（11シナリオ成功、残件1）。scriptは現在、欠陥の観測をassertする初回版から、安全な結果をassertする修正確認版へ更新済み。
+- 保護対象formal-evaluation/trial/trial-store/outcome/ndcg/model-search/backtestは、基準からe6a47cfまで再び差分ゼロを確認。
+- Node v24.19.0、外部取得を禁止した隔離実行。本番接続・変更・デプロイは行っていない。
