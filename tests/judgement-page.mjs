@@ -83,8 +83,8 @@ test('all maximum-probability settings are retained and detailed output is escap
  const html=ctx.JUGESTJudgementView.result(r,{debug:true});
  assert.match(html,/&lt;img/);assert.doesNotMatch(html,/<img src=x/);
  for(const label of ['分布集中度','ログ尤度','既存の設定別逆算行','技術情報','MCP判別識別子'])assert.ok(html.includes(label));
- assert.ok(html.indexOf('設定1〜6の確率')<html.indexOf('入力データ'));
- assert.ok(html.indexOf('入力データ')<html.indexOf('詳細分析'));
+ assert.ok(html.indexOf('設定1〜6の確率')<html.indexOf('判別要素別の設定相当値'));
+ assert.ok(html.indexOf('判別要素別の設定相当値')<html.indexOf('詳細分析'));
 });
 
 test('six tabs preserve old workspace keys, navigation history and safe UI restoration',async()=>{
@@ -148,7 +148,7 @@ test('ordinary judgement omits developer DOM while retaining meaningful analysis
  const html=app.mount.innerHTML;
  assert.doesNotMatch(html,/data-observed-debug/);
  for(const label of internalLabels)assert.ok(!html.includes(label),label);
- for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','入力データ','BB確率','RB確率','合算','詳細分析を見る','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
+ for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','判別要素別の設定相当値','機種スペック表','合算','詳細分析を見る','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
  const direct=ctx.JUGESTJudgementView.result(bridge.judgeObservedMachine(reviewSample));
  assert.ok(!direct.includes('設定別ログ尤度'),'standalone renderer also defaults to ordinary output');
 });
