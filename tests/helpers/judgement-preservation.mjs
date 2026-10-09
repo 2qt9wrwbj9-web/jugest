@@ -35,6 +35,23 @@ function stripLiveReverseBlock(source,start,end,expected){
  assert.equal(createHash('sha256').update(source.slice(at,stop)).digest('hex'),expected,'unreviewed reverse UI addition');
  return source.slice(0,at)+source.slice(stop);
 }
+const REVIEWED_LIVE_JUDGE_COMPACT=Object.freeze({
+ jsHelpers:'018fc4573198a3c45ac56f07cde68dea92f3ef0c080880873206441aba6f34ae',
+ cssStyles:'167d19b1c1cb89676963cfa6f7611d1ab72147fbdc03fa5ffb6555663153cce9',
+ methods:Object.freeze({"renderJudgeScreen": "bb7a72f01a0e6168b12c383a93f434894b928cea2e332dcbbfb8ef361c51e02d", "patchJudgeResult": "36cf395e91dbafa099c13b969a928a8c6bedbe0ce3b7a55f1ef2c15eb57b6ea9", "hanaResultPanel": "705c5e43f95aea751aa69a633518bb10af6b2ce3f10bf5ad25a688f8202366d0", "patchHanaResult": "04148def61d690f6d6c3e72924ebe9319b7f1824340720cdb671873ffa595593", "renderHanaJudgeScreen": "5a447f3d28c67acf941187126286d9ee9a1cde0b5dda47ad0010cb24b26cd4f2"})
+});
+const LIVE_JUDGE_COMPACT_BASELINE=JSON.parse(readFileSync(new URL('./live-judge-compact-baseline.json',import.meta.url),'utf8'));
+function restoreCompactJudgementMethod(source,name){
+ const anchor='  '+name+'(';
+ assert.equal(source.split(anchor).length-1,1,'compact live method occurrence: '+name);
+ const a=source.indexOf(anchor),b=source.indexOf('\n  ',a+3);
+ assert.ok(b>a,'compact live method boundary: '+name);
+ const actual=source.slice(a,b);
+ assert.equal(createHash('sha256').update(actual).digest('hex'),REVIEWED_LIVE_JUDGE_COMPACT.methods[name],'unreviewed live judgement change: '+name);
+ const prior=LIVE_JUDGE_COMPACT_BASELINE[name];
+ assert.ok(typeof prior==='string'&&prior.startsWith(anchor),'live compact baseline: '+name);
+ return source.slice(0,a)+prior+source.slice(b);
+}
 function replace(source,from,to='',count=1){
  assert.equal(source.split(from).length-1,count,`approved judgement anchor count: ${from.slice(0,65)}`);
  return source.replaceAll(from,to);
@@ -49,7 +66,10 @@ function block(source,start,end,replacement=''){
 }
 export function withoutJudgementAdditions(file,source){
  if(file==='app-v510.js'){
+  source=stripLiveReverseBlock(source,'\n// BEGIN reviewed live judgement compact helpers\n','// END reviewed live judgement compact helpers\n',REVIEWED_LIVE_JUDGE_COMPACT.jsHelpers);
+  for(const name of Object.keys(REVIEWED_LIVE_JUDGE_COMPACT.methods))source=restoreCompactJudgementMethod(source,name);
   source=stripLiveReverseBlock(source,'// BEGIN reviewed live reverse display helpers\n','// END reviewed live reverse display helpers\n',REVIEWED_LIVE_REVERSE.helpers);
+  source=replace(source,'\n\n\nclass JugestApp extends HTMLElement{','\n\nclass JugestApp extends HTMLElement{');
   for(const name of ['renderReverseScreen','patchReverseResult'])source=restoreLiveReverseMethod(source,name);
   source=block(source,'  // BEGIN independent judgement UI\n','  // END independent judgement UI\n');
   for(const [from,to] of [
@@ -70,6 +90,7 @@ export function withoutJudgementAdditions(file,source){
   const field="    const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}\n";
   source=replace(source,field,'',2);
  }else if(file==='app-v510.css'){
+  source=stripLiveReverseBlock(source,'\n/* BEGIN reviewed live judgement compact styles */\n','/* END reviewed live judgement compact styles */\n',REVIEWED_LIVE_JUDGE_COMPACT.cssStyles);
   source=stripLiveReverseBlock(source,'/* BEGIN reviewed live reverse compact styles */\n','/* END reviewed live reverse compact styles */\n',REVIEWED_LIVE_REVERSE.styles);
   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
