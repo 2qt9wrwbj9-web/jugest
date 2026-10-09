@@ -80,6 +80,31 @@ function factorRow(name,odds,probability,denominators,color,estimated=false){
     '<span class="observed-factor-unknown">算出不可</span>'}
    </div></div>`;
 }
+function unifiedSummary(result){
+ const distribution=Array.isArray(result.q)&&result.q.length===6?result.q:[0,0,0,0,0,0];
+ const colors=['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'];
+ const bars=distribution.map((p,i)=>`<span class="observed-unified-segment" style="width:${Number.isFinite(p)?Math.max(0,p*100):0}%;background:${colors[i]}" aria-hidden="true"></span>`).join('');
+ const bandLabel=distribution.map((p,i)=>`設定${i+1} ${percent(p)}`).join('、');
+ return `<div class="observed-unified-header">
+  <div class="observed-unified-highlights">
+   <div><span>期待設定</span><strong>${number(result.expectedSetting)}</strong></div>
+   <div><span>最有力設定</span><strong>${esc(top(result))}</strong></div>
+  </div>
+  <div class="observed-unified-odds">
+   <span>P4+ <strong>${percent(result.p4)}</strong></span>
+   <span>P5+ <strong>${percent(result.p5)}</strong></span>
+  </div>
+  <div class="observed-unified-distribution">
+   <div class="observed-unified-distribution-head">
+    <h3>設定1〜6の確率</h3>
+    <details class="observed-unified-concentration"><summary>分布集中度 ${number(result.distributionConcentration,1)}%</summary>
+     <p>分布集中度は、設定確率がどれだけ一部の設定へ集中しているかを表す指標で、判別の的中率ではありません。</p></details>
+   </div>
+   <div class="observed-unified-band" role="img" aria-label="${esc(bandLabel)}">${bars}</div>
+   <div class="observed-unified-labels">${distribution.map((p,i)=>`<div><span>設定${i+1}</span><strong>${percent(p)}</strong></div>`).join('')}</div>
+  </div>
+ </div>`;
+}
 function factorPanel(result){
  const x=result.input,settings=result.engine?.table?.settings;
  const rows=Array.isArray(settings)&&settings.length===6?settings:null;
@@ -95,22 +120,25 @@ function factorPanel(result){
  ].join('');
  const header=['設定','BB','RB','合算','ぶどう'];
  const body=rows?rows.map((row,i)=>`<tr><th scope="row">${i+1}</th>${[bb[i],rb[i],combined[i],g[i]].map(v=>`<td>${grape(v)}</td>`).join('')}</tr>`).join(''):'<tr><td colspan="5">機種スペックを取得できませんでした。</td></tr>';
- return `<section class="panel observed-factor-card"><h2>判別要素別の設定相当値</h2>
+ return `<div class="observed-factor-content"><h3 class="observed-unified-visually-hidden">判別要素別の設定相当値</h3>
   <dl class="observed-compact-summary">${pair('通常G',`${number(x.games,0)}G`)}${pair('BB',number(x.bb,0))}${pair('RB',number(x.rb,0))}${pair('差枚',x.diff==null?'未入力':`${x.diff>=0?'+':''}${number(x.diff,0)}枚`)}</dl>
   <div class="observed-factor-axis" aria-hidden="true"><span></span><div>${Array.from({length:6},(_,i)=>`<span>${i+1}</span>`).join('')}</div></div>
   <div class="observed-factor-rows">${factors}</div>
-  <p class="observed-help">設定相当値は参考値です。ぶどうは差枚からの推定値です。</p>
+
   <h3 class="observed-spec-title">機種スペック表</h3>
   <div class="observed-spec-scroll" role="region" aria-label="機種スペック表" tabindex="0"><table class="observed-spec-table"><thead><tr>${header.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
-  <details class="observed-factor-details observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',estimated?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl></details>
- </section>`;
+  <details class="observed-factor-details observed-details"><summary>詳細分析を見る</summary><p class="observed-help">設定相当値は参考値です。ぶどうは差枚からの推定値です。</p><dl class="observed-input-summary">${pair('推定ブドウ確率',estimated?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl></details>
+ </div>`;
 }
 function result(result,{debug=false}={}){
  const x=result.input;
  return `<section class="observed-result" data-observed-result>
- <section class="panel"><h2>${esc(result.machineName)}${x.tableNo?` · 台${esc(x.tableNo)}`:''}</h2>${summary(result)}<p class="observed-help">分布集中度は、設定確率がどれだけ一部の設定へ集中しているかを表す指標で、判別の的中率ではありません。</p>${result.warnings.map(w=>`<p class="observed-error" role="alert">${result.reverseWarn?'逆算警告：':''}${esc(w)}</p>`).join('')}</section>
- <section class="panel"><h2>設定1〜6の確率</h2><div class="observed-distribution">${result.q.map((p,i)=>`<div class="observed-probability"><span>設定${i+1}</span><div class="observed-bar-track" aria-hidden="true"><div class="observed-bar" style="width:${p*100}%"></div></div><strong>${percent(p)}</strong></div>`).join('')}</div><p class="observed-help">すべての棒は0〜100%の共通スケールです。</p></section>
- ${factorPanel(result)}
+ <section class="panel observed-factor-card observed-unified-card" data-observed-unified>
+  <h2>${esc(result.machineName)}${x.tableNo?` · 台${esc(x.tableNo)}`:''}</h2>
+  ${unifiedSummary(result)}
+  ${result.warnings.map(w=>`<p class="observed-error" role="alert">${result.reverseWarn?'逆算警告：':''}${esc(w)}</p>`).join('')}
+  ${factorPanel(result)}
+ </section>
  ${debug===true?developerInfo(result):''}
  </section>`;
 }
