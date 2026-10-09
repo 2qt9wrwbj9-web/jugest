@@ -53,3 +53,23 @@ test('matrix detail taps preserve the current horizontal and vertical scroll pos
   const source=await readFile(new URL('../../vps-ui-audit-store.mjs',import.meta.url),'utf8');
   for(const token of ["cell.closest?.('.vps-matrix-wrap')",'scrollLeft=matrixScroll.left','scrollTop=matrixScroll.top'])assert.ok(source.includes(token),token);
 });
+
+test('matrix evolution preserves the heatmap and adds local search, density and mobile details',async()=>{
+ const source=await readFile(new URL('../../vps-ui-audit-store.mjs',import.meta.url),'utf8');
+ for(const token of [
+  'data-vps-matrix-search','data-vps-matrix-match-count','data-vps-matrix-row','data-vps-matrix-search-empty',
+  'data-vps-matrix-density','readMatrixDensity(shop)','writeMatrixDensity(activeShop(),density.value)',
+  'vps-matrix-dense','vps-matrix-floating','data-vps-matrix-detail-close',
+  'data-vps-matrix-cell','aria-pressed=','vps-matrix-label','position:sticky'
+ ])assert.ok(source.includes(token),'missing matrix control: '+token);
+ const search=source.slice(source.indexOf('function handleMatrixSearchInput('),source.indexOf('function handleMachineFilterChange('));
+ assert.ok(search.includes('applyMatrixSearch(panel,matrixSearchState.query)'));
+ assert.ok(!search.includes('schedule()'),'typing must not rerun all-day judgement');
+ const change=source.slice(source.indexOf('function handleMachineFilterChange('),source.indexOf('function handleMachineFilterClick('));
+ assert.ok(change.indexOf("if(density)")<change.indexOf('schedule()'),'density applied without recomputation');
+ assert.ok(source.includes('detail.hidden=!selectedVisible'),'filter hides excluded selection details');
+ assert.ok(source.includes('root.append(floating)'),'detail stays outside animated workspace');
+ assert.ok(source.includes('scrollLeft=matrixScroll.left')&&source.includes('scrollTop=matrixScroll.top'),'both scroll axes retained');
+ assert.ok(source.includes("dates=[...source.dates].sort((a,b)=>String(b).localeCompare(String(a)))"),'newest columns first');
+ assert.ok(source.includes('settingHeatColor(ok?es:null)')&&source.includes('settingHeatTextColor(ok?es:null)'),'existing heat colors remain');
+});
