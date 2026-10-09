@@ -9,4 +9,13 @@ for(const fn of ['renderReverseScreen','renderMoveScreen','renderCompareScreen']
 assert.match(js,/data-rev-g/);assert.match(js,/data-pickup-current-g/);assert.match(js,/data-move-candidate/);assert.match(js,/data-compare-row/);
 assert.doesNotMatch(js,/navigateLegacy\?\.\(['"](?:rev|movecompare|cmp)/,'live tools must not visibly navigate to legacy pages');
 assert.doesNotMatch(js,/min-width\s*:\s*(?:5|6|7|8|9)\d\dpx/,'new app JS must not introduce desktop min-width tables');
+const css=fs.readFileSync('public/app-v510.css','utf8');
+for(const marker of ['rev-compact','rev-odds','rev-probs-band','rev-probs-vals','data-rev-bb-odds','data-rev-rb-odds','data-rev-total-odds','data-rev-range','data-rev-q','data-rev-band']){
+ assert.ok((js+css).includes(marker),`reverse compact missing ${marker}`);
+}
+assert.match(js,/patchReverseResult\(this\.bridge\(\)\?\.getReverseState/,'live input updates must update derived values');
+assert.match(js,/getReverseState\?\.\(this\.state\.rev\)/,'live reverse continues to use the existing judgement bridge');
+assert.match(css,/\.rev-compact \.rev-input input\{[^}]*min-height:44px/,'mobile inputs must remain usable');
+assert.match(css,/\.rev-compact \.rev-probs-band/,'setting distribution has a scoped layout');
+assert.doesNotMatch(js,/Math\.random\(/,'reverse display never fabricates odds or probabilities');
 console.log('v5.1.0 live tools native UI static PASS');
