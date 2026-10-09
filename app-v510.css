@@ -262,3 +262,50 @@
 .observed-unified-card .observed-factor-details{margin-top:5px;padding-top:2px}
 .observed-unified-card .observed-factor-details>summary{min-height:26px}
 /* END independent judgement styles */
+/* BEGIN reviewed live reverse compact styles */
+/* Live reverse compact UI; read-only additions use existing reverse probabilities. */
+.rev-compact{min-width:0;padding-bottom:8px}
+.rev-compact .rev-head{display:flex;align-items:center;gap:10px;margin:0 0 4px;min-height:32px}
+.rev-compact .rev-head .back-row{margin:0;min-height:32px;padding:0 8px 0 0;font-size:12px;white-space:nowrap}
+.rev-compact .rev-head h1{font-size:24px;line-height:1.2}
+.rev-compact .rev-head>span{margin-left:auto;font-size:10px;font-weight:850;color:var(--accent)}
+.rev-compact .live-tabs{margin:6px 0 8px;padding:3px}
+.rev-compact .live-tabs button{min-height:38px}
+.rev-compact .rev-toolbar{gap:8px;margin:6px 0 8px}
+.rev-compact .rev-toolbar label{gap:4px;min-width:0}
+.rev-compact .rev-toolbar select{width:100%;height:44px;min-height:44px;font-size:14px;padding:0 8px;text-overflow:ellipsis}
+.rev-compact .rev-input.panel{padding:9px 11px;margin:0 0 8px;gap:7px;border-radius:16px}
+.rev-compact .rev-input label{min-width:0;gap:3px}
+.rev-compact .rev-input input{box-sizing:border-box;width:100%;height:44px;min-height:44px;font-size:17px;padding:0 11px;border-radius:11px;font-variant-numeric:tabular-nums}
+.rev-compact .rev-result{padding:11px 13px;margin:0 0 8px;border-radius:16px}
+.rev-compact .judge-result-top{gap:8px;align-items:center}
+.rev-compact .judge-result-top>div:first-child small{font-size:10px}
+.rev-compact .judge-result-top strong{font-size:32px}
+.rev-compact .judge-pills{flex-wrap:nowrap;gap:4px;min-width:0}
+.rev-compact .judge-pills span{min-width:0;padding:4px 5px;border-radius:9px;flex:1 1 auto}
+.rev-compact .judge-pills b{font-size:11px}
+.rev-compact .rev-odds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rev-compact .rev-odds>div{display:flex;align-items:baseline;justify-content:space-between;gap:4px;min-width:0}
+.rev-compact .rev-odds small{font-size:9px;color:var(--muted);white-space:nowrap}
+.rev-compact .rev-odds b{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rev-compact .rev-est{gap:7px;margin-top:7px}
+.rev-compact .rev-est>div{padding:5px 8px;border-radius:10px}
+.rev-compact .rev-est small{font-size:9px}
+.rev-compact .rev-est b{margin-top:2px;font-size:14px}
+.rev-compact .rev-range{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:6px 1px 0;font-size:10px;line-height:1.4}
+.rev-compact .rev-range[hidden]{display:none}
+.rev-compact .rev-range span{color:var(--muted)}
+.rev-compact .rev-range b{font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rev-compact .rev-probs{margin-top:8px}
+.rev-compact .rev-probs-title{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10px;margin-bottom:4px}
+.rev-compact .rev-probs-title small{font-size:9px;color:var(--muted)}
+.rev-compact .rev-probs-band{display:flex;width:100%;height:9px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.rev-compact .rev-probs-band span{display:block;flex:0 0 auto;min-width:0;height:100%}
+.rev-compact .rev-probs-vals{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;text-align:center;margin-top:4px}
+.rev-compact .rev-probs-vals span{min-width:0;display:grid;gap:1px}
+.rev-compact .rev-probs-vals small{font-size:9px;color:var(--muted)}
+.rev-compact .rev-probs-vals b{font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rev-compact .primary-cta{margin-top:7px;min-height:46px;border-radius:13px}
+.rev-compact .judge-warning{margin-top:5px}
+@media(max-width:359px){.rev-compact .rev-odds{gap:3px}.rev-compact .rev-odds>div{display:grid;gap:1px}.rev-compact .rev-odds b{font-size:10px}.rev-compact .judge-result-top strong{font-size:28px}.rev-compact .judge-pills b{font-size:10px}.rev-compact .rev-probs-vals b{font-size:9px}}
+/* END reviewed live reverse compact styles */
