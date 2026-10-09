@@ -1,5 +1,7 @@
 // Store UI v2 for slot stores. Keeps JUGEST engines, persistence and event handlers unchanged.
+import {createVerificationReader,renderVerificationResults,errorMessage} from './vps-ui-store-verify.mjs';
 let app=null,root=null,observer=null,pending=false;
+const verificationReader=createVerificationReader();let verificationSequence=0;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>v==null||v===''||!Number.isFinite(Number(v))?'—':Math.round(Number(v)).toLocaleString('ja-JP');
 const diff=v=>v==null||v===''||!Number.isFinite(Number(v))?'—':(Number(v)>=0?'+':'')+num(v)+'枚';
@@ -22,7 +24,7 @@ function header(shop,kind,o){const s=collectorStatus(o),name=shop==='PIA大船1'
 }
 function subnav(kind){
  if(kind==='trend')return `<nav class="sv2-subnav" aria-label="店舗傾向の種類"><button type="button" data-action="store-trend" class="${app.state.screen==='trend'?'active':''}">台番傾向</button><button type="button" data-action="store-analysis" class="${app.state.screen==='analysis'?'active':''}">投入パターン</button></nav>`;
- if(kind==='verify')return `<nav class="sv2-subnav" aria-label="予測検証の種類"><button type="button" data-action="store-model" class="${app.state.screen==='model'?'active':''}">モデル性能</button><button type="button" data-action="store-replay" class="${app.state.screen==='replay'?'active':''}">過去の朝を再現</button></nav>`;
+ if(kind==='verify')return `<nav class="sv2-subnav" aria-label="予測検証の種類"><button type="button" data-action="store-model" class="${app.state.screen==='model'?'active':''}">LIVE成績</button><button type="button" data-action="store-replay" class="${app.state.screen==='replay'?'active':''}">過去検証</button></nav>`;
  return '';
 }
 function latestSummary(shop,o){
@@ -56,8 +58,50 @@ function machineTable(screen){
  list.innerHTML=`<div class="sv2-machine-table-scroll"><table class="sv2-machine-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${records.map(row=>`<tr><td>${esc(row.name)}</td>${heads.slice(1).map((_,i)=>`<td>${esc(row.metrics[i]?.value||'—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
  list.dataset.sv2Table='1';
 }
+function verificationMode(){return app?.state?.screen==='replay'?'historical':'live'}
+function loadVerification(screen,shop,{force=false}={}){
+ const node=screen.querySelector('[data-sv2-verification-content]');if(!node)return;
+ const id=++verificationSequence,mode=verificationMode();
+ if(!force){
+  const cached=verificationReader.peek(shop);
+  if(cached){node.innerHTML=renderVerificationResults(cached,mode);return}
+ }
+ node.innerHTML='<div class="sv2-verify-message"><b>VPSの保存済み結果を読み込み中…</b><span>端末内で予測や再計算は実行しません。</span></div>';
+ void verificationReader.read(shop,{force}).then(comparison=>{
+  if(id!==verificationSequence||!screen.isConnected||app?.state?.activeStore!==shop||verificationMode()!==mode)return;
+  node.innerHTML=renderVerificationResults(comparison,mode);
+ }).catch(error=>{
+  if(id!==verificationSequence||!screen.isConnected||app?.state?.activeStore!==shop||verificationMode()!==mode)return;
+  node.innerHTML=errorMessage(error);
+ });
+}
+function verificationScreen(screen,shop,o){
+ screen.dataset.sv2Attached='1';screen.classList.add('sv2-workspace','sv2-verify');
+ const mode=verificationMode();
+ screen.innerHTML=header(shop,'verify',o)+subnav('verify')+
+  '<div class="sv2-section-title"><b>'+(mode==='live'?'予測の答え合わせ':'過去の朝を検証')+'</b><small>VPS保存済みデータ</small></div>'+
+  '<div class="sv2-verify-toolbar"><span>自動で蓄積した予測・採点を表示</span><button type="button" data-sv2-verify-refresh>再取得 ↻</button></div>'+
+  '<div data-sv2-verification-content aria-live="polite"></div>';
+ loadVerification(screen,shop);
+}
+function repairRemoteTrendSummary(screen,shop,o){
+ if(app?.state?.screen!=='trend')return;
+ const summary=screen.querySelector('.trend-summary'),rosterText=summary?.querySelector('b');
+ if(!summary||!rosterText||!/^0日\s*\/\s*0台$/.test(rosterText.textContent.trim()))return;
+ const available=bridge()?.getStoreDates?.(shop,app?.state?.trendPeriod==='all'?366:Number(app?.state?.trendPeriod)||30)||[];
+ const days=Array.isArray(available)?available.length:0,machines=Number(o?.machineRows)||0;
+ if(days<=0&&machines<=0)return;
+ const small=summary.querySelector('small');if(small)small.textContent='VPS蓄積（台番傾向は未同期）';
+ rosterText.textContent=days+'日 / 最新'+machines+'台';
+ const button=summary.querySelector('[data-trend-run]');if(button){button.disabled=true;button.textContent='端末側のデータなし'}
+ if(!screen.querySelector('[data-sv2-trend-guidance]')){
+  const tip=document.createElement('p');tip.className='sv2-verify-notice';tip.dataset.sv2TrendGuidance='';
+  tip.textContent='VPS側にデータはありますが、この台番傾向計算は端末側の履歴を参照します。VPSの集計済み分析は「投入パターン」で確認できます。';
+  summary.after(tip);
+ }
+}
 function compact(screen,kind,shop,o){
- if(screen.dataset.sv2Attached){if(kind==='data')machineTable(screen);return}
+ if(screen.dataset.sv2Attached){if(kind==='data')machineTable(screen);if(kind==='trend')repairRemoteTrendSummary(screen,shop,o);return}
  screen.dataset.sv2Attached='1';screen.classList.add('sv2-workspace','sv2-'+kind);
  for(const key of ['.back-row','.kicker','.store-title','.store-meta'])screen.querySelector(':scope > '+key)?.remove();
  screen.querySelector(':scope > .segmented[aria-label="店舗内ナビ"]')?.remove();
@@ -66,15 +110,17 @@ function compact(screen,kind,shop,o){
  screen.insertAdjacentHTML('afterbegin',header(shop,kind,o)+subnav(kind)+`<div class="sv2-section-title"><b>${label}</b><small>${meta}</small></div>`);
  if(kind==='plan'){const controls=screen.querySelector('.plan-controls');if(controls){const wrap=document.createElement('details');wrap.className='sv2-plan-settings';if(!app.state.planResult||app.state.planResult.error)wrap.open=true;wrap.innerHTML='<summary>対象日・抽選番号・並び人数を設定</summary>';controls.before(wrap);wrap.append(controls)}}
  if(kind==='data')machineTable(screen);
+ if(kind==='trend')repairRemoteTrendSummary(screen,shop,o);
 }
 function reconcile(){
  if(!root||!app)return;const kind=screenKind(),screen=activeScreen();if(!kind||!screen||isPachinko(screen))return;
  style();const shop=String(app.state.activeStore||''),o=bridge()?.getStoreOverview?.(shop)||{};
  if(kind==='overview'){if(screen.dataset.sv2Attached)return;screen.dataset.sv2Attached='1';overview(screen,shop,o)}
+ else if(kind==='verify'){if(!screen.dataset.sv2Attached)verificationScreen(screen,shop,o)}
  else compact(screen,kind,shop,o);
 }
 function schedule(){if(pending)return;pending=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{pending=false;try{reconcile()}catch(e){console.error('JUGEST Store UI v2:',e)}},0)}
-function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});schedule();return true}
+function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
 function boot(){if(attach(document.querySelector('jugest-app')))return;globalThis.setTimeout(boot,60)}
 if(typeof document!=='undefined')boot();
 export const __test={collectorStatus,latestSummary,nav,dateShort};
