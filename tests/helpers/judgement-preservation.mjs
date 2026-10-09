@@ -1,6 +1,7 @@
 // Keep the original protected hashes. Undo only the explicitly authorized
 // judgement UI additions / diagnostic taps before checking the old baseline.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
@@ -9,6 +10,31 @@ const APPROVED_BLOCKS=Object.freeze({
  '/* BEGIN independent judgement styles */\n':'962b94a63ae73dc83ae4bc756154f70af0bf02a5a29da2f2c6f1f8714c2e7862',
  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
 });
+const REVIEWED_LIVE_REVERSE=Object.freeze({
+ helpers:'a712f70308d5aa9888fa73ff4f1941b9d58f4c2e7de303f26fda032dce301e0c',
+ styles:'094ce8598a31be72a2055aef8b7dd196a2b9451a4db6369196b6b1d77e5d7cd0',
+ methods:Object.freeze({renderReverseScreen:'1f438de9b5ae66485f7cf6aacf334fcce8ff458d8fc54119e269f3d792b1d734',patchReverseResult:'11ea50b69944a4bcf4c17a2007b08f3c53a1ed65306524be0a0969e2b4e48f92'})
+});
+const LIVE_REVERSE_BASELINE=JSON.parse(readFileSync(new URL('./live-reverse-baseline.json',import.meta.url),'utf8'));
+function restoreLiveReverseMethod(source,name){
+ const anchor='  '+name+'(';
+ assert.equal(source.split(anchor).length-1,1,'reviewed reverse method exists exactly once: '+name);
+ const at=source.indexOf(anchor),end=source.indexOf('\n',at);
+ assert.ok(end>at,'reviewed reverse method has a line end');
+ const current=source.slice(at,end+1);
+ assert.equal(createHash('sha256').update(current).digest('hex'),REVIEWED_LIVE_REVERSE.methods[name],'unreviewed reverse method modification: '+name);
+ assert.ok(LIVE_REVERSE_BASELINE[name]?.startsWith(anchor),'original reverse method fixture: '+name);
+ return source.slice(0,at)+LIVE_REVERSE_BASELINE[name]+source.slice(end+1);
+}
+function stripLiveReverseBlock(source,start,end,expected){
+ const at=source.indexOf(start),finish=source.indexOf(end,at);
+ assert.ok(at>=0&&finish>at,'approved reverse block boundaries');
+ assert.equal(source.split(start).length-1,1,'unique reverse block start');
+ assert.equal(source.split(end).length-1,1,'unique reverse block end');
+ const stop=finish+end.length;
+ assert.equal(createHash('sha256').update(source.slice(at,stop)).digest('hex'),expected,'unreviewed reverse UI addition');
+ return source.slice(0,at)+source.slice(stop);
+}
 function replace(source,from,to='',count=1){
  assert.equal(source.split(from).length-1,count,`approved judgement anchor count: ${from.slice(0,65)}`);
  return source.replaceAll(from,to);
@@ -23,6 +49,8 @@ function block(source,start,end,replacement=''){
 }
 export function withoutJudgementAdditions(file,source){
  if(file==='app-v510.js'){
+  source=stripLiveReverseBlock(source,'// BEGIN reviewed live reverse display helpers\n','// END reviewed live reverse display helpers\n',REVIEWED_LIVE_REVERSE.helpers);
+  for(const name of ['renderReverseScreen','patchReverseResult'])source=restoreLiveReverseMethod(source,name);
   source=block(source,'  // BEGIN independent judgement UI\n','  // END independent judgement UI\n');
   for(const [from,to] of [
    ["['home','judgement','live','store','records','data']","['home','live','store','records','data']"],
@@ -42,6 +70,7 @@ export function withoutJudgementAdditions(file,source){
   const field="    const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}\n";
   source=replace(source,field,'',2);
  }else if(file==='app-v510.css'){
+  source=stripLiveReverseBlock(source,'/* BEGIN reviewed live reverse compact styles */\n','/* END reviewed live reverse compact styles */\n',REVIEWED_LIVE_REVERSE.styles);
   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
  }else if(file==='index.html'){
