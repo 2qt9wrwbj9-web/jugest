@@ -56,3 +56,24 @@ test('grape remains optional without a coin difference, while other factors stil
  assert.ok(html.includes('未使用'));
  assert.doesNotMatch(html,/>NaN<|>Infinity<|left:NaN|width:NaN/);
 });
+
+test('one result card contains probability band and settings 1-6 without duplicate summary cards',async()=>{
+ const {ctx,bridge}=await boot({loadApp:false});
+ const r=bridge.judgeObservedMachine({...sample,games:6000,bb:25,rb:25,diff:1500});
+ const before=plain(r);
+ const html=ctx.JUGESTJudgementView.result(r);
+ assert.equal((html.match(/class=\"panel observed-factor-card observed-unified-card\"/g)||[]).length,1);
+ assert.equal((html.match(/class=\"observed-unified-segment\"/g)||[]).length,6);
+ assert.equal((html.match(/class=\"observed-unified-labels\"/g)||[]).length,1);
+ assert.equal((html.match(/class=\"observed-factor-row\"/g)||[]).length,4);
+ assert.equal((html.match(/<tr><th scope=\"row\">/g)||[]).length,6);
+ assert.equal((html.match(/P4\+/g)||[]).length,1);
+ assert.equal((html.match(/P5\+/g)||[]).length,1);
+ assert.ok(!html.includes('P6'));
+ assert.match(html,/設定6 [0-9.]+%/);
+ assert.equal(html.includes('推定ブドウ</dt>'),false);
+ assert.deepEqual(plain(r),before);
+ const widths=[...html.matchAll(/class=\"observed-unified-segment\" style=\"width:([0-9.]+)%/g)].map(x=>Number(x[1]));
+ assert.equal(widths.length,6);
+ assert.ok(Math.abs(widths.reduce((a,b)=>a+b,0)-100)<.00001);
+});
