@@ -18,4 +18,12 @@ assert.match(js,/getReverseState\?\.\(this\.state\.rev\)/,'live reverse continue
 assert.match(css,/\.rev-compact \.rev-input input\{[^}]*min-height:44px/,'mobile inputs must remain usable');
 assert.match(css,/\.rev-compact \.rev-probs-band/,'setting distribution has a scoped layout');
 assert.doesNotMatch(js,/Math\.random\(/,'reverse display never fabricates odds or probabilities');
+// Display-only revamp of live Juggler / HANA screens; keep existing bridge selectors.
+const liveCss=fs.readFileSync('public/app-v510.css','utf8');
+for(const marker of ['judge-compact','hana-compact','judge-counter-groups','live-compact-band','data-judge-grape','data-hana-live-bell','data-hana-live-water','liveCompactDistribution','livePatchDistribution']){
+ assert.ok((js+liveCss).includes(marker),'compact screen marker missing: '+marker);
+}
+for(const attr of ['data-judge-g','data-judge-metric','data-judge-step','data-judge-enable','data-hana-field','data-hana-count','data-hana-reset','data-record-save-current'])assert.ok(js.includes(attr),'existing control must survive: '+attr);
+assert.match(js,/liveCounterRate\(Number\(s.currentG\)-Number\(s.startG\),s.bell\)/,'bell rate uses only own games');
+assert.match(js,/liveCounterRate\(s.bigGames,s.bigWater\)/,'BIG watermelon denominator is BIG games');
 console.log('v5.1.0 live tools native UI static PASS');
