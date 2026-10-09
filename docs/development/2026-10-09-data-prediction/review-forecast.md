@@ -173,3 +173,76 @@ prospective       true
 - 隔離scriptは、元のF1–F6・営業日期間と追加4条件が安全側期待値で成功。末尾に追加した保存ロック待ち条件のみ安全側assertが失敗する（11シナリオ成功、残件1）。scriptは現在、欠陥の観測をassertする初回版から、安全な結果をassertする修正確認版へ更新済み。
 - 保護対象formal-evaluation/trial/trial-store/outcome/ndcg/model-search/backtestは、基準からe6a47cfまで再び差分ゼロを確認。
 - Node v24.19.0、外部取得を禁止した隔離実行。本番接続・変更・デプロイは行っていない。
+
+
+### 2026-10-09 最終独立再確認（d1317d0 + 修正後working tree）
+
+対象HEAD: `d1317d0724859b0a337612cd418f2a16f3e171be`。最終対象検証は **2026-10-09 09:04:12–09:04:47 UTC** に実行した。親担当がUI・集計API・追加安全修正を進める共有working treeを対象とし、開始時・途中・最終検証前後のSHA-256を記録した。最終検証前後では下記の予測・評価・集計・API対象21ファイルに変更がなかった。以下はcommit全体やUI完成を承認する判定ではない。
+
+**完了: F1–F6、前回未解決だったF2の保存ロック待ち、および今回追加で発見した3境界は、修正後の安全側検証で解消を確認した。このレビュー範囲に未解決のP1/P2所見はない。** 実装ファイルはレビュー担当が編集していない。本番接続・変更・外部取得・デプロイ・commitを行っていない。
+
+今回の初期再確認で新たに発見した境界は、発見時に親担当へ即通知し、親担当の最小修正後に独立再検証した。
+
+| 追加境界・残件 | 初期観測 | 修正後の独立結論 |
+| --- | --- | --- |
+| F2残件: 新pair保存のBEGIN IMMEDIATE待ち | 前回e6a47cfでは9/13対象を14:59:59Z作成として15:00:01Zに保存できた | 書込権取得後に締切を確認して取引全体をrollback。旧pairと先に確定した正式証拠1日を保持し、再試行は9/14へ2行を保存、証拠を再消費しない |
+| F2追加: PREの外側client snapshot保存 | 内側LIVE保存guard後、client_snapshotsのINSERT中に締切を跨ぐと外側savepointが遅い公開を許した | 外側公開前guardで予測・表示snapshot・評価登録・queueを全てrollbackする |
+| P1追加: 正式判定後の書込ロック中に入力版訂正 | 最終版照合後、正式証拠用BEGINの待ち中にsource訂正が確定すると旧版の証拠1日をcompleteにできた。実ファイルSQLite二接続でも再現 | protected scorerを変更せず、その取引の書込権取得直後に同じevaluationInputVersionを再確認。source/normalized/quality/検品版の変化はいずれも証拠0、outcome_changed_during_evaluationで保留 |
+| P2追加: 正式成績read側の訂正即時表示 | 正常complete後にsourceだけ訂正し、次の評価job前に読んでもformal assessmentがcompleteのままだった | 各既採点日の固定pairの事前性と現在入力版をread時に照合。実行中・終了済みtrialとも訂正をcorrected、旧marker欠落・事後pairをhistoricalに分類。正式証拠・累積統計・採用status・Activeは変更しない |
+
+#### 検証した保証
+
+- 正式開始のBEGIN待ち・Champion片側保存後、日次pairの片側保存後、PRE/SHADOWの初回INSERT・評価queue登録途中がJST締切を跨ぐ場合は原子的に拒否した。既保存予測のpayload・created_atは書換えず、再試行で二重評価しない。
+- 実ファイルSQLite/WALの別workerが書込権を保持する条件でも確認した。PRE/SHADOWの最初のINSERTおよび正式開始BEGINは実busy wait約330–333msを経て締切を跨ぎ、不正予測を残さなかった。時計は隔離fixtureへ注入したJST境界で、本番の実時刻・本番DBではない。
+- 正式証拠保存用の実SQLite二接続・約229msのロック待ち中のsource訂正は、書込権取得後に検出し、証拠0・data_insufficientで停止した。元資料だけの変更も検品根拠だけの変更も同じ版識別へ含まれる。
+- 古い呼出し元daysから最新canonicalへ訂正されたF1は、既存runExistingStoreDayJudgementで独立計算した現在qと保存qが完全一致した。明示targetへの予測でもfuture行は入力へ混ぜず、Activeの学習frontierが要求履歴より未来なら拒否した。
+- 差枚欠損・機種変更・旧事後予測は引き続き保留する。遅れて届いた完全実績では同じ固定予測を1回だけ評価し、既知の0を未知へ変えず、欠損を0点へ変えない。
+- F3の既採点旧trial保留、F4の固定PRE競合を残した正式runner継続、F5の訂正後の旧score/evidence完全保持、F6の検品根拠改善による再queueを再確認した。checkedAtだけが変わる同じ再送はdirtyにも競合にもならない。
+- 正式成績readはrunning/promotedの隔離fixtureで16条件を検証した。source/normalized/quality/検品根拠は即corrected、旧marker欠落・事後pairはhistorical、checkedAtだけはcompleteを維持する。読み取り前後でtrial/予測/outcome/evidence/評価marker/Activeの保存行は完全一致した。promotedは終了済みレコードの表示fixtureであり、新しい採用を実行していない。
+- 進行中の追加世代はcompleted_generationを先へ誤進行させずfollow-up jobへ引き継いだ。正式証拠commit後にcomplete公開を失敗させた実ファイルDBを閉じて再openし、同じ版なら証拠を再採点せずcomplete回復、source訂正済みなら元証拠1日を保持してcorrected保留にした。
+- `formal-evaluation.mjs`、`trial.mjs`、`trial-store.mjs`、`outcome.mjs`、`ndcg.mjs`、`model-search.mjs`、`backtest.mjs`の7ファイルは、最終working treeと`a461a08005d8533107879813db29a57027c139b5`のファイルbytesを直接比較し、全て差分ゼロだった。数式・逐次検定・採用閾値を修正して所見を解消していない。
+
+#### 実行結果と対象版
+
+Node `v24.19.0`、`JUGEST_ACCESS_ENABLED=0 JUGEST_PIA_ACCESS_MODE=public`。以下の安全側隔離fixtureは最終対象版で **50/50成功**。
+
+| 隔離fixture（全て /workspace/scratch/2f9e5eaabf52/forecast-review/） | 条件数 | 内容 |
+| --- | ---: | --- |
+| recheck-final.mjs | 12 | 元F1–F6、旧証拠、判定await境界、保存ロック拒否と再開、世代race、営業日期間 |
+| recheck-boundaries.mjs | 16 | 正式start/pair・LIVE/PRE保存途中のJST境界、原子rollback、未来入力、quality/検品版、正式書込版race、即時read |
+| recheck-formal-read.mjs | 16 | 実行中/終了済みtrialの訂正・旧予測・版不明・時刻だけの再送、読み取り不変性 |
+| recheck-real-cutoff.mjs | 3 | 実SQLite二接続のPRE/SHADOW初回INSERT・正式start保存ロック待ち |
+| probe-real-lock.mjs | 1 | 実SQLite二接続の正式証拠書込権取得中source訂正、安全側assert付き |
+| recheck-restart.mjs | 2 | 正式証拠commit後の実ファイルDB再open、同じ版/訂正版の回復と二重消費防止 |
+
+初期再確認で関連6既存ファイルを実行し41/41成功した。追加修正後は影響するprediction-operations/pre-v2-formal-daily-loopの2ファイルのみを再実行し、**24/24成功**。全体回帰は親担当が実行するため重ねて実行していない。ログは同じ隔離ディレクトリの`final-*.log`、開始/途中/最終版記録は`recheck-*-hashes.json`に残した。元の`repro.mjs`は前回欠陥の観測版なので、修正後の安全判定には上表の新scriptを用いた。
+
+最終対象ファイルのSHA-256（実装担当の並行編集との版区別用）:
+
+| ファイル | SHA-256 |
+| --- | --- |
+| `vps/src/research/pre-v2/formal-daily-loop.mjs` | `0c3a4b24d0d02265c1008f2f5a742470075fa1d1d57c477e4bd2bb8dd178d0bd` |
+| `vps/src/research/pre-v2/formal-start.mjs` | `4e74fbd05932bcbdd00db21b4ea8fa85ae79041088d7f8f2f2227ee65a0f7c98` |
+| `vps/src/research/live-comparison.mjs` | `12fba02d1f43bc45d01a3e3c574732db88a1010b3537c1b96ded57c036a5caac` |
+| `vps/src/research/store-read-output.mjs` | `fc1d02adf411fa9abe7bd9eb85687faba021de627002c99938e56f4484018ff5` |
+| `vps/src/research/prediction-policy.mjs` | `16d9b1d7ee660cb03023120a799dc64d9317f04345877a57efee8b596fda4f9d` |
+| `vps/src/research/evaluation-state.mjs` | `7b6a1844ce62c05908778cbb4adb4b7a2d65258d2c353376a000834eda1709b4` |
+| `vps/src/research/prediction-performance.mjs` | `486b4b6ad005b43cb036858b370e73cbc6bc048ac7c9eaa8332bdfcb73857c38` |
+| `vps/src/analysis/comparison-refresh.mjs` | `563b2b06040199888a237111fc3c9cd8c11f88758dfeeb20acaf5f87be1981fa` |
+| `vps/src/analysis/prediction-evaluation.mjs` | `7b4bb2bdcab52bbc1332759365f6e924bec59892b4ea8ea13c622f7e923dbbea` |
+| `vps/src/analysis/prediction-refresh-state.mjs` | `9edfc0929488dfc702e6105f4ebb5684c7eee94a74567913f2c3e10c355dc1e3` |
+| `vps/src/operations.mjs` | `957fa412515648857f425bcc903c1322008859e9c3abaed2bf820d6d6c6cc282` |
+| `vps/src/analytics-handler.mjs` | `a11a5df175745e20ff3c50dbc3b69bffe2fbda72aba5b1f23e70ac62168bfd64` |
+
+画面・配信パッチはこの担当の機能検証範囲外だが、親担当の並行編集版として次のhashを記録した:
+
+| 未検証画面ファイル | SHA-256 |
+| --- | --- |
+| `vps-browser-analytics.mjs` | `e9ffcc47a188f9335968139b0c6c5041e083d6a298aecfc8c99a672c07b17e65` |
+| `vps-ui-enhancements.mjs` | `9b18292c18d09743936e23ca23a0f76e537eae0260cb0e7d5b4741b4b11b4369` |
+| `vps/src/ui-source-patch.mjs` | `28f427a3ad3c4071a57e40b3a1dd9050c8a1dad0093f6f3eaaef8f618d0eab53` |
+| `vps-ui-operations.mjs` | `b87b167f7171734f6b931b7493772335c24c2c9db33d593ff05cd52f345115a9` |
+
+#### 未検証・残す限界
+
+この担当では、日本語画面・390px/Safari描画・配信パッチ適用後の操作、画面/APIの認証・所有権・PIA閲覧権限、本番稼働・本番データ、取得元の実完全性、実設定の正解、全体build/full suiteを検証していない。画面/APIと全体回帰は親担当の別検証対象であり、上のhash記録をその成功根拠として扱わない。予測/正式評価の今回再現範囲では残件なし。後続に対象コードが変わった場合は、その変更部分の再確認が必要となる。

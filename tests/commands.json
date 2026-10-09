@@ -71,5 +71,6 @@
   "node --test tests/legacy-short-history.mjs",
   "node --test tests/store-plan-modes.mjs",
   "node tests/store-optimization-research.mjs",
-  "node --test tests/judgement-page.mjs"
+  "node --test tests/judgement-page.mjs",
+  "node --test tests/operations-ui.mjs"
 ]

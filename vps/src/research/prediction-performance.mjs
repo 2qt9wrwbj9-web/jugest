@@ -1,5 +1,7 @@
 import {isProspectivePrediction,businessDateAt} from './prediction-policy.mjs';
 import {evaluationInputVersion} from './evaluation-state.mjs';
+import {loadFormalPrediction} from './pre-v2/formal-prediction-store.mjs';
+import {missingMachineCount} from '../ingest/day-integrity.mjs';
 const ENGINES=['current_shadow','pre_research'],TOP=[1,3,5,10];
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const stratum=row=>`${row.sourceMachineName??row.machineName??row.machine}|${row.games<2000?'low':row.games<5000?'medium':'high'}`;
@@ -62,10 +64,33 @@ export function buildPredictionPerformance(db,{storeId,nowIso=new Date().toISOSt
       paired:{days:paired.length,newWins:paired.filter(r=>r.winner==='pre_research').length,currentWins:paired.filter(r=>r.winner==='current_shadow').length,ties:paired.filter(r=>r.winner==='tie').length}};
   }
   const formalExists=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pre_v2_formal_trials'").get();
-  const formal=formalExists?db.prepare(`SELECT lineage_id,trial_number,status,state_json,updated_at FROM pre_v2_formal_trials WHERE store_id=? ORDER BY trial_number DESC LIMIT 10`).all(storeId).map(r=>({lineageId:r.lineage_id,trialNumber:r.trial_number,status:r.status,trial:JSON.parse(r.state_json),updatedAt:r.updated_at})):[];
+  const formal=formalExists?db.prepare(`SELECT lineage_id,trial_number,status,state_json,updated_at FROM pre_v2_formal_trials WHERE store_id=? ORDER BY trial_number DESC LIMIT 10`).all(storeId).map(r=>{
+    const series=`formal:${r.lineage_id}:${r.trial_number}`;
+    const latest=db.prepare('SELECT state,reason,target_date,updated_at FROM prediction_evaluation_state WHERE store_id=? AND series=? ORDER BY updated_at DESC LIMIT 1').get(storeId,series);
+    const held=db.prepare("SELECT state,reason,target_date FROM prediction_evaluation_state WHERE store_id=? AND series=? AND state IN ('historical','corrected','data_insufficient') ORDER BY updated_at DESC LIMIT 1").get(storeId,series);
+    // A correction must be visible before the next job, including ended trials.
+    // Keep the original evidence and adoption statistics intact; this is read-only.
+    const processed=db.prepare(`SELECT t.target_date,e.state,e.reason,e.details_json
+      FROM pre_v2_formal_trial_days t LEFT JOIN prediction_evaluation_state e
+      ON e.store_id=t.store_id AND e.target_date=t.target_date AND e.series=?
+      WHERE t.store_id=? AND t.lineage_id=? AND t.trial_number=? ORDER BY t.target_date DESC`).all(series,storeId,r.lineage_id,r.trial_number);
+    let invalid=null,verifiedDays=0;
+    for(const day of processed){
+      const pair=['champion','challenger'].map(role=>loadFormalPrediction(db,{storeId,lineageId:r.lineage_id,trialNumber:r.trial_number,targetDate:day.target_date,role}));
+      const version=day.details_json?JSON.parse(day.details_json).inputVersion:null;
+      const reason=pair.some(p=>!p||!isProspectivePrediction(p))?'historical_prediction':!version?'legacy_evaluation_unverified':version!==evaluationInputVersion(db,{storeId,targetDate:day.target_date})?'formal_outcome_corrected':null;
+      if(reason)invalid??={target_date:day.target_date,state:reason==='formal_outcome_corrected'?'corrected':'historical',reason};
+      else if(day.state==='complete')verifiedDays++;
+      else invalid??={target_date:day.target_date,state:day.state??'data_insufficient',reason:day.reason??'formal_publication_pending'};
+    }
+    const trial=JSON.parse(r.state_json),unverified=Number(trial.daysProcessed??0)>processed.length;
+    return{lineageId:r.lineage_id,trialNumber:r.trial_number,status:r.status,trial,verifiedDays,updatedAt:r.updated_at,assessment:invalid??held??(unverified?{state:'historical',reason:'legacy_evaluation_unverified'}:latest??null)};
+  }):[];
   const integrity=db.prepare('SELECT check_json FROM store_day_integrity WHERE store_id=? ORDER BY business_date DESC LIMIT 90').all(storeId).map(r=>JSON.parse(r.check_json));
-  return{storeId,policy:'prospective-jst-v1',periods,rows:rows.slice(0,366),formal,
-    completeness:{observedDays:integrity.length,missingMachines:integrity.reduce((n,c)=>n+c.missingKeys.length,0),unknownDiff:integrity.reduce((n,c)=>n+c.missingFields.diff,0)},
+  const known=integrity.filter(c=>c.expectedCount!==null),expected=known.reduce((n,c)=>n+c.expectedCount,0),missing=known.reduce((n,c)=>n+missingMachineCount(c),0);
+  const forecasts=db.prepare("SELECT target_date,state,reason,updated_at FROM prediction_evaluation_state WHERE store_id=? AND series='forecast:pre_research' ORDER BY target_date DESC LIMIT 7").all(storeId).map(r=>({targetDate:r.target_date,state:r.state,reason:r.reason,updatedAt:r.updated_at}));
+  return{storeId,asOf:nowIso,latestObservedDate:closed[0]?.targetDate??null,policy:'prospective-jst-v1',periods,rows:rows.slice(0,366),formal,forecasts,
+    completeness:{observedDays:integrity.length,knownInventoryDays:known.length,unknownInventoryDays:integrity.length-known.length,expectedMachines:expected||null,missingMachines:missing,missingRate:expected?missing/expected:null,unknownDiff:integrity.reduce((n,c)=>n+c.missingFields.diff,0)},
     evidence:'通常成績は実測差枚。正式比較は既存JUGEST推定分布による順位評価（NDCG）。実設定は不明。',
     limitations:['プラス差枚は高設定を意味しない。低稼働ほど推定は不確実。','無作為差は同じ候補台集合から選ぶ場合の期待値。機種・実績稼働帯を揃えた差も参考値。','日ごとの平均を等しく重み付け。区間は日次平均の標準誤差による参考値で、連日相関を補正していない。','訂正日は元の採点を保存し最新集計から除外。正式統計の再採点・自動採用は行わない。']};
 }

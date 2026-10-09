@@ -29,6 +29,10 @@ export function integrityFingerprint(check){
   if(!check)return null;
   const {checkedAt,normalizedHash,...evidence}=check;return hashCanonical(evidence);
 }
+export function missingMachineCount(check){
+  if(!check||check.expectedCount==null)return null;
+  return Math.max(0,check.expectedCount-check.actualCount,check.missingKeys?.length??0);
+}
 function parse(text){try{return JSON.parse(text)}catch{return null}}
 function keysForRows(rows){return rows.map(machineIdentity).map(x=>x.key).filter(Boolean).sort()}
 function recentInventory(db,storeId,date,allowExistingDay){

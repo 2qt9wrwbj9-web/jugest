@@ -53,6 +53,16 @@ test('observation/check timestamps do not turn the same history resend into a co
   assert.equal(listLivePredictions(db,{storeId:'a'})[0].inputHash,before.inputHash);
  }finally{db.close()}
 });
+test('the display write crossing the target start rolls back the frozen prediction and evaluation queue together',()=>{
+ const db=setup(),RealDate=globalThis.Date,prepare=db.prepare.bind(db);let time=RealDate.parse('2026-10-08T14:59:59Z');
+ class FakeDate extends RealDate{constructor(...args){super(...(args.length?args:[time]))}static now(){return time}}
+ try{
+  globalThis.Date=FakeDate;
+  db.prepare=sql=>{const statement=prepare(sql);return sql.includes('INSERT INTO client_snapshots')?{run(...args){const result=statement.run(...args);time=RealDate.parse('2026-10-08T15:00:01Z');return result}}:statement};
+  assert.throws(()=>persistStoreReadSnapshot(db,{storeId:'a',modelFingerprint:'fp',model:{version:'store-read-model-v1',axes:[]},featureVersion:'v1',frontierDate:'2026-10-07',days:[{date:'2026-10-07',machines:rows}]}),/deadline passed before display/);
+  for(const table of ['store_prediction_snapshots','client_snapshots','jobs','prediction_refresh_state'])assert.equal(prepare(`SELECT COUNT(*) n FROM ${table}`).get().n,0);
+ }finally{db.prepare=prepare;globalThis.Date=RealDate;db.close()}
+});
 test('prediction and evaluation registration roll back together when registration fails',()=>{
  const db=setup();try{
   db.exec("CREATE TRIGGER fixture_eval_failure BEFORE INSERT ON prediction_refresh_state BEGIN SELECT RAISE(ABORT,'fixture_register_failed'); END");

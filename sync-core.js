@@ -184,11 +184,23 @@ function readJSON(key,fallback=null){
 }
 function writeJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
 function storedObject(value,key){if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('保存済みデータの形式が壊れているよ。同期を止めたよ（'+key+'）');return value}
+function validateJudgeData(data){
+  storedObject(data,'data');
+  for(const [key,row] of Object.entries(data)){
+    storedObject(row,'data.'+key);
+    for(const field of ['v','on'])if(field in row)storedObject(row[field],'data.'+key+'.'+field);
+    if('G' in row&&!['number','string'].includes(typeof row.G))throw new Error('保存済みゲーム数の形式が壊れているよ');
+  }
+}
 function validateStoredState(st){
   storedObject(st,STATE_KEY);
-  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory'])if(key in st&&!Array.isArray(st[key]))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
+  for(const key of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory'])if(key in st&&(!Array.isArray(st[key])||st[key].some(row=>!row||typeof row!=='object'||Array.isArray(row))))throw new Error('保存済み一覧の形式が壊れているよ（'+key+'）');
+  // Older sync clients used [] for an absent comparison map. Only that empty
+  // fallback is equivalent to {}; a non-empty array is still malformed.
+  if(Array.isArray(st.cmpData)&&st.cmpData.length===0)st.cmpData={};
   if('cmpData' in st){storedObject(st.cmpData,'cmpData');if(Object.values(st.cmpData).some(value=>!Array.isArray(value)))throw new Error('保存済み比較一覧の形式が壊れているよ')}
   for(const key of ['data','liveSessions','rev','v4HybridProfiles'])if(key in st)storedObject(st[key],key);
+  if('data' in st)validateJudgeData(st.data);
   return st;
 }
 function validateExternalDays(days){
@@ -202,7 +214,15 @@ function validateSyncPackage(pkg){
   const core=storedObject(pkg.core,'core');
   for(const key of ['shops','sessions','tags','forecasts','layoutOverrides','moveHistory'])if(!Array.isArray(core[key])||core[key].some(row=>!row||typeof row!=='object'||Array.isArray(row)))throw new Error('同期先の一覧データが不完全だよ（'+key+'）');
   if(core.shops.some(row=>!canon(row.name))||core.tags.some(row=>!canon(row.name)))throw new Error('同期先の店舗・タグの識別情報が不完全だよ');
+  if(core.forecasts.some(row=>!row.shop||!row.targetDate)||core.layoutOverrides.some(row=>!row.shopName||!row.tableNo||!row.machine))throw new Error('同期先の予測・台配置の識別情報が不完全だよ');
   storedObject(core.sections,'sections');validateExternalDays(pkg.externalDays);
+  if(core.sections.judge){
+    const judge=storedObject(core.sections.judge.value,'judge');validateJudgeData(judge.data);
+    if(Array.isArray(judge.cmpData)&&judge.cmpData.length===0)judge.cmpData={};
+    for(const key of ['liveSessions','rev','cmpData'])storedObject(judge[key],key);
+    if(Object.values(judge.cmpData).some(rows=>!Array.isArray(rows)))throw new Error('同期先の比較一覧が不完全だよ');
+  }
+  if(core.sections.hana)storedObject(core.sections.hana.value,'hana');
   if(!Array.isArray(pkg.analysisSnapshots)||pkg.analysisSnapshots.some(row=>!row||row.schema!=='juggler-store-analysis-snapshot'))throw new Error('同期先の保存済み解析が不完全だよ');
   return pkg;
 }
@@ -294,10 +314,9 @@ async function buildLocalPackage(meta){
   const st=validateStoredState(readJSON(STATE_KEY,{})),seed=+st.savedAt||now(),deviceId=meta.deviceId;
   st.sessions=ensureSyncIds(st.sessions,deviceId,'session');
   st.v4MoveHistory=ensureSyncIds(st.v4MoveHistory,deviceId,'move');
-  writeJSON(STATE_KEY,st);
   const hana=storedObject(readJSON(HANA_KEY,{}),HANA_KEY);
   const judgeSection={
-    data:st.data||{},liveSessions:st.liveSessions||{},rev:st.rev||{},cmpData:st.cmpData||[],cmpSeq:+st.cmpSeq||1
+    data:st.data||{},liveSessions:st.liveSessions||{},rev:st.rev||{},cmpData:st.cmpData||{},cmpSeq:+st.cmpSeq||1
   };
   const sections={
     judge:sectionEnvelope(meta,'judge',judgeSection,seed),
@@ -307,12 +326,14 @@ async function buildLocalPackage(meta){
   if(savedExternal!==null&&!Array.isArray(savedExternal))throw new Error('保存済み店舗データの形式が壊れているよ。バックアップを確認してね');
   const externalDays=validateExternalDays(savedExternal??[]);
   const analysisSnapshots=await readAnalysisSnapshots();
-  saveClient(meta);
-  return{schema:SYNC_SCHEMA,version:SYNC_VERSION,appVersion:APP_VERSION,generatedAt:new Date().toISOString(),sourceDevice:deviceId,
+  const pkg={schema:SYNC_SCHEMA,version:SYNC_VERSION,appVersion:APP_VERSION,generatedAt:new Date().toISOString(),sourceDevice:deviceId,
     core:{sections,shops:arr(st.shops),sessions:arr(st.sessions),sessionSeq:+st.sessionSeq||1,tags:arr(st.tags),tagSeq:+st.tagSeq||1,
       forecasts:arr(st.modelForecasts),forecastSeq:+st.modelForecastSeq||1,layoutOverrides:arr(st.v4LayoutOverrides),moveHistory:arr(st.v4MoveHistory),
       hybridProfiles:obj(st.v4HybridProfiles)},
     externalDays,analysisSnapshots};
+  validateSyncPackage(pkg);
+  writeJSON(STATE_KEY,st);saveClient(meta);
+  return pkg;
 }
 async function applyPackage(pkg,meta){
   const st=readJSON(STATE_KEY,{})||{},core=obj(pkg.core),sections=obj(core.sections);
@@ -429,7 +450,7 @@ async function syncNow(meta,onProgress=()=>{},hooks={}){
     pull=await api({action:'pull',syncId:link.id,authToken:link.auth});
     if(pull.revision<Number(meta.lastRevision||0))throw new Error('同期先の保存履歴が以前より古いよ。端末への反映を止めたよ');
     remote=pull.payload?await decryptPackage(pull.payload,link.key):null;
-    const merged=mergePackages(local,remote);
+    const merged=validateSyncPackage(mergePackages(local,remote));
     const encrypted=await encryptPackage(merged,link.key);
     const bytes=JSON.stringify(encrypted).length;
     if(bytes>4_700_000)throw new Error(`同期データが大きすぎるよ（約${(bytes/1048576).toFixed(1)}MB）。この版の上限を超えてる`);

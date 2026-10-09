@@ -129,3 +129,96 @@ R1–R6の再現scriptは「レビュー時の不具合が存在すること」�
 APIのbody/payload上限は確認したが、append-only commit保存全体の総容量・保持期限は別の運用課題として残る。body制限だけで長期の総保存容量が制限されるわけではない。修正済みと未確認、本番稼働と隔離fixtureの成功を区別して最終報告する。
 
 初回P1所見は修正担当へ通知済み。修正後にR1–R5を個別再確認し、R6のメタデータ保存を確認するまでこのレビューを完了扱いにしない。
+
+## 2026-10-09 UTC 修正後の最終独立再確認
+
+再確認対象は `d1317d0724859b0a337612cd418f2a16f3e171be` と、その後同じ作業ブランチへ加えられた修正。実装担当とは別に、安全側の期待値を使う隔離fixtureで再実行した。元の不具合の存在をassertする初回scriptの成功を、修正完了の根拠には使っていない。本番・認証・生データ・外部取得へ接続せず、実装ファイルと数学・統合関数は変更せず、buildや全体回帰も実行していない。全体回帰はroot担当が実施する。
+
+### 対応を確認した初回所見と追加所見
+
+| 対象 | 修正後の実証 |
+| --- | --- |
+| R1: 未移行/未確認日の差枚消失 | 検品行なし、および `unverified` の既存日の欠損再送を拒否。既存差枚 `[100,200]` と元行を維持。既存37件の対象テストで訂正の1回反映・同一再送の重複なし・明示された台集合縮小の受入も確認 |
+| R2: PIAの差枚欠損後に再試行停止 | `partial` は `not_ready`。snapshot baselineは `2026-10-08` を維持し、40分後は `attempt:true / due`。完全な資料が来る前に当日完了へ進めない |
+| R3: 分割保存の誤ACK | `pushCommit` の古いrevisionを拒否し、cloud revision0/payload null、端末lastSyncAt0を維持。さらに実際のHTTP200応答を改変し、`pushStart` の台数不一致、`pushChunk` のindex不一致、commitの未来revision、`pullChunk` のrevision不一致の全4ケースを拒否 |
+| R4: IDB外部資料の型破損 | 非配列の既存値を拒否し、元値を維持。配列内部のshop欠損、date欠損、実在しない日付、machines型破損、null行も、2回連続の同期で各々reject・push0・lastSyncAt0。`postcheck-extra.log` の「2回目に0件へ消失」は修正前証拠であり現状では再現しない |
+| R5: 構文破損STATEのUI迂回 | 実配信パッチ後の再起動でdirect serviceとUI bridgeを双方reject。原文 `{broken-existing-state` を維持、push0・lastSyncAt0。後述の解析可能JSON内部の型破損は追加で検出し修正後再確認対象とした |
+| R6: Relayのsource検品情報消失 | 実HTTPの3候補行→2台正規化で `sourceDiagnostics.duplicateRows:1 / candidateRows:3` がcanonical検品とreceiptへ残る。正規化後 `duplicateKeys:[]` と区別して記録。compact Relay day自体にqualityが無いことを、canonical hookでの明示的な受渡しにより補う |
+| 正規cmpData形式の互換性 | UI autosaveが実際に作る `{my:[],…}` のobject mapを許容し、配列と誤認しない。再起動を挟んで同期revision1→2を確認 |
+| 明示backupによる修復路 | 壊れたSTATEを自動保存しないまま検証済みbackupをrestore。`juggler_pre_restore_v1` へ元の破損原文をbyte同等で退避し、再起動後にbackupの稼働メモを維持してrevision1へ同期 |
+| 同機種の取得元別名 | canonical機種 `my` のまま `マイジャグラーV` → `マイジャグラー5` と表示名だけ変えた差枚欠損再送を拒否し、既存差枚100を維持 |
+
+R6のsource重複を正規化後の重複と同じ意味に扱ったり、sourceが示していない期待集合をtotalMachinesから生成したりしていない。差枚・設定推定・ランキング・研究の式を変更した結果でもない。
+
+### 保存・同期・再起動と容量不足
+
+実VPS HTTP handlerへ200万字メモを分割保存し、HTTP serverを閉じて新しいserverと新clientから再同期した。revision1→2、upload chunk8回・download chunk4回でメモ全200万字を維持。別OSプロセスでcommit claim保存後のhead失敗を発生させ、プロセスを終了し、新OSプロセスのpullでrevision1/元payloadへ回復した。同じETagを読んだ別々のOSプロセスのSQLite writeは200/412となり、同baseのdirect/chunk commitは200/409でrevision1となった。fake BlobのifMatch無視をCAS成功の根拠にはしていない。
+
+payload上限超過400、body 5,700,001 byteで413、chunk総容量超過400、欠落chunkは409 `upload_incomplete`、期限切れuploadは410。これらの失敗ではhead revision0/payload nullを維持した。
+
+canonical SQLiteの `PRAGMA max_page_count` を現在の80pageへ制限し、200万字を含む訂正を保存しようとした。実際の `database or disk is full` を受け、既存machine rows/store_days/jobs/receiptsが全て完全一致で維持された。host全体のディスクを埋める操作は行っていない。raw保存失敗・解析登録失敗の対象既存テストも旧canonical行とジョブの維持を確認した。
+
+localStorageの復元前退避keyだけにquota失敗を注入すると、restoreは退避失敗を返し、破損STATE原文を維持した。IDB write失敗を注入したrestoreは `reloadRequired:true` の失敗を返し、退避原文と旧外部資料は維持した。STATEが先にbackup内容へstageされるため、**backup復元の複数保存先は一つの原子的取引ではない**。成功に偽装せず、退避とbackupから再試行できる範囲を確認した。
+
+同期でもcloud commit revision1の後にIDB write失敗を注入するとclientはrejectし、旧外部資料とlastSyncAt0を維持した。書込可能へ戻して再試行するとrevision2となり元の稼働メモ・外部資料を保持した。cloud保存と端末の反映は原子的ではなく、cloudだけ成功した失敗から既存merge規則で回復する設計である。
+
+### 追加レビューで検出した不備
+
+1. **R5追加・P1:** STATE全体が解析可能JSONでも、`data:'damaged-original-map'` のように入力マップだけ壊れた場合、当初のUI gateは検査せず事前autosaveで空mapへ置換した。direct serviceはrejectする一方、UI bridgeはrevision1/lastSyncAt更新で成功した。top-level map検査の修正後は双方reject・原文維持・push0を再確認した。さらに `data:{my:'damaged-original-machine-input'}` の既知機種内の破損も同じ消失を再現したため、rowとv/onの構造検査を修正担当へ通知した。
+2. **R7・P2:** local STATEにnameのない店舗行 `{id:'orphan-shop',savedCoinBase:2000}` があると、1回目同期はrevision1/lastSyncAt更新で成功するが、2回目は同じpayloadをremote側の識別検査が拒否する。localから作ったpackageへ同じ検査境界を適用しておらず、自端末が読戻せないpackageを成功保存する。元店舗行は端末へ残るものの、その共有領域への同期が以後停止する。安全側probeで実再現し、共通検査の修正担当へ通知した。
+
+この2件の初回失敗証拠は `final-structural-probe.log`、`final-nested-map-probe.log`、`final-local-package-probe.log`。修正後の確認結果と最終の未解決状態は下記へ追記する。
+
+### reviewed-sync.patchの再検査
+
+基準 `a461a080` の `protected-hashes.json` と現在のmanifest全文はbyte一致し、20個の元ハッシュを更新していない。現在の `api/_sync-web.js` と `sync-core.js` にhelperを適用した復元全文は、各々 `git show a461a080:<file>` とbyte一致し、元SHA256 `041366c6…87c9a` / `abc391f2…540d` へ戻った。hunk内の未承認変更はhelperがrejectし、hunk外の追加は復元後SHA256が変わった。reviewed patch全文も、その時点の基準→現在の2file diffと完全一致した。`collector-preservation.mjs` は20 protected hashesと5配信調整ファイルの検査をPASSした。
+
+これらは期待ハッシュを合わせる検査ではなく、許可された同期変更だけを逆適用して残る全byteを保護する検査である。patch自身が許可差分の信頼根である点は初回の記述通りで、今回の追加検査修正によるpatch更新も再確認する。
+
+### 実行証拠と未検証範囲
+
+Node `v24.19.0`。修正前・後の全てのfixtureは合成資料だけを使用した。初回の修正後対象テストはclient 11/11、VPS 37/37成功。全体回帰は重複実行していない。以下のscratch内の専用fixtureとlogが実証内容に対応する。
+
+- `reproduce-postfix.mjs` と `final-reproduce-postfix.log`: R1–R4安全側再確認。
+- `ui-storage-postfix.mjs` と `final-ui-storage-postfix.log`: R5構文破損、配信UI bridge経路。
+- `relay-quality-postfix.mjs` と `independent-final-relay-quality.log`: R6実HTTP/canonical/receipt。
+- `native-sync-postfix.mjs` / `native-sync-child.mjs` と `final-native-sync.log`: 実HTTP分割・新OSプロセス回復・別process CAS。
+- `native-bounds.mjs` と `final-native-bounds.log`: サイズ・chunk欠落・期限・direct/chunk競合。
+- `final-extra-safe.mjs/.log`: 正規cmpData、backup修復後再起動、外部資料内部識別、同機種別名、local quota/IDB失敗・再試行、実SQLITE_FULL。
+- `final-ack-safety.mjs/.log`: 分割の各段階とpullChunkの不正ACK。
+- `final-preservation-check.mjs/.log`: 元manifest・2file逆適用のbyte一致、hunk内外への未承認変更の検出。
+
+保存先WAL/`synchronous=NORMAL`、停電・OSクラッシュの最後のwrite耐久性、raw archiveのfsync/実ENOSPC、live private Blobの実CAS/read-after-write、実Safari quota/圧縮codec、多regionのタイムアウト、本番移行・本番稼働は引き続き未検証。追加の端末容量試験はfixtureのwrite失敗注入であり、実Safariのquota測定ではない。append-only commit全体の長期容量/保持期限も別途運用設計が必要。この範囲を「対応済み」に含めない。
+
+### 追加修正の独立再確認
+
+追加のR5入力マップ破損は、top-level dataのscalarと、既知機種rowのscalar・vのscalar・onのarrayについて、direct serviceと配信UI bridgeが全てrejectし、元のSTATE原文を完全保持、push0・lastSyncAt0となった。R7のname欠損店舗も2回連続のdirect serviceでrejectし、店舗行を保持してpush0・lastSyncAt0となった。local packageとmerge後packageがremoteと同じ構造検査を通り、検査終了前にSTATE/client metadataを書かない実装を確認した。判別・統合の式は変更していない。証拠: `independent-final-structural-green.log`、`independent-final-nested-green.log`、`independent-final-local-package-green.log`。
+
+**R8・P2（旧版互換）** も追加検出した。基準 `a461a080` のsync-core全文をVMで実行して実際に暗号化・送信すると、STATEにcmpDataがない場合は旧版のfallbackが `judge.cmpData:[]` を生成する。新しい共通検査はこの空配列まで拒否し、旧clientが保存したrevision1の稼働資料を取り込めなかった。これは不正配列を任意に許可する要件ではなく、旧版自身が生成した正確な空配列の互換境界である。
+
+修正後は空配列だけを読取境界で空object mapとして扱い、旧clientが生成したcloud revision1→最新receiver revision2で旧稼働メモを維持した。さらに旧端末のlocal STATEに残るcmpData空配列を最新配信UIで再起動し、revision3・object mapへ更新して同じメモを保持した。空でない不正配列はdirect/bridgeが共にreject・原文保持・push0・lastSyncAt0。証拠: `final-legacy-package-probe.mjs`、`independent-final-legacy-package-red.log` / `independent-final-legacy-package-green.log`。旧sourceを実行した隔離fixtureであり、本番へ接続していない。
+
+この段階の追加対象clientテストは13/13、VPS対象は37/37成功。`independent-final-extra-safe.log` でbackup/IDB失敗/実SQLITE_FULLを、`independent-final-native-sync.log` で最新clientの実HTTP分割・新OSプロセス回復・別process CASを再確認した。対象外の全体回帰はroot担当が実施する。
+
+ただしR5の一覧要素にも同じ読取り境界の漏れを確認した。解析可能STATE `sessions:['damaged-original-session-row']` はdirect serviceではthrowするが、配信UIのrestoreが文字列行をfilterで落とし、事前autosave後のbridgeは `sessions:0 / revision:1` と成功する。STATE原文は失われ、push1回・lastSyncAt更新となった。`final-local-collection-probe.mjs` と `independent-final-local-collection-red.log` に安全側assert失敗を保存し、一覧rowのobject/null/array型検査をboot前のgateにも揃える必要を修正担当へ通知した。
+
+旧版cmpData互換の2行追加中には、reviewed patchとcurrent sourceのbyte差が厳格検査でFAILした。検査の期待値を緩めず、実装担当によるpatch更新後に完全逆適用と元20ハッシュを再確認する。最終判定はこの一覧要素保護とpatch更新の確認後に記載する。
+
+### 最終判定（2026-10-09 09:16 UTC）
+
+**本レビューで再現したP1/P2は全て修正後の安全側確認を完了。未修正の再現所見は残っていない。** 初回R1–R6、正規cmpData、明示backup修復、同機種別名差枚保護、externalDays内部識別欠損に加え、R5の入力マップ・機種row/v/on・一覧rowのUI迂回、R7のlocal package検査、R8の旧版空cmpData互換を個別確認した。これを本番稼働確認や上記未検証範囲の完了と扱わない。
+
+最後の一覧row試験は、sessions文字列/null、shops配列row/name欠損、tags name欠損、modelForecasts targetDate欠損、v4LayoutOverrides機種欠損、v4MoveHistory文字列の8ケースで、direct serviceと配信UI bridgeが双方reject・原文完全保持・push0・lastSyncAt0。証拠: `independent-final-local-collection-green.log`。その後の対象client回帰は **14/14 PASS**（`tests/sync-client-safety.mjs` と `tests/sync-roundtrip.mjs`、`independent-final-client-tests.log`）。VPSの対象5fileは **37/37 PASS**（`independent-final-vps-tests.log`）。R5/R7/R8の初回red logは不具合が修正前に存在した証拠として保持しており、最終失敗と混同しない。
+
+最終のreviewed patchはcurrent sourceの基準差分全文と一致し、2fileを逆適用した全文は元の基準sourceとbyte一致。hunk内の未承認変更はreject、hunk外の変更は元hash不一致となった。元20ハッシュmanifestも基準とbyte一致し、`collector-preservation.mjs` の20 protected hashes/5配信調整ファイル検査がPASS。許可された追加差分は構造検査・保存前検査の順序・正確な旧版空fallback互換であり、merge/暗号化/判別・研究の式を変えるための例外ではない。証拠: `independent-final-preservation-check.log` と `independent-final-20hash.log`。
+
+独立確認した最終sourceのSHA256（HEAD `d1317d0` 上の作業差分を識別するもの）:
+
+| file | SHA256 |
+| --- | --- |
+| `sync-core.js` | `1ff2ba585c8ac8b882c7889c87ac22d7d0e65be7ccd68027ef15eb18da42d9f7` |
+| `api/_sync-web.js` | `c410e768f3b7f93eb0ee86cfd84d0014fec9ad7bebb648f43c0cecf83fcfaa6a` |
+| `vps/src/ui-source-patch.mjs` | `181074bf15be2434457c9c930d86942204443491fca208b593e9842fb13cb885` |
+| `reviewed-sync.patch` | `2d39b3a63e98f71dfbc55e5da19414a7f8a37509d50354829333432bc0e3e408` |
+
+全体回帰・資源測定・監視UI/API・予測評価の独立レビューは各担当の結果と合わせて評価する。今回担当の変更はレビュー文書と隔離fixtureのみ。実装・本番・認証・生データ・外部取得・buildには触れず、判別数学も変更していない。

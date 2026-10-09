@@ -10,7 +10,7 @@ import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-externa
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateReceiver,authenticateAssistantRead,assistantReadKeyStatus,rotateAssistantReadKey,revokeAssistantReadKey} from './assistant-read-key.mjs';
 import {canReadPiaRoute} from './access/handler.mjs';
-import {buildOperationsOverview,buildStoreOperations,retryStoreOperation} from './operations.mjs';
+import {buildOperationsOverview,buildStoreOperations,retryStoreOperation,callOwnedCollector} from './operations.mjs';
 import {buildPredictionPerformance} from './research/prediction-performance.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
@@ -108,7 +108,12 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       migrate(db);
       if(parts.length===3&&parts[2]==='operations'){
         const stores=db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all().filter(row=>{const metadata=storeMetadata(row.source_metadata_json);return piaOnly?metadata.source==='pia-public-ranking-top':canAccessStoreMetadata(metadata,auth.channelId)});
-        sendJson(req,res,200,{ok:true,operations:buildOperationsOverview(db,{stores,auth})});return;
+        let collectorTargets=[],collectorWarning=null;
+        if(!piaOnly&&auth.authType==='receiver'){
+          try{const result=await callOwnedCollector({relayDbPath,auth,token:String(req.headers.authorization??'').replace(/^Bearer\s+/i,''),action:'collectorStatus'});collectorTargets=result.iosTargets??[]}
+          catch{collectorWarning='iPhoneの取得対象一覧を確認できませんでした。以下は正式に保存された店舗の状態です。'}
+        }
+        sendJson(req,res,200,{ok:true,operations:buildOperationsOverview(db,{stores,auth,collectorTargets,collectorWarning})});return;
       }
       if(parts.length===4&&parts[2]==='system'&&parts[3]==='resources'){
         try{sendJson(req,res,200,{ok:true,resources:await resourceStatusBuilder(db)});}catch(error){sendJson(req,res,503,{ok:false,code:'resource_telemetry_unavailable',message:String(error?.message??error)});}return;
@@ -129,13 +134,17 @@ export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,reso
       }
       if(retryRoute){
         try{
-          const body=await readJsonBody(req,{maxBytes:4096}),store=db.prepare('SELECT * FROM stores WHERE id=?').get(storeId);
+          const body=await readJsonBody(req,{maxBytes:4096});
+          // Uploading the body can outlive a Receiver/session revocation.
+          const fresh=auth.authType==='receiver'?await authenticateReceiver(req,relayDbPath):authenticatePia(req);
+          if(!fresh||(auth.authType==='receiver'?fresh.channelId!==auth.channelId:fresh.kind!=='admin')){sendJson(req,res,401,{ok:false,code:'unauthorized'});return}
+          const store=db.prepare('SELECT * FROM stores WHERE id=?').get(storeId);
           const token=String(req.headers.authorization??'').replace(/^Bearer\s+/i,'');
-          const result=await retryStoreOperation(db,{store,auth,kind:body?.kind,date:body?.date,relayDbPath,token});
+          const result=await retryStoreOperation(db,{store,auth:fresh,kind:body?.kind,date:body?.date,relayDbPath,token});
           sendJson(req,res,202,{ok:true,...result});
         }catch(error){
           const status=error.status??(error.code==='body_too_large'?413:error.code==='bad_json'?400:503);
-          sendJson(req,res,status,{ok:false,code:error.code??'operation_retry_failed',message:error.status?error.message:'再試行を登録できませんでした。保存済みのデータは保持しています。'},status===429?{'retry-after':'300'}:{});
+          sendJson(req,res,status,{ok:false,code:error.code??'operation_retry_failed',message:error.status?error.message:'再試行を登録できませんでした。保存済みのデータは保持しています。'},status===429?{'retry-after':String(error.retryAfter??300)}:{});
         }return;
       }
       if(parts.length===5&&parts[4]==='days'){

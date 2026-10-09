@@ -26,8 +26,22 @@ function vpsAssertStoredStateReadable(){
    let raw=localStorage.getItem(key);if(raw===null)continue;
    let value=JSON.parse(raw);if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("保存形式が不正");
    if(key===STORAGE_KEY){
-    for(const field of ["shops","sessions","tags","modelForecasts","v4LayoutOverrides","v4MoveHistory"])if(field in value&&!Array.isArray(value[field]))throw new Error("保存済み一覧が不正");
-    if("cmpData" in value&&(!value.cmpData||typeof value.cmpData!=="object"||Array.isArray(value.cmpData)||Object.values(value.cmpData).some(rows=>!Array.isArray(rows))))throw new Error("保存済み比較一覧が不正");
+    for(const field of ["shops","sessions","tags","modelForecasts","v4LayoutOverrides","v4MoveHistory"])if(field in value&&(!Array.isArray(value[field])||value[field].some(row=>!row||typeof row!=="object"||Array.isArray(row))))throw new Error("保存済み一覧が不正");
+    for(const field of ["shops","tags"])if(value[field]?.some(row=>!String(row.name??"").trim()))throw new Error("保存済み店舗・タグの識別情報が不正");
+    if(value.modelForecasts?.some(row=>!row.shop||!row.targetDate))throw new Error("保存済み予測の識別情報が不正");
+    if(value.v4LayoutOverrides?.some(row=>!row.shopName||!row.tableNo||!M[row.machine]))throw new Error("保存済み台配置の識別情報が不正");
+    for(const field of ["data","liveSessions","rev","v4HybridProfiles"])if(field in value&&(!value[field]||typeof value[field]!=="object"||Array.isArray(value[field])))throw new Error("保存済み入力の形式が不正");
+    for(const machine of MACHINE_KEYS){
+     if(!value.data||!(machine in value.data))continue;
+     const row=value.data[machine];if(!row||typeof row!=="object"||Array.isArray(row))throw new Error("保存済み台入力の形式が不正");
+     for(const field of ["v","on"])if(field in row&&(!row[field]||typeof row[field]!=="object"||Array.isArray(row[field])))throw new Error("保存済み台根拠の形式が不正");
+     if("G" in row&&!["number","string"].includes(typeof row.G))throw new Error("保存済みゲーム数の形式が不正");
+    }
+    if("cmpData" in value&&!(Array.isArray(value.cmpData)&&value.cmpData.length===0)&&(!value.cmpData||typeof value.cmpData!=="object"||Array.isArray(value.cmpData)||Object.values(value.cmpData).some(rows=>!Array.isArray(rows))))throw new Error("保存済み比較一覧が不正");
+   }
+   if(key==="jugglerDeviceSync:v1"){
+    if("sectionMeta" in value&&(!value.sectionMeta||typeof value.sectionMeta!=="object"||Array.isArray(value.sectionMeta)))throw new Error("同期の保存形式が不正");
+    if("link" in value&&value.link!==null&&(!value.link||typeof value.link!=="object"||Array.isArray(value.link)))throw new Error("同期の接続形式が不正");
    }
   }
  }catch(e){vpsStorageReadError="端末の保存データを読み出せなかったよ。自動保存と同期を止めたので、バックアップから復元して再読み込みしてね";throw new Error(vpsStorageReadError)}

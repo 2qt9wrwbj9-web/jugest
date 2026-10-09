@@ -66,3 +66,28 @@ test('a validated backup can repair corrupt STATE while preserving the exact ori
  assert.equal(result.ok,true);assert.equal(result.reloadRequired,true);assert.equal(storage.getItem('juggler_pre_restore_v1'),'{broken-original');
  assert.doesNotThrow(()=>JSON.parse(storage.getItem(STATE)));
 });
+test('an incomplete local shop is rejected before any cloud write or local normalization',async()=>{
+ const server=syncHarness(),a=await boot({fetch:server.fetch});await a.bridge.createSyncShare();
+ const raw=JSON.stringify({shops:[{id:'orphan',savedCoinBase:2000}],sessions:[]});a.storage.setItem(STATE,raw);
+ await assert.rejects(a.ctx.JUGESTDeviceSync.syncNow(),/識別情報/);
+ assert.equal(a.storage.getItem(STATE),raw);assert.equal(server.calls.filter(x=>x.action==='push').length,0);assert.equal(a.ctx.JUGESTDeviceSync.getStatus().lastSyncAt,0);
+});
+test('damaged machine inputs cannot be overwritten by served autosave or pushed via direct sync',async()=>{
+ const htmlSource=patchJugestIndexSource(readFileSync('index.html','utf8'));
+ for(const row of ['damaged-input',{G:'6000',v:'damaged-counts',on:{}},{G:'6000',v:{},on:[]}]){
+  const server=syncHarness(),first=await boot({fetch:server.fetch,htmlSource});await first.bridge.createSyncShare();
+  const raw=JSON.stringify({data:{my:row},cmpData:{my:[]},sessions:[]});first.storage.setItem(STATE,raw);
+  const next=await boot({fetch:server.fetch,storage:first.storage,htmlSource});await next.tick(150);
+  await assert.rejects(next.bridge.runDeviceSync());await assert.rejects(next.ctx.JUGESTDeviceSync.syncNow());
+  assert.equal(first.storage.getItem(STATE),raw);assert.equal(server.calls.filter(x=>x.action==='push').length,0);assert.equal(next.ctx.JUGESTDeviceSync.getStatus().lastSyncAt,0);
+ }
+});
+test('malformed list records cannot be filtered away before served bridge sync',async()=>{
+ const htmlSource=patchJugestIndexSource(readFileSync('index.html','utf8'));
+ for(const field of ['shops','sessions','tags','modelForecasts','v4LayoutOverrides','v4MoveHistory']){
+  const server=syncHarness(),first=await boot({fetch:server.fetch,htmlSource});await first.bridge.createSyncShare();
+  const raw=JSON.stringify({[field]:['damaged-original-record']});first.storage.setItem(STATE,raw);
+  const next=await boot({fetch:server.fetch,storage:first.storage,htmlSource});await next.tick(150);await assert.rejects(next.bridge.runDeviceSync());await assert.rejects(next.ctx.JUGESTDeviceSync.syncNow());
+  assert.equal(first.storage.getItem(STATE),raw);assert.equal(server.calls.filter(x=>x.action==='push').length,0);
+ }
+});

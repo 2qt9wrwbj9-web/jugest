@@ -81,6 +81,7 @@ export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,feat
     ON CONFLICT(store_id,snapshot_type,version) DO UPDATE SET
       business_date=excluded.business_date,payload_json=excluded.payload_json,payload_hash=excluded.payload_hash,updated_at=excluded.updated_at`)
     .run(id,STORE_READ_SNAPSHOT_TYPE,STORE_READ_VERSION,targetDate,payloadJson,payloadHash,at);
+  if(!isProspectivePrediction({targetDate,sourceFrontierDate:frontier,createdAt:clock()}))throw Object.assign(new Error('prospective prediction deadline passed before display publication'),{code:'prediction_deadline_passed'});
   return Object.freeze({payload,payloadHash,targetDate,conflict:false});
   });
 }

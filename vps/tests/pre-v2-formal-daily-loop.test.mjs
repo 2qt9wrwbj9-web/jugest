@@ -9,6 +9,7 @@ import {migratePreV2TrialStore} from '../src/research/pre-v2/trial-store.mjs';
 import {startFormalLiveTrial} from '../src/research/pre-v2/formal-start.mjs';
 import {advanceFormalLiveTrialDay} from '../src/research/pre-v2/formal-daily-loop.mjs';
 import {inspectDay,saveDayIntegrity} from '../src/ingest/day-integrity.mjs';
+import {buildPredictionPerformance} from '../src/research/prediction-performance.mjs';
 
 function makeDays(lastDay=10,{extraMachineFrom=null}={}){
   const out=[];
@@ -92,6 +93,31 @@ test('a correction arriving during judgement holds the formal day before any evi
   const r=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>{saveOperationalTarget(f.db,{hash:'during-judgement'});return{date:'2026-09-11',rows:judgedRows()}}});
   assert.equal(r.reason,'outcome_changed_during_evaluation');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
  }finally{f.db.close()}
+});
+test('a correction just before the formal write lock cannot consume evidence from the old outcome',async()=>{
+ const f=setup(),exec=f.db.exec.bind(f.db);let changed=false;
+ try{
+  saveOperationalTarget(f.db);
+  f.db.exec=sql=>{if(/^\s*BEGIN IMMEDIATE/i.test(sql)&&!changed){changed=true;f.db.prepare("UPDATE store_days SET source_hash='corrected-before-lock' WHERE store_id='s1'").run()}return exec(sql)};
+  const r=await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>({date:'2026-09-11',rows:judgedRows()})});
+  assert.equal(r.reason,'outcome_changed_during_evaluation');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM pre_v2_formal_trial_days').get().n,0);
+  assert.equal(f.db.prepare("SELECT state FROM prediction_evaluation_state WHERE series LIKE 'formal:%'").get().state,'data_insufficient');
+ }finally{f.db.exec=exec;f.db.close()}
+});
+test('formal performance discloses corrections before a job runs, including completed trials, without rewriting evidence',async()=>{
+ for(const mode of ['source','legacy-pair','legacy-marker']){
+  const f=setup();try{
+   saveOperationalTarget(f.db);await advanceFormalLiveTrialDay(f.db,{storeId:'s1',days:makeDays(11),throughDate:'2026-09-11',nowIso:'2026-09-12T02:00:00Z',operational:true,judgementRunner:async()=>({date:'2026-09-11',rows:judgedRows()})});
+   const evidence=f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all();assert.equal(buildPredictionPerformance(f.db,{storeId:'s1'}).formal[0].verifiedDays,1);
+   f.db.exec("UPDATE pre_v2_formal_trials SET status='promoted'");
+   if(mode==='source')f.db.exec("UPDATE store_days SET source_hash='corrected' WHERE store_id='s1'");
+   if(mode==='legacy-pair')f.db.exec("UPDATE pre_v2_formal_predictions SET created_at='2026-09-11T01:00:00Z' WHERE target_date='2026-09-11'");
+   if(mode==='legacy-marker')f.db.exec("DELETE FROM prediction_evaluation_state WHERE series LIKE 'formal:%'");
+   const before=f.db.prepare('SELECT * FROM prediction_evaluation_state').all(),r=buildPredictionPerformance(f.db,{storeId:'s1'});
+   assert.equal(r.formal[0].assessment.state,mode==='source'?'corrected':'historical');assert.equal(r.formal[0].verifiedDays,0);
+   assert.deepEqual(f.db.prepare('SELECT * FROM pre_v2_formal_trial_days').all(),evidence);assert.deepEqual(f.db.prepare('SELECT * FROM prediction_evaluation_state').all(),before);
+  }finally{f.db.close()}
+ }
 });
 test('formal judgement uses the current canonical target instead of a stale caller copy',async()=>{
  const f=setup();try{

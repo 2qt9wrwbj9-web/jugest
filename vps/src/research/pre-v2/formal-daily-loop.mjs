@@ -188,7 +188,25 @@ export async function advanceFormalLiveTrialDay(db,{
       if(reason){saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:'data_insufficient',reason,nowIso});return{reason,scoredTargetDate:null,nextTargetDate:pending,trial:record}}
       saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:'evaluating',normalizedHash:outcome.day.normalized_payload_hash,outcomeHash:outcome.outcomeInputHash,details:{inputVersion:outcome.inputVersion},nowIso:clock()});
     }
-    const scored=scoreFormalTargetDay(db,{...key,targetDate:pending,judgedRows:judged.rows,nowIso:operational?clock():nowIso});
+    // Keep the protected scorer/transaction implementation unchanged. Its actual
+    // write-lock acquisition is the last safe point to verify the outcome version.
+    const scoringDb=operational?{
+      prepare:db.prepare.bind(db),
+      exec(sql){
+        const result=db.exec(sql);
+        if(/^\s*BEGIN IMMEDIATE\s*;?\s*$/i.test(sql)&&evaluationInputVersion(db,{storeId:store,targetDate:pending})!==outcome.inputVersion){
+          db.exec('ROLLBACK;');throw Object.assign(new Error('outcome changed while acquiring formal storage'),{code:'formal_outcome_changed_before_commit'});
+        }
+        return result;
+      }
+    }:db;
+    let scored;
+    try{scored=scoreFormalTargetDay(scoringDb,{...key,targetDate:pending,judgedRows:judged.rows,nowIso:operational?clock():nowIso})}
+    catch(error){
+      if(error.code!=='formal_outcome_changed_before_commit')throw error;
+      saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:'data_insufficient',reason:'outcome_changed_during_evaluation',nowIso:clock()});
+      return{reason:'outcome_changed_during_evaluation',scoredTargetDate:null,nextTargetDate:pending,trial:record};
+    }
     if(operational)saveEvaluationState(db,{storeId:store,targetDate:pending,series,state:'complete',normalizedHash:outcome.day.normalized_payload_hash,outcomeHash:outcome.outcomeInputHash,details:{inputVersion:outcome.inputVersion},nowIso:clock()});
     record=scored.trial;
     scoredTargetDate=pending;
