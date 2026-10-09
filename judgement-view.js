@@ -99,10 +99,9 @@ function factorPanel(result){
   <dl class="observed-compact-summary">${pair('通常G',`${number(x.games,0)}G`)}${pair('BB',number(x.bb,0))}${pair('RB',number(x.rb,0))}${pair('差枚',x.diff==null?'未入力':`${x.diff>=0?'+':''}${number(x.diff,0)}枚`)}</dl>
   <div class="observed-factor-axis" aria-hidden="true"><span></span><div>${Array.from({length:6},(_,i)=>`<span>${i+1}</span>`).join('')}</div></div>
   <div class="observed-factor-rows">${factors}</div>
-  <p class="observed-help">設定相当値は機種スペックと各要素の確率を比較した参考値で、設定確率とは異なります。ぶどうは差枚からの推定値です。</p>
+  <p class="observed-help">設定相当値は参考値です。ぶどうは差枚からの推定値です。</p>
   <h3 class="observed-spec-title">機種スペック表</h3>
   <div class="observed-spec-scroll" role="region" aria-label="機種スペック表" tabindex="0"><table class="observed-spec-table"><thead><tr>${header.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
-  <p class="observed-help">JUGEST既存の確率表を使用。グラフの設定間は実際の出現確率で補間し、判別の計算には加えていません。</p>
   <details class="observed-factor-details observed-details"><summary>詳細分析を見る</summary><dl class="observed-input-summary">${pair('推定ブドウ確率',estimated?grape(result.estimatedGrape):'未使用')}${pair('推定ブドウ個数',number(result.estimatedGrapeCount))}${pair('既存逆算範囲（個数）',Number.isFinite(result.grapeCountLo)&&Number.isFinite(result.grapeCountHi)?`${number(result.grapeCountLo)}〜${number(result.grapeCountHi)}`:'未使用')}</dl></details>
  </section>`;
 }
