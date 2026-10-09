@@ -147,8 +147,11 @@ test('ordinary judgement omits developer DOM while retaining meaningful analysis
  app.acceptMachineRows([reviewSample]);app.handleObservedAction('judge',app.observed.single.id);
  const html=app.mount.innerHTML;
  assert.doesNotMatch(html,/data-observed-debug/);
+ assert.doesNotMatch(html,/<dt>P6<\/dt>/,'P6 is already shown by the setting 6 percentage');
+ assert.equal((html.match(/data-observed-unified/g)||[]).length,1,'single consolidated result');
+ assert.equal((html.match(/class="observed-unified-segment"/g)||[]).length,6,'all six settings remain visible');
  for(const label of internalLabels)assert.ok(!html.includes(label),label);
- for(const label of ['期待設定','最有力設定','P4+','P5+','P6','分布集中度','的中率ではありません','設定1〜6の確率','判別要素別の設定相当値','機種スペック表','合算','詳細分析を見る','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
+ for(const label of ['期待設定','最有力設定','P4+','P5+','分布集中度','的中率ではありません','設定1〜6の確率','判別要素別の設定相当値','機種スペック表','合算','詳細分析を見る','推定ブドウ確率','推定ブドウ個数','既存逆算範囲'])assert.ok(html.includes(label),label);
  const direct=ctx.JUGESTJudgementView.result(bridge.judgeObservedMachine(reviewSample));
  assert.ok(!direct.includes('設定別ログ尤度'),'standalone renderer also defaults to ordinary output');
 });
