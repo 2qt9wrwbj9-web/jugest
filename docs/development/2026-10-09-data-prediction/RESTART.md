@@ -39,3 +39,11 @@
 ## 保存確認
 
 この台帳自身のcommit SHAを自己参照で埋め込むことはできない。最終コードの識別は上記commit/tree、報告を含む最新保存は作業ブランチとPRの実際のheadを正とする。保存後にGitHub ref/tree一致と作業差分なしを確認する。
+
+### 2026-10-09 18:51 JST GitHub最終実装保存とPR
+
+- 実装・最終検証・報告を含むGitHub commit: `f36e554ba7d1cf66175dce6d8c01f6af7375f1cd`。
+- tree: `0b913c2ca59d86d011e56a90059bd14302a46d91`。local報告commit `d0de279166999e7d51062fc02b6bea7cfdb385b7` と完全一致を確認。非force・現在head一致条件で作業ブランチを更新した。
+- draft PR: [#52](https://github.com/2qt9wrwbj9-web/jugest/pull/52)。base `deploy/vps`、未merge、auto_mergeなし。作成後の読取りでmergeable=true／cleanを確認。許可前にmergeしない。
+- 既存Vercel連携がPR用Previewを自動生成したことをbotコメントで確認。本番VPSは従来release。PreviewでのUI/API操作・同期データ書込みは行っていない。
+- この追記の後続commitは文書のみ。最新保存SHAはPR／branch headを読み取る。実装・最終テスト対象は上記112841bから変更なし。

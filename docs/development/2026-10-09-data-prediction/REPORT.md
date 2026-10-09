@@ -122,10 +122,13 @@ WebKitはscratch内の依存を利用して実行した。OSパッケージの�
 - 最終テスト対象コードのローカルcommit: `112841b0f8bf40a56f2d461198e1e3107483139e`、tree `b91d208341e4594f6edca29de323c85eba976306`。
 - 送信用Git認証がないため、接続済みGitHubのGit object APIで保存。各checkpointのtree SHAをローカルと完全一致させ、現在head一致条件・非force更新を使った。コミットの作者等が異なるためローカル／GitHubのcommit SHAは異なる。ローカル履歴はmergeで保持した。
 - 完成報告・再開台帳・証拠の保存後SHAとdraft PRは [RESTART.md](RESTART.md) に記載。再開時はPR／ブランチの最新headを読み取ること。
+- 実装・報告のGitHub保存commitは `f36e554ba7d1cf66175dce6d8c01f6af7375f1cd`。draft PRは [#52](https://github.com/2qt9wrwbj9-web/jugest/pull/52)。後続の文書追記を含む最新headは同PRで確認できる。
 
 ## 12. 本番反映前に必要な確認
 
 本番releaseは `a461a080...` のまま。作業ブランチはVPS自動反映の監視対象ではなく、GitHub workflowも今回のPush／PRからデプロイを実行する設定ではない。本番DB・同期データ・環境変数・スケジュール・サービス・取得負荷は変更していない。
+
+PR作成後、既存Vercel連携によるworkブランチのPreview自動生成をbotコメントで確認した。PreviewへのUI/API操作や同期書込みは行っていない。本番VPSへの反映は引き続き未実施。
 
 ヒロの本番適用許可を求める前に、以下を具体的な適用手順として確認する必要がある。
 

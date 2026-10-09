@@ -91,3 +91,10 @@
 - 3独立担当で再現した問題は全て修正後確認。確認範囲内の未解決P1/P2なし。本番稼働の保証ではない。
 - REPORT.md / RESTART.md / evidence/test-results.json / evidence/changed-files.jsonを追加。初回調査と最新状態、完成と本番未検証を分離。次はこの報告を含む最終GitHub保存とdraft PR。
 - deploy/vpsは再読取でも `a461a080...`。本番未変更。旧同期保存先移行・実機・本番日次・旧trial方針等は本番前確認として残る。
+
+## 2026-10-09 18:51 JST GitHub完成保存・PR
+
+- local `d0de279`（実装112841b＋報告）を remote `f36e554ba7d1cf66175dce6d8c01f6af7375f1cd` に保存。tree `0b913c2ca59d86d011e56a90059bd14302a46d91` 完全一致。local履歴はremote commitのmergeで保持。
+- draft PR [#52](https://github.com/2qt9wrwbj9-web/jugest/pull/52)を作成。未merge、auto_mergeなし、mergeable/cleanを読取確認。本番承認前のmerge禁止を本文に明記。
+- Vercel botはPR用Preview生成を報告。Previewへの操作や同期書込みはなし。本番VPSのreleaseや設定は変更していない。
+- REPORT/RESTARTへ保存SHAとPRを追記して最終保存する。以後のコード変更・再テストは不要。本番前確認のみが次工程。
