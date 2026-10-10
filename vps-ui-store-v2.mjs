@@ -100,8 +100,50 @@ function repairRemoteTrendSummary(screen,shop,o){
   summary.after(tip);
  }
 }
+function compactDataScreen(screen){
+ const toolbar=screen.querySelector(':scope > .data-toolbar');
+ if(toolbar&&!toolbar.dataset.sv2DataToolbar){
+  toolbar.dataset.sv2DataToolbar='1';
+  const heading=document.createElement('strong');heading.className='sv2-data-title';heading.textContent='全台データ';
+  toolbar.prepend(heading);
+  const date=toolbar.querySelector('[data-store-date]');
+  if(date){
+   date.setAttribute('aria-label','営業日');
+   for(const option of date.options){
+    const m=String(option.value).match(/^\d{4}-(\d{2})-(\d{2})$/);
+    if(m)option.textContent=m[1]+'/'+m[2];
+   }
+  }
+ }
+ const summary=screen.querySelector('[data-vps-store-data-summary]');
+ if(!summary||summary.dataset.sv2Compact==='1')return;
+ const controls=summary.querySelector('.vps-matrix-tools'),filter=summary.querySelector('[data-vps-machine-filter="data"]'),density=controls?.querySelector('.vps-matrix-density');
+ if(!controls||!filter||!density)return;
+ summary.dataset.sv2Compact='1';
+ controls.classList.add('sv2-tools-unified');
+ density.before(filter);
+ const filterLabel=filter.querySelector(':scope > summary > span');
+ if(filterLabel)filterLabel.textContent='機種';
+ const search=controls.querySelector('[data-vps-matrix-search]');
+ if(search)search.placeholder='台番・機種検索';
+ const counts=summary.querySelector('[data-vps-matrix-match-count]');
+ if(counts)counts.hidden=!String(search?.value||'').trim();
+ for(const kpi of summary.querySelectorAll('.vps-audit-kpis > .vps-audit-kpi')){
+  const value=kpi.querySelector('b');if(!value)continue;
+  const original=value.textContent.trim();
+  const diff=original.match(/^([+-]?[\d,]+)(枚)$/);
+  const rate=original.match(/^([\d.]+%)(\s*\(\d+\/\d+\))$/);
+  if(diff){
+   value.textContent=diff[1];
+   const unit=document.createElement('span');unit.className='sv2-kpi-unit';unit.textContent=diff[2];value.append(unit);
+  }else if(rate){
+   value.textContent=rate[1];
+   const detail=document.createElement('span');detail.className='sv2-kpi-denominator';detail.textContent=rate[2];value.append(detail);
+  }
+ }
+}
 function compact(screen,kind,shop,o){
- if(screen.dataset.sv2Attached){if(kind==='data')machineTable(screen);if(kind==='trend')repairRemoteTrendSummary(screen,shop,o);return}
+ if(screen.dataset.sv2Attached){if(kind==='data'){machineTable(screen);compactDataScreen(screen)}if(kind==='trend')repairRemoteTrendSummary(screen,shop,o);return}
  screen.dataset.sv2Attached='1';screen.classList.add('sv2-workspace','sv2-'+kind);
  for(const key of ['.back-row','.kicker','.store-title','.store-meta'])screen.querySelector(':scope > '+key)?.remove();
  screen.querySelector(':scope > .segmented[aria-label="店舗内ナビ"]')?.remove();
@@ -109,7 +151,7 @@ function compact(screen,kind,shop,o){
  const meta=kind==='data'?'既存ヒートマップを維持':kind==='trend'?'実データと観測日数から評価':kind==='plan'?'既存エンジンで計算':'予測結果を検証';
  screen.insertAdjacentHTML('afterbegin',header(shop,kind,o)+subnav(kind)+`<div class="sv2-section-title"><b>${label}</b><small>${meta}</small></div>`);
  if(kind==='plan'){const controls=screen.querySelector('.plan-controls');if(controls){const wrap=document.createElement('details');wrap.className='sv2-plan-settings';if(!app.state.planResult||app.state.planResult.error)wrap.open=true;wrap.innerHTML='<summary>対象日・抽選番号・並び人数を設定</summary>';controls.before(wrap);wrap.append(controls)}}
- if(kind==='data')machineTable(screen);
+ if(kind==='data'){machineTable(screen);compactDataScreen(screen)}
  if(kind==='trend')repairRemoteTrendSummary(screen,shop,o);
 }
 function reconcile(){
@@ -120,7 +162,7 @@ function reconcile(){
  else compact(screen,kind,shop,o);
 }
 function schedule(){if(pending)return;pending=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{pending=false;try{reconcile()}catch(e){console.error('JUGEST Store UI v2:',e)}},0)}
-function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
+function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('input',event=>{if(!event.target?.matches?.('[data-vps-matrix-search]'))return;const summary=event.target.closest('[data-vps-store-data-summary]'),counts=summary?.querySelector('[data-vps-matrix-match-count]');if(counts)counts.hidden=!String(event.target.value||'').trim()},true);root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
 function boot(){if(attach(document.querySelector('jugest-app')))return;globalThis.setTimeout(boot,60)}
 if(typeof document!=='undefined')boot();
 export const __test={collectorStatus,latestSummary,nav,dateShort};
