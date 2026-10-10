@@ -22,7 +22,7 @@ jobs:
         run: |
           cat > /tmp/maruhan-smoke.py <<'PY'
           import urllib.request, zipfile, os, pathlib, subprocess, json
-          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=armeabi-v7a&sv=26'
+          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=arm64-v8a&sv=26'
           work=pathlib.Path('/tmp/maruhan-apk');work.mkdir(exist_ok=True)
           p=work/'maruhan.xapk'
           try:
@@ -36,7 +36,7 @@ jobs:
               with zipfile.ZipFile(p) as z:
                   names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
                   print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
-                  names=[n for n in names if n=='config.armeabi_v7a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
+                  names=[n for n in names if n=='config.arm64_v8a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
                   for n in names:(work/n).write_bytes(z.read(n))
               if not names:raise ValueError('no architecture-neutral APK')
               print('INSTALL_ATTEMPT:',names)
@@ -68,6 +68,14 @@ jobs:
                       applo=subprocess.run(['adb','logcat','-d','-v','brief','--pid='+pkgpid[0]],capture_output=True,text=True,timeout=18)
                       for k in ['401','403','400','500','token','auth','request','response','failed','exception','ssl','API']:
                           print('APPLOG_COUNT_'+k.upper()+':',len(re.findall(re.escape(k),applo.stdout,re.I)))
+                  safetyterms=['SSL','CertPath','CERTIFICATE','TrustAnchor','Handshake','timeout','Connection refused','Connection reset','Network is unreachable','UnknownHost','Pinning','ApiSec']
+                  print('APP_DIAGNOSTIC_KEYWORDS:',[(x,applo.stdout.lower().count(x.lower())) for x in safetyterms])
+                  def scrub(t):
+                      t=re.sub(r'(?i)(token|authorization|bearer|password|secret|auth.key|uuid)\\s*[:=]\\s*\\S+',r'\\1=[REDACTED]',t)
+                      t=re.sub(r'[A-Za-z0-9_./+=-]{26,}', '[REDACTED]', t)
+                      return t[:190]
+                  err=[scrub(v) for v in applo.stdout.splitlines() if any(w in v.lower() for w in ('ssl', 'exception', 'handshake', 'connection refused', 'certpath'))]
+                  print('APP_SSL_ERROR_SAMPLES:',err[:8])
                   print('TOP_ERRTAGS:',__import__('collections').Counter(re.findall(r'^[EWF]/([^ (:]+)',logs.stdout,re.M)).most_common(18))
                   dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
                   print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
@@ -101,7 +109,7 @@ jobs:
       - name: Start Android and verify public app install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 35
           target: google_apis_playstore
           arch: x86_64
           ram-size: 2048M
