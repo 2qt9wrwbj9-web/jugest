@@ -70,6 +70,16 @@ jobs:
                   if shot.returncode==0:
                       pathlib.Path('/tmp/maruhan-firstscreen.png').write_bytes(shot.stdout)
                       print('SCREENSHOT_BYTES:',len(shot.stdout))
+                  subprocess.run(['adb','shell','input','tap','244','416'],capture_output=True,text=True,timeout=15)
+                  time.sleep(5)
+                  again=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-after.xml'],capture_output=True,text=True,timeout=30)
+                  if again.returncode==0:
+                      subprocess.run(['adb','pull','/sdcard/maruhan-after.xml','/tmp/maruhan-afterclose-ui.xml'],capture_output=True,text=True,timeout=15)
+                      ar=ET.parse('/tmp/maruhan-afterclose-ui.xml').getroot()
+                      found=[(n.attrib.get('text','')[:70],n.attrib.get('content-desc','')[:70],n.attrib.get('bounds','')) for n in ar.iter('node') if n.attrib.get('text','') or n.attrib.get('content-desc','')]
+                      print('AFTER_DISMISS_UI:',found[:65])
+                  shot2=subprocess.run(['adb','exec-out','screencap','-p'],capture_output=True,timeout=20)
+                  if shot2.returncode==0:pathlib.Path('/tmp/maruhan-afterclose.png').write_bytes(shot2.stdout)
           except Exception as e:
               print('APP_TEST_ERROR:',type(e).__name__,str(e)[:450])
           PY
@@ -92,5 +102,7 @@ jobs:
           path: |
             /tmp/maruhan-firstscreen.png
             /tmp/maruhan-firstscreen-ui.xml
+            /tmp/maruhan-afterclose.png
+            /tmp/maruhan-afterclose-ui.xml
           retention-days: 1
           if-no-files-found: warn
