@@ -7,21 +7,18 @@ permissions:
   contents: read
 jobs:
   maruhan-android-smoke:
-    runs-on: ubuntu-24.04
+    runs-on: macos-15
     timeout-minutes: 14
     steps:
-      - name: KVM for Android Emulator
+      - name: Apple Silicon guest host
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm
-          free -h
+          uname -m
+          sysctl -n hw.memsize
       - name: Prepare isolated app probe
         run: |
           cat > /tmp/maruhan-smoke.py <<'PY'
           import urllib.request, zipfile, os, pathlib, subprocess, json
-          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=armeabi-v7a&sv=26'
+          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=arm64-v8a&sv=26'
           work=pathlib.Path('/tmp/maruhan-apk');work.mkdir(exist_ok=True)
           p=work/'maruhan.xapk'
           try:
@@ -35,7 +32,7 @@ jobs:
               with zipfile.ZipFile(p) as z:
                   names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
                   print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
-                  names=[n for n in names if n=='config.armeabi_v7a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
+                  names=[n for n in names if n=='config.arm64_v8a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
                   for n in names:(work/n).write_bytes(z.read(n))
               if not names:raise ValueError('no architecture-neutral APK')
               print('INSTALL_ATTEMPT:',names)
@@ -86,9 +83,9 @@ jobs:
       - name: Start Android and verify public app install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 35
           target: google_apis
-          arch: x86_64
+          arch: arm64-v8a
           ram-size: 2048M
           heap-size: 512M
           emulator-boot-timeout: 450
