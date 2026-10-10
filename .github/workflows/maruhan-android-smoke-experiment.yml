@@ -17,6 +17,41 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           test -r /dev/kvm && test -w /dev/kvm
           free -h
+      - name: Prepare isolated app probe
+        run: |
+          cat > /tmp/maruhan-smoke.py <<'PY'
+          import urllib.request, zipfile, os, pathlib, subprocess, json
+          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=armeabi-v7a&sv=26'
+          work=pathlib.Path('/tmp/maruhan-apk');work.mkdir(exist_ok=True)
+          p=work/'maruhan.xapk'
+          try:
+              with urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'}),timeout=60) as r:
+                  with p.open('wb') as f:
+                      while True:
+                          c=r.read(1024*1024)
+                          if not c:break
+                          f.write(c)
+                          if f.tell()>75*1024*1024:raise ValueError('archive over limit')
+              with zipfile.ZipFile(p) as z:
+                  names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
+                  print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
+                  names=[n for n in names if not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
+                  for n in names:(work/n).write_bytes(z.read(n))
+              if not names:raise ValueError('no architecture-neutral APK')
+              print('INSTALL_ATTEMPT:',names)
+              res=subprocess.run(['adb','install-multiple','-r',*[str(work/n) for n in names]],capture_output=True,text=True,timeout=100)
+              print('INSTALL_CODE:',res.returncode,'OUT:',(res.stdout+res.stderr)[-900:])
+              if res.returncode==0:
+                  pkg='jp.co.maruhan.android'
+                  cmd=subprocess.run(['adb','shell','monkey','-p',pkg,'-c','android.intent.category.LAUNCHER','1'],capture_output=True,text=True,timeout=25)
+                  print('LAUNCH_CODE:',cmd.returncode,'OUT:',(cmd.stdout+cmd.stderr)[-550:])
+                  import time;time.sleep(10)
+                  dump=subprocess.run(['adb','shell','dumpsys','activity','activities'],capture_output=True,text=True,timeout=15)
+                  lines=[v.strip() for v in dump.stdout.splitlines() if 'mResumed' in v or 'topResumedActivity' in v]
+                  print('VISIBLE_ACTIVITY:',lines[:5])
+          except Exception as e:
+              print('APP_TEST_ERROR:',type(e).__name__,str(e)[:450])
+          PY
       - name: Start Android and verify public app install
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -27,41 +62,4 @@ jobs:
           heap-size: 512M
           emulator-boot-timeout: 450
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -eu
-            echo "ANDROID_BOOT=$(adb shell getprop sys.boot_completed)"
-            echo "ANDROID_ABIS=$(adb shell getprop ro.product.cpu.abilist)"
-            echo "NATIVE_BRIDGE=$(adb shell getprop ro.dalvik.vm.native.bridge)"
-            python3 - <<'PY'
-            import urllib.request, zipfile, os, pathlib, subprocess, json
-            u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=armeabi-v7a&sv=26'
-            work=pathlib.Path('/tmp/maruhan-apk');work.mkdir(exist_ok=True)
-            p=work/'maruhan.xapk'
-            try:
-                with urllib.request.urlopen(urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'}),timeout=60) as r:
-                    with p.open('wb') as f:
-                        while True:
-                            c=r.read(1024*1024)
-                            if not c:break
-                            f.write(c)
-                            if f.tell()>75*1024*1024:raise ValueError('archive over limit')
-                with zipfile.ZipFile(p) as z:
-                    names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
-                    print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
-                    names=[n for n in names if not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
-                    for n in names:(work/n).write_bytes(z.read(n))
-                if not names:raise ValueError('no architecture-neutral APK')
-                print('INSTALL_ATTEMPT:',names)
-                res=subprocess.run(['adb','install-multiple','-r',*[str(work/n) for n in names]],capture_output=True,text=True,timeout=100)
-                print('INSTALL_CODE:',res.returncode,'OUT:',(res.stdout+res.stderr)[-900:])
-                if res.returncode==0:
-                    pkg='jp.co.maruhan.android'
-                    cmd=subprocess.run(['adb','shell','monkey','-p',pkg,'-c','android.intent.category.LAUNCHER','1'],capture_output=True,text=True,timeout=25)
-                    print('LAUNCH_CODE:',cmd.returncode,'OUT:',(cmd.stdout+cmd.stderr)[-550:])
-                    import time;time.sleep(10)
-                    dump=subprocess.run(['adb','shell','dumpsys','activity','activities'],capture_output=True,text=True,timeout=15)
-                    lines=[v.strip() for v in dump.stdout.splitlines() if 'mResumed' in v or 'topResumedActivity' in v]
-                    print('VISIBLE_ACTIVITY:',lines[:5])
-            except Exception as e:
-                print('APP_TEST_ERROR:',type(e).__name__,str(e)[:450])
-            PY
+          script: python3 /tmp/maruhan-smoke.py
