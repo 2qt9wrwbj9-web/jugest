@@ -70,12 +70,7 @@ jobs:
                           print('APPLOG_COUNT_'+k.upper()+':',len(re.findall(re.escape(k),applo.stdout,re.I)))
                   safetyterms=['SSL','CertPath','CERTIFICATE','TrustAnchor','Handshake','timeout','Connection refused','Connection reset','Network is unreachable','UnknownHost','Pinning','ApiSec']
                   print('APP_DIAGNOSTIC_KEYWORDS:',[(x,applo.stdout.lower().count(x.lower())) for x in safetyterms])
-                  def scrub(t):
-                      t=re.sub(r'(?i)(token|authorization|bearer|password|secret|auth.key|uuid)\\s*[:=]\\s*\\S+',r'\\1=[REDACTED]',t)
-                      t=re.sub(r'[A-Za-z0-9_./+=-]{26,}', '[REDACTED]', t)
-                      return t[:190]
-                  err=[scrub(v) for v in applo.stdout.splitlines() if any(w in v.lower() for w in ('ssl', 'exception', 'handshake', 'connection refused', 'certpath'))]
-                  print('APP_SSL_ERROR_SAMPLES:',err[:8])
+                  print('APP_EXCEPTION_CLASS_NAMES:',sorted(set(re.findall(r'(?:[A-Za-z_]+\\.)+[A-Za-z_]*(?:Exception|Error)',applo.stdout)))[:16])
                   print('TOP_ERRTAGS:',__import__('collections').Counter(re.findall(r'^[EWF]/([^ (:]+)',logs.stdout,re.M)).most_common(18))
                   dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
                   print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
