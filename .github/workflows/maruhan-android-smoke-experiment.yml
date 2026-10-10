@@ -49,24 +49,24 @@ jobs:
                   dump=subprocess.run(['adb','shell','dumpsys','activity','activities'],capture_output=True,text=True,timeout=15)
                   lines=[v.strip() for v in dump.stdout.splitlines() if 'mResumed' in v or 'topResumedActivity' in v]
                   print('VISIBLE_ACTIVITY:',lines[:5])
+                  dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
+                  print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
+                  if dump.returncode==0:
+                      subprocess.run(['adb','pull','/sdcard/maruhan-ui.xml','/tmp/maruhan-firstscreen-ui.xml'],capture_output=True,text=True,timeout=25)
+                      import xml.etree.ElementTree as ET
+                      root=ET.parse('/tmp/maruhan-firstscreen-ui.xml').getroot()
+                      arr=[]
+                      for node in root.iter('node'):
+                          desc=node.attrib.get('content-desc','').strip()
+                          txt=node.attrib.get('text','').strip()
+                          if desc or txt:arr.append((txt[:90],desc[:90],node.attrib.get('bounds')))
+                      print('INITIAL_VISIBLE_UI_NODES:',arr[:60])
+                  shot=subprocess.run(['adb','exec-out','screencap','-p'],capture_output=True,timeout=35)
+                  if shot.returncode==0:
+                      pathlib.Path('/tmp/maruhan-firstscreen.png').write_bytes(shot.stdout)
+                      print('SCREENSHOT_BYTES:',len(shot.stdout))
           except Exception as e:
               print('APP_TEST_ERROR:',type(e).__name__,str(e)[:450])
-            dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
-            print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
-            if dump.returncode==0:
-                subprocess.run(['adb','pull','/sdcard/maruhan-ui.xml','/tmp/maruhan-firstscreen-ui.xml'],capture_output=True,text=True,timeout=25)
-                import xml.etree.ElementTree as ET
-                root=ET.parse('/tmp/maruhan-firstscreen-ui.xml').getroot()
-                arr=[]
-                for node in root.iter('node'):
-                    desc=node.attrib.get('content-desc','').strip()
-                    txt=node.attrib.get('text','').strip()
-                    if desc or txt:arr.append((txt[:90],desc[:90],node.attrib.get('bounds')))
-                print('INITIAL_VISIBLE_UI_NODES:',arr[:60])
-            shot=subprocess.run(['adb','exec-out','screencap','-p'],capture_output=True,timeout=35)
-            if shot.returncode==0:
-                pathlib.Path('/tmp/maruhan-firstscreen.png').write_bytes(shot.stdout)
-                print('SCREENSHOT_BYTES:',len(shot.stdout))
           PY
       - name: Start Android and verify public app install
         uses: reactivecircus/android-emulator-runner@v2
