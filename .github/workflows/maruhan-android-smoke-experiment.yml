@@ -28,7 +28,7 @@ jobs:
           emulator-boot-timeout: 450
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: |
-            set -euo pipefail
+            set -eu
             echo "ANDROID_BOOT=$(adb shell getprop sys.boot_completed)"
             echo "ANDROID_ABIS=$(adb shell getprop ro.product.cpu.abilist)"
             echo "NATIVE_BRIDGE=$(adb shell getprop ro.dalvik.vm.native.bridge)"
