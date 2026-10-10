@@ -35,7 +35,7 @@ jobs:
               with zipfile.ZipFile(p) as z:
                   names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
                   print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
-                  names=[n for n in names if not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
+                  names=[n for n in names if n=='config.armeabi_v7a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
                   for n in names:(work/n).write_bytes(z.read(n))
               if not names:raise ValueError('no architecture-neutral APK')
               print('INSTALL_ATTEMPT:',names)
@@ -49,6 +49,11 @@ jobs:
                   dump=subprocess.run(['adb','shell','dumpsys','activity','activities'],capture_output=True,text=True,timeout=15)
                   lines=[v.strip() for v in dump.stdout.splitlines() if 'mResumed' in v or 'topResumedActivity' in v]
                   print('VISIBLE_ACTIVITY:',lines[:5])
+                  logs=subprocess.run(['adb','logcat','-d','-v','brief'],capture_output=True,text=True,timeout=18)
+                  needles=('UnsatisfiedLinkError','NoClassDefFoundError','ClassNotFoundException','SSLHandshakeException','UnknownHostException','ConnectException','ApiSec')
+                  matched=[k for k in needles if k in logs.stdout]
+                  print('DIAGNOSTIC_ERROR_TYPES:',matched)
+                  print('LOG_401_COUNT:',logs.stdout.count('401'),'LOG_403_COUNT:',logs.stdout.count('403'))
                   dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
                   print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
                   if dump.returncode==0:
