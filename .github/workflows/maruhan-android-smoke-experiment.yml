@@ -71,7 +71,7 @@ jobs:
                       pathlib.Path('/tmp/maruhan-firstscreen.png').write_bytes(shot.stdout)
                       print('SCREENSHOT_BYTES:',len(shot.stdout))
                   subprocess.run(['adb','shell','input','tap','244','416'],capture_output=True,text=True,timeout=15)
-                  time.sleep(5)
+                  time.sleep(22)
                   again=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-after.xml'],capture_output=True,text=True,timeout=30)
                   if again.returncode==0:
                       subprocess.run(['adb','pull','/sdcard/maruhan-after.xml','/tmp/maruhan-afterclose-ui.xml'],capture_output=True,text=True,timeout=15)
