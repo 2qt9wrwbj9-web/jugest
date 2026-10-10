@@ -7,18 +7,20 @@ permissions:
   contents: read
 jobs:
   maruhan-android-smoke:
-    runs-on: macos-15
+    runs-on: ubuntu-24.04
     timeout-minutes: 14
     steps:
-      - name: Apple Silicon guest host
+      - name: KVM for Android Emulator
         run: |
-          uname -m
-          sysctl -n hw.memsize
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - name: Prepare isolated app probe
         run: |
           cat > /tmp/maruhan-smoke.py <<'PY'
           import urllib.request, zipfile, os, pathlib, subprocess, json
-          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=arm64-v8a&sv=26'
+          u='https://d.apkpure.net/b/XAPK/jp.co.maruhan.android?versionCode=68008&nc=armeabi-v7a&sv=26'
           work=pathlib.Path('/tmp/maruhan-apk');work.mkdir(exist_ok=True)
           p=work/'maruhan.xapk'
           try:
@@ -32,10 +34,16 @@ jobs:
               with zipfile.ZipFile(p) as z:
                   names=[n for n in z.namelist() if n.endswith('.apk') and '..' not in n and n.count('/')==0]
                   print('APK_ARCHIVE:',len(names),'files', [(n,z.getinfo(n).file_size) for n in names])
-                  names=[n for n in names if n=='config.arm64_v8a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
+                  names=[n for n in names if n=='config.armeabi_v7a.apk' or not any(part in n for part in ('arm64','armeabi','x86_64','x86'))]
                   for n in names:(work/n).write_bytes(z.read(n))
               if not names:raise ValueError('no architecture-neutral APK')
               print('INSTALL_ATTEMPT:',names)
+              print('GUEST_PROPERTIES:',subprocess.run(['adb','shell','getprop','ro.build.fingerprint'],capture_output=True,text=True,timeout=10).stdout[:110].strip())
+              print('GUEST_TZ_BEFORE:',subprocess.run(['adb','shell','getprop','persist.sys.timezone'],capture_output=True,text=True,timeout=10).stdout.strip())
+              subprocess.run(['adb','shell','setprop','persist.sys.timezone','Asia/Tokyo'],capture_output=True,text=True,timeout=12)
+              print('PLAY_APP:',subprocess.run(['adb','shell','pm','path','com.android.vending'],capture_output=True,text=True,timeout=10).stdout[:140].strip())
+              print('GMS_APP:',subprocess.run(['adb','shell','pm','path','com.google.android.gms'],capture_output=True,text=True,timeout=10).stdout[:140].strip())
+              subprocess.run(['adb','logcat','-c'],capture_output=True,text=True,timeout=10)
               res=subprocess.run(['adb','install-multiple','-r',*[str(work/n) for n in names]],capture_output=True,text=True,timeout=100)
               print('INSTALL_CODE:',res.returncode,'OUT:',(res.stdout+res.stderr)[-900:])
               if res.returncode==0:
@@ -51,6 +59,14 @@ jobs:
                   matched=[k for k in needles if k in logs.stdout]
                   print('DIAGNOSTIC_ERROR_TYPES:',matched)
                   print('LOG_401_COUNT:',logs.stdout.count('401'),'LOG_403_COUNT:',logs.stdout.count('403'))
+                  import re
+                  pkgpid=subprocess.run(['adb','shell','pidof',pkg],capture_output=True,text=True,timeout=12).stdout.strip().split()
+                  if pkgpid:
+                      print('APP_PID_PRESENT:',True)
+                      applo=subprocess.run(['adb','logcat','-d','-v','brief','--pid='+pkgpid[0]],capture_output=True,text=True,timeout=18)
+                      for k in ['401','403','400','500','token','auth','request','response','failed','exception','ssl','API']:
+                          print('APPLOG_COUNT_'+k.upper()+':',len(re.findall(re.escape(k),applo.stdout,re.I)))
+                  print('TOP_ERRTAGS:',__import__('collections').Counter(re.findall(r'^[EWF]/([^ (:]+)',logs.stdout,re.M)).most_common(18))
                   dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
                   print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
                   if dump.returncode==0:
@@ -83,9 +99,9 @@ jobs:
       - name: Start Android and verify public app install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          target: google_apis
-          arch: arm64-v8a
+          api-level: 30
+          target: google_apis_playstore
+          arch: x86_64
           ram-size: 2048M
           heap-size: 512M
           emulator-boot-timeout: 450
