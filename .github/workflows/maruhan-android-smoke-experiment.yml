@@ -44,10 +44,24 @@ jobs:
               print('GUEST_TZ_BEFORE:',subprocess.run(['adb','shell','getprop','persist.sys.timezone'],capture_output=True,text=True,timeout=10).stdout.strip())
               subprocess.run(['adb','shell','setprop','persist.sys.timezone','Asia/Tokyo'],capture_output=True,text=True,timeout=12)
               print('PLAY_APP:',subprocess.run(['adb','shell','pm','path','com.android.vending'],capture_output=True,text=True,timeout=10).stdout[:140].strip())
+              sysdate=subprocess.run(['adb','shell','date','-u','+%Y-%m-%dT%H:%M:%SZ'],capture_output=True,text=True,timeout=10)
+              print('EMULATOR_UTC_CLOCK:',sysdate.stdout.strip()[:40])
+              net=subprocess.run(['adb','shell','dumpsys','connectivity'],capture_output=True,text=True,timeout=15)
+              print('EMULATOR_NETWORK_HAS_VALIDATED:',('VALIDATED' in net.stdout),'NETWORK_HAS_INTERNET:',('INTERNET' in net.stdout))
+              print('ANDROID_HTTP_PROXY:',subprocess.run(['adb','shell','settings','get','global','http_proxy'],capture_output=True,text=True,timeout=10).stdout.strip()[:80])
+
               print('GMS_APP:',subprocess.run(['adb','shell','pm','path','com.google.android.gms'],capture_output=True,text=True,timeout=10).stdout[:140].strip())
               subprocess.run(['adb','logcat','-c'],capture_output=True,text=True,timeout=10)
               res=subprocess.run(['adb','install-multiple','-r',*[str(work/n) for n in names]],capture_output=True,text=True,timeout=100)
               print('INSTALL_CODE:',res.returncode,'OUT:',(res.stdout+res.stderr)[-900:])
+              if res.returncode==0:
+                  inst=subprocess.run(['adb','shell','dumpsys','package','jp.co.maruhan.android'],capture_output=True,text=True,timeout=16)
+                  entries=[x.strip()[:145] for x in inst.stdout.splitlines() if any(k in x for k in ('installerPackageName','installingPackageName','versionCode=','versionName=','pkgFlags='))]
+                  print('APK_INSTALLER_METADATA:',entries[:9])
+              verify=subprocess.run(['/usr/local/lib/android/sdk/build-tools/35.0.0/apksigner','verify','--print-certs',str(work/'jp.co.maruhan.android.apk')],capture_output=True,text=True,timeout=15)
+              print('APK_V2_SIGNED:',verify.returncode==0)
+              print('APK_CERT_HAS_SHA256:',('SHA-256' in verify.stdout))
+
               if res.returncode==0:
                   pkg='jp.co.maruhan.android'
                   cmd=subprocess.run(['adb','shell','monkey','-p',pkg,'-c','android.intent.category.LAUNCHER','1'],capture_output=True,text=True,timeout=25)
@@ -71,6 +85,12 @@ jobs:
                   safetyterms=['SSL','CertPath','CERTIFICATE','TrustAnchor','Handshake','timeout','Connection refused','Connection reset','Network is unreachable','UnknownHost','Pinning','ApiSec']
                   print('APP_DIAGNOSTIC_KEYWORDS:',[(x,applo.stdout.lower().count(x.lower())) for x in safetyterms])
                   print('APP_EXCEPTION_CLASS_NAMES:',sorted(set(re.findall(r'(?:[A-Za-z_]+\\.)+[A-Za-z_]*(?:Exception|Error)',applo.stdout)))[:16])
+                  # Do not print raw log lines or credentials to this public CI.
+                  important=['Integrity','PlayCore','SafetyNet','Auth','API','Firebase','Retrofit','Trust','network','http','connect','certificate','denied','403','401']
+                  print('APP_EVENT_MARKERS:',[(q,len(re.findall(re.escape(q),applo.stdout,re.I))) for q in important])
+                  p2=subprocess.run(['adb','shell','dumpsys','package',pkg],capture_output=True,text=True,timeout=16)
+                  print('PACKAGE_TARGET_SDK_PRESENT:', 'targetSdk=' in p2.stdout)
+
                   print('TOP_ERRTAGS:',__import__('collections').Counter(re.findall(r'^[EWF]/([^ (:]+)',logs.stdout,re.M)).most_common(18))
                   dump=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/maruhan-ui.xml'],capture_output=True,text=True,timeout=35)
                   print('UI_DUMP_STATUS:',dump.returncode,dump.stdout[-160:],dump.stderr[-160:])
