@@ -51,6 +51,20 @@ jobs:
               print('ANDROID_HTTP_PROXY:',subprocess.run(['adb','shell','settings','get','global','http_proxy'],capture_output=True,text=True,timeout=10).stdout.strip()[:80])
 
               print('GMS_APP:',subprocess.run(['adb','shell','pm','path','com.google.android.gms'],capture_output=True,text=True,timeout=10).stdout[:140].strip())
+              try:
+                  import time, xml.etree.ElementTree as ET
+                  store=subprocess.run(['adb','shell','am','start','-a','android.intent.action.VIEW','-d','market://details?id=jp.co.maruhan.android'],capture_output=True,text=True,timeout=25)
+                  print('OFFICIAL_PLAY_ROUTE_LAUNCH:',store.returncode)
+                  time.sleep(7)
+                  sub=subprocess.run(['adb','shell','uiautomator','dump','/sdcard/play-access.xml'],capture_output=True,text=True,timeout=25)
+                  if sub.returncode==0:
+                      subprocess.run(['adb','pull','/sdcard/play-access.xml','/tmp/maruhan-play-route.xml'],capture_output=True,text=True,timeout=18)
+                      parsed=ET.parse('/tmp/maruhan-play-route.xml').getroot()
+                      strings=[n.attrib.get('text','')[:90] for n in parsed.iter('node') if n.attrib.get('text','')]
+                      print('OFFICIAL_PLAY_ROUTE_VISIBLE_LABELS:',strings[:35])
+                  subprocess.run(['adb','shell','input','keyevent','3'],capture_output=True,text=True,timeout=10)
+              except Exception as ex:
+                  print('OFFICIAL_PLAY_ROUTE_ERROR_TYPE:',type(ex).__name__)
               subprocess.run(['adb','logcat','-c'],capture_output=True,text=True,timeout=10)
               res=subprocess.run(['adb','install-multiple','-r',*[str(work/n) for n in names]],capture_output=True,text=True,timeout=100)
               print('INSTALL_CODE:',res.returncode,'OUT:',(res.stdout+res.stderr)[-900:])
