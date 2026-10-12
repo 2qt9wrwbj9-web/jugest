@@ -43,6 +43,38 @@
 .sv2-machine-table th:first-child{background:#f3f6fc;z-index:2}
 .sv2-machine-table th,.sv2-machine-table td{padding:9px 6px;border-bottom:1px solid #edf1f7;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sv2-machine-table td{color:var(--sv2-ink);font-weight:700}
+/* Machine summaries: keep the original desktop table, with a mobile-only comparison view. */
+.sv2-machine-mobile{display:none}
+@media(max-width:600px){
+ .sv2-workspace.store-data-screen .vps-audit-summary .vps-audit-machines{min-width:0;display:block}
+ .sv2-workspace.store-data-screen .sv2-machine-table-scroll{display:none}
+ .sv2-workspace.store-data-screen .sv2-machine-mobile{display:block;max-width:100%;min-width:0}
+ .sv2-machine-sortbar{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin:0 0 7px;font-size:10px;color:#73819a;font-weight:750}
+ .sv2-machine-sortbar select{max-width:145px;min-height:34px;padding:6px 9px;border:1px solid #dfe6f1;border-radius:9px;color:#24395c;background:#fff;font-size:11px;font-weight:800}
+ .sv2-machine-mobile-list{width:100%;min-width:0;overflow:hidden;border:1px solid #dfe6f1;border-radius:14px;background:#fff;box-sizing:border-box}
+ .sv2-machine-mobile-head,.sv2-machine-mobile-summary{display:grid;grid-template-columns:minmax(0,1.68fr) minmax(0,.98fr) minmax(0,.9fr) minmax(0,.75fr) 10px;align-items:center;column-gap:5px;box-sizing:border-box;width:100%;min-width:0}
+ .sv2-machine-mobile-head{padding:12px 9px;background:#f3f6fc;color:#73819a;font-size:clamp(8px,2.2vw,10px);font-weight:800}
+ .sv2-machine-mobile-head span:not(:first-child){text-align:right}
+ .sv2-machine-mobile-row{min-width:0;border-top:1px solid #e9edf5;background:#fff}
+ .sv2-machine-mobile-row>summary{list-style:none;cursor:pointer}
+ .sv2-machine-mobile-row>summary::-webkit-details-marker{display:none}
+ .sv2-machine-mobile-summary{padding:13px 9px;min-height:64px}
+ .sv2-machine-mobile-name{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#202f4d;font-size:clamp(10px,2.8vw,12px);line-height:1.4;font-weight:850;text-align:left}
+ .sv2-machine-mobile-value{min-width:0;white-space:nowrap;text-align:right;color:#192947;font-size:clamp(9px,2.6vw,11px);font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+ .sv2-machine-mobile-value.sv2-positive{color:#245de0}
+ .sv2-machine-mobile-value.sv2-negative{color:#9b4651}
+ .sv2-machine-chevron{font-size:15px;color:#8491ab;line-height:1;text-align:right;transition:transform .16s}
+ .sv2-machine-mobile-row[open]{background:#f0f5ff}
+ .sv2-machine-mobile-row[open] .sv2-machine-chevron{transform:rotate(180deg);color:#245de0}
+ .sv2-machine-mobile-detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px;margin:0 8px 10px;padding:4px 12px;background:#fff;border:1px solid #edf0f7;border-radius:12px}
+ .sv2-machine-detail-stat{min-width:0;padding:10px 2px;border-bottom:1px solid #edf1f8}
+ .sv2-machine-detail-stat:nth-last-child(-n+1){border-bottom:0}
+ .sv2-machine-detail-stat small{display:block;font-size:10px;color:#73819a;margin-bottom:3px}
+ .sv2-machine-detail-stat b{font-size:clamp(12px,3.2vw,15px);font-weight:850;color:#192947;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+ .sv2-machine-detail-stat b.sv2-positive{color:#245de0}
+ .sv2-machine-detail-stat b.sv2-negative{color:#9b4651}
+}
+@media(min-width:420px) and (max-width:600px){.sv2-machine-mobile-detail{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .sv2-workspace.store-trend-screen .trend-controls{margin:5px 0 8px}
 .sv2-workspace.store-trend-screen .trend-summary{margin:6px 0 9px;padding:9px 11px}.sv2-workspace.store-trend-screen .trend-row{padding:9px 10px}
 .sv2-workspace.intelligence-screen .intel-controls{margin:7px 0 10px}
