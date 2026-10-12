@@ -1,0 +1,98 @@
+diff --git a/docs/development/2026-10-10-parallel-group-judge-validation.md b/docs/development/2026-10-10-parallel-group-judge-validation.md
+index e175f38..b928010 100644
+--- a/docs/development/2026-10-10-parallel-group-judge-validation.md
++++ b/docs/development/2026-10-10-parallel-group-judge-validation.md
+@@ -2,6 +2,14 @@
+ 
+ 開発基準は `f728b2587a9bdd81541ccb50d3ae802a8492486a`、開発ブランチは `work/parallel-group-judge-20261010`。本番VPSのcurrentと判別関連5ファイルを読み取りで照合した。deploy/vps・main・本番サービス・本番データの変更は今回の範囲に含めない。
+ 
++## 調査した既存設計
++
++`index.html` の `externalJudge`／`externalBonusJudgeQ`／`reverseCoreKnown`／`reverseCore` と機種別表、`judgement-model.js` の観測入力adapter・診断値、`judgement-view.js` と `app-v510.js` の入力・個別結果・詳細導線を確認した。現在の設定分布は6設定の等重み正規化。BB・RB・その他の多項尤度と、差枚がある場合の既存ブドウ逆算の近似を使う。既存ログを新エンジンに渡し、丸められた事後分布から尤度を復元しない。
++
++店舗予測側の `v4ModelTraining` は時系列のdiscovery／confirm／scoreに分割し、`v4FitCalibration` は既存 `r.p4` を目標 `y` とする予測補正を行う。確定設定や全台系イベントの正解ラベルによる校正ではないため、これを全台系の成立事前頻度や成立確率の根拠に流用しない。strict Champion・Calibration・store-share constraint・single-evidenceの既存実装を保持した。
++
++従来のsingle-evidence設計では、同じ観測を別の集計や表現へ変えて独立根拠として重ねない。この原則に合わせ、各台・合算・ボーナスだけの再計算・反証検査を独立証拠として乗算しない。既存のpreservation・個別画面・factor-spectrum・公開API・加工後配信テストに加え、今回の独立数値照合と旧コミット別実行の回帰検査を追加した。
++
+ ## 既存判別との互換性
+ 
+ `tests/group-judge-regression.mjs` は基準コミットのファイルを一時ディレクトリへ展開して別runtimeを起動し、現在のruntimeと全フィールドを比較する。8機種×128入力＝1,024件。差枚なし、空欄、明示0、負差枚、極端値、低G、BB/RBなしなどを含む。設定表・旧数学のハッシュ検査も維持する。
+diff --git a/tests/parallel-group-ui.mjs b/tests/parallel-group-ui.mjs
+index 09c2297..de2cb13 100644
+--- a/tests/parallel-group-ui.mjs
++++ b/tests/parallel-group-ui.mjs
+@@ -136,6 +136,74 @@ test('group mode uses cached complete results and preserves all ordinary individ
+  assert.deepEqual(app.observed.rows.map(r=>r.id),ids);
+ });
+ 
++test('unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion',async()=>{
++ const {app,ctx}=await ready();app.navigate('judgement');
++ assert.equal(app.observed.single.id,'1');app.handleObservedAction('parallel');
++ const weak=app.observed.rows[0];assert.equal(weak.id,'2');
++ const fill=(row,values)=>{for(const [key,value] of Object.entries(values))edit(app,row,key,String(value));};
++ fill(weak,{machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''});
++ app.handleObservedAction('add');const strong=app.observed.rows[1];assert.equal(strong.id,'3');
++ fill(strong,{machine:'mr',tableNo:'',games:8000,bb:40,rb:44,diff:''});
++ change(app,'data-observed-group-toggle',null,true);
++ const check=(weakRow,weakOrdinal,strongOrdinal)=>{
++  app.handleObservedAction('judge-all');assert.equal(app.observed.groupReport.ok,true);
++  assert.equal(app.observed.groupReport.n,2);
++  for(const h of app.observed.groupReport.hypotheses){assert.equal(h.worstRow.id,weakRow.id);assert.equal(h.refutation.weakestRow.id,weakRow.id);}
++  const html=app.mount.innerHTML.match(/<section class="panel observed-group-report"[\s\S]*?<\/section>/)?.[0];assert.ok(html);
++  const label=`台番なし（${weakOrdinal}行目）`;
++  assert.ok(html.includes(`最も整合しない台 <b>${label}</b>`),'the main warning identifies the actual editor row');
++  assert.ok(html.includes(`<dt>最も下振れした台</dt><dd>${label}</dd>`),'weakest row agrees with the main warning');
++  for(const ordinal of [weakOrdinal,strongOrdinal]){
++   const current=`台番なし（${ordinal}行目）`;
++   assert.ok(html.includes(`<div class="observed-group-conditional-row"><b>${current}</b>`),'conditional rows retain editor positions');
++   assert.ok(html.includes(`<div class="observed-group-p-row"><b>${current}</b>`),'p-value rows retain editor positions');
++  }
++ };
++ check(weak,1,2);const originalQ=plain(weak.result.q);
++ app.handleObservedAction('duplicate',weak.id);const copy=app.observed.rows[1];
++ for(const key of ctx.JUGESTJudgement.FIELDS)edit(app,weak,key,'');
++ check(copy,2,3);assert.deepEqual(plain(copy.result.q),originalQ,'display numbering never changes ordinary judgement');
++ app.handleObservedAction('duplicate',weak.id);const blankCopy=app.observed.rows[1];
++ check(copy,3,4);
++ app.handleObservedAction('delete',weak.id);check(copy,2,3);
++ app.handleObservedAction('delete',blankCopy.id);check(copy,1,2);
++});
++
++test('standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});
++ const report=ctx.JUGESTGroupJudge.analyze([
++  {id:'9001',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''})},
++  {id:'9002',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:40,rb:44,diff:''})},
++ ]);assert.equal(report.ok,true);
++ const before=structuredClone(report),rowNumbers=Object.freeze({'9001':4,'9002':7});
++ const view=ctx.JUGESTGroupJudgeView;
++ const fallback=view.render(report);
++ assert.ok(fallback.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
++ assert.ok(fallback.includes('<dt>最も下振れした台</dt><dd>台番なし（対象1台目）</dd>'));
++ assert.ok(fallback.includes('<div class="observed-group-conditional-row"><b>台番なし（対象2台目）</b>'));
++ assert.ok(fallback.includes('<div class="observed-group-p-row"><b>台番なし（対象2台目）</b>'));
++ assert.doesNotMatch(fallback,/行900[12]|900[12]行目/);
++ for(const hypothesis of ['all456','all56','all6']){
++  const html=view.render(report,{hypothesis,rowNumbers});
++  assert.ok(html.includes('最も整合しない台 <b>台番なし（4行目）</b>'));
++  assert.ok(html.includes('<dt>最も下振れした台</dt><dd>台番なし（4行目）</dd>'));
++  assert.ok(html.includes('<div class="observed-group-conditional-row"><b>台番なし（7行目）</b>'));
++  assert.ok(html.includes('<div class="observed-group-p-row"><b>台番なし（7行目）</b>'));
++ }
++ assert.deepEqual(structuredClone(report),before);assert.deepEqual(rowNumbers,{'9001':4,'9002':7});
++});
++
++test('parallel result rows retain compact most-likely text, including every tied setting',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});const view=ctx.JUGESTJudgementView;
++ const result=bridge.judgeObservedMachine(sample),before=structuredClone(result);
++ const html=view.parallelResults([{id:'1',result}]);
++ assert.ok(html.includes(`最有力 <b>${result.mostLikelySettings.map(s=>`設定${s}`).join(' / ')}</b>`));
++ for(const label of ['期待設定','P4+','P5+','P6','推定ブドウ','observed-result-band'])assert.ok(html.includes(label),label);
++ const tied=view.parallelResults([{id:'2',result:{...result,mostLikelySettings:[2,4]}}]);
++ assert.ok(tied.includes('最有力 <b>設定2 / 設定4</b>'));
++ assert.deepEqual(structuredClone(result),before);
++});
++
+ test('sorting changes only result order with stable ties, while labels and input order remain intact',async()=>{
+  const {app,ctx}=await ready();app.acceptMachineRows([...rows,{...sample,tableNo:'101'}]);app.handleObservedAction('judge-all');
+  const inputs=plain(app.observed.rows.map(r=>({id:r.id,input:r.input})));

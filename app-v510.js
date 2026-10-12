@@ -15,7 +15,7 @@ const MOTION=Object.freeze({fast:160,view:220,sheet:320});
 
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function safeJSON(raw,fallback){try{const v=JSON.parse(raw);return v&&typeof v==='object'?v:fallback}catch(_){return fallback}}
-function loadUIState(){try{return safeJSON(global.localStorage?.getItem?.(UI_KEY),{})}catch(_){return {}}}
+function loadUIState(){try{const raw=global.localStorage?.getItem?.(UI_KEY);return typeof raw==='string'&&raw.length<=2*1024*1024?safeJSON(raw,{}):{}}catch(_){return {}}}
 function formatCount(value,suffix=''){const n=Number(value);return Number.isFinite(n)?`${n.toLocaleString('ja-JP')}${suffix}`:`0${suffix}`}
 function pct(value){const n=Number(value);return Number.isFinite(n)?`${(n*100).toFixed(1)}%`:'—'}
 function fmtES(value){const n=Number(value);return Number.isFinite(n)&&n>0?n.toFixed(2):'—'}
@@ -116,7 +116,8 @@ class JugestApp extends HTMLElement{
     this.shadowRoot.append(link,this.mount);
     const saved=loadUIState();this.noticeLedger={active:Array.isArray(saved.noticeLedger?.active)?saved.noticeLedger.active:[],read:Array.isArray(saved.noticeLedger?.read)?saved.noticeLedger.read:[]};this.recentAnalyses=[];this._jobChanged=()=>{this.state.analysisLoading=analysisJob.status==='running';if(this.state.activeStore===analysisJob.shop)this.state.analysisResult=analysisJob.result;this.render();if(analysisJob.status==='completed'){this.loadRecentAnalyses();global.clearTimeout(this._chipTimer);this._chipTimer=global.setTimeout(()=>this.render(),60000)}};
     this.state={workspace:validWorkspace(saved.workspace),screen:'hub',activeStore:String(saved.activeStore||''),storeSelectorOpen:false,storeQuery:'',summary:{},stores:[],error:'',judge:null,storeDate:'',storeDataLimit:24,trendPeriod:'30',trendMachine:'',trendResult:null,trendLoading:false,trendLimit:24,calendarCursor:new Date(),recordLimit:20,dataBusy:false,rev:{machine:'',G:'',B:'',R:'',D:'',style:'random'},pickup:null,compareBucket:'all',compareSort:'p4',moveInput:{G:'',B:'',R:'',D:''},moveResult:null,planDate:new Date().toISOString().slice(0,10),planLottery:'',planQueue:'',planMode:'new',planResult:null,planLoading:false,analysisOpts:{period:'180',minG:'2000',maxDims:'1',minDays:'4'},analysisResult:null,analysisLoading:false,analysisHistory:[],analysisHistoryOpen:null,analysisHistoryLoading:false,replayDate:'',replayResult:null,replayLoading:false,modelResult:null,modelLoading:false,strategyFilters:{entry:'',shopId:'',machine:'',tagId:''},strategyData:null,storeEditor:null,jsonRaw:'',jsonPreview:null,jsonBusy:false,storeManageQuery:'',storeManageFilter:'all',storeManageSort:'name',hana:null,syncCode:'',syncBusy:false,syncMessage:'',syncReloadRequired:false,collectorMessage:'',recordEditor:null,recordTagName:'',storeFinanceSort:'runs',storeFinanceEditor:null,calendarSelectedDate:'',notificationOpen:false};
-    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true};
+    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true,groupEnabled:saved.observedGroup===true,groupReport:null,sort:['input','tableNo','expectedSetting','p4','p5','p6'].includes(saved.observedSort)?saved.observedSort:'input',allocation:['all456','all56','all6'].includes(saved.observedAllocation)?saved.observedAllocation:'all456'};
+    this.restoreObservedDrafts(saved.observedDrafts);
     this._planCache={new:null,legacy:null};this._planTask=null;this._planRequestedKey='';this._runExternalNewPlan=null;
     analysisJob.listeners.add(this._jobChanged);this.state.analysisLoading=analysisJob.status==='running';
     this._boundClick=e=>this.onClick(e);this._boundInput=e=>this.onInput(e);this._boundChange=e=>this.onChange(e);this._boundPop=e=>this.onPopState(e);this._unsubscribe=null;this._collectorPoll=null;this._collectorRefreshing=false;this._boundResume=()=>{if(!document.hidden)this.refreshCollectorStatus()};
@@ -129,8 +130,51 @@ class JugestApp extends HTMLElement{
   renderObservedSettings(){return `<section class="panel observed-display-settings"><h2>開発者向け</h2><label class="observed-debug-setting"><input type="checkbox" role="switch" data-observed-debug-toggle ${this.observed.debug?'checked':''}><span><b>高度なデバッグ情報を表示</b><small>判別エンジンの検証用情報を表示します。通常はOFFで問題ありません。</small></span></label></section>`}
   setObservedDebug(enabled){this.observed.debug=enabled===true;this.persist();this.render()}
   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
+  observedDraftError(drafts){
+    if(!drafts||drafts.version!==1||!Array.isArray(drafts.rows))return '入力の保存形式を確認できません。';
+    if(drafts.rows.length>1000)return '並列入力が1,000行を超えています。保存するには行数を減らしてください。';
+    const labels={machine:'機種',tableNo:'台番',games:'G',bb:'BB',rb:'RB',diff:'差枚'};
+    for(const value of [...(drafts.single==null?[]:[drafts.single]),...Array.from(drafts.rows)]){
+      if(!value||typeof value!=='object'||Array.isArray(value))return '保存できない形式の入力行があります。';
+      for(const key of global.JUGESTJudgement.FIELDS){
+        const text=value[key];if(text==null)continue;
+        if(!['string','number'].includes(typeof text)||(typeof text==='number'&&!Number.isFinite(text)))return `${labels[key]}に保存できない形式の値があります。`;
+        if(String(text).length>2048)return `${labels[key]}が2,048文字を超えています。保存するには入力を短くしてください。`;
+      }
+    }
+    return '';
+  }
+  restoreObservedDrafts(drafts){
+    if(this.observedDraftError(drafts))return;
+    if(drafts.single!=null)this.observed.single=this.newObservedRow(drafts.single);
+    this.observed.rows=drafts.rows.map(value=>this.newObservedRow(value));
+  }
+  observedDrafts(){return {version:1,single:this.observed.single?global.JUGESTJudgement.inputRow(this.observed.single.input):null,rows:this.observed.rows.map(row=>global.JUGESTJudgement.inputRow(row.input))}}
+  observedPersistenceText(){return `入力を端末に保存できませんでした。${this.observed.persistenceReason||''}画面を閉じる前に入力を控えてください。`}
+  patchObservedPersistenceNotice(){const notice=this.shadowRoot.querySelector('[data-observed-persistence-status]');if(notice){notice.hidden=!this.observed.persistenceFailed;notice.textContent=this.observedPersistenceText()}}
   isObservedRowEmpty(row){return global.JUGESTJudgement.FIELDS.every(key=>String(row.input[key]??'').trim()==='')}
   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))}
+  invalidateObservedGroup(){this.observed.groupReport=null;this.shadowRoot.querySelector('[data-observed-group-report]')?.remove()}
+  refreshObservedGroup(){
+    this.observed.groupReport=null;
+    if(!this.observed.groupEnabled)return;
+    const rows=this.observed.rows.filter(row=>!this.isObservedRowEmpty(row));
+    const incomplete=rows.filter(row=>!row.result?.ok||Object.keys(row.errors).length);
+    if(incomplete.length){this.observed.groupReport={ok:false,errors:[`入力済み${rows.length}台のうち${incomplete.length}台が未判別、または入力に不備があります。各行を確認して「まとめて判別」を押してください。`]};return}
+    const analyze=global.JUGESTGroupJudge?.analyze;
+    if(typeof analyze!=='function'){this.observed.groupReport={ok:false,errors:['全台系の判別を準備できませんでした。再読み込みしてください。']};return}
+    try{this.observed.groupReport=analyze(rows.map(row=>({id:row.id,result:row.result})))}
+    catch(_){this.observed.groupReport={ok:false,errors:['全台系を比較できませんでした。入力値を確認してください。']}}
+  }
+  handleObservedControl(element){
+    const toggle=element.closest?.('[data-observed-group-toggle]');
+    if(toggle){this.observed.groupEnabled=toggle.checked===true;this.invalidateObservedGroup();if(this.observed.groupEnabled&&this.observed.rows.some(row=>row.result||Object.keys(row.errors).length))this.refreshObservedGroup();this.persist();this.render();return true}
+    const sort=element.closest?.('[data-observed-sort]');
+    if(sort){if(['input','tableNo','expectedSetting','p4','p5','p6'].includes(sort.value))this.observed.sort=sort.value;this.persist();this.render();return true}
+    const allocation=element.closest?.('[data-observed-allocation]');
+    if(allocation){if(['all456','all56','all6'].includes(allocation.value))this.observed.allocation=allocation.value;this.persist();this.render();return true}
+    return false;
+  }
   restoreObservedHistory(state){
     if(['single','parallel'].includes(state.observedMode))this.observed.mode=state.observedMode;
     const row=this.observed.mode==='parallel'?this.observed.rows.find(row=>row.id===String(state.observedRowId)):null;
@@ -146,13 +190,14 @@ class JugestApp extends HTMLElement{
     if(append){this.observed.rows.push(...drafts);this.observed.mode='parallel'}
     else if(drafts.length===1){this.observed.single=drafts[0];this.observed.mode='single'}
     else{this.observed.rows=drafts;this.observed.mode='parallel'}
-    this.observed.selectedId=null;this.navigate('judgement');return drafts.map(row=>row.id);
+    this.observed.selectedId=null;this.invalidateObservedGroup();this.navigate('judgement');return drafts.map(row=>row.id);
   }
   editObservedField(element){
     const id=element.closest('[data-observed-row]')?.dataset.observedRow,row=this.observedRow(id),field=element.dataset.observedField;
     if(!row||!global.JUGESTJudgement.FIELDS.includes(field))return;
     if(row.input[field]===element.value)return;
     row.input[field]=element.value;row.result=null;row.errors={};
+    this.invalidateObservedGroup();this.persist();
     const card=element.closest('[data-observed-card]');
     card?.querySelector('[data-row-summary]')?.remove();
     this.shadowRoot.querySelector(`[data-observed-result-row="${row.id}"]`)?.remove();
@@ -175,13 +220,14 @@ class JugestApp extends HTMLElement{
       this.observed.mode=action;this.observed.selectedId=null;
       if(action==='parallel'&&!this.observed.rows.length)this.observed.rows.push(this.newObservedRow({machine:''}));
       this.navigate('judgement','hub',{replace:true});return;
-    }else if(action==='add')this.observed.rows.push(this.newObservedRow({machine:''}));
-    else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null}
-    else if(action==='judge-all'){for(const row of this.observed.rows){if(this.isObservedRowEmpty(row)){row.result=null;row.errors={};continue}this.judgeObservedRow(row)}}
+    }else if(action==='add'){this.observed.rows.push(this.newObservedRow({machine:''}));this.invalidateObservedGroup()}
+    else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null;this.invalidateObservedGroup()}
+    else if(action==='duplicate'){const index=this.observed.rows.findIndex(row=>row.id===id);if(index>=0)this.observed.rows.splice(index+1,0,this.newObservedRow({...this.observed.rows[index].input,tableNo:''}));this.invalidateObservedGroup()}
+    else if(action==='judge-all'){for(const row of this.observed.rows){if(this.isObservedRowEmpty(row)){row.result=null;row.errors={};continue}this.judgeObservedRow(row)}this.refreshObservedGroup()}
     else if(action==='judge'){const row=this.observedRow(id);if(row)this.judgeObservedRow(row)}
     else if(action==='detail'){const row=this.observedRow(id);if(row?.result){this.observed.selectedId=id;this.navigate('judgement','detail');return}}
     else if(action==='close-detail'){this.observed.selectedId=null;this.navigate('judgement');return}
-    this.render();
+    this.persist();this.render();
     if(action==='judge'&&this.observed.mode==='single')global.requestAnimationFrame?.(()=>this.shadowRoot.querySelector('[data-observed-result]')?.scrollIntoView?.({block:'start'}));
   }
   renderObservedPage(){
@@ -194,14 +240,14 @@ class JugestApp extends HTMLElement{
 
     let body;
     if(selected?.result)body=`<div data-observed-detail><button type="button" class="back-row" data-observed-action="close-detail">‹ 並列一覧へ</button>${view.result(selected.result,{debug:o.debug})}</div>`;
-    else if(o.mode==='parallel')body=`${view.parallelEditor(o.rows,machines)}<div class="observed-parallel-actions"><button type="button" data-observed-action="add">＋ 行を追加</button><button type="button" class="primary-btn" data-observed-action="judge-all">まとめて判別</button></div><p class="observed-help">空行は飛ばします。差枚は任意、BB・RBが0回なら0を入力。結果を見るだけで実戦は開始しません。</p>${view.parallelResults(o.rows)}`;
+    else if(o.mode==='parallel')body=`${view.parallelEditor(o.rows,machines)}<div class="observed-parallel-actions"><button type="button" data-observed-action="add">＋ 行を追加</button><button type="button" class="primary-btn" data-observed-action="judge-all">まとめて判別</button></div><p class="observed-help">空行は飛ばします。差枚は任意、BB・RBが0回なら0を入力。複製は台番を空にします。</p><label class="observed-group-toggle"><input type="checkbox" role="switch" data-observed-group-toggle ${o.groupEnabled?'checked':''}><span><b>全台系を比較する</b><small>入力した全台の全456・全56・全6を検討</small></span></label>${o.groupEnabled&&o.groupReport?global.JUGESTGroupJudgeView?.render(o.groupReport,{hypothesis:o.allocation})||'':''}${view.parallelResults(o.rows,{sort:o.sort})}`;
     else body=`${o.single.result?`<div data-observed-detail>${view.result(o.single.result,{debug:o.debug})}</div>`:'<p class="observed-help">差枚は任意です。BB・RBが0回の場合は0を入力してください。</p>'}<section class="panel observed-card" data-observed-card><h2>${o.single.result?'入力を変更':'台データを入力'}</h2>${view.fields(o.single,machines)}<button type="button" class="primary-btn" data-observed-action="judge" data-row-id="${o.single.id}">判別する</button></section>`;
-    return `<section class="workspace observed-page"><div class="kicker">JUDGEMENT</div><h1>判別</h1><p class="lead">観測した台データから設定を分析・比較。</p>${controls}${body}</section>`;
+    return `<section class="workspace observed-page"><div class="kicker">JUDGEMENT</div><h1>判別</h1><p class="lead">観測した台データから設定を分析・比較。</p>${controls}${body}<p class="observed-error" data-observed-persistence-status ${o.persistenceFailed?'':'hidden'} role="status">${esc(this.observedPersistenceText())}</p></section>`;
   }
   // END independent judgement UI
   connectBridge(){const bridge=this.bridge();if(!bridge){this.state.error='JUGESTコアを準備中…';this.render();this._connectTimer=setTimeout(()=>this.connectBridge(),50);return}this.state.error='';if(this.state.activeStore)bridge.setActiveStore?.(this.state.activeStore,{silent:true});this.refreshFromBridge();this._unsubscribe=bridge.subscribe?.(()=>this.refreshFromBridge())||null;this.render();this.loadRecentAnalyses();this.refreshCollectorStatus()}
   refreshFromBridge(){const bridge=this.bridge();if(!bridge)return;this.state.summary=bridge.getSummary?.()||{};this.state.stores=Array.isArray(bridge.getStores?.())?bridge.getStores():[];const bridgeStore=bridge.getActiveStore?.()||'';this.state.activeStore=bridgeStore||this.state.activeStore||this.state.stores[0]?.name||'';if(this.state.workspace==='live'&&this.state.screen==='judge')try{this.state.judge=bridge.getJudgeState?.()||this.state.judge}catch(_){}this.persist();this.render()}
-  persist(){try{global.localStorage?.setItem?.(UI_KEY,JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug}))}catch(_){}}
+  persist(){let reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';try{const drafts=this.observedDrafts();reason=this.observedDraftError(drafts);if(reason)throw Error('保存できない入力');const value=JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug,observedGroup:this.observed.groupEnabled,observedSort:this.observed.sort,observedAllocation:this.observed.allocation,observedDrafts:drafts});if(value.length>2*1024*1024){reason='保存データのサイズが上限を超えています。';throw Error('保存データの上限超過')}reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';if(typeof global.localStorage?.setItem!=='function')throw Error('UI保存を利用できません');global.localStorage.setItem(UI_KEY,value);this.observed.persistenceFailed=false;this.observed.persistenceReason=''}catch(_){this.observed.persistenceFailed=true;this.observed.persistenceReason=reason}this.patchObservedPersistenceNotice()}
   navigate(workspace,screen='hub',{replace=false}={}){const next=validWorkspace(workspace);if(next==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.workspace=next;this.state.screen=screen;this.state.error='';this.state.storeSelectorOpen=false;this.state.notificationOpen=false;this.persist();const state={jugestV510:true,workspace:next,screen,...(next==='judgement'?{observedMode:this.observed.mode,observedRowId:this.observed.selectedId}:{})};try{replace?global.history.replaceState(state,''):global.history.pushState(state,'')}catch(_){}this.render()}
   onPopState(event){if(this.state.syncBusy||this.state.syncReloadRequired)return;const s=event.state;if(s?.jugestV510){this.state.workspace=validWorkspace(s.workspace);if(this.state.workspace==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.screen=s.screen||'hub';if(this.state.workspace==='judgement')this.restoreObservedHistory(s);this.state.storeSelectorOpen=false;this.persist();this.render()}}
   onInput(event){
@@ -228,6 +274,7 @@ class JugestApp extends HTMLElement{
   }
   onChange(event){
     if(this.state.syncBusy||this.state.syncReloadRequired)return;
+    if(this.handleObservedControl(event.target))return;
     const observedDebug=event.target.closest?.('[data-observed-debug-toggle]');if(observedDebug){this.setObservedDebug(observedDebug.checked);return}
     const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}
     const machine=event.target.closest?.('[data-judge-machine]');if(machine){this.state.judge=this.bridge()?.setJudgeMachine?.(machine.value)||this.state.judge;this.render();return}

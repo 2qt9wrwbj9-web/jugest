@@ -1,0 +1,75 @@
+✔ versioned input drafts survive reload, retain explicit zero and never restore results (72.10347ms)
+✔ single drafts and every edit, add, duplicate and delete mutation persist (11.640709ms)
+✔ a real storage failure keeps the editor usable and reports only the unsaved state (6.978877ms)
+✔ one overlong field among 200 drafts preserves the last reloadable save and recovers without truncation (44.69638ms)
+✔ 1001 drafts cannot overwrite a valid save; returning to the row limit saves every row (152.951094ms)
+✔ unsupported, malformed and oversized stored drafts are ignored; 200 valid drafts retain unique ids (54.385644ms)
+✔ group mode uses cached complete results and preserves all ordinary individual distributions (74.91419ms)
+✖ unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion (13.377248ms)
+✖ standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure (16.058923ms)
+✖ parallel result rows retain compact most-likely text, including every tied setting (10.326316ms)
+✔ sorting changes only result order with stable ties, while labels and input order remain intact (16.028136ms)
+✔ invalid, incomplete and unjudged nonempty rows block the group while empty rows are skipped (18.114404ms)
+✔ editing immediately removes only its row and the group, without rerendering input DOM (10.845299ms)
+✔ group display is pure, escaped, explanatory and separates ratios from conditional percentages (14.6149ms)
+✔ extreme ratios and tiny refutation p use their logs and impossible conditional output stays unavailable (10.551591ms)
+✔ 60-row profiles stay compact and all input controls meet the stable mobile contract (312.201436ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 13
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 951.112957
+
+✖ failing tests:
+
+test at tests/parallel-group-ui.mjs:139:1
+✖ unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion (13.377248ms)
+  AssertionError [ERR_ASSERTION]: the main warning identifies the actual editor row
+      at check (file:///workspace/scratch/de64dcbbff0a/jugest/tests/parallel-group-ui.mjs:154:10)
+      at TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest/tests/parallel-group-ui.mjs:162:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/parallel-group-ui.mjs:172:1
+✖ standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure (16.058923ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(fallback.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'))
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest/tests/parallel-group-ui.mjs:181:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/parallel-group-ui.mjs:196:1
+✖ parallel result rows retain compact most-likely text, including every tied setting (10.326316ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(html.includes(`最有力 <b>${result.mostLikelySettings.map(s=>`設定${s}`).join(' / ')}</b>`))
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest/tests/parallel-group-ui.mjs:200:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

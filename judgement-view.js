@@ -17,22 +17,27 @@ function parallelEditor(rows,machines){
  const columns=[['tableNo','台番'],['machine','機種'],['games','G'],['bb','BB'],['rb','RB'],['diff','差枚']];
  const lines=rows.map((row,index)=>{
   const errorId=`observed-row-errors-${esc(row.id)}`,x=row.input;
-  const cells=columns.map(([key,label])=>{
+  const cells=Object.fromEntries(columns.map(([key,label])=>{
    const invalid=row.errors[key]?` aria-invalid="true" aria-describedby="${errorId}"`:'';
    const attrs=`data-observed-field="${key}" aria-label="${index+1}行目 ${label}"${invalid}`;
-   return key==='machine'?`<select ${attrs}><option value="">選択</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(shortNames[m.key]||m.name)}</option>`).join('')}</select>`:`<input type="text" inputmode="${key==='diff'?'text':'numeric'}" ${attrs} value="${esc(x[key])}" autocomplete="off" autocorrect="off" spellcheck="false">`;
-  }).join('');
+   const input=key==='machine'?`<select ${attrs}><option value="">選択</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(shortNames[m.key]||m.name)}</option>`).join('')}</select>`:`<input type="text" inputmode="${key==='diff'?'text':'numeric'}" ${attrs} value="${esc(x[key])}" autocomplete="off" autocorrect="off" spellcheck="false">`;
+   return [key,`<label><span>${key==='tableNo'?`${index+1} · `:''}${label}${key==='diff'?'（任意）':''}</span>${input}</label>`];
+  }));
   const errors=Object.values(row.errors);
-  return `<div class="observed-table-row" data-observed-row="${esc(row.id)}" data-observed-card>${cells}<button type="button" data-observed-action="delete" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を削除">×</button>${errors.length?`<div class="observed-error observed-row-errors" id="${errorId}" role="alert">${index+1}行目：${errors.map(esc).join(' ')}</div>`:''}</div>`;
+  return `<div class="observed-table-row" data-observed-row="${esc(row.id)}" data-observed-card><div class="observed-table-identity">${cells.tableNo}${cells.machine}<div class="observed-table-actions"><button type="button" data-observed-action="duplicate" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を複製">複製</button><button type="button" data-observed-action="delete" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を削除">×</button></div></div><div class="observed-table-numbers">${['games','bb','rb','diff'].map(key=>cells[key]).join('')}</div>${errors.length?`<div class="observed-error observed-row-errors" id="${errorId}" role="alert">${index+1}行目：${errors.map(esc).join(' ')}</div>`:''}</div>`;
  }).join('');
- return `<div class="observed-parallel-editor" data-observed-parallel-editor role="group" aria-label="並列判別の台データ"><div class="observed-table-head" aria-hidden="true">${columns.map(([,label])=>`<span>${label}${label==='機種'?' ▾':''}</span>`).join('')}<span>削除</span></div>${lines||'<p class="observed-help">行を追加して入力してください。</p>'}</div>`;
+ return `<div class="observed-parallel-editor" data-observed-parallel-editor role="group" aria-label="並列判別の台データ">${lines||'<p class="observed-help">行を追加して入力してください。</p>'}</div>`;
 }
-function parallelResults(rows){
- const judged=rows.filter(row=>row.result);
+function parallelResults(rows,{sort='input'}={}){
+ const judged=rows.filter(row=>row.result).slice();
  if(!judged.length)return '';
- return `<section class="observed-parallel-results" aria-label="並列判別結果"><h2>判別結果</h2>${judged.map((row,index)=>{
+ if(sort==='tableNo')judged.sort((a,b)=>String(a.result.input.tableNo||'').localeCompare(String(b.result.input.tableNo||''),'ja',{numeric:true})||rows.indexOf(a)-rows.indexOf(b));
+ else if(['expectedSetting','p4','p5','p6'].includes(sort))judged.sort((a,b)=>b.result[sort]-a.result[sort]||rows.indexOf(a)-rows.indexOf(b));
+ const order=[['input','入力順'],['tableNo','台番順'],['expectedSetting','期待設定が高い順'],['p4','設定4以上（P4+）'],['p5','設定5以上（P5+）'],['p6','設定6（P6）']];
+ return `<section class="observed-parallel-results" aria-label="並列判別結果"><div class="observed-result-heading"><h2>個別の判別結果</h2><label>並べ替え<select data-observed-sort aria-label="結果の並べ替え">${order.map(([value,label])=>`<option value="${value}" ${sort===value?'selected':''}>${label}</option>`).join('')}</select></label></div>${judged.map(row=>{
   const r=row.result;
-  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span><span>${esc(top(r))}</span></span><span class="observed-result-probs"><span>P4+ <b>${percent(r.p4)}</b></span><span>P5+ <b>${percent(r.p5)}</b></span><span>P6 <b>${percent(r.p6)}</b></span></span><span>推定ブドウ <b>${grape(r.estimatedGrape)}</b></span></button>`;
+  const label=(r.q||[]).map((p,i)=>`設定${i+1} ${percent(p)}`).join('、');
+  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span></span><span class="observed-result-probs"><span title="設定4以上の確率" aria-label="設定4以上 ${percent(r.p4)}">P4+ <b>${percent(r.p4)}</b></span><span title="設定5以上の確率" aria-label="設定5以上 ${percent(r.p5)}">P5+ <b>${percent(r.p5)}</b></span><span title="設定6の確率">P6 <b>${percent(r.p6)}</b></span><span>推定ブドウ <b>${grape(r.estimatedGrape)}</b></span></span><span class="observed-result-band" role="img" aria-label="${esc(label)}">${(r.q||[]).map((p,i)=>`<span style="width:${Number.isFinite(p)?Math.max(0,p*100):0}%;background:${['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'][i]}"></span>`).join('')}</span></button>`;
  }).join('')}<p class="observed-help">結果をタップすると詳細を表示します。</p></section>`;
 }
 function summary(result){return `<dl class="observed-summary">${pair('期待設定',number(result.expectedSetting))}${pair('最有力設定',top(result))}${pair('P4+',percent(result.p4))}${pair('P5+',percent(result.p5))}${pair('P6',percent(result.p6))}${pair('推定ブドウ',grape(result.estimatedGrape))}${pair('分布集中度',`${number(result.distributionConcentration,1)}%`)}</dl>`}

@@ -1,0 +1,855 @@
+{
+  "storeName": "PIA大船1",
+  "date": "2026-09-21",
+  "source": "Public PIA observations archived in earlier JUGEST investigation; judge outputs deliberately excluded. No known setting labels.",
+  "rows": [
+    {
+      "tableNo": "3049",
+      "machine": "my",
+      "games": 2731,
+      "bb": 9,
+      "rb": 6,
+      "diff": -413
+    },
+    {
+      "tableNo": "3050",
+      "machine": "my",
+      "games": 4581,
+      "bb": 19,
+      "rb": 10,
+      "diff": 335
+    },
+    {
+      "tableNo": "3051",
+      "machine": "my",
+      "games": 1335,
+      "bb": 3,
+      "rb": 2,
+      "diff": -481
+    },
+    {
+      "tableNo": "3052",
+      "machine": "my",
+      "games": 3788,
+      "bb": 12,
+      "rb": 12,
+      "diff": -573
+    },
+    {
+      "tableNo": "3053",
+      "machine": "my",
+      "games": 3010,
+      "bb": 11,
+      "rb": 8,
+      "diff": -168
+    },
+    {
+      "tableNo": "3054",
+      "machine": "my",
+      "games": 1024,
+      "bb": 2,
+      "rb": 0,
+      "diff": -768
+    },
+    {
+      "tableNo": "3055",
+      "machine": "my",
+      "games": 4499,
+      "bb": 7,
+      "rb": 13,
+      "diff": -2004
+    },
+    {
+      "tableNo": "3056",
+      "machine": "my",
+      "games": 3261,
+      "bb": 12,
+      "rb": 9,
+      "diff": -165
+    },
+    {
+      "tableNo": "3057",
+      "machine": "my",
+      "games": 671,
+      "bb": 2,
+      "rb": 0,
+      "diff": -244
+    },
+    {
+      "tableNo": "3058",
+      "machine": "my",
+      "games": 7782,
+      "bb": 28,
+      "rb": 33,
+      "diff": 1255
+    },
+    {
+      "tableNo": "3059",
+      "machine": "my",
+      "games": 9200,
+      "bb": 35,
+      "rb": 35,
+      "diff": 1118
+    },
+    {
+      "tableNo": "3060",
+      "machine": "my",
+      "games": 448,
+      "bb": 1,
+      "rb": 0,
+      "diff": -319
+    },
+    {
+      "tableNo": "3061",
+      "machine": "my",
+      "games": 8632,
+      "bb": 38,
+      "rb": 21,
+      "diff": 1435
+    },
+    {
+      "tableNo": "3062",
+      "machine": "my",
+      "games": 755,
+      "bb": 1,
+      "rb": 1,
+      "diff": -590
+    },
+    {
+      "tableNo": "3063",
+      "machine": "my",
+      "games": 4476,
+      "bb": 14,
+      "rb": 13,
+      "diff": -815
+    },
+    {
+      "tableNo": "3064",
+      "machine": "my",
+      "games": 3100,
+      "bb": 9,
+      "rb": 7,
+      "diff": -751
+    },
+    {
+      "tableNo": "3065",
+      "machine": "my",
+      "games": 5880,
+      "bb": 16,
+      "rb": 21,
+      "diff": -825
+    },
+    {
+      "tableNo": "3066",
+      "machine": "my",
+      "games": 9495,
+      "bb": 41,
+      "rb": 36,
+      "diff": 2866
+    },
+    {
+      "tableNo": "3067",
+      "machine": "my",
+      "games": 5440,
+      "bb": 19,
+      "rb": 15,
+      "diff": -116
+    },
+    {
+      "tableNo": "3068",
+      "machine": "my",
+      "games": 276,
+      "bb": 1,
+      "rb": 0,
+      "diff": -137
+    },
+    {
+      "tableNo": "3069",
+      "machine": "my",
+      "games": 8771,
+      "bb": 26,
+      "rb": 14,
+      "diff": -2551
+    },
+    {
+      "tableNo": "3070",
+      "machine": "my",
+      "games": 316,
+      "bb": 1,
+      "rb": 0,
+      "diff": -86
+    },
+    {
+      "tableNo": "3071",
+      "machine": "my",
+      "games": 9203,
+      "bb": 37,
+      "rb": 28,
+      "diff": 798
+    },
+    {
+      "tableNo": "3072",
+      "machine": "my",
+      "games": 1001,
+      "bb": 3,
+      "rb": 2,
+      "diff": -409
+    },
+    {
+      "tableNo": "3073",
+      "machine": "my",
+      "games": 1222,
+      "bb": 3,
+      "rb": 1,
+      "diff": -430
+    },
+    {
+      "tableNo": "3074",
+      "machine": "my",
+      "games": 3999,
+      "bb": 15,
+      "rb": 11,
+      "diff": -17
+    },
+    {
+      "tableNo": "3075",
+      "machine": "my",
+      "games": 1945,
+      "bb": 8,
+      "rb": 4,
+      "diff": 133
+    },
+    {
+      "tableNo": "3076",
+      "machine": "my",
+      "games": 632,
+      "bb": 3,
+      "rb": 0,
+      "diff": -119
+    },
+    {
+      "tableNo": "3077",
+      "machine": "my",
+      "games": 7077,
+      "bb": 25,
+      "rb": 24,
+      "diff": 462
+    },
+    {
+      "tableNo": "3078",
+      "machine": "my",
+      "games": 2029,
+      "bb": 8,
+      "rb": 3,
+      "diff": -135
+    },
+    {
+      "tableNo": "3079",
+      "machine": "my",
+      "games": 8655,
+      "bb": 37,
+      "rb": 27,
+      "diff": 1457
+    },
+    {
+      "tableNo": "3080",
+      "machine": "my",
+      "games": 9923,
+      "bb": 43,
+      "rb": 37,
+      "diff": 2628
+    },
+    {
+      "tableNo": "3081",
+      "machine": "my",
+      "games": 7092,
+      "bb": 28,
+      "rb": 20,
+      "diff": 233
+    },
+    {
+      "tableNo": "3082",
+      "machine": "my",
+      "games": 6717,
+      "bb": 28,
+      "rb": 26,
+      "diff": 1452
+    },
+    {
+      "tableNo": "3083",
+      "machine": "my",
+      "games": 3992,
+      "bb": 16,
+      "rb": 6,
+      "diff": -321
+    },
+    {
+      "tableNo": "3084",
+      "machine": "my",
+      "games": 6413,
+      "bb": 29,
+      "rb": 18,
+      "diff": 1456
+    },
+    {
+      "tableNo": "3085",
+      "machine": "my",
+      "games": 1116,
+      "bb": 2,
+      "rb": 1,
+      "diff": -599
+    },
+    {
+      "tableNo": "3086",
+      "machine": "my",
+      "games": 9792,
+      "bb": 32,
+      "rb": 45,
+      "diff": 1568
+    },
+    {
+      "tableNo": "3087",
+      "machine": "my",
+      "games": 4525,
+      "bb": 13,
+      "rb": 14,
+      "diff": -304
+    },
+    {
+      "tableNo": "3088",
+      "machine": "my",
+      "games": 9233,
+      "bb": 37,
+      "rb": 41,
+      "diff": 2365
+    },
+    {
+      "tableNo": "3089",
+      "machine": "my",
+      "games": 8179,
+      "bb": 43,
+      "rb": 33,
+      "diff": 4379
+    },
+    {
+      "tableNo": "3090",
+      "machine": "my",
+      "games": 3097,
+      "bb": 4,
+      "rb": 10,
+      "diff": -1616
+    },
+    {
+      "tableNo": "3091",
+      "machine": "my",
+      "games": 8713,
+      "bb": 30,
+      "rb": 39,
+      "diff": 952
+    },
+    {
+      "tableNo": "3092",
+      "machine": "my",
+      "games": 3239,
+      "bb": 11,
+      "rb": 8,
+      "diff": 35
+    },
+    {
+      "tableNo": "3093",
+      "machine": "my",
+      "games": 1582,
+      "bb": 1,
+      "rb": 2,
+      "diff": -1553
+    },
+    {
+      "tableNo": "3094",
+      "machine": "my",
+      "games": 5792,
+      "bb": 24,
+      "rb": 16,
+      "diff": 420
+    },
+    {
+      "tableNo": "3095",
+      "machine": "my",
+      "games": 1839,
+      "bb": 1,
+      "rb": 2,
+      "diff": -1695
+    },
+    {
+      "tableNo": "3096",
+      "machine": "my",
+      "games": 3226,
+      "bb": 9,
+      "rb": 5,
+      "diff": -1055
+    },
+    {
+      "tableNo": "3097",
+      "machine": "go",
+      "games": 7713,
+      "bb": 31,
+      "rb": 29,
+      "diff": 679
+    },
+    {
+      "tableNo": "3098",
+      "machine": "go",
+      "games": 920,
+      "bb": 3,
+      "rb": 1,
+      "diff": -245
+    },
+    {
+      "tableNo": "3099",
+      "machine": "go",
+      "games": 2067,
+      "bb": 11,
+      "rb": 7,
+      "diff": 726
+    },
+    {
+      "tableNo": "3100",
+      "machine": "go",
+      "games": 893,
+      "bb": 3,
+      "rb": 0,
+      "diff": -460
+    },
+    {
+      "tableNo": "3101",
+      "machine": "go",
+      "games": 3933,
+      "bb": 17,
+      "rb": 9,
+      "diff": 257
+    },
+    {
+      "tableNo": "3102",
+      "machine": "go",
+      "games": 710,
+      "bb": 3,
+      "rb": 0,
+      "diff": -226
+    },
+    {
+      "tableNo": "3103",
+      "machine": "go",
+      "games": 6797,
+      "bb": 24,
+      "rb": 25,
+      "diff": -132
+    },
+    {
+      "tableNo": "3104",
+      "machine": "go",
+      "games": 564,
+      "bb": 1,
+      "rb": 2,
+      "diff": -354
+    },
+    {
+      "tableNo": "3105",
+      "machine": "go",
+      "games": 6902,
+      "bb": 30,
+      "rb": 27,
+      "diff": 1532
+    },
+    {
+      "tableNo": "3106",
+      "machine": "go",
+      "games": 6490,
+      "bb": 30,
+      "rb": 25,
+      "diff": 2086
+    },
+    {
+      "tableNo": "3107",
+      "machine": "go",
+      "games": 248,
+      "bb": 0,
+      "rb": 0,
+      "diff": -314
+    },
+    {
+      "tableNo": "3108",
+      "machine": "go",
+      "games": 9645,
+      "bb": 41,
+      "rb": 48,
+      "diff": 2914
+    },
+    {
+      "tableNo": "3109",
+      "machine": "go",
+      "games": 3062,
+      "bb": 13,
+      "rb": 7,
+      "diff": 119
+    },
+    {
+      "tableNo": "3110",
+      "machine": "go",
+      "games": 544,
+      "bb": 0,
+      "rb": 1,
+      "diff": -439
+    },
+    {
+      "tableNo": "3111",
+      "machine": "go",
+      "games": 3120,
+      "bb": 17,
+      "rb": 6,
+      "diff": 760
+    },
+    {
+      "tableNo": "3112",
+      "machine": "go",
+      "games": 7933,
+      "bb": 39,
+      "rb": 29,
+      "diff": 3102
+    },
+    {
+      "tableNo": "3113",
+      "machine": "go",
+      "games": 1229,
+      "bb": 2,
+      "rb": 4,
+      "diff": -672
+    },
+    {
+      "tableNo": "3114",
+      "machine": "go",
+      "games": 6319,
+      "bb": 23,
+      "rb": 24,
+      "diff": 196
+    },
+    {
+      "tableNo": "3115",
+      "machine": "go",
+      "games": 1145,
+      "bb": 2,
+      "rb": 2,
+      "diff": -908
+    },
+    {
+      "tableNo": "3116",
+      "machine": "go",
+      "games": 1369,
+      "bb": 2,
+      "rb": 5,
+      "diff": -831
+    },
+    {
+      "tableNo": "3117",
+      "machine": "go",
+      "games": 7820,
+      "bb": 17,
+      "rb": 30,
+      "diff": -2195
+    },
+    {
+      "tableNo": "3118",
+      "machine": "go",
+      "games": 703,
+      "bb": 0,
+      "rb": 3,
+      "diff": -623
+    },
+    {
+      "tableNo": "3119",
+      "machine": "go",
+      "games": 4026,
+      "bb": 15,
+      "rb": 12,
+      "diff": -111
+    },
+    {
+      "tableNo": "3120",
+      "machine": "go",
+      "games": 1015,
+      "bb": 4,
+      "rb": 1,
+      "diff": -235
+    },
+    {
+      "tableNo": "3121",
+      "machine": "im",
+      "games": 6515,
+      "bb": 25,
+      "rb": 17,
+      "diff": -94
+    },
+    {
+      "tableNo": "3122",
+      "machine": "im",
+      "games": 2014,
+      "bb": 7,
+      "rb": 7,
+      "diff": 170
+    },
+    {
+      "tableNo": "3123",
+      "machine": "im",
+      "games": 1341,
+      "bb": 2,
+      "rb": 5,
+      "diff": -638
+    },
+    {
+      "tableNo": "3124",
+      "machine": "im",
+      "games": 3605,
+      "bb": 14,
+      "rb": 12,
+      "diff": 103
+    },
+    {
+      "tableNo": "3125",
+      "machine": "im",
+      "games": 3402,
+      "bb": 11,
+      "rb": 10,
+      "diff": -154
+    },
+    {
+      "tableNo": "3126",
+      "machine": "im",
+      "games": 7841,
+      "bb": 28,
+      "rb": 39,
+      "diff": 1378
+    },
+    {
+      "tableNo": "3127",
+      "machine": "im",
+      "games": 285,
+      "bb": 0,
+      "rb": 1,
+      "diff": -220
+    },
+    {
+      "tableNo": "3128",
+      "machine": "im",
+      "games": 269,
+      "bb": 0,
+      "rb": 0,
+      "diff": -305
+    },
+    {
+      "tableNo": "3129",
+      "machine": "im",
+      "games": 6490,
+      "bb": 32,
+      "rb": 23,
+      "diff": 2467
+    },
+    {
+      "tableNo": "3130",
+      "machine": "im",
+      "games": 1468,
+      "bb": 2,
+      "rb": 5,
+      "diff": -814
+    },
+    {
+      "tableNo": "3131",
+      "machine": "im",
+      "games": 3545,
+      "bb": 11,
+      "rb": 11,
+      "diff": -525
+    },
+    {
+      "tableNo": "3132",
+      "machine": "im",
+      "games": 2759,
+      "bb": 7,
+      "rb": 9,
+      "diff": -596
+    },
+    {
+      "tableNo": "3133",
+      "machine": "im",
+      "games": 4988,
+      "bb": 14,
+      "rb": 16,
+      "diff": -1029
+    },
+    {
+      "tableNo": "3134",
+      "machine": "im",
+      "games": 4355,
+      "bb": 18,
+      "rb": 11,
+      "diff": 701
+    },
+    {
+      "tableNo": "3135",
+      "machine": "im",
+      "games": 1245,
+      "bb": 5,
+      "rb": 2,
+      "diff": -58
+    },
+    {
+      "tableNo": "3136",
+      "machine": "im",
+      "games": 618,
+      "bb": 1,
+      "rb": 0,
+      "diff": -578
+    },
+    {
+      "tableNo": "3137",
+      "machine": "im",
+      "games": 851,
+      "bb": 2,
+      "rb": 1,
+      "diff": -498
+    },
+    {
+      "tableNo": "3138",
+      "machine": "im",
+      "games": 1774,
+      "bb": 3,
+      "rb": 5,
+      "diff": -715
+    },
+    {
+      "tableNo": "3139",
+      "machine": "im",
+      "games": 2534,
+      "bb": 11,
+      "rb": 7,
+      "diff": 135
+    },
+    {
+      "tableNo": "3140",
+      "machine": "im",
+      "games": 418,
+      "bb": 1,
+      "rb": 0,
+      "diff": -319
+    },
+    {
+      "tableNo": "3141",
+      "machine": "im",
+      "games": 5379,
+      "bb": 21,
+      "rb": 20,
+      "diff": 840
+    },
+    {
+      "tableNo": "3142",
+      "machine": "im",
+      "games": 6432,
+      "bb": 24,
+      "rb": 29,
+      "diff": 1271
+    },
+    {
+      "tableNo": "3143",
+      "machine": "im",
+      "games": 1128,
+      "bb": 3,
+      "rb": 2,
+      "diff": -483
+    },
+    {
+      "tableNo": "3144",
+      "machine": "im",
+      "games": 5769,
+      "bb": 21,
+      "rb": 19,
+      "diff": 732
+    },
+    {
+      "tableNo": "3145",
+      "machine": "fk",
+      "games": 1037,
+      "bb": 3,
+      "rb": 2,
+      "diff": -319
+    },
+    {
+      "tableNo": "3146",
+      "machine": "fk",
+      "games": 4590,
+      "bb": 19,
+      "rb": 12,
+      "diff": 477
+    },
+    {
+      "tableNo": "3147",
+      "machine": "fk",
+      "games": 1095,
+      "bb": 1,
+      "rb": 6,
+      "diff": -413
+    },
+    {
+      "tableNo": "3148",
+      "machine": "fk",
+      "games": 7028,
+      "bb": 36,
+      "rb": 15,
+      "diff": 1610
+    },
+    {
+      "tableNo": "3149",
+      "machine": "fk",
+      "games": 1016,
+      "bb": 4,
+      "rb": 2,
+      "diff": -83
+    },
+    {
+      "tableNo": "3150",
+      "machine": "hp",
+      "games": 5753,
+      "bb": 18,
+      "rb": 26,
+      "diff": 176
+    },
+    {
+      "tableNo": "3151",
+      "machine": "hp",
+      "games": 3558,
+      "bb": 12,
+      "rb": 7,
+      "diff": -186
+    },
+    {
+      "tableNo": "3152",
+      "machine": "hp",
+      "games": 7280,
+      "bb": 24,
+      "rb": 32,
+      "diff": 525
+    },
+    {
+      "tableNo": "3153",
+      "machine": "hp",
+      "games": 1778,
+      "bb": 5,
+      "rb": 3,
+      "diff": -493
+    },
+    {
+      "tableNo": "3154",
+      "machine": "hp",
+      "games": 1556,
+      "bb": 1,
+      "rb": 5,
+      "diff": -1268
+    }
+  ]
+}

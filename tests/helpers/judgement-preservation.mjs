@@ -6,8 +6,8 @@ import {createHash} from 'node:crypto';
 
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
- '  // BEGIN independent judgement UI\n':'efa1c27d4a3c0a14dbc7c95143b018a9c8289e150a1f76ab175929e6f25da75d',
- '/* BEGIN independent judgement styles */\n':'962b94a63ae73dc83ae4bc756154f70af0bf02a5a29da2f2c6f1f8714c2e7862',
+ '  // BEGIN independent judgement UI\n':'3ea054e05c8530ca735f35f6e22f1083691450975a432caed3d4ed9c5150649f',
+ '/* BEGIN independent judgement styles */\n':'df15e1246ed3b28a7d16b0522c361aeaf9cc494cd56f023b1d5af9a8b01d2729',
  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
 });
 const REVIEWED_LIVE_REVERSE=Object.freeze({
@@ -66,6 +66,9 @@ function block(source,start,end,replacement=''){
 }
 export function withoutJudgementAdditions(file,source){
  if(file==='app-v510.js'){
+  // Exact source restoration for the bounded draft-storage additions only.
+  source=replace(source,"function loadUIState(){try{const raw=global.localStorage?.getItem?.(UI_KEY);return typeof raw==='string'&&raw.length<=2*1024*1024?safeJSON(raw,{}):{}}catch(_){return {}}}\n","function loadUIState(){try{return safeJSON(global.localStorage?.getItem?.(UI_KEY),{})}catch(_){return {}}}\n");
+  source=replace(source,"  persist(){let reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';try{const drafts=this.observedDrafts();reason=this.observedDraftError(drafts);if(reason)throw Error('保存できない入力');const value=JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug,observedGroup:this.observed.groupEnabled,observedSort:this.observed.sort,observedAllocation:this.observed.allocation,observedDrafts:drafts});if(value.length>2*1024*1024){reason='保存データのサイズが上限を超えています。';throw Error('保存データの上限超過')}reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';if(typeof global.localStorage?.setItem!=='function')throw Error('UI保存を利用できません');global.localStorage.setItem(UI_KEY,value);this.observed.persistenceFailed=false;this.observed.persistenceReason=''}catch(_){this.observed.persistenceFailed=true;this.observed.persistenceReason=reason}this.patchObservedPersistenceNotice()}\n","  persist(){try{global.localStorage?.setItem?.(UI_KEY,JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug}))}catch(_){}}\n");
   source=stripLiveReverseBlock(source,'\n// BEGIN reviewed live judgement compact helpers\n','// END reviewed live judgement compact helpers\n',REVIEWED_LIVE_JUDGE_COMPACT.jsHelpers);
   for(const name of Object.keys(REVIEWED_LIVE_JUDGE_COMPACT.methods))source=restoreCompactJudgementMethod(source,name);
   source=stripLiveReverseBlock(source,'// BEGIN reviewed live reverse display helpers\n','// END reviewed live reverse display helpers\n',REVIEWED_LIVE_REVERSE.helpers);
@@ -76,7 +79,9 @@ export function withoutJudgementAdditions(file,source){
    ["['home','judgement','live','store','records','data']","['home','live','store','records','data']"],
    ["home:'ホーム',judgement:'判別',live:","home:'ホーム',live:"],
    ["home:'⌂',judgement:'▥',live:","home:'⌂',live:"],
-   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true};\n",''],
+   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true,groupEnabled:saved.observedGroup===true,groupReport:null,sort:['input','tableNo','expectedSetting','p4','p5','p6'].includes(saved.observedSort)?saved.observedSort:'input',allocation:['all456','all56','all6'].includes(saved.observedAllocation)?saved.observedAllocation:'all456'};\n",''],
+   ["    this.restoreObservedDrafts(saved.observedDrafts);\n",''],
+   ["    if(this.handleObservedControl(event.target))return;\n",''],
    [',observedDebug:this.observed.debug',''],
    [',observedMode:this.observed.mode',''],
    ['${this.renderObservedSettingsButton()}',''],
@@ -95,6 +100,7 @@ export function withoutJudgementAdditions(file,source){
   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
  }else if(file==='index.html'){
+  source=replace(source,'<script src="./group-judge.js"></script><script src="./group-judge-view.js"></script>');
   source=replace(source,'Independent judgement page v1 — 2026-10-02:\n- Added a second-position judgement workspace with single/parallel observed-data inputs and shared detailed results.\n- Reused externalJudge and the existing MCP summaries; diagnostic taps expose values from the same invocation.\n- Added distribution concentration, setting probability bars and an explicit structured-row draft interface.\n- Judgment math, MCP result schemas, PRE/store analysis, sessions and run-record persistence are unchanged.\n\n');
   source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script>');
   source=replace(source,'function externalBonusJudgeQ(key,g,bb,rb,capture){','function externalBonusJudgeQ(key,g,bb,rb){');
@@ -105,8 +111,10 @@ export function withoutJudgementAdditions(file,source){
   source=block(source,'// Independent observed-data judgement: no session, context or persistence writes.\n','function rejudgeExternalMachine(r){','function rejudgeExternalMachine(r){');
   source=replace(source,' getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),\n judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),\n');
  }else if(file==='build.mjs'){
+  source=replace(source,"'group-judge.js','group-judge-view.js',");
   source=replace(source,"'judgement-model.js','judgement-view.js',");
  }else if(file==='tests/helpers/runtime.mjs'){
+  source=replace(source,"'group-judge.js','group-judge-view.js',");
   source=replace(source,",htmlSource=null",'');
   source=replace(source,"'judgement-model.js','judgement-view.js',",'');
   source=replace(source,"htmlSource??fs.readFileSync('index.html','utf8')","fs.readFileSync('index.html','utf8')");
