@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
- '  // BEGIN independent judgement UI\n':'3ea054e05c8530ca735f35f6e22f1083691450975a432caed3d4ed9c5150649f',
+ '  // BEGIN independent judgement UI\n':'237c72d031d53f67b15651b5fd70b30010f0ed88d15fbc7e5dffb2e032014117',
  '/* BEGIN independent judgement styles */\n':'df15e1246ed3b28a7d16b0522c361aeaf9cc494cd56f023b1d5af9a8b01d2729',
  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
 });

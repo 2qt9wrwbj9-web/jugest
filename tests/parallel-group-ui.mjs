@@ -204,6 +204,39 @@ test('parallel result rows retain compact most-likely text, including every tied
  assert.deepEqual(structuredClone(result),before);
 });
 
+test('unnumbered sorted results keep editor identities after editing and rejudging',async()=>{
+ const {app}=await ready();
+ app.acceptMachineRows([{...sample,tableNo:'',bb:4,rb:1,diff:''},{...sample,tableNo:'',bb:35,rb:40,diff:''}]);
+ const [weak,strong]=app.observed.rows;
+ change(app,'data-observed-group-toggle',null,true);app.handleObservedAction('judge-all');
+ change(app,'data-observed-sort','p4');
+ const labels=()=>[...app.mount.innerHTML.matchAll(/data-observed-result-row="([^"]+)"[\s\S]*?<b>([^<]+)<\/b>/g)].map(m=>[m[1],m[2]]);
+ assert.deepEqual(labels(),[[strong.id,'台番なし（2行目）'],[weak.id,'台番なし（1行目）']]);
+ const oldResult=weak.result;edit(app,weak,'rb','20');
+ assert.equal(weak.result,null);assert.equal(app.observed.groupReport,null);
+ app.render();assert.deepEqual(labels(),[[strong.id,'台番なし（2行目）']]);
+ app.handleObservedAction('judge-all');assert.notEqual(weak.result,oldResult);assert.equal(weak.result.input.rb,20);
+ assert.deepEqual(app.observed.rows.map(r=>r.id),[weak.id,strong.id]);
+ assert.ok(app.mount.innerHTML.includes('最も整合しない台 <b>台番なし（1行目）</b>'));
+ change(app,'data-observed-sort','input');
+ assert.deepEqual(labels(),[[weak.id,'台番なし（1行目）'],[strong.id,'台番なし（2行目）']]);
+});
+
+test('group row labels reject inherited or invalid editor numbers without inventing positions',async()=>{
+ const {ctx,bridge}=await ready({loadApp:false});
+ const report=ctx.JUGESTGroupJudge.analyze([
+  {id:'9001',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''})},
+  {id:'9002',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'007',games:8000,bb:40,rb:44,diff:''})}
+ ]);
+ const view=ctx.JUGESTGroupJudgeView;
+ for(const rowNumbers of [Object.create({'9001':99}),null,...[0,-1,2.5,Infinity,'7',true].map(n=>({'9001':n}))]){
+  const html=view.render(report,{rowNumbers});
+  assert.ok(html.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
+  assert.ok(html.includes('<div class="observed-group-conditional-row"><b>007</b>'));
+  assert.doesNotMatch(html,/台番なし（(?:99|9001)行目）/);
+ }
+});
+
 test('sorting changes only result order with stable ties, while labels and input order remain intact',async()=>{
  const {app,ctx}=await ready();app.acceptMachineRows([...rows,{...sample,tableNo:'101'}]);app.handleObservedAction('judge-all');
  const inputs=plain(app.observed.rows.map(r=>({id:r.id,input:r.input})));

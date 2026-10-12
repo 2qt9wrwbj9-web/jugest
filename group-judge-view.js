@@ -5,7 +5,14 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const number=(value,digits=2)=>Number.isFinite(value)?value.toLocaleString('ja-JP',{maximumFractionDigits:digits}):'—';
 const percent=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
 const pair=(label,value)=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
-const rowLabel=row=>{const value=String(row?.tableNo||`台番なし（行${row?.id||'—'}）`);return value.length>40?value.slice(0,39)+'…':value;};
+function rowLabels(report,rowNumbers={}){
+ const targets=new Map((report.hypotheses[0]?.refutation?.rows||[]).map((row,i)=>[String(row.id),i+1]));
+ return row=>{
+  const id=String(row?.id),ordinal=Object.prototype.hasOwnProperty.call(rowNumbers||{},id)?rowNumbers[id]:undefined;
+  const fallback=Number.isSafeInteger(ordinal)&&ordinal>0?`台番なし（${ordinal}行目）`:targets.has(id)?`台番なし（対象${targets.get(id)}台目）`:'台番なし';
+  const value=String(row?.tableNo||fallback);return value.length>40?value.slice(0,39)+'…':value;
+ };
+}
 const colors=['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'];
 function evidence(logRatio){
  if(logRatio===Infinity)return '比較側の支持なし';
@@ -31,7 +38,7 @@ function allocationLabel(profile){
  if(counts.reduce((a,n)=>a+n,0)<=12)return profile.label||counts.map((n,i)=>String(i+1).repeat(n)).join('');
  return counts.flatMap((n,i)=>n>0?[`設定${i+1} ${number(n,0)}台`]:[]).join(' · ');
 }
-function conditional(h){
+function conditional(h,rowLabel){
  const c=h.conditional;
  if(!c?.available)return `<p class="observed-error" role="status">${esc(c?.reason||'この仮説での配分を推定できません。')}</p>`;
  const profileList=profiles=>`<ol class="observed-group-allocations">${profiles.map(profile=>`<li data-observed-count-profile><b>${esc(allocationLabel(profile))}</b><span>${percent(profile.probability)}</span></li>`).join('')}</ol>`;
@@ -45,7 +52,7 @@ function conditional(h){
 function sensitivity(h){
  return `<details class="observed-group-details"><summary>根拠比の重み感度</summary><p class="observed-help">設定の配分重みを変えた比較です。店舗の実績から得た頻度や、全台系を使う頻度ではありません。</p>${(h.sensitivity||[]).map(s=>`<div class="observed-group-sensitivity"><b>${esc(s.label)}</b><span>既存モデル ${esc(evidence(s.logEvidenceRatio))}</span><span>ボーナスだけ ${esc(evidence(s.bonusLogEvidenceRatio))}</span></div>`).join('')}</details>`;
 }
-function refutation(h){
+function refutation(h,rowLabel){
  const r=h.refutation;
  return `<details class="observed-group-details"><summary>ボーナスの下振れ検査・前提</summary><dl class="observed-input-summary">${pair('3仮説も考慮したp値',tinyP(r.logFamilyP))}${pair('最も下振れした台',rowLabel(r.weakestRow))}${pair('台数補正後のp値',tinyP(r.logP))}${pair('最も整合しない台のログ差',number(-h.worstRow.logCompatibility,3))}</dl>
  <p class="observed-help">BB・RB・合算の下側累積確率を設定ごとに調べ、3項目の補正後、許容設定の中で最も保守的な値を使います。全台数と画面の3仮説も補正し、p値が0.05未満なら「反証あり」です。</p>
@@ -57,10 +64,11 @@ function sameSetting(report){
  const reference=report.aggregateJudgement;
  return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
 }
-function render(report,{hypothesis='all456'}={}){
+function render(report,{hypothesis='all456',rowNumbers}={}){
  if(!report)return '';
  if(!report.ok)return `<section class="panel observed-group-report" data-observed-group-report aria-label="全台系判別"><h2>全台系の入力を確認</h2><div class="observed-error" role="alert">${(report.errors||['判別できませんでした。']).map(error=>`<p>${esc(error)}</p>`).join('')}</div><p class="observed-help">入力した台をすべて個別判別してから、2〜60台の集合として比較します。</p></section>`;
  const a=report.aggregate,h=report.hypotheses.find(x=>x.id===hypothesis)||report.hypotheses[0];
+ const rowLabel=rowLabels(report,rowNumbers);
  const low=(report.warnings||[]).find(w=>w.startsWith('2000G未満の台が'))?.match(/台が(\d+)\//)?.[1];
  const reverse=(report.warnings||[]).filter(w=>w.startsWith('台')&&w.includes('：差枚の逆算に警告があります。')).length;
  const severe=[...(low?[`2000G未満 ${low}/${report.n}台：小稼働では区別が難しくなります。`]:[]),...(a.mixedMachines?['機種が混在しています。合算確率は観測の参考値です。']:[]),...(reverse?[`差枚の逆算に警告 ${reverse}台。各台の入力を確認してください。`]:[])];
@@ -73,7 +81,7 @@ function render(report,{hypothesis='all456'}={}){
  <details class="observed-group-details"><summary>根拠比の見方・比較の前提</summary><p class="observed-help">根拠比は、各仮説と、その比較側である「少なくとも1台が許容設定の外」のデータへの適合を比べる倍率です。設定1〜6を等重みとし、各仮説の許容集合で重みを正規化します。店舗が全台系を使う事前頻度は採用していません。</p><p class="observed-help">既存モデルとボーナスだけの比は同じ観測の別計算です。独立証拠として掛け合わせません。全6 ⊂ 全56 ⊂ 全456なので、3仮説は足して100%になる分類ではありません。</p></details>
  ${severe.length?`<div class="observed-group-warnings" role="status">${severe.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
  <div class="observed-group-allocation-head"><h3>仮説を置いた設定配分</h3><label>配分を見る仮説<select data-observed-allocation aria-label="配分を見る仮説">${report.hypotheses.map(item=>`<option value="${esc(item.id)}" ${h.id===item.id?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label></div>
- ${conditional(h)}${sensitivity(h)}${refutation(h)}${sameSetting(report)}
+ ${conditional(h,rowLabel)}${sensitivity(h)}${refutation(h,rowLabel)}${sameSetting(report)}
  <details class="observed-group-details"><summary>注意点を確認</summary>${(report.warnings||[]).map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
  </section>`;
 }

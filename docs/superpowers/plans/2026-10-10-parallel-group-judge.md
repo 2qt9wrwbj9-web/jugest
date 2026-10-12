@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 基準SHA f728b2587a9bdd81541ccb50d3ae802a8492486a。開発ブランチwork/parallel-group-judge-20261010のみを保存。
+- 元の基準SHA f728b2587a9bdd81541ccb50d3ae802a8492486a。2026-10-12はユーザー指定の保存版a563a04からwork/parallel-group-checkpoint-20261012を継続。元ブランチは保持。
 - 個別数学・設定表・MCP・PRE・店舗・DB・同期を変更しない。合算を追加証拠として使用しない。
 - 仮説の成立確率は表示しない。包含仮説を排他的な4択にしない。条件付き配分は条件を常に明示する。
 - 製品依存追加なし。本番VPSへの書込み・サービス変更・deploy/vps/mainへのpush/mergeなし。
@@ -64,3 +64,39 @@ VPS解析runtimeへのgroupファイル追加は不要と判明したため、�
 - [x] 仕様・数学・画面・互換性の独立レビューを依頼。重要な指摘を再現テストから修正し再確認。
 - [ ] ブランチ全体を最終独立レビューし、必要な修正を再検証する。
 - [ ] 最終結果を記録・コミット、GitHub専用開発ブランチへpushし保存SHAを照合。
+
+## 2026-10-12 再開：完成済みTask 1・2は再実装しない
+
+保存版READMEと失敗ログを先に確認し、元環境・bundle・a563a04を保全。既存数学／設定表の変更、設計の全面置換は禁止。以下だけを継続する。
+
+### Task 4: 残る表示3件の修正と境界条件
+
+**Files:** app-v510.js, group-judge-view.js, judgement-view.js, tests/parallel-group-ui.mjs, tests/helpers/judgement-preservation.mjs.
+
+**Interfaces:** Consumes existing report and complete editor rows; Produces display-only render(report,{hypothesis,rowNumbers}) with stable ID to current editor ordinal. Standalone fallback identifies target ordinal. Numerical report and ordinary q stay unchanged.
+
+- [x] 既存16件を実行し13成功・3失敗を再現。Expected: 行番号と最有力表示の3件だけが失敗。
+- [x] 許容設定や計算を変えず、入力全行の番号対応を渡して全表示を統一。最有力表示も復帰。Expected: 16/16成功。
+- [x] 並べ替え後の編集・再判別、番号情報の型／継承境界を追加。Expected: 18/18成功。
+- [ ] 保護検査と個別1,024件を確認、途中保存。Expected: 既存数学・保護fixtureは変更なし。
+
+### Task 5: 数学と反証能力の最終確認
+
+**Files:** tests/group-judge-simulation.mjs, validation documents and logs; group-judge.js remains unchanged unless a proven defect requires a scoped fix.
+
+**Interfaces:** Consumes existing model/tables; Produces reproducible rates that distinguish true-hypothesis rejection, false-hypothesis nonrejection and evidence ratio from event probability.
+
+- [ ] 既存SciPy412CDF／独立列挙27／エンジン17件／個別1,024件を新ログで再検証。
+- [ ] 既存7条件を維持し、近い低設定混在・2台・低稼働・差枚入力有無の検証を追加。真偽両側の反証率・否定できない率を保存。
+- [ ] 限界・低い反証能力を画面の既存説明と照合し、結果を記録して途中保存。
+
+### Task 6: 全体・ブラウザ・独立レビュー・保存
+
+**Files:** tests/parallel-group-browser.mjs, completion-20261012 evidence and screenshots, final README.
+
+**Interfaces:** Consumes completed UI/model; Produces fresh all-suite results, mobile evidence and reviewable development preview.
+
+- [ ] Chromium/WebKit × built/patched × 320/375/390/430px。入力、空台番の対応、複製・削除・空行、再判別、並べ替え、画面切替、reloadを実操作。
+- [ ] npm test／npm --prefix vps test。Expected: 全件成功、旧73/553や保存時79/553は最新結果の代用にしない。
+- [ ] 別コンテキストの最終レビュー。重要指摘は再現テストから修正。公開本番へは反映しない。
+- [ ] ヒロが画面・計算例を確認できる開発成果、全ログ、レビュー結果、次回READMEをGitHub保存し遠隔SHAを照合。
