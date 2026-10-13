@@ -1,0 +1,9 @@
+# 本番反映直前の読み取り照合（2026-10-14）
+
+反映候補はeb8a9e175cbcaeacea41481a8ffe053456b94e31。現在の本番Gitと実稼働currentは3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7で一致。14ソースのSHA-256も現行Git基準と完全一致し、追跡ファイル差分なし。jugest-web.serviceと自動反映timerはactive、ローカルhealthはHTTP200・ok:true。
+
+候補は現在の本番コミットを祖先に持つ。vps/src、vps/scripts、vps/systemd、apiは現行とバイト一致。新しいDB/API/サービス設定の変更は不要。DBはこの接続権限ではmetadataにもアクセス不可だったため、それ以上調査せず内容も開いていない。DB変更・サービス再起動・本番ブランチ更新は一切実施していない。
+
+許可後の対象：判別UIと全台系エンジンの完成版をdeploy/vpsへ反映。明示許可を確認後、再度遠隔現行SHAを読み取りし、3a0ad0aから動いていなければexpected_shaを指定した非force更新でeb8a9e1へ進める。更新すると既存自動反映がVPS全体テスト→current切替→web再起動→internal/nginx healthを行う。health失敗時は既存実装の前リリース復帰が働く。成功時は稼働SHA・health・静的資産と判別画面を確認する。
+
+本書は実行前の照合と具体的な反映手順。現在はユーザーの本番反映の明示許可を待つ段階。元の禁止指示を一般的な「進めて」だけで解除しない。

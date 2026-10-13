@@ -1,0 +1,58 @@
+{
+  "currentTarget": "/opt/jugest/releases/3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+  "currentSHA": {
+    "code": 0,
+    "out": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7"
+  },
+  "webService": {
+    "code": 0,
+    "out": "active"
+  },
+  "deployTimer": {
+    "code": 0,
+    "out": "active"
+  },
+  "trackedChanges": {
+    "code": 0,
+    "out": ""
+  },
+  "fileHashes": {
+    "index.html": "499657cfc8de67b62bf7ff93a7c2e5553b60e89104a87bdbdcbe2d05642e006a",
+    "app-v510.js": "d043ff679ecbba15cd5319c2bb1aabb2f6fd1023cbcdb4a1c037f51328eefe3b",
+    "app-v510.css": "f9b96327389b45089255ef2d70a5a69a8d6230b5a1eefa0bb5c4de519dfddf80",
+    "judgement-model.js": "4a6af35a9ecc987f80d684f7cae9f9d12453dad28fc585bac927ff558ffc3e21",
+    "judgement-view.js": "21b5de181b262696b5e0ebdd80aa726a54e56dc752f5545479e7b921c0d1ce6a",
+    "core-v510.js": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+    "sync-core.js": "abc391f2e7ca79a37cdba1f99e8fbfea54429df7a6d45be7feb6d89cda3c540d",
+    "machine-names.js": "7cb86660dbe9ba30c3a880bfa17a99fa9f36a4ce25ab723cd1f184b68ad5c04c",
+    "hanahana-judge.js": "d8c540d14aa5a8e06fe5dadd01a29251d9d37e6243d4a136891c8870282740c0",
+    "missing-inference.js": "1a44d1192bcbd7ec2863b9dbcad46e2c0301124f68506f3491ba45448d49e98d",
+    "vps/src/analysis/runtime-adapter.mjs": "8067c951f0955f85787ebfc7052a91db76115c70a05b2b8b0dfa872583e59d82",
+    "vps/src/collectors/pia-public.mjs": "6242ea25941d0a94cc29722980979a2a1051f16fd745260d7c4659ef89b7ed79",
+    "vps/src/deploy-runner.mjs": "2b04c8ae1442c859b2dfea0807ac49fe807f256794cc4c6e5b37823cf5dc913b",
+    "vps/src/deploy-core.mjs": "ec8423f7aea4e16f22a6b8d6c029710c462e5a67480873c343f782d583c5b696"
+  },
+  "dbFiles": {
+    "jugest.sqlite": {
+      "metadataReadable": false
+    },
+    "relay.sqlite": {
+      "metadataReadable": false
+    },
+    "access.sqlite": {
+      "metadataReadable": false
+    }
+  },
+  "localHealth": {
+    "status": 200,
+    "ok": true
+  },
+  "deploymentCandidate": "eb8a9e175cbcaeacea41481a8ffe053456b94e31",
+  "productionBase": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+  "all14LiveSourceHashesMatchGitBase": true,
+  "vpsApiAndDeploymentCodeExactlyUnchanged": true,
+  "databaseMigrationRequired": false,
+  "databaseContentsRead": false,
+  "approvalRequiredBeforeProductionChanges": true,
+  "productionChangesPerformed": false
+}
