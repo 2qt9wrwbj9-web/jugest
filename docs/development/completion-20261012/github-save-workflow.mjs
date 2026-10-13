@@ -27,6 +27,7 @@ async function chunk(file,offset,size){
   return await chunk(file,offset,half)+(offset+half<file.length?await chunk(file,offset+half,size-half):'');
  }
 }
+async function request(call){for(let attempt=0;attempt<4;attempt++){try{return data(await call())}catch(error){if(attempt===3||!/503|502|504|Transport|connection termination/.test(String(error)))throw error;await new Promise(resolve=>setTimeout(resolve,2000))}}}
 const elements=[];
 for(const file of manifest.files){
  if(file.reuse){elements.push({path:file.path,mode:file.mode,type:'blob',sha:file.sha});continue}
@@ -36,14 +37,14 @@ for(const file of manifest.files){
   const results=await Promise.allSettled(chunks.slice(i,i+4).map(c=>chunk(file,c.offset,c.size)));
   for(const result of results){if(result.status==='rejected')throw result.reason;parts.push(result.value)}
  }
- const blob=data(await tools.mcp__codex_apps__github_create_blob({repository_full_name:repository,content:parts.join(''),encoding:file.encoding}));
+ const blob=await request(()=>tools.mcp__codex_apps__github_create_blob({repository_full_name:repository,content:parts.join(''),encoding:file.encoding}));
  if(blob.sha!==file.sha)throw Error('Git blob differs: '+file.path);
  elements.push({path:file.path,mode:file.mode,type:'blob',sha:blob.sha});
- notify({savedBlob:file.path,bytes:file.bytes});
+ notify({savedBlob:file.path,sha:blob.sha,bytes:file.bytes});
 }
-const tree=data(await tools.mcp__codex_apps__github_create_tree({repository_full_name:repository,base_tree_sha:manifest.baseTree,tree_elements:elements}));
+const tree=await request(()=>tools.mcp__codex_apps__github_create_tree({repository_full_name:repository,base_tree_sha:manifest.baseTree,tree_elements:elements}));
 if(tree.sha!==manifest.tree)throw Error('Git tree differs');
-const commit=data(await tools.mcp__codex_apps__github_create_commit({repository_full_name:repository,parent_sha:manifest.base,...(manifest.additional_parent_shas?.length?{additional_parent_shas:manifest.additional_parent_shas}:{}),tree_sha:tree.sha,message:manifest.message}));
-const ref=data(await tools.mcp__codex_apps__github_update_ref({repository_full_name:repository,branch_name:branch,expected_sha:manifest.base,force:false,sha:commit.sha}));
+const commit=await request(()=>tools.mcp__codex_apps__github_create_commit({repository_full_name:repository,parent_sha:manifest.base,...(manifest.additional_parent_shas?.length?{additional_parent_shas:manifest.additional_parent_shas}:{}),tree_sha:tree.sha,message:manifest.message}));
+const ref=await request(()=>tools.mcp__codex_apps__github_update_ref({repository_full_name:repository,branch_name:branch,expected_sha:manifest.base,force:false,sha:commit.sha}));
 store('resumeLastSaved',{sha:commit.sha,tree:tree.sha,local:manifest.head,files:manifest.files.length});
 text({saved:commit.sha,tree:tree.sha,local:manifest.head,files:manifest.files.length,ref});

@@ -1,0 +1,21 @@
+{
+  "frontendCommands": 83,
+  "frontendExitCode": 0,
+  "vpsTests": 570,
+  "vpsExitCode": 0,
+  "uiTests": 22,
+  "engineTests": 17,
+  "myVITests": 2,
+  "currentIndividualFullMatches": 1152,
+  "legacyWithApprovedNameOnlyMatches": 1024,
+  "legacyRawFullMatches": 640,
+  "browserScenarios": 16,
+  "previewScenarios": 8,
+  "screenshots": 18,
+  "independentCDFCases": 412,
+  "independentEnumerations": 27,
+  "simulationTrials": 4800,
+  "pairedDifferenceChecks": 4800,
+  "productionBase": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+  "productionChangesByThisTask": false
+}

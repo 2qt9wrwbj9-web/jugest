@@ -13,4 +13,4 @@
 - [本番反映前の停止地点](docs/development/completion-20261012/deployment-handoff.md)
 - [作業と判断の記録](docs/development/completion-20261012/progress.md)
 
-最新版の店舗比較UI de812821 は開発側にのみ統合済み。新しいUI・個別結果・数学の回帰を実行し、最終レビューと警告表示修正を進めている。完了判定・最終保存SHAは最新の再開記録へ記す。
+開発版は本番反映直前まで完成。最新本番3a0ad0aの機種名・マイVI・店舗傾向・PIA取得復旧を開発側へ保持。フロント83/83、VPS570/570、UI22/22、ブラウザ16/16と確認版8/8。独立レビューのImportantは解消、Minor1件は報告。最終結果と再開条件は [final-report.md](docs/development/completion-20261012/final-report.md) を読む。本番反映は未実施。

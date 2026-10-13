@@ -61,29 +61,65 @@ export function normalizePiaJugglerRow(row){
   };
 }
 
-export function validatePiaSnapshot(data,{minMachineCount=80}={}){
+// PIA resets a replaced machine's rolling history to one row on installation.
+// Before accepting shortened history, verify the transition against the last
+// successfully stored snapshot. An unchanged machine must not lose history.
+export function validatePiaSnapshot(data,{minMachineCount=80,previousSnapshot=null}={}){
   if(!data||data.status!==0||!Array.isArray(data.ranking))throw new Error('PIA RankingTop returned an invalid payload');
   const snapshotDate=validDate(data?.server_date_time?.date);
   if(!snapshotDate)throw new Error('PIA RankingTop did not include a valid server date');
-  const counts=new Map();
+  const groups=new Map();
   for(const row of data.ranking){
     if(Number(row?.store_id)!==35)throw new Error('PIA RankingTop mixed an unexpected store');
     const no=String(row?.machine_no??'');if(!no)throw new Error('PIA RankingTop row is missing machine_no');
-    counts.set(no,(counts.get(no)||0)+1);
+    if(!groups.has(no))groups.set(no,[]);
+    groups.get(no).push(row);
   }
-  if(counts.size<minMachineCount)throw new Error(`PIA RankingTop machine count too small: ${counts.size}`);
-  const irregular=[...counts].filter(([,count])=>count!==30);
-  if(irregular.length)throw new Error(`PIA RankingTop is not a 30-row rolling history for ${irregular.length} machine(s)`);
-  return {snapshotDate,snapshotTime:String(data?.server_date_time?.time??''),rowCount:data.ranking.length,machineCount:counts.size};
+  if(groups.size<minMachineCount)throw new Error(`PIA RankingTop machine count too small: ${groups.size}`);
+  const previousGroups=new Map();
+  for(const row of previousSnapshot?.ranking??[]){
+    const no=String(row?.machine_no??'');
+    if(!previousGroups.has(no))previousGroups.set(no,[]);
+    previousGroups.get(no).push(row);
+  }
+  let shortened=0;
+  for(const [no,rows] of groups){
+    if(rows.length>30)throw new Error(`PIA RankingTop history exceeds 30 rows for machine ${no}`);
+    const first=rows[0];
+    if(rows.some(row=>String(row?.name??'')!==String(first?.name??'')||
+      String(row?.sis_machine_code??'')!==String(first?.sis_machine_code??''))){
+      throw new Error(`PIA RankingTop mixed machine identities for machine ${no}`);
+    }
+    if(rows.length===30)continue;
+    shortened++;
+    const prior=previousGroups.get(no);
+    if(!previousSnapshot)throw new Error(`PIA RankingTop is not a 30-row rolling history for ${shortened} machine(s)`);
+    if(!prior){
+      if(rows.length===1)continue; // genuinely new machine number
+      throw new Error(`PIA RankingTop has unverified short history for machine ${no}`);
+    }
+    const old=prior[0];
+    const identityChanged=String(old?.name??'')!==String(first?.name??'')||
+      String(old?.sis_machine_code??'')!==String(first?.sis_machine_code??'')||
+      (Boolean(old?.store_machine_id)&&Boolean(first?.store_machine_id)&&
+        String(old.store_machine_id)!==String(first.store_machine_id));
+    if(identityChanged){
+      if(rows.length===1)continue; // replacement's first recorded business day
+    }else if(prior.length<30&&rows.length===prior.length+1){
+      continue; // history grows one row per day until it reaches 30
+    }
+    throw new Error(`PIA RankingTop unexpected rolling history transition for machine ${no}: ${prior.length} -> ${rows.length}`);
+  }
+  return {snapshotDate,snapshotTime:String(data?.server_date_time?.time??''),rowCount:data.ranking.length,machineCount:groups.size,shortenedMachineCount:shortened};
 }
 
-export async function fetchPiaPublicSnapshot({fetchImpl=fetch,minMachineCount=80}={}){
+export async function fetchPiaPublicSnapshot({fetchImpl=fetch,minMachineCount=80,previousSnapshot=null}={}){
   const body=new URLSearchParams({machine_type:'S',store_id:'35',limit:'5000'});
   const response=await fetchImpl(PIA_ENDPOINT,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded;charset=UTF-8'},body,signal:AbortSignal.timeout(20000)});
   if(!response?.ok)throw new Error(`PIA RankingTop HTTP ${response?.status??'error'}`);
   const rawText=await response.text();
   let data;try{data=JSON.parse(rawText)}catch{throw new Error('PIA RankingTop returned non-JSON data')}
-  const meta=validatePiaSnapshot(data,{minMachineCount});
+  const meta=validatePiaSnapshot(data,{minMachineCount,previousSnapshot});
   return {...meta,data,rawText,snapshotHash:sha256(rawText)};
 }
 
@@ -109,11 +145,20 @@ function addedRows(previousRows,currentRows){
 
 export function derivePiaBusinessDay(previousSnapshot,currentSnapshot,currentDate,{minComparable=20}={}){
   const previous=groupRows(previousSnapshot),current=groupRows(currentSnapshot);
-  let comparable=0,oneAdd=0,multiAdd=0,zeroAdd=0,newMachines=0,unsupported=0;
+  let comparable=0,oneAdd=0,multiAdd=0,zeroAdd=0,newMachines=0,unsupported=0,normalizedComparable=0;
   const machines=[];
   for(const [no,rows] of current){
     const prior=previous.get(no);
-    if(!prior){newMachines++;continue}
+    if(!prior){
+      newMachines++;
+      // A newly assigned table number has no previous group to diff against.
+      // Only its first (single-row) day is unambiguous.
+      if(rows.length===1){
+        const normalized=normalizePiaJugglerRow(rows[0]);
+        if(normalized)machines.push(normalized);else unsupported++;
+      }
+      continue;
+    }
     comparable++;
     const added=addedRows(prior,rows);
     if(added.length===0){zeroAdd++;continue}
@@ -121,10 +166,10 @@ export function derivePiaBusinessDay(previousSnapshot,currentSnapshot,currentDat
     oneAdd++;
     const normalized=normalizePiaJugglerRow(added[0]);
     if(!normalized){unsupported++;continue}
-    machines.push(normalized);
+    machines.push(normalized);normalizedComparable++;
   }
   machines.sort((a,b)=>Number(a.tableNo)-Number(b.tableNo)||a.tableNo.localeCompare(b.tableNo));
-  const oneAddCoverage=comparable?oneAdd/comparable:0,normalizedCoverage=comparable?machines.length/comparable:0;
+  const oneAddCoverage=comparable?oneAdd/comparable:0,normalizedCoverage=comparable?normalizedComparable/comparable:0;
   const ready=comparable>=minComparable&&oneAddCoverage>=0.95&&normalizedCoverage>=0.90&&(multiAdd/comparable)<=0.05;
   const businessDate=previousDate(currentDate);
   const warnings=[];
@@ -164,7 +209,7 @@ export async function collectPiaPublicOnce(db,{rawRoot,fetchImpl=fetch,nowIso=ne
   if(typeof rawRoot!=='string'||!rawRoot.trim())throw new TypeError('rawRoot is required');
   const prior=readState(db);
   let snapshot;
-  try{snapshot=await fetchPiaPublicSnapshot({fetchImpl,minMachineCount})}
+  try{snapshot=await fetchPiaPublicSnapshot({fetchImpl,minMachineCount,previousSnapshot:prior?.last_snapshot_json?JSON.parse(prior.last_snapshot_json):null})}
   catch(error){
     writeState(db,{collector_id:PIA_COLLECTOR_ID,source_store_id:PIA_SOURCE_STORE_ID,last_attempt_at:nowIso,last_result:'fetch_error',last_error:String(error?.message??error),updated_at:nowIso});
     throw error;

@@ -1,3 +1,18 @@
+# 最終状態：本番反映直前（2026-10-14）
+
+正式な再開地点a563a04から継続して完成。開発ブランチは `work/parallel-group-checkpoint-20261012`。元535ファイル／未保存2ファイル／12コミットのbundleと原環境を保全。元の設計を再実装していない。
+
+UI22/22、エンジン17/17、MyVI追加2/2、フロント83/83、ローカルVPS570/570、最新個別9機種×128=1,152全出力完全一致。旧8機種1,024件は承認済みmachineNameだけ更新、全計算と他フィールド完全一致（640件は全フィールドも一致）。ブラウザ16/16・確認版8/8、画面18枚。独立CDF412／全設定列挙27とシミュレーション4,800反復・差枚4,800ペアも成功。
+
+最新本番 `3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7` のMyVI・機種名・店舗UI・PIA取得復旧を開発側に保持。追加の本番更新がある場合は反映前に読み取り照合する。重要なレビュー指摘はTDDで解消。範囲外G入力の対象順案内にMinor1件を延期。
+
+最終結果は [final-report.md](final-report.md)、最新操作ログは browser-current-production.log／preview-current-production.log、全体ログは frontend-ready.log／vps-pia-recovery-complete.log。最終保存SHAはこのREADMEと同一のGitHubコミット（`git rev-parse HEAD`）。直前checkpointは66f837f。原環境・過去証拠・失敗ログは削除しない。
+
+ヒロの確認用は [preview.html](preview.html) と images-current-production/。確認版は架空5台、外部通信遮断、実際の製品コードから生成。物理iPhoneのソフトキーボードは未確認。本番操作はゼロ。本番反映には直前のヒロの明示許可が必要。
+
+---
+以下は保全した作業段階の履歴であり、最新の結果ではない。
+
 # 並列判別・全台系 完成作業の再開記録
 
 正式な再開地点：a563a04e4771420ef8689593e90cf6aa97e36c3d。作業ブランチ：work/parallel-group-checkpoint-20261012。元のf728b258基準・d8d3e9cの12コミット・未保存2ファイルはcheckpoint-20261012と元環境に保持。元の成果は上書きしない。

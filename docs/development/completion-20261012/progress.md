@@ -25,3 +25,13 @@ Task7: production6945776 union resolved4loader conflicts. Latest27 production fi
 
 Task7: Ruling: strip only the exact reviewed group loader additions before reversing approved machine-name edits — the name manifest pins full loader lines, so composing transformations in the opposite order caused a false failure — if wrong, an unauthorized loader edit could escape; unchanged original protected hashes and strict one-occurrence checks remain the gate. Collector preservation RED→GREEN20 hashes, no fixture values changed.
 Task7: Ruling: retain current production 6945776, with V/VI aggregate reference allowed only after checking all six b/r pairs — avoids overwriting published features and avoids pooling different tables — if wrong, current compatibility and explicit perturbed-table regression must fail.
+
+Task7: Ruling: import production3a0ad0a PIA recovery byte-exact into development — two collector-only files do not overlap judgement and must survive any future deployment — if wrong, collector behavior may differ; latest fullVPS570/570 and exact-source checks guard it.
+Final: Ruling: actual iPhone keyboard/OS remains unverified — two engines/four widths satisfy browser scope, physical input limits are explicit — cost if wrong: a device-specific usability issue may remain.
+Final: Ruling: event incidence and difference-model empirical calibration are unknown — show relative evidence and conditional estimates, not event probability — cost if wrong: users may overtrust model-based ratios; persistent UI warnings explain this.
+Final: Ruling: live production code/DB deferred to authorized deployment preflight — this task uses readonly Git and local tests — cost if wrong: live drift must be caught before publishing.
+Final: Ruling: already published store UI and collection internals retained byte-exact, not redesigned — scope is judgement; full integration regressions cover the boundary — cost if wrong: upstream issues may remain.
+Task6: complete — final independent review0Critical/1Important/1Minor; Important warning identity RED→GREEN, Minor explicitly deferred. Browser16/16, preview8/8, images18, original535/2dirtyhashes preserved.
+Task7: complete verification — current prod3a0ad0a retained; front83/83, localVPS570/570, latest1152 exact, legacy1024 all numerical fields exact, MyVI2/2; final remote save pending.
+
+Final verification: npm test on the post-PIA-merge tree exit0 (frontend-ready.log83/83); npm --prefix vps test exit0 (vps-pia-recovery-complete.log570/570). Numeric independent audit412/27, browser16/preview8 exit0, screenshot18. Product source unchanged after these checks. Final GitHub upload pending lease-checked ref update.

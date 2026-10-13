@@ -39,3 +39,9 @@ NODE_PATH=/path/to/playwright/node_modules \
 ```
 
 今回の環境設定：PlaywrightはCodex primary runtime、Chromiumは/workspace/scratch/e04472ff9640/browser-runtime/chromium、WebKitは/workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336。日本語フォント設定は/workspace/scratch/2f9e5eaabf52/browser-deps/fonts.conf。復元済みの共有ライブラリをWebKit実行環境へリンクし、既知のホスト検出を省略するPLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1を使用した。全操作の成功は実際のブラウザ起動で検証済み。
+
+## 2026-10-14 最終：最新本番由来の機能を保持した開発版
+
+browser-current-production.log／results.json：16/16。preview-current-production.log／results.json：8/8。browser-current-production-exit-codes.jsonは両方0。画像はimages-current-production/に18枚。320px入力とWebKit430px全台系画面も目視確認した。390pxの警告ID衝突はmy6とmyの実入力を使う。横スクロールなし、16px以上の文字、44px以上の行操作、結果失効と行識別、保存／再読み込みを検査。
+
+機種名の読み込み追加により確認コピーはindex＋10スクリプト＋CSS＋ロゴの13ソース。preview.sources.jsonの全SHAと成果物SHAが実ソースと一致。PIA復旧の最後の2ファイル取り込みはVPScollectorのみで、この13ソースは変更しない。WebKitの依存リンクは永続しないため同一実行内でリンク復元とnodeテスト実行を行った。物理iPhoneキーボードは未検証。
