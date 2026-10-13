@@ -19,6 +19,7 @@ const shopName=inferShopName();
 const decEnt=(s='')=>{const map={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '};return String(s).replace(/&#x([0-9a-f]+);/gi,(_,x)=>String.fromCodePoint(parseInt(x,16))).replace(/&#([0-9]+);/g,(_,x)=>String.fromCodePoint(parseInt(x,10))).replace(/&([a-z]+);/gi,(z,k)=>map[k.toLowerCase()]??z)};
 const strip=(s='')=>decEnt(String(s).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<br\s*\/?\s*>/gi,'\n').replace(/<[^>]+>/g,' ')).replace(/[\u00a0\t\r ]+/g,' ').replace(/\n\s+/g,'\n').trim();
 const aliases=[
+ ['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],
  ['my',['マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],
  ['im',['ネオアイムジャグラーEX','ネオアイムジャグラー','ネオアイム']],
  ['go',['ゴーゴージャグラー3','ゴーゴージャグラーⅢ','ゴージャグ3','ゴージャグⅢ']],
@@ -116,7 +117,7 @@ const payload={
 };
 const json=JSON.stringify(payload,null,2);
 const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const machineNames={my:'マイジャグV',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};
+const machineNames={my:'マイジャグV',my6:'マイジャグⅥ',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};
 const counts=day.quality?.machineCounts||{};
 const countText=Object.entries(counts).filter(([,n])=>n>0).map(([k,n])=>`${machineNames[k]||k} ${n}`).join(' / ');
 const root=document.createElement('div');root.id='jugglerSingleDayExporter';

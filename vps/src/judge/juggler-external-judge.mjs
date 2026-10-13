@@ -1,10 +1,10 @@
 import '../../../judgement-model.js';
 import {runExistingJugglerJudgementBatch} from '../analysis/runtime-adapter.mjs';
 
-export const JUGGLER_MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
+export const JUGGLER_MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 
 const MACHINE_NAMES=Object.freeze({
-  my:'マイジャグV',im:'ネオアイムジャグラー',go:'ゴーゴージャグラー3',fk:'ファンキージャグラー2',
+  my:'マイジャグV',my6:'マイジャグⅥ',im:'ネオアイムジャグラー',go:'ゴーゴージャグラー3',fk:'ファンキージャグラー2',
   hp:'ハッピージャグラーVⅢ',gg:'ジャグラーガールズSS',mr:'ミスタージャグラー',um:'ウルトラミラクルジャグラー'
 });
 

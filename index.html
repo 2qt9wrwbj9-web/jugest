@@ -582,22 +582,24 @@ simple:[{g:5.93,b:267.49,r:425.56},{g:5.93,b:261.10,r:402.06},{g:5.93,b:256.00,r
 revch:[35.1,35.0,34.8,34.6,33.5,33.0],bell:1024,pier:1024,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"ウルトラミラクルジャグラー：ガリぞう説。🍇・非重複🍒・BIG・REGで判別。後ヅモは設定別の全チェリー確率を使用。"}
 };
+// The My Juggler VI alias intentionally uses the same judgement parameters as V.
+M.my6={...M.my,name:"マイジャグⅥ",defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。"};
 // Restore full Funky detailed table
 M.fk.T=[{s:1,g:5.94,b0:402.06,bc:1456.36,r0:636.27,rc:1424.70,ra:6553.6,rb:6553.6,rabp:16384},{s:2,g:5.92,b0:397.19,bc:1365.33,r0:574.88,rc:1394.38,ra:5957.8,rb:5957.8,rabp:16384},{s:3,g:5.88,b0:397.19,bc:1337.47,r0:512,rc:1285.02,ra:5461.3,rb:5461.3,rabp:16384},{s:4,g:5.83,b0:385.51,bc:1337.47,r0:448.88,rc:1149.75,ra:5041.2,rb:5041.2,rabp:16384},{s:5,g:5.76,b0:378.82,bc:1260.31,r0:409.60,rc:1110.78,ra:4681.1,rb:4681.1,rabp:10923},{s:6,g:5.67,b0:339.56,bc:1191.56,r0:356.17,rc:992.97,ra:4369.1,rb:4369.1,rabp:10923}];
 
 const HANA=window.HanaJudge;
 const MISSING=window.JugestMissingInference;
-const JUGGLER_MACHINE_KEYS=["my","im","go","fk","hp","gg","mr","um"];
+const JUGGLER_MACHINE_KEYS=["my","my6","im","go","fk","hp","gg","mr","um"];
 const HANA_MACHINE_KEYS=["houou","king","dragon","star","newkingv"];
 const MACHINE_KEYS=JUGGLER_MACHINE_KEYS;
 const ALL_MACHINE_KEYS=[...JUGGLER_MACHINE_KEYS,...HANA_MACHINE_KEYS];
 const MACHINE_FAMILY=Object.fromEntries(ALL_MACHINE_KEYS.map(k=>[k,HANA_MACHINE_KEYS.includes(k)?"hanahana":"juggler"]));
 if(HANA){for(const k of HANA_MACHINE_KEYS){const h=HANA.MACHINES[k];M[k]={name:h.name,defs:[],T:[],simple:h.big.map((b,i)=>({g:h.bell[i],b,r:h.reg[i]})),note:h.sourceNote,hana:true};}}
-const MACHINE_RATE={my:[97.0,98.0,99.9,102.8,105.3,109.4],im:[97.0,98.0,99.5,101.1,103.3,105.5],go:[97.2,98.2,99.4,101.6,103.8,106.5],fk:[97.0,98.5,99.8,102.0,104.3,109.0],hp:[97.0,98.1,99.9,102.9,105.8,108.4],gg:[97.0,97.9,99.9,102.1,104.0,107.5],mr:[97.0,98.0,99.8,102.7,105.5,107.3],um:[97.0,98.1,99.8,102.1,104.5,108.1],houou:[97,99,101,103,106,109],king:[97,99,101,104,107,110],dragon:[97,99,101,104,107,110],star:[97,99,101,104,107,110],newkingv:[97,99,101,104,108,108]};
-let cur="my",lastMachine="my",page="judge",E={},data={my:{G:"",v:{},on:{}},im:{G:"",v:{},on:{}},go:{G:"",v:{},on:{}},fk:{G:"",v:{},on:{}},hp:{G:"",v:{},on:{}},gg:{G:"",v:{},on:{}},mr:{G:"",v:{},on:{}},um:{G:"",v:{},on:{}}};
-let cmpSeq=1,cmpData={my:[],im:[],go:[],fk:[],hp:[],gg:[],mr:[],um:[],houou:[],king:[],dragon:[],star:[],newkingv:[],all:[]};
-let revStyle={my:"random",im:"random",go:"random",fk:"random",hp:"random",gg:"random",mr:"random",um:"random"};
-let liveSessions={my:null,im:null,go:null,fk:null,hp:null,gg:null,mr:null,um:null};
+const MACHINE_RATE={my:[97.0,98.0,99.9,102.8,105.3,109.4],my6:[97.0,98.0,99.9,102.8,105.3,109.4],im:[97.0,98.0,99.5,101.1,103.3,105.5],go:[97.2,98.2,99.4,101.6,103.8,106.5],fk:[97.0,98.5,99.8,102.0,104.3,109.0],hp:[97.0,98.1,99.9,102.9,105.8,108.4],gg:[97.0,97.9,99.9,102.1,104.0,107.5],mr:[97.0,98.0,99.8,102.7,105.5,107.3],um:[97.0,98.1,99.8,102.1,104.5,108.1],houou:[97,99,101,103,106,109],king:[97,99,101,104,107,110],dragon:[97,99,101,104,107,110],star:[97,99,101,104,107,110],newkingv:[97,99,101,104,108,108]};
+let cur="my",lastMachine="my",page="judge",E={},data={my:{G:"",v:{},on:{}},my6:{G:"",v:{},on:{}},im:{G:"",v:{},on:{}},go:{G:"",v:{},on:{}},fk:{G:"",v:{},on:{}},hp:{G:"",v:{},on:{}},gg:{G:"",v:{},on:{}},mr:{G:"",v:{},on:{}},um:{G:"",v:{},on:{}}};
+let cmpSeq=1,cmpData={my:[],my6:[],im:[],go:[],fk:[],hp:[],gg:[],mr:[],um:[],houou:[],king:[],dragon:[],star:[],newkingv:[],all:[]};
+let revStyle={my:"random",my6:"random",im:"random",go:"random",fk:"random",hp:"random",gg:"random",mr:"random",um:"random"};
+let liveSessions={my:null,my6:null,im:null,go:null,fk:null,hp:null,gg:null,mr:null,um:null};
 let shops=[],sessions=[],sessionSeq=1,pendingSession=null,editingSessionId=null;
 let externalDays=[],externalSeq=1,externalPreview=null,trendShopFilter="",trendMachineFilter="",trendPeriod="30",trendWeekdayFilter="",trendDateTailFilter="",jdataShopFilter="",jdataDateFilter="",jdataMachineFilter="",jdataFamily="juggler";
 let bruteShopFilter="",brutePeriod="180",bruteMinG="2000",bruteMaxDims="1",bruteMinDays="4",bruteView="single",bruteResults=null,bruteRunToken=0;
@@ -607,7 +609,7 @@ const DEFAULT_TAG_NAMES=["特日・イベント","過去傾向","末尾","並び
 let tags=DEFAULT_TAG_NAMES.map((name,i)=>({id:"tag_default_"+(i+1),name,active:true,createdAt:0})),tagSeq=1;
 let analysisShopFilter="",analysisMachineFilter="";
 let monthReportMachine="";
-const MONTH_REPORT_LABEL={my:"マイV",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ"};
+const MONTH_REPORT_LABEL={my:"マイV",my6:"マイⅥ",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ"};
 let strategyEntryFilter="",strategyShopFilter="",strategyMachineFilter="",strategyTagFilter="";
 let storeSort="runs",strategyShopTagShopFilter="",strategyShopTagTagFilter="",strategyShopTagSort="setting";
 let calCursor=new Date();calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth(),1);
@@ -879,7 +881,7 @@ function styleRateText(key,style){
 /* legacy UI removed: save */
 
 
-function probsFor(key,t){if(key==="my")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0,bc:1/t.bc+rare,r0:1/t.r0,rc:1/t.rc};if(key==="hp")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0+rareHp,bc:1/t.bc,r0:1/t.r0,rc:1/t.rc};if(key==="gg"||key==="um")return{grape:1/t.g,cherry:1/t.c,big:1/t.b,reg:1/t.r};if(key==="fk"){let rr=1/t.ra+1/t.rb+1/t.rabp+1/10923+1/10923+1/32768;return{grape:1/t.g,b0:1/t.b0+.5*rr,bc:1/t.bc+.5*rr,r0:1/t.r0,rc:1/t.rc}}return{grape:1/t.g,big:1/t.b,reg:1/t.r}}
+function probsFor(key,t){if(key==="my"||key==="my6")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0,bc:1/t.bc+rare,r0:1/t.r0,rc:1/t.rc};if(key==="hp")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0+rareHp,bc:1/t.bc,r0:1/t.r0,rc:1/t.rc};if(key==="gg"||key==="um")return{grape:1/t.g,cherry:1/t.c,big:1/t.b,reg:1/t.r};if(key==="fk"){let rr=1/t.ra+1/t.rb+1/t.rabp+1/10923+1/10923+1/32768;return{grape:1/t.g,b0:1/t.b0+.5*rr,bc:1/t.bc+.5*rr,r0:1/t.r0,rc:1/t.rc}}return{grape:1/t.g,big:1/t.b,reg:1/t.r}}
 
 /* legacy UI removed: probs */
 
@@ -965,7 +967,7 @@ function liveBlank(key){
 function liveLikelihood(key,N,x,on,t){
  if(N<=0)return 0;
  let p=probsFor(key,t),op;
- if(key==="my"||key==="fk"||key==="hp"){
+ if(key==="my"||key==="my6"||key==="fk"||key==="hp"){
   let bt=(x.b0||0)+(x.bc||0)+(x.bu||0),rt=(x.r0||0)+(x.rc||0)+(x.ru||0);
   let qb=bt?(x.bu||0)/bt:0,qr=rt?(x.ru||0)/rt:0;
   op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}
@@ -1794,7 +1796,7 @@ function fmtPct(v,d=2){return Number.isFinite(+v)?(+v).toFixed(d)+"%":"—"}
 function fmtSetting(v){return Number.isFinite(+v)?(+v).toFixed(2):"—"}
 function hasActual(r){return r&&r.actualDiff!==null&&r.actualDiff!==""&&Number.isFinite(+r.actualDiff)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-function judgeSnapshot(key){if(!M[key])return null;if(page==="judge"&&key===cur)save();let N=+(data[key]?.G||0);if(!N)return null;let q;if(key===cur&&page==="judge")q=safeNorm(M[key].T.map(LL));else{let src=data[key]||{G:"",v:{},on:{}};let pLL=t=>{let p=probsFor(key,t),x={};M[key].defs.forEach(([id])=>x[id]=+src.v[id]||0);let op;if(key==="my"||key==="fk"||key==="hp"){let bt=x.b0+x.bc+x.bu,rt=x.r0+x.rc+x.ru,qb=bt?x.bu/bt:0,qr=rt?x.ru/rt:0;op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}}else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};let n=0,ps=0,L=0;for(let [id] of M[key].defs){if(src.on[id]===false)continue;let xx=x[id],pp=op[id];if(!pp&&xx)return-Infinity;if(xx)L+=xx*Math.log(pp);n+=xx;ps+=pp||0}let no=N-n,po=1-ps;if(no<0||po<=0)return-Infinity;if(no)L+=no*Math.log(po);return L};q=safeNorm(M[key].T.map(pLL))}if(!q)return null;return{source:"judge",machine:key,startG:0,endG:N,playedG:N,q,judgeData:clone(data[key])}}
+function judgeSnapshot(key){if(!M[key])return null;if(page==="judge"&&key===cur)save();let N=+(data[key]?.G||0);if(!N)return null;let q;if(key===cur&&page==="judge")q=safeNorm(M[key].T.map(LL));else{let src=data[key]||{G:"",v:{},on:{}};let pLL=t=>{let p=probsFor(key,t),x={};M[key].defs.forEach(([id])=>x[id]=+src.v[id]||0);let op;if(key==="my"||key==="my6"||key==="fk"||key==="hp"){let bt=x.b0+x.bc+x.bu,rt=x.r0+x.rc+x.ru,qb=bt?x.bu/bt:0,qr=rt?x.ru/rt:0;op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}}else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};let n=0,ps=0,L=0;for(let [id] of M[key].defs){if(src.on[id]===false)continue;let xx=x[id],pp=op[id];if(!pp&&xx)return-Infinity;if(xx)L+=xx*Math.log(pp);n+=xx;ps+=pp||0}let no=N-n,po=1-ps;if(no<0||po<=0)return-Infinity;if(no)L+=no*Math.log(po);return L};q=safeNorm(M[key].T.map(pLL))}if(!q)return null;return{source:"judge",machine:key,startG:0,endG:N,playedG:N,q,judgeData:clone(data[key])}}
 function liveSnapshot(key){let sess=liveSessions[key];if(!sess||!M[key])return null;let start=+sess.startG||0,now=+sess.currentG||0,selfG=Math.max(0,now-start);let pre=reverseCore(key,start,+sess.B||0,+sess.R||0,+sess.D||0,sess.style);if(!pre)return null;let afterLs=M[key].T.map(t=>liveLikelihood(key,selfG,sess.v,sess.on,t));let q=safeNorm(pre.Ls.map((v,i)=>v+afterLs[i]));if(!q)return null;return{source:"live",machine:key,startG:start,endG:now,playedG:selfG,q,judgeData:{before:{G:start,B:sess.B,R:sess.R,D:sess.D,style:sess.style},after:{v:clone(sess.v),on:clone(sess.on)}}}}
 
 
@@ -1855,7 +1857,7 @@ function signClass(v){return Number.isFinite(+v)?(+v>0?"pos":+v<0?"neg":""):""}
 
 
 function aggregate(list){let totalG=0,actualG=0,actualDiff=0,expectedDiff=0,expectedDiffActual=0,win=0,actualN=0,esNum=0,qNum=[0,0,0,0,0,0];list.forEach(r=>{let g=+r.playedG||0;if(!g)return;totalG+=g;expectedDiff+=+r.expectedDiff||0;esNum+=g*(+r.expectedSetting||expectedSetting(r.q));if(Array.isArray(r.q))r.q.forEach((v,i)=>qNum[i]+=g*(+v||0));if(hasActual(r)){actualN++;actualG+=g;actualDiff+=+r.actualDiff;expectedDiffActual+=+r.expectedDiff||0;if(+r.actualDiff>0)win++}});return{n:list.length,totalG,actualG,actualDiff,expectedDiff,expectedDiffActual,win,actualN,winRate:actualN?100*win/actualN:NaN,actualRate:actualG?100*(1+actualDiff/(3*actualG)):NaN,expectedRate:totalG?100*(1+expectedDiff/(3*totalG)):NaN,expectedSetting:totalG?esNum/totalG:NaN,qAvg:totalG?qNum.map(v=>v/totalG):null}}
-function analysisMachineName(k){return({my:"マイV",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ",houou:"ホウオウ天翔",king:"キングハナハナ",dragon:"ドラゴン閃光",star:"スターハナハナ",newkingv:"ニューキングV"})[k]||M[k]?.name||k}
+function analysisMachineName(k){return({my:"マイV",my6:"マイⅥ",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ",houou:"ホウオウ天翔",king:"キングハナハナ",dragon:"ドラゴン閃光",star:"スターハナハナ",newkingv:"ニューキングV"})[k]||M[k]?.name||k}
 function metricSource(r){let jd=r?.judgeData;if(!jd)return null;if(r.source==="live"&&jd.after&&jd.after.v){let g=+r.playedG||0;return g?{g,v:jd.after.v||{},on:jd.after.on||{}}:null}if(jd.v){let g=+jd.G||+r.playedG||0;return g?{g,v:jd.v||{},on:jd.on||{}}:null}return null}
 function activeMetric(src,ids){return ids.every(id=>src.on?.[id]!==false)}
 function sumIds(v,ids){return ids.reduce((z,id)=>z+(+v?.[id]||0),0)}
@@ -2390,7 +2392,7 @@ function v510JudgeState(){
   let x=Object.fromEntries(defs.map(d=>[d.id,d.value]));
   const ll=t=>{
    let p=probsFor(cur,t),op;
-   if(cur==="my"||cur==="fk"||cur==="hp"){
+   if(cur==="my"||cur==="my6"||cur==="fk"||cur==="hp"){
     let bt=(x.b0||0)+(x.bc||0)+(x.bu||0),rt=(x.r0||0)+(x.rc||0)+(x.ru||0),qb=bt?(x.bu||0)/bt:0,qr=rt?(x.ru||0)/rt:0;
     op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}
    }else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};

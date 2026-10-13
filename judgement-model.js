@@ -1,7 +1,7 @@
 (function(global){
 'use strict';
 const FIELDS=Object.freeze(['machine','tableNo','games','bb','rb','diff']);
-const MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
+const MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 const MESSAGES={machine:'対応する機種を選択してください。',games:'通常Gを正の整数で入力してください。',bb:'BBを0以上の整数で入力してください。',rb:'RBを0以上の整数で入力してください。',diff:'差枚を整数で入力してください。',bonus:'BBとRBの合計が通常Gを超えています。'};
 function inputRow(value={}){return Object.fromEntries(FIELDS.map(key=>[key,value[key]==null?'':String(value[key])]))}
 function observedInteger(value){

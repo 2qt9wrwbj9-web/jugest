@@ -58,8 +58,8 @@ const vectors=[
   }
 ];
 
-test('server external judge keeps all eight Juggler machine keys',()=>{
-  assert.deepEqual(JUGGLER_MACHINE_KEYS,['my','im','go','fk','hp','gg','mr','um']);
+test('server external judge keeps all nine Juggler machine keys',()=>{
+  assert.deepEqual(JUGGLER_MACHINE_KEYS,['my','my6','im','go','fk','hp','gg','mr','um']);
 });
 
 test('server external judge matches protected browser reference vectors',async()=>{
