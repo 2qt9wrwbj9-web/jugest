@@ -1,0 +1,10 @@
+{
+  "savedEvidenceCommit": "f038adb376c99ad94446f9395643b77598b3ad20",
+  "savedTree": "69a55394d33ae4f8089e828140c1dfbacba2c6ce",
+  "localAndRemoteTreesEqual": true,
+  "originalSavedStartIsAncestor": true,
+  "latestProductionIsAncestor": true,
+  "productionBase": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+  "branch": "work/parallel-group-checkpoint-20261012",
+  "workingTreeCleanBeforeClosure": true
+}
