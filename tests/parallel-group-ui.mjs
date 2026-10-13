@@ -208,6 +208,7 @@ test('parallel result rows retain compact most-likely text, including every tied
 
 test('reverse warnings identify the current editor row even when its internal id collides with a real table number',async()=>{
  const {app}=await ready();
+ app.handleObservedAction('single');
  app.acceptMachineRows([{...sample,tableNo:'',diff:50000},{...sample,tableNo:'2',diff:''}]);
  const [warned,normal]=app.observed.rows;
  assert.equal(warned.id,normal.input.tableNo,'reproduces the ambiguous raw warning label');

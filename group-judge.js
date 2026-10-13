@@ -312,6 +312,7 @@ function analyze(entries){
   if(aggregate.diffN<rows.length)warnings.push(`差枚は${aggregate.diffN}/${rows.length}台のみ入力済みです。入力済みの合計を別に表示し、欠損を0で補いません。`);
   if(aggregate.mixedMachines)warnings.push('機種が混在しています。合算BB・RB・合算分母は観測の参考値です。');
   else warnings.push('同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。');
+  const reverseWarningRows=rows.filter(row=>row.reverseWarn).map(row=>({id:row.id,tableNo:row.input.tableNo}));
   for(const row of rows)if(row.reverseWarn)warnings.push(`台${row.input.tableNo||row.id}：差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを確認してください。`);
   if(aggregate.diffN)warnings.push('差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。');
   const hypotheses=HYPOTHESES.map(h=>{
@@ -321,7 +322,7 @@ function analyze(entries){
     logEvidenceRatio:sensitivity[0].logEvidenceRatio,bonusLogEvidenceRatio:sensitivity[0].bonusLogEvidenceRatio,sensitivity,
     worstRow:worstRow(rows,h.allowed),refutation:refutation(rows,cdfs,h.allowed),conditional:distribution};
   });
-  return {ok:true,version:VERSION,n:rows.length,aggregate,aggregateJudgement:reference,hypotheses,warnings};
+  return {ok:true,version:VERSION,n:rows.length,aggregate,aggregateJudgement:reference,hypotheses,warnings,reverseWarningRows};
  }catch(error){return {ok:false,errors:[error instanceof NumericalError?error.message:'集合の判別に必要な情報を安全に読み取れませんでした。']}}
 }
 global.JUGESTGroupJudge=Object.freeze({VERSION,analyze,__test:Object.freeze({binomialLowerTail,logEvidenceRatio,log1mexp})});

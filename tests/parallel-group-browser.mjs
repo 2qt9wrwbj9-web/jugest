@@ -151,6 +151,21 @@ try{
    for(const key of ['tableNo','games','bb','rb','diff'])await field(key,0).fill('');
    await field('machine',0).selectOption('');
    await identities();await openEditor();await host.locator('[data-observed-action="delete"]').first().click();await identities();
+   // The warned row's internal id may equal a healthy row's real table number.
+   // It must still point to the current editor row in native rendered notices.
+   await openEditor();
+   const warningId=await page.evaluate(()=>document.querySelector('jugest-app').observed.rows[0].id);
+   for(const [index,values] of [[0,{machine:'my',tableNo:'',games:'5000',bb:'20',rb:'20',diff:'50000'}],[1,{machine:'my',tableNo:warningId,games:'5000',bb:'20',rb:'20',diff:''}]]){
+    for(const [key,value] of Object.entries(values))if(key==='machine')await field(key,index).selectOption(value);else await field(key,index).fill(value);
+   }
+   await host.locator('[data-observed-action="judge-all"]').click();
+   assert.equal(await page.evaluate(()=>document.querySelector('jugest-app').observed.groupReport.ok),true);
+   const warningReport=await host.locator('[data-observed-group-report]').textContent();
+   assert.match(warningReport,/台番なし（1行目）：差枚の逆算に警告があります。/);
+   assert.doesNotMatch(warningReport,new RegExp(`台${warningId}：差枚の逆算に警告があります。`),'never blame the healthy numbered row');
+   const warningSummary=host.locator('[data-observed-group-report] summary').filter({hasText:'注意点を確認'});
+   if(!await warningSummary.evaluate(e=>e.parentElement.open))await warningSummary.click();
+   if(delivery==='patched'&&width===390){await warningSummary.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(evidence,`${name}-${delivery}-${width}-warning.png`),scale:'css'});}
    await openEditor();await field('tableNo',0).fill('<img src=x onerror=alert(1)>');
    await host.locator('[data-observed-action="judge-all"]').click();assert.equal(await host.locator('[data-row-summary] img').count(),0);await geometry();
    const saved=await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input)));
@@ -162,7 +177,7 @@ try{
    await host.locator('.bottom-nav [data-workspace="home"]').click();await host.locator('.bottom-nav [data-workspace="judgement"]').click();
    assert.equal(await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input))),saved,'workspace changes preserve all drafts');
    assert.deepEqual(errors,[],`${name}/${delivery}/${width} page errors`);
-   results.push({engine:name,browserVersion:browser.version(),delivery,width,rows:5,negativeDifference:true,draftReload:true,workspaceSwitch:true,groupToggle:true,sort:true,conditionalModes:true,duplicate:true,duplicateNumberBlocked:true,partialInputBlocked:true,unnumberedEditorIdentity:true,skippedBlankIdentity:true,modalSettingVisible:true,focusAndScrollStable:true,caretStable:true,escaped:true,pageErrors:0});
+   results.push({engine:name,browserVersion:browser.version(),delivery,width,rows:5,negativeDifference:true,draftReload:true,workspaceSwitch:true,groupToggle:true,sort:true,conditionalModes:true,duplicate:true,duplicateNumberBlocked:true,partialInputBlocked:true,unnumberedEditorIdentity:true,skippedBlankIdentity:true,reverseWarningIdentity:true,modalSettingVisible:true,focusAndScrollStable:true,caretStable:true,escaped:true,pageErrors:0});
    console.error(`PASS ${name}/${delivery}/${width}`);
    await context.close();
   }

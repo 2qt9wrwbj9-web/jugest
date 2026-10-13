@@ -1,0 +1,25 @@
+✔ two and three rows match finite enumeration for each hypothesis and weight sensitivity (19.778133ms)
+✔ neutral logs give zero evidence ratios and conditional weight restrictions (5.071894ms)
+✔ unordered allocation profiles include every assignment and preserve multiplicities (5.156229ms)
+✔ nonuniform three-row allocation DP agrees with every profile of an independent full enumeration (3.972377ms)
+✔ per-row offsets and entry order do not change evidence or conditional allocations (8.334322ms)
+✔ two-state complement DP remains finite at extreme all-high likelihood concentration (3.701026ms)
+✔ zero support is represented as impossible evidence and unavailable conditional, not fake distributions (4.636009ms)
+✔ binomial lower CDF agrees with independent PMF sums and exact boundary identities (9.843113ms)
+✔ binomial CDF certified SciPy 1.17 / decimal reference vectors cover large n and extreme p (2.92647ms)
+✔ refutation uses the setting-wise channel minimum, allowed-setting maximum, rows and three-hypothesis corrections (4.174346ms)
+✔ worst compatibility row uses maximum logs and not q or the lower-tail weakest row (2.46007ms)
+✔ aggregates retain explicit zero differences and separate partial differences without zero filling (6.840011ms)
+✔ homogeneous reference is bonus-only same-setting aggregate, while mixed machines remain valid (4.742697ms)
+✔ complete input contract rejects duplicates, missing results, malformed logs/tables and limits (12.742514ms)
+✔ 60-row allocation and refutation calculations stay bounded and normalized (415.94375ms)
+✔ warnings describe low exposure, inverse warnings, weight assumptions and selected-after-observation limits (2.162901ms)
+✔ real adapter output works for all eight machines; analyze is pure and does not rewrite individual q (71.989302ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 713.48256

@@ -13,6 +13,18 @@ function rowLabels(report,rowNumbers={}){
   const value=String(row?.tableNo||fallback);return value.length>40?value.slice(0,39)+'…':value;
  };
 }
+const reverseWarningSuffix='：差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを確認してください。';
+function warningTexts(report,rowLabel){
+ let index=0;
+ return (report.warnings||[]).map(text=>{
+  if(!text.startsWith('台')||!text.endsWith(reverseWarningSuffix))return text;
+  const row=report.reverseWarningRows?.[index++];
+  // Old captured reports have no unambiguous identity metadata. Never guess
+  // from their text: an internal id may equal a different real table number.
+  if(!row)return '差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを各台の詳細で確認してください。';
+  return `${row.tableNo?`台${rowLabel(row)}`:rowLabel(row)}${reverseWarningSuffix}`;
+ });
+}
 const colors=['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'];
 function evidence(logRatio){
  if(logRatio===Infinity)return '比較側の支持なし';
@@ -68,7 +80,7 @@ function render(report,{hypothesis='all456',rowNumbers}={}){
  if(!report)return '';
  if(!report.ok)return `<section class="panel observed-group-report" data-observed-group-report aria-label="全台系判別"><h2>全台系の入力を確認</h2><div class="observed-error" role="alert">${(report.errors||['判別できませんでした。']).map(error=>`<p>${esc(error)}</p>`).join('')}</div><p class="observed-help">入力した台をすべて個別判別してから、2〜60台の集合として比較します。</p></section>`;
  const a=report.aggregate,h=report.hypotheses.find(x=>x.id===hypothesis)||report.hypotheses[0];
- const rowLabel=rowLabels(report,rowNumbers);
+ const rowLabel=rowLabels(report,rowNumbers),warnings=warningTexts(report,rowLabel);
  const low=(report.warnings||[]).find(w=>w.startsWith('2000G未満の台が'))?.match(/台が(\d+)\//)?.[1];
  const reverse=(report.warnings||[]).filter(w=>w.startsWith('台')&&w.includes('：差枚の逆算に警告があります。')).length;
  const severe=[...(low?[`2000G未満 ${low}/${report.n}台：小稼働では区別が難しくなります。`]:[]),...(a.mixedMachines?['機種が混在しています。合算確率は観測の参考値です。']:[]),...(reverse?[`差枚の逆算に警告 ${reverse}台。各台の入力を確認してください。`]:[])];
@@ -82,7 +94,7 @@ function render(report,{hypothesis='all456',rowNumbers}={}){
  ${severe.length?`<div class="observed-group-warnings" role="status">${severe.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
  <div class="observed-group-allocation-head"><h3>仮説を置いた設定配分</h3><label>配分を見る仮説<select data-observed-allocation aria-label="配分を見る仮説">${report.hypotheses.map(item=>`<option value="${esc(item.id)}" ${h.id===item.id?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label></div>
  ${conditional(h,rowLabel)}${sensitivity(h)}${refutation(h,rowLabel)}${sameSetting(report)}
- <details class="observed-group-details"><summary>注意点を確認</summary>${(report.warnings||[]).map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
+ <details class="observed-group-details"><summary>注意点を確認</summary>${warnings.map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
  </section>`;
 }
 global.JUGESTGroupJudgeView=Object.freeze({render});

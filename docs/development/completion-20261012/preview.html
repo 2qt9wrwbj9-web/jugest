@@ -511,6 +511,7 @@ function analyze(entries){
   if(aggregate.diffN<rows.length)warnings.push(`差枚は${aggregate.diffN}/${rows.length}台のみ入力済みです。入力済みの合計を別に表示し、欠損を0で補いません。`);
   if(aggregate.mixedMachines)warnings.push('機種が混在しています。合算BB・RB・合算分母は観測の参考値です。');
   else warnings.push('同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。');
+  const reverseWarningRows=rows.filter(row=>row.reverseWarn).map(row=>({id:row.id,tableNo:row.input.tableNo}));
   for(const row of rows)if(row.reverseWarn)warnings.push(`台${row.input.tableNo||row.id}：差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを確認してください。`);
   if(aggregate.diffN)warnings.push('差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。');
   const hypotheses=HYPOTHESES.map(h=>{
@@ -520,7 +521,7 @@ function analyze(entries){
     logEvidenceRatio:sensitivity[0].logEvidenceRatio,bonusLogEvidenceRatio:sensitivity[0].bonusLogEvidenceRatio,sensitivity,
     worstRow:worstRow(rows,h.allowed),refutation:refutation(rows,cdfs,h.allowed),conditional:distribution};
   });
-  return {ok:true,version:VERSION,n:rows.length,aggregate,aggregateJudgement:reference,hypotheses,warnings};
+  return {ok:true,version:VERSION,n:rows.length,aggregate,aggregateJudgement:reference,hypotheses,warnings,reverseWarningRows};
  }catch(error){return {ok:false,errors:[error instanceof NumericalError?error.message:'集合の判別に必要な情報を安全に読み取れませんでした。']}}
 }
 global.JUGESTGroupJudge=Object.freeze({VERSION,analyze,__test:Object.freeze({binomialLowerTail,logEvidenceRatio,log1mexp})});
@@ -539,6 +540,18 @@ function rowLabels(report,rowNumbers={}){
   const fallback=Number.isSafeInteger(ordinal)&&ordinal>0?`台番なし（${ordinal}行目）`:targets.has(id)?`台番なし（対象${targets.get(id)}台目）`:'台番なし';
   const value=String(row?.tableNo||fallback);return value.length>40?value.slice(0,39)+'…':value;
  };
+}
+const reverseWarningSuffix='：差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを確認してください。';
+function warningTexts(report,rowLabel){
+ let index=0;
+ return (report.warnings||[]).map(text=>{
+  if(!text.startsWith('台')||!text.endsWith(reverseWarningSuffix))return text;
+  const row=report.reverseWarningRows?.[index++];
+  // Old captured reports have no unambiguous identity metadata. Never guess
+  // from their text: an internal id may equal a different real table number.
+  if(!row)return '差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを各台の詳細で確認してください。';
+  return `${row.tableNo?`台${rowLabel(row)}`:rowLabel(row)}${reverseWarningSuffix}`;
+ });
 }
 const colors=['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'];
 function evidence(logRatio){
@@ -595,7 +608,7 @@ function render(report,{hypothesis='all456',rowNumbers}={}){
  if(!report)return '';
  if(!report.ok)return `<section class="panel observed-group-report" data-observed-group-report aria-label="全台系判別"><h2>全台系の入力を確認</h2><div class="observed-error" role="alert">${(report.errors||['判別できませんでした。']).map(error=>`<p>${esc(error)}</p>`).join('')}</div><p class="observed-help">入力した台をすべて個別判別してから、2〜60台の集合として比較します。</p></section>`;
  const a=report.aggregate,h=report.hypotheses.find(x=>x.id===hypothesis)||report.hypotheses[0];
- const rowLabel=rowLabels(report,rowNumbers);
+ const rowLabel=rowLabels(report,rowNumbers),warnings=warningTexts(report,rowLabel);
  const low=(report.warnings||[]).find(w=>w.startsWith('2000G未満の台が'))?.match(/台が(\d+)\//)?.[1];
  const reverse=(report.warnings||[]).filter(w=>w.startsWith('台')&&w.includes('：差枚の逆算に警告があります。')).length;
  const severe=[...(low?[`2000G未満 ${low}/${report.n}台：小稼働では区別が難しくなります。`]:[]),...(a.mixedMachines?['機種が混在しています。合算確率は観測の参考値です。']:[]),...(reverse?[`差枚の逆算に警告 ${reverse}台。各台の入力を確認してください。`]:[])];
@@ -609,7 +622,7 @@ function render(report,{hypothesis='all456',rowNumbers}={}){
  ${severe.length?`<div class="observed-group-warnings" role="status">${severe.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
  <div class="observed-group-allocation-head"><h3>仮説を置いた設定配分</h3><label>配分を見る仮説<select data-observed-allocation aria-label="配分を見る仮説">${report.hypotheses.map(item=>`<option value="${esc(item.id)}" ${h.id===item.id?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label></div>
  ${conditional(h,rowLabel)}${sensitivity(h)}${refutation(h,rowLabel)}${sameSetting(report)}
- <details class="observed-group-details"><summary>注意点を確認</summary>${(report.warnings||[]).map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
+ <details class="observed-group-details"><summary>注意点を確認</summary>${warnings.map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
  </section>`;
 }
 global.JUGESTGroupJudgeView=Object.freeze({render});

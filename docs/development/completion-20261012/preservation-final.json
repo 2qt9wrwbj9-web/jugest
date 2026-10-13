@@ -4,7 +4,7 @@
   "originalSourceFiles": 535,
   "savedSnapshotMatchesOriginalFiles": 535,
   "mismatches": [],
-  "groupEngineUnchangedSinceSavedStart": true,
+  "groupEngineUnchangedSinceSavedStart": false,
   "protectedFilesIdenticalToProductionBaseline": {
     "judgement-model.js": true,
     "core-v510.js": true,
@@ -12,5 +12,8 @@
     "vps/src/analysis/runtime-adapter.mjs": true,
     "hanahana-judge.js": true,
     "missing-inference.js": true
-  }
+  },
+  "groupNumericalSourceExactlyPreservedAfterRemovingDisplayMetadataAddition": true,
+  "groupLegacyReportFieldComparisons": 6,
+  "displayOnlyAdditionalField": "reverseWarningRows"
 }

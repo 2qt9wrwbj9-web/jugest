@@ -17,3 +17,9 @@ ui-red.log は開始時13/16、ui-green-16.log は修正後16/16、ui-boundaries
 数学仕様：../../superpowers/specs/2026-10-10-parallel-group-judge-design.md。旧引き継ぎ：../checkpoint-20261012/README.md。最終作業の記録：progress.md。
 
 本番VPS・DB・サービス・deploy/vps・mainは変更しない。本番反映の直前にヒロの明示許可が必要。
+
+## 最終レビュー修正済み・Safari相当の最後の再確認前
+
+警告行の識別情報を表示専用メタデータとして追加し、逆算警告の台取り違えを修正。UI22/22、旧report全フィールド6条件完全一致、フロント79/79、ローカルVPS557/557、エンジン17/17、個別1,024件一致を新規実行済み。final-independent-review.mdとreview-resolution.mdに独立レビュー／一回のTDD修正を記録。計算コードは追加の表示メタデータを取り除くと保存版にバイト一致。
+
+最終Chromium8条件成功。WebKitはローカルのlibgstreamer依存が不足して起動失敗。依存を同一実行内で復元した起動確認は成功済み。最後の16条件／確認版8条件をその方法で再実行し、完成結果を確定する。失敗ログも保持。Critical／Importantの未修正はなく、Minorは1000万G超の対象順エラー案内を延期。完成宣言と本番反映はまだ行わない。

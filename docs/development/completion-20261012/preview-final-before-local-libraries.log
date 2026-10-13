@@ -1,0 +1,45 @@
+PASS offline-preview/chromium/320
+PASS offline-preview/chromium/375
+PASS offline-preview/chromium/390
+PASS offline-preview/chromium/430
+Skipping host requirements validation logic because `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` env variable is set.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/pw_run.sh --inspector-pipe --headless --no-startup-window
+<launched> pid=118
+[pid=118][err] /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/minibrowser-wpe/bin/MiniBrowser: error while loading shared libraries: libgstreamer-1.0.so.0: cannot open shared object file: No such file or directory
+Call log:
+[2m  - <launching> /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/pw_run.sh --inspector-pipe --headless --no-startup-window[22m
+[2m  - <launched> pid=118[22m
+[2m  - [pid=118][err] /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/minibrowser-wpe/bin/MiniBrowser: error while loading shared libraries: libgstreamer-1.0.so.0: cannot open shared object file: No such file or directory[22m
+[2m  - [pid=118] <gracefully close start>[22m
+[2m  - [pid=118] <kill>[22m
+[2m  - [pid=118] <will force kill>[22m
+[2m  - [pid=118] exception while trying to kill process: Error: kill ESRCH[22m
+[2m  - [pid=118] <process did exit: exitCode=127, signal=null>[22m
+[2m  - [pid=118] starting temporary directories cleanup[22m
+[2m  - [pid=118] finished temporary directories cleanup[22m
+[2m  - [pid=118] <gracefully close end>[22m
+
+    at /workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/offline-judge-preview-browser.mjs:10:58 {
+  log: [
+    '  - <launching> /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/pw_run.sh --inspector-pipe --headless --no-startup-window',
+    '  - <launched> pid=118',
+    '  - [pid=118][err] /workspace/scratch/de64dcbbff0a/browser-runtime/webkit-2336/minibrowser-wpe/bin/MiniBrowser: error while loading shared libraries: libgstreamer-1.0.so.0: cannot open shared object file: No such file or directory',
+    '  - [pid=118] <gracefully close start>',
+    '  - [pid=118] <kill>',
+    '  - [pid=118] <will force kill>',
+    '  - [pid=118] exception while trying to kill process: Error: kill ESRCH',
+    '  - [pid=118] <process did exit: exitCode=127, signal=null>',
+    '  - [pid=118] starting temporary directories cleanup',
+    '  - [pid=118] finished temporary directories cleanup',
+    '  - [pid=118] <gracefully close end>'
+  ]
+}
+
+Node.js v24.19.0

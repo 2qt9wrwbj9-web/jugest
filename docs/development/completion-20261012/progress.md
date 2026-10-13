@@ -16,3 +16,7 @@ Task 6: browser16/16 and offline preview8/8 pass with exit0. Actual screenshots1
 Task 6: Ruling: merge already-published store comparison commits de812821 into development only — latest production differs from the original f728 baseline in four disjoint files, and deployment must preserve that update — if wrong, integration may affect shared delivery; byte-exact import checks and rerun root/VPS/browser cover the boundary. Production refs are not written.
 
 Final review continuity: Work runtime lost the active reviewer before final report. Its concrete Important warning identity and Minor out-of-range target ordinal are preserved in final-review-interim.md. Resume the same final-review seat, not a second opinion or post-fix re-review. Product source is still unchanged; two regression tests already RED.
+
+Final: fixed inverse-warning row identity — standalone rawID regression and corrected single→parallel collision test against saved old sources RED→GREEN; current UI22/22 including6 exact legacy report comparisons. Root full79/79, localVPS557/557, engine17/17, baseline1024 exact. Final browser Chromium8 pass; WebKit dependency restoration must occur inside the same execution as the test.
+Final: minor (deferred): group out-of-range errors use analyzed-target ordinals after blank editor rows; calculations stop safely.
+Final review report and all Declined to judge rulings are preserved in review-resolution.md. No post-fix re-review.

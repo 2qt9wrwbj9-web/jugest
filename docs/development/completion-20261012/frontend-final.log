@@ -1,0 +1,550 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> jugest-v512-vercel-only@5.1.2 test
+> node build.mjs && node tests/run-regressions.mjs
+
+JUGEST v5.1.2 Collector coverage + fixed chrome + store-analysis evidence view + analysis progress stability + startup/icon hotfix PASS
+PASS node --check ana-launcher.js
+PASS node --check hanahana-judge.js
+PASS node --check sync-core.js
+PASS node --check missing-inference.js
+PASS node --check core-v510.js
+PASS node --check app-v510.js
+PASS node --check vps-resource-ui.mjs
+PASS node --check tests/fixtures/legacy-netlify/functions/relay.mjs
+PASS node --check tests/fixtures/legacy-netlify/functions/sync.mjs
+PASS node tests/index-inline-syntax.mjs
+index inline syntax PASS
+PASS node tests/missing-inference.mjs
+missing value inference PASS
+PASS node tests/collector-relay.mjs
+relay collector integration PASS
+PASS node tests/collector-calendar-year.mjs
+PASS Collector calendar-year scheduling ignores manual startDate and walks backward
+PASS node tests/collector-single-fetch-cadence.mjs
+PASS Collector single-fetch cadence uses 30..90s jitter and no 15-minute window limit
+PASS node --test tests/collector-batch-v3.mjs
+✔ conditional Blob writes reject a stale ETag without losing newer data (15.650515ms)
+BATCH_V3_OPERATION_COUNT {"get":2,"put":3,"list":0,"delete":0,"advanced":3}
+✔ issues five, saves five, pulls exact parsed days; steady-state operation budget (43.35072ms)
+✔ partial/all failure (1/5) persists successes and only retries failed days (15.474395ms)
+✔ partial/all failure (2/5) persists successes and only retries failed days (17.762751ms)
+✔ partial/all failure (5/5) persists successes and only retries failed days (8.687874ms)
+✔ same batch and same job replay cannot increment revisions or retry counters (23.226545ms)
+✔ aborted Shortcut preserves submitted successes; expired missing jobs are reissued, stale owner rejected (18.447775ms)
+✔ parallel Next claims at most one batch; V2 cannot claim its dates (12.335601ms)
+✔ parallel Push of overlapping results is idempotent and does not lose disjoint days (27.230469ms)
+[juggler-relay] Error: lost acknowledgement
+    at f.blob.hooks.afterPut (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:92:96)
+    at Object.put (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/helpers/collector-blob.mjs:16:29)
+    at async set (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:25:18)
+    at async Object.setJSON (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:38:12)
+    at async transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:125:19)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:93:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ lost Push acknowledgement is recovered by resend without re-saving (11.905795ms)
+[juggler-relay] Error: state unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:99:79)
+    at Object.put (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:100:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ unpublished payload is never visible if state commit fails (23.512989ms)
+✔ manual requeue overrides coverage and invalidates previously saved and in-flight tokens (17.598958ms)
+✔ multiple stores retain priority and do not cross identities (19.381416ms)
+✔ legacy format migrates non-destructively; old payloads, V2 and coverage remain compatible (34.171769ms)
+✔ cleanup removes store state, preserves other store data, and unlink cannot resurrect legacy data (23.480952ms)
+✔ year calendar including leap floor is enforced; local coverage skip reaches DONE (22.457387ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at Object.getWithMetadata (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:60:23)
+    at async readCollectorState (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:12:13)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:140:20)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:155:63)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ corrupt snapshot and absent ETag fail closed (6.73886ms)
+✔ V2 lease ownership and explicit failed result receipts prevent stale retries (8.168396ms)
+✔ Launcher messages still save, receive and acknowledge after snapshot migration (5.574107ms)
+✔ key rotation revokes the old key and preserves existing jobs for the new key (13.638279ms)
+✔ cold concurrent migration retains every original day and creates a single claim (10.991773ms)
+[juggler-relay] Error: Collector payload pack is missing or invalid
+    at fail (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:8:28)
+    at Object.get (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:54:59)
+    at async Object.collectorPull (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:845:17)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:147:24)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:194:14)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing payload cannot advance Device Sync-compatible Collector pull cursor (12.932675ms)
+[juggler-relay] SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at readLegacy (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:23:32)
+    at async migrate (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:26:13)
+    at async transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:107:48)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:202:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ missing origin ETag rejects a write; malformed legacy metadata cannot be migrated as empty (7.136694ms)
+✔ identical local coverage polling and WAIT polling do not write (11.22652ms)
+[juggler-relay] Error: delete unavailable
+    at f.blob.s.delete (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:219:97)
+    at drainGarbage (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:94:64)
+    at transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:139:11)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:220:11)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ a failed cleanup remains journaled and a later authorized request safely finishes it (12.8824ms)
+[juggler-relay] Error: unlink deletion failed
+    at f.blob.s.delete (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:228:97)
+    at drainGarbage (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:94:64)
+    at async transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:139:5)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async Object.call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:229:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+✔ unlink interrupted during deletion can be retried with the original receiver credential (26.535992ms)
+✔ iosCollectorRequeueDate wins against a stale parallel Push (9.896402ms)
+✔ iosCollectorTargetDelete wins against a stale parallel Push (9.099253ms)
+✔ unlink wins against a stale parallel Push (10.423172ms)
+✔ real parser accepts HTML/text layouts and rejects identity, missing headers and partial pages independently (27.94773ms)
+[juggler-relay] Error: network unavailable
+    at f.blob.hooks.beforePut (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:264:79)
+    at Object.put (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/helpers/collector-blob.mjs:12:66)
+    at set (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:25:31)
+    at Object.setJSON (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_blob-store.js:38:18)
+    at transactCollector (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-state-v3.js:125:30)
+    at async dispatch (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_collector-batch-v3.js:148:12)
+    at async Object.defaultHandler [as default] (eval at createRelayRuntime (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/api/_relay-web.js:100:17), <anonymous>:948:25)
+    at async call (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:14:35)
+    at async TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/collector-batch-v3.mjs:265:17)
+    at async Test.run (node:internal/test_runner/test:1389:7)
+✔ target deletion reclaims unpublished payloads left by an ambiguous failed write (11.367979ms)
+✔ invalid/cross-channel credentials cannot issue or modify jobs (15.367597ms)
+✔ SDK-shaped conditional errors without a numeric status retry from a fresh snapshot (6.83359ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 656.266595
+PASS node --test tests/collector-batch-v2-compat.mjs
+✔ V2 stays outside active V3 batch claims and keeps the 30-90 second cadence (35.464312ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 186.409753
+PASS node tests/collector-operations.mjs
+{
+  "unit": "SDK operations; Advanced equivalent = put + list; no multipart, conflicts or SDK network retries in steady state",
+  "fixture": "One channel, one store, five missing dates, ten machine rows per date. Same unmodified parser and sample content.",
+  "legacy": {
+    "counts": {
+      "get": 95,
+      "put": 45,
+      "list": 5,
+      "delete": 10,
+      "advanced": 50
+    },
+    "bytes": {
+      "snapshot": 0,
+      "payloadPacks": 0
+    },
+    "requestBytes": null
+  },
+  "batch": {
+    "counts": {
+      "get": 2,
+      "put": 3,
+      "list": 0,
+      "delete": 0,
+      "advanced": 3
+    },
+    "bytes": {
+      "snapshot": 7335,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5784
+  },
+  "coldMigration": {
+    "counts": {
+      "get": 6,
+      "put": 3,
+      "list": 4,
+      "delete": 0,
+      "advanced": 7
+    },
+    "bytes": {
+      "snapshot": 7382,
+      "payloadPacks": 11536
+    },
+    "requestBytes": 5784
+  },
+  "reductionPercent": 94,
+  "averagePerFetchedDay": 0.6,
+  "backfill365Days": [
+    {
+      "stores": 1,
+      "days": 365,
+      "batches": 73,
+      "advanced": 219
+    },
+    {
+      "stores": 2,
+      "days": 730,
+      "batches": 146,
+      "advanced": 438
+    },
+    {
+      "stores": 3,
+      "days": 1095,
+      "batches": 219,
+      "advanced": 657
+    }
+  ],
+  "dailyOnlyAfterBackfill": [
+    {
+      "stores": 1,
+      "daysPerDailyBatch": 1,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 2,
+      "daysPerDailyBatch": 2,
+      "annualAdvanced": 1095
+    },
+    {
+      "stores": 3,
+      "daysPerDailyBatch": 3,
+      "annualAdvanced": 1095
+    }
+  ],
+  "exclusions": [
+    "initial configuration",
+    "initial migration lists/reads",
+    "contention and failed writes",
+    "failed/retried pages",
+    "manual force and cleanup",
+    "new local coverage sync",
+    "dashboard activity",
+    "real SDK internal retries"
+  ],
+  "calendar": "The actual inclusive calendar-year window contains 366 or 367 dates. Above estimates deliberately use the requested 365 days.",
+  "realBlobVerified": false
+}
+PASS node tests/collector-preservation.mjs
+PASS 20 Production hashes, five byte-exact clean jitter files, Preview namespace and diagnostic exclusion
+PASS node tests/collector-local-coverage.mjs
+PASS Collector skips local JUGEST dates while preserving manual requeue
+PASS node tests/collector-local-coverage-client.mjs
+PASS JUGEST sends bounded local-day coverage during Collector status refresh
+PASS node tests/collector-ui-static.mjs
+collector new-UI static PASS
+PASS node tests/collector-store-management.mjs
+collector store management new-UI PASS
+PASS node tests/ui-v510-foundation.mjs
+v5.1.0 UI foundation static PASS
+PASS node tests/ui-v510-runtime-isolation.mjs
+v5.1.0 no-legacy runtime isolation PASS
+PASS node tests/ui-v510-live-store.mjs
+v5.1.0 live/store native UI static PASS
+PASS node tests/pwa-viewport-background.mjs
+PWA viewport background no-legacy regression PASS
+PASS node tests/ui-v510-records-data.mjs
+v5.1.0 records/data native UI static PASS
+PASS node tests/ui-v510-live-tools.mjs
+v5.1.0 live tools native UI static PASS
+PASS node tests/ui-v510-store-intelligence.mjs
+v5.1.0 store intelligence native UI static PASS
+PASS node tests/ui-v510-strategy-data-management.mjs
+v5.1.0 strategy/data-management native UI static PASS
+PASS node tests/ui-v510-bridge-headless.mjs
+v5.1.0 headless bridge regression PASS (116 core functions)
+PASS node tests/ui-v510-no-legacy-runtime.mjs
+v5.1.0 no-legacy-runtime architecture PASS
+PASS node tests/ui-v510-hana-native.mjs
+v5.1.0 native HANA UI static PASS
+PASS node tests/ui-v510-sync-native.mjs
+v5.1.0 native device sync static PASS
+PASS node tests/ui-v510-record-editor.mjs
+v5.1.0 native record editor static PASS
+PASS node tests/ui-v510-store-finance.mjs
+v5.1.0 native store finance static PASS
+PASS node tests/ui-v510-records-parity.mjs
+v5.1.0 records parity static PASS
+PASS node tests/ui-v510-tag-admin.mjs
+v5.1.0 native tag admin static PASS
+PASS node tests/ui-v510-dead-ui-removed.mjs
+v5.1.0 dead legacy UI removal PASS
+PASS node tests/ui-v510-analysis-history-native.mjs
+v5.1.0 native analysis history static PASS
+PASS node tests/ui-v510-final-shell.mjs
+v5.1.0 FINAL shell completion gate PASS
+PASS node tests/ui-v511-notification-popover.mjs
+v5.1.1 notification popover + silent restore static PASS
+PASS node tests/netlify-config-current-files.mjs
+Historical Netlify fixture config PASS (not deployed)
+PASS node tests/ui-v512-fixed-chrome.mjs
+v5.1.2 fixed mobile chrome static PASS
+PASS node tests/ui-v512-store-delete.mjs
+v5.1.2 safe store deletion static PASS
+PASS node tests/vps-resource-ui-shadow.mjs
+vps resource UI shadow integration PASS
+PASS node tests/vps-resource-queue-diagnostics.mjs
+vps resource queue diagnostics UI PASS
+PASS node tests/vps-resource-task-history.mjs
+VPS resource task history static PASS
+PASS node tests/vercel-migration.mjs
+Vercel migration static PASS
+PASS node --check api/_blob-store.js
+PASS node --check api/_node-web.js
+PASS node --check api/_relay-web.js
+PASS node --check api/_sync-web.js
+PASS node --check api/relay.js
+PASS node --check api/sync.js
+PASS node tests/vercel-blob-store.mjs
+Vercel Blob compatibility store PASS
+PASS node tests/vercel-native-backend.mjs
+Vercel native backend static PASS
+PASS node tests/vercel-node-web-adapter.mjs
+Vercel Node/Web adapter PASS
+PASS node tests/vercel-relay-native-behavior.mjs
+Vercel native relay behavior PASS
+PASS node tests/vercel-sync-chunk-transport.mjs
+Vercel sync chunk transport PASS
+PASS node tests/vercel-sync-chunk-server.mjs
+Vercel sync chunk server PASS
+PASS node tests/vercel-sync-concurrency.mjs
+PASS concurrent Device Sync: one writer wins, loser conflicts, and committed revision repairs stale head
+PASS node tests/vercel-server-parity.mjs
+Actual decoded Relay: 20 core functions exact; Device Sync intentional backend changes are behavior-tested separately
+PASS node tests/vercel-launcher-origin.mjs
+Vercel launcher origin migration PASS
+PASS node tests/vercel-launcher-no-netlify-runtime.mjs
+Vercel launcher has no Netlify runtime fallback PASS
+PASS node --test tests/user-flow-regressions.mjs tests/home-collector-status.mjs tests/resume-flow-regressions.mjs tests/sync-roundtrip.mjs tests/production-preservation.mjs
+✔ Unchecked or failed Collector status never claims normal operation (48.599635ms)
+✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (12.853618ms)
+✔ Protected inline math and research sections remain identical to the captured Production (10.004852ms)
+✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (16.605238ms)
+✔ Fresh Launcher setup exposes the existing loader using this JUGEST origin (58.414538ms)
+✔ History navigation cannot hide recovery after a partial Device Sync apply (13.861759ms)
+✔ Automatic Collector refresh clears a recovered transient error (16.234489ms)
+✔ Backup undo explains its partial scope before the user presses it (6.354963ms)
+✔ Production FOUC gate waits for CSS load/error and has a 2-second fallback (14.570187ms)
+✔ Partial backup restore exposes reload recovery and blocks stale in-memory edits (8.492675ms)
+✔ Backup restore refuses to overwrite when the pre-restore safety copy cannot be saved (8.071752ms)
+✔ Two real sync-core clients encrypt, merge, persist, and reload without losing either device records (112.883742ms)
+✔ Unlinked UI exposes pairing through the actual bridge and existing createPair API (77.492834ms)
+✔ Pending pair survives reload, polls to linked, and resumes on pageshow (26.605078ms)
+✔ Pair expiry and network failure keep retry available; linked channel is never replaced (23.56804ms)
+✔ Unlink revokes only the Collector channel and keeps acquired data and Device Sync identity (9.567075ms)
+✔ iPhone Shortcut creation/key rotation has its own existing API and survives reload (13.613351ms)
+✔ Launcher queue is counted and imported through receive -> durable save -> ack (39.343226ms)
+✔ CollectorPull still imports days; a failed local save must never ACK Launcher data (15.732527ms)
+✔ Device Sync flushes current edits and pagehide cannot overwrite applied remote records (6.261054ms)
+✔ Backup undo reaches the bridge and reloads; failure unlocks retry (7.484764ms)
+✔ Store save and backup restore errors clear busy state before final render (7.699151ms)
+✔ Missing clipboard API never reports a successful Device Sync copy (9.010241ms)
+✔ First Collector store can be added from an empty store-management screen (11.775487ms)
+✔ Global operation errors keep the current screen and retry controls visible (7.290917ms)
+✔ Sync failure before apply releases the save gate; partial apply requires reload (7.497372ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 440.642643
+PASS node --test tests/ui-home-jobs.mjs
+✔ home summary reports unsaved play and stops resuming unchanged saved input (38.306155ms)
+✔ returning Home reads fresh play input, not a stale summary (26.506117ms)
+✔ malformed persisted unread ledger cannot break rendering (8.326269ms)
+✔ core orchestration reports progress without replacing the analysis engine (10.363393ms)
+✔ next action uses actual state in priority order, including empty stores (5.449633ms)
+✔ missing URL never creates warning/count; success is not unread (4.9945ms)
+✔ opening notifications reads current occurrences; new occurrences alone become unread and persist (15.41708ms)
+✔ VPS analysis captures the selected store, survives every workspace and returns to its completed result (6.64379ms)
+✔ failed VPS analysis remains reachable without silently invoking local analysis (6.165032ms)
+✔ explicit local-analysis fallback preserves progress updates without rebuilding the whole app (10.737066ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 234.816778
+PASS node tests/store-analysis-evidence-view.mjs
+store-analysis evidence view regression PASS
+PASS node --test tests/legacy-short-history.mjs
+✔ legacy prediction is unavailable through 6 days and available from 7 through 44 days (1440.518718ms)
+✔ 45 and 90 day legacy routing is exactly the existing full-history path (7489.00379ms)
+✔ target-day and future rows never enter short-history training (260.874232ms)
+✔ legacy plan result exposes the 7-day threshold and short-mode metadata (97.012265ms)
+✔ short-history confidence grows conservatively and never reaches full-history trust (879.369625ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10277.448374
+PASS node --test tests/store-plan-modes.mjs
+✔ prediction starts with the new mode; each mode runs only when selected and reuses its own result (25.803841ms)
+✔ date and lottery changes invalidate cached predictions without calculating the inactive mode (6.755916ms)
+✔ an in-flight new prediction finishes before legacy starts and never appears in its view (5.610722ms)
+✔ switching from an externally requested new prediction to legacy starts the legacy result (6.249617ms)
+✔ switching back to new hands its result to the PRE prediction runner (4.955352ms)
+✔ the legacy prediction retains its original display and core entry (9.142498ms)
+✔ legacy short-history output is clearly labeled and 6-day shortage explains the threshold (5.786592ms)
+✔ the built prediction switch preserves two full-width mobile targets (0.993189ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 143.824092
+PASS node tests/store-optimization-research.mjs
+PASS research chronology, immutable input, future/target poisoning, baseline tie, receipt hashes, invalid data guards
+PASS paired candidate selection and no-data abstention
+PASS node --test tests/judgement-page.mjs
+✔ all eight machines match externalJudge and the existing summaries exactly (30.013068ms)
+✔ input validation preserves explicit zero and rejects missing or malformed observations (6.086867ms)
+✔ diagnostics come from one execution and judgement has no session, store, storage or autosave side effects (20.472802ms)
+✔ diagnostic callbacks cannot mutate the calculated judgement (8.857816ms)
+✔ single and parallel share the same adapter, imports only fill drafts, and edits invalidate results (19.456638ms)
+✔ all maximum-probability settings are retained and detailed output is escaped (8.111662ms)
+✔ six tabs preserve old workspace keys, navigation history and safe UI restoration (6.733203ms)
+✔ built and VPS-patched sources retain the page, bridge and existing shop fixes (32.829485ms)
+✔ history restores the selected parallel row after closing details or opening another row (12.206201ms)
+✔ preservation rejects unreviewed edits inside excluded additions and duplicated boundaries (26.40546ms)
+✔ ordinary judgement omits developer DOM while retaining meaningful analysis (8.341742ms)
+✔ single: debug switching only changes UI and never reruns judgement (22.064768ms)
+✔ parallel: debug switching only changes UI and never reruns judgement (24.535994ms)
+✔ debug ON and OFF calculate identical raw sample values with one engine call each (11.023861ms)
+✔ fallback settings preserve the return destination after repeated gear clicks and history (12.975479ms)
+✔ parallel editor renders all imported rows as compact inputs and escaped comparison results (8.037433ms)
+✔ batch ignores blank rows, isolates partial errors and preserves zero, missing and negative differences (10.337876ms)
+✔ ordinary detail contains only grape estimates, moves engine labels to debug and shows warnings only when present (8.889203ms)
+✔ grape is visible in both summaries and details without rejudging or changing the result (9.027578ms)
+✔ unavailable grape values render a dash in summaries and never leak NaN or Infinity (14.081846ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 392.778646
+PASS node --test tests/judgement-factor-spectrum.mjs
+✔ factor spectrum respects probability interpolation, endpoint caps and equal-setting plateaus (20.127651ms)
+✔ each machine uses its exact existing result spec; render has no judgement side effects (33.17728ms)
+✔ grape remains optional without a coin difference, while other factors still render (7.141347ms)
+✔ one result card contains probability band and settings 1-6 without duplicate summary cards (6.815164ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 145.019165
+PASS node --check group-judge.js
+PASS node --check group-judge-view.js
+PASS node --test tests/group-judge.mjs
+✔ two and three rows match finite enumeration for each hypothesis and weight sensitivity (12.053605ms)
+✔ neutral logs give zero evidence ratios and conditional weight restrictions (2.379781ms)
+✔ unordered allocation profiles include every assignment and preserve multiplicities (2.456495ms)
+✔ nonuniform three-row allocation DP agrees with every profile of an independent full enumeration (2.475733ms)
+✔ per-row offsets and entry order do not change evidence or conditional allocations (4.544284ms)
+✔ two-state complement DP remains finite at extreme all-high likelihood concentration (2.286503ms)
+✔ zero support is represented as impossible evidence and unavailable conditional, not fake distributions (2.919149ms)
+✔ binomial lower CDF agrees with independent PMF sums and exact boundary identities (5.857337ms)
+✔ binomial CDF certified SciPy 1.17 / decimal reference vectors cover large n and extreme p (1.587799ms)
+✔ refutation uses the setting-wise channel minimum, allowed-setting maximum, rows and three-hypothesis corrections (2.606807ms)
+✔ worst compatibility row uses maximum logs and not q or the lower-tail weakest row (1.449685ms)
+✔ aggregates retain explicit zero differences and separate partial differences without zero filling (3.938698ms)
+✔ homogeneous reference is bonus-only same-setting aggregate, while mixed machines remain valid (2.934972ms)
+✔ complete input contract rejects duplicates, missing results, malformed logs/tables and limits (7.126344ms)
+✔ 60-row allocation and refutation calculations stay bounded and normalized (245.70993ms)
+✔ warnings describe low exposure, inverse warnings, weight assumptions and selected-after-observation limits (1.501111ms)
+✔ real adapter output works for all eight machines; analyze is pure and does not rewrite individual q (53.038477ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 427.104272
+PASS node --test tests/parallel-group-ui.mjs
+✔ versioned input drafts survive reload, retain explicit zero and never restore results (54.460691ms)
+✔ single drafts and every edit, add, duplicate and delete mutation persist (12.54357ms)
+✔ a real storage failure keeps the editor usable and reports only the unsaved state (6.845203ms)
+✔ one overlong field among 200 drafts preserves the last reloadable save and recovers without truncation (32.945677ms)
+✔ 1001 drafts cannot overwrite a valid save; returning to the row limit saves every row (101.027263ms)
+✔ unsupported, malformed and oversized stored drafts are ignored; 200 valid drafts retain unique ids (31.19675ms)
+✔ group mode uses cached complete results and preserves all ordinary individual distributions (28.980446ms)
+✔ unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion (24.38445ms)
+✔ standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure (11.701494ms)
+✔ parallel result rows retain compact most-likely text, including every tied setting (6.460068ms)
+✔ reverse warnings identify the current editor row even when its internal id collides with a real table number (18.70753ms)
+✔ standalone reverse warnings use target positions, preserve named escaping and never leak internal ids (15.845616ms)
+✔ warning identity metadata leaves every saved group calculation and legacy report field exactly unchanged (29.251942ms)
+✔ unnumbered sorted results keep editor identities after editing and rejudging (13.981037ms)
+✔ group row labels reject inherited or invalid editor numbers without inventing positions (12.850554ms)
+✔ group overview warns that low-setting mixtures can escape refutation despite a large ratio (8.253482ms)
+✔ sorting changes only result order with stable ties, while labels and input order remain intact (7.712952ms)
+✔ invalid, incomplete and unjudged nonempty rows block the group while empty rows are skipped (19.385824ms)
+✔ editing immediately removes only its row and the group, without rerendering input DOM (10.515739ms)
+✔ group display is pure, escaped, explanatory and separates ratios from conditional percentages (12.095737ms)
+✔ extreme ratios and tiny refutation p use their logs and impossible conditional output stays unavailable (8.442833ms)
+✔ 60-row profiles stay compact and all input controls meet the stable mobile contract (263.884552ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 826.510936
+PASS node tests/group-judge-regression.mjs
+{"baseline":"f728b2587a9bdd81541ccb50d3ae802a8492486a","machines":8,"inputsPerMachine":128,"fullOutputsExactlyEqual":1024}
+PASS node tests/group-judge-simulation.mjs
+{"seed":"0x20261010","trialsPerCase":400,"totalTrials":4800,"simulationModel":"Fixed exposure; mutually exclusive BB/RB/grape/replay/caught-cherry/bell/pierrot/other roles from existing tables, fixed random capture style. Bonus marginals exactly preserve the previous seed and observations. Difference uses the unchanged reverse equation; approximate difference scores are NOT empirically calibrated.","pairedDifferenceChecks":4800,"limits":["Forced weak observations are diagnostic checks, not false-rejection calibration.","Evidence above 10 can occur for false hypotheses; it is not an event probability.","Role multinomial and fixed capture style are declared simulation assumptions; actual overlap/covariance and play selection may differ.","Nonrejection measures missed contradictions and never proves all-high settings."],"simulations":[{"case":"low-mixed","trials":400,"rows":5,"trueSettings":[1,2,4,5,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-4539,"maximumDiff":6480,"negativeDiffRows":740,"positiveDiffRows":1260,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":false,"rejectionRate":0.0675,"nonRejectionRate":0.9325,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9325,"evidenceAbove10Rate":0.0025,"bonusEvidenceAbove10Rate":0.0025,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-1.3284098283942833,"meanDifferenceLogEvidenceRatio":-2.953604208581639},"all56":{"trueHypothesis":false,"rejectionRate":0.25,"nonRejectionRate":0.75,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.75,"evidenceAbove10Rate":0.0025,"bonusEvidenceAbove10Rate":0.0025,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-2.942878791488228,"meanDifferenceLogEvidenceRatio":-5.902672735279623},"all6":{"trueHypothesis":false,"rejectionRate":0.385,"nonRejectionRate":0.615,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.615,"evidenceAbove10Rate":0.0025,"bonusEvidenceAbove10Rate":0.0025,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-4.357355997381631,"meanDifferenceLogEvidenceRatio":-8.70198597414959}}},{"case":"all456","trials":400,"rows":5,"trueSettings":[4,4,5,5,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3407,"maximumDiff":6330,"negativeDiffRows":410,"positiveDiffRows":1590,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":0,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.1375,"bonusEvidenceAbove10Rate":0.1375,"differenceEvidenceAbove10Rate":0.14,"meanLogEvidenceRatio":0.9287964639706695,"meanDifferenceLogEvidenceRatio":0.6637462935523962},"all56":{"trueHypothesis":false,"rejectionRate":0.025,"nonRejectionRate":0.975,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.975,"evidenceAbove10Rate":0.16,"bonusEvidenceAbove10Rate":0.16,"differenceEvidenceAbove10Rate":0.1025,"meanLogEvidenceRatio":0.38759430094289216,"meanDifferenceLogEvidenceRatio":-0.38290199956615134},"all6":{"trueHypothesis":false,"rejectionRate":0.0475,"nonRejectionRate":0.9525,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9525,"evidenceAbove10Rate":0.1325,"bonusEvidenceAbove10Rate":0.1325,"differenceEvidenceAbove10Rate":0.06,"meanLogEvidenceRatio":-0.2956215732500453,"meanDifferenceLogEvidenceRatio":-1.784229605922964}}},{"case":"all56","trials":400,"rows":5,"trueSettings":[5,5,6,6,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-2985,"maximumDiff":7559,"negativeDiffRows":220,"positiveDiffRows":1780,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0.0025,"nonRejectionRate":0.9975,"falseRejectionRate":0.0025,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.49,"bonusEvidenceAbove10Rate":0.49,"differenceEvidenceAbove10Rate":0.5725,"meanLogEvidenceRatio":2.2343261671149044,"meanDifferenceLogEvidenceRatio":2.367441602867099},"all56":{"trueHypothesis":true,"rejectionRate":0.005,"nonRejectionRate":0.995,"falseRejectionRate":0.005,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.53,"bonusEvidenceAbove10Rate":0.53,"differenceEvidenceAbove10Rate":0.53,"meanLogEvidenceRatio":2.2406253533793214,"meanDifferenceLogEvidenceRatio":2.1492287802490337},"all6":{"trueHypothesis":false,"rejectionRate":0.01,"nonRejectionRate":0.99,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.99,"evidenceAbove10Rate":0.49,"bonusEvidenceAbove10Rate":0.49,"differenceEvidenceAbove10Rate":0.4325,"meanLogEvidenceRatio":2.0723416930104945,"meanDifferenceLogEvidenceRatio":1.5900910523665985}}},{"case":"all6","trials":400,"rows":5,"trueSettings":[6,6,6,6,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3063,"maximumDiff":7781,"negativeDiffRows":210,"positiveDiffRows":1790,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0.0025,"nonRejectionRate":0.9975,"falseRejectionRate":0.0025,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.625,"bonusEvidenceAbove10Rate":0.625,"differenceEvidenceAbove10Rate":0.6775,"meanLogEvidenceRatio":2.60696392478215,"meanDifferenceLogEvidenceRatio":2.867018548293274},"all56":{"trueHypothesis":true,"rejectionRate":0.005,"nonRejectionRate":0.995,"falseRejectionRate":0.005,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.6525,"bonusEvidenceAbove10Rate":0.6525,"differenceEvidenceAbove10Rate":0.665,"meanLogEvidenceRatio":2.724767263533223,"meanDifferenceLogEvidenceRatio":2.8242526822719993},"all6":{"trueHypothesis":true,"rejectionRate":0.005,"nonRejectionRate":0.995,"falseRejectionRate":0.005,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.6325,"bonusEvidenceAbove10Rate":0.6325,"differenceEvidenceAbove10Rate":0.585,"meanLogEvidenceRatio":2.7001270055690156,"meanDifferenceLogEvidenceRatio":2.5167805445216698}}},{"case":"all6-weak-observation","trials":400,"rows":5,"trueSettings":[6,6,6,6,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":true,"difference":{"style":"random","minimumDiff":-7027,"maximumDiff":7079,"negativeDiffRows":562,"positiveDiffRows":1438,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":1,"nonRejectionRate":0,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-4.138264503181622,"meanDifferenceLogEvidenceRatio":-3.512040538128615},"all56":{"trueHypothesis":true,"rejectionRate":1,"nonRejectionRate":0,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-6.955625037845854,"meanDifferenceLogEvidenceRatio":-6.413611594458923},"all6":{"trueHypothesis":true,"rejectionRate":1,"nonRejectionRate":0,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-8.69075710487876,"meanDifferenceLogEvidenceRatio":-8.478576324152236}}},{"case":"low-exposure","trials":400,"rows":5,"trueSettings":[4,4,5,5,6],"gamesPerRow":100,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-206,"maximumDiff":933,"negativeDiffRows":1146,"positiveDiffRows":851,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":0,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":0.03343644219127044,"meanDifferenceLogEvidenceRatio":0.01206066227330897},"all56":{"trueHypothesis":false,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":1,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":0.03345158009171464,"meanDifferenceLogEvidenceRatio":0.000035157670480858024},"all6":{"trueHypothesis":false,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":1,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":0.03039251444495157,"meanDifferenceLogEvidenceRatio":-0.016503161892186074}}},{"case":"mixed-machines","trials":400,"rows":5,"trueSettings":[4,4,5,5,6],"gamesPerRow":8000,"machines":["my","go","im","hp","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3235,"maximumDiff":7735,"negativeDiffRows":491,"positiveDiffRows":1509,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0.005,"nonRejectionRate":0.995,"falseRejectionRate":0.005,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.2,"bonusEvidenceAbove10Rate":0.2,"differenceEvidenceAbove10Rate":0.1925,"meanLogEvidenceRatio":1.2257612098010013,"meanDifferenceLogEvidenceRatio":1.0634110578537657},"all56":{"trueHypothesis":false,"rejectionRate":0.0175,"nonRejectionRate":0.9825,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9825,"evidenceAbove10Rate":0.2375,"bonusEvidenceAbove10Rate":0.2375,"differenceEvidenceAbove10Rate":0.16,"meanLogEvidenceRatio":0.8912218690577488,"meanDifferenceLogEvidenceRatio":0.30795255650925424},"all6":{"trueHypothesis":false,"rejectionRate":0.07,"nonRejectionRate":0.9299999999999999,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9299999999999999,"evidenceAbove10Rate":0.185,"bonusEvidenceAbove10Rate":0.185,"differenceEvidenceAbove10Rate":0.04,"meanLogEvidenceRatio":0.027213706467326883,"meanDifferenceLogEvidenceRatio":-2.4704542524310673}}},{"case":"deceptive-low-mixed","trials":400,"rows":5,"trueSettings":[3,6,6,6,6],"gamesPerRow":8000,"machines":["mr","mr","mr","mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3535,"maximumDiff":6818,"negativeDiffRows":334,"positiveDiffRows":1666,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":false,"rejectionRate":0.015,"nonRejectionRate":0.985,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.985,"evidenceAbove10Rate":0.235,"bonusEvidenceAbove10Rate":0.235,"differenceEvidenceAbove10Rate":0.22,"meanLogEvidenceRatio":1.4454979199138023,"meanDifferenceLogEvidenceRatio":1.223451453265846},"all56":{"trueHypothesis":false,"rejectionRate":0.0475,"nonRejectionRate":0.9525,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9525,"evidenceAbove10Rate":0.2775,"bonusEvidenceAbove10Rate":0.2775,"differenceEvidenceAbove10Rate":0.2,"meanLogEvidenceRatio":1.2360963258896966,"meanDifferenceLogEvidenceRatio":0.6449410568171631},"all6":{"trueHypothesis":false,"rejectionRate":0.075,"nonRejectionRate":0.925,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.925,"evidenceAbove10Rate":0.285,"bonusEvidenceAbove10Rate":0.285,"differenceEvidenceAbove10Rate":0.1275,"meanLogEvidenceRatio":0.9087229163602737,"meanDifferenceLogEvidenceRatio":-0.22666592050744627}}},{"case":"two-all6","trials":400,"rows":2,"trueSettings":[6,6],"gamesPerRow":8000,"machines":["mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-2799,"maximumDiff":7085,"negativeDiffRows":66,"positiveDiffRows":734,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0.0075,"nonRejectionRate":0.9925,"falseRejectionRate":0.0075,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.3775,"bonusEvidenceAbove10Rate":0.3775,"differenceEvidenceAbove10Rate":0.4575,"meanLogEvidenceRatio":1.9836804711972087,"meanDifferenceLogEvidenceRatio":2.201305207154009},"all56":{"trueHypothesis":true,"rejectionRate":0.0075,"nonRejectionRate":0.9925,"falseRejectionRate":0.0075,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.32,"bonusEvidenceAbove10Rate":0.32,"differenceEvidenceAbove10Rate":0.34,"meanLogEvidenceRatio":1.5807184631523017,"meanDifferenceLogEvidenceRatio":1.6374478825087724},"all6":{"trueHypothesis":true,"rejectionRate":0.0075,"nonRejectionRate":0.9925,"falseRejectionRate":0.0075,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.23,"bonusEvidenceAbove10Rate":0.23,"differenceEvidenceAbove10Rate":0.17,"meanLogEvidenceRatio":1.22162577398475,"meanDifferenceLogEvidenceRatio":1.1347684046303832}}},{"case":"two-low-close","trials":400,"rows":2,"trueSettings":[3,6],"gamesPerRow":8000,"machines":["mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3843,"maximumDiff":6428,"negativeDiffRows":244,"positiveDiffRows":555,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":false,"rejectionRate":0.0075,"nonRejectionRate":0.9925,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9925,"evidenceAbove10Rate":0.0625,"bonusEvidenceAbove10Rate":0.0625,"differenceEvidenceAbove10Rate":0.045,"meanLogEvidenceRatio":0.22016354159223345,"meanDifferenceLogEvidenceRatio":-0.165817840698724},"all56":{"trueHypothesis":false,"rejectionRate":0.035,"nonRejectionRate":0.965,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.965,"evidenceAbove10Rate":0.035,"bonusEvidenceAbove10Rate":0.035,"differenceEvidenceAbove10Rate":0.025,"meanLogEvidenceRatio":-0.2676983064441521,"meanDifferenceLogEvidenceRatio":-0.9474597737796069},"all6":{"trueHypothesis":false,"rejectionRate":0.145,"nonRejectionRate":0.855,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.855,"evidenceAbove10Rate":0.015,"bonusEvidenceAbove10Rate":0.015,"differenceEvidenceAbove10Rate":0.01,"meanLogEvidenceRatio":-0.6913184516264559,"meanDifferenceLogEvidenceRatio":-1.7086095209426235}}},{"case":"two-low-exposure","trials":400,"rows":2,"trueSettings":[1,6],"gamesPerRow":100,"machines":["mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-196,"maximumDiff":772,"negativeDiffRows":500,"positiveDiffRows":300,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":false,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":1,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-0.008482186050474554,"meanDifferenceLogEvidenceRatio":-0.029697224807676975},"all56":{"trueHypothesis":false,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":1,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-0.01630111346443935,"meanDifferenceLogEvidenceRatio":-0.04348796392525986},"all6":{"trueHypothesis":false,"rejectionRate":0,"nonRejectionRate":1,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":1,"evidenceAbove10Rate":0,"bonusEvidenceAbove10Rate":0,"differenceEvidenceAbove10Rate":0,"meanLogEvidenceRatio":-0.023125439395716936,"meanDifferenceLogEvidenceRatio":-0.056855540602389176}}},{"case":"two-all456","trials":400,"rows":2,"trueSettings":[4,5],"gamesPerRow":8000,"machines":["mr","mr"],"forcedWeakObservation":false,"difference":{"style":"random","minimumDiff":-3424,"maximumDiff":6634,"negativeDiffRows":164,"positiveDiffRows":636,"pairedTrials":400},"hypotheses":{"all456":{"trueHypothesis":true,"rejectionRate":0.0025,"nonRejectionRate":0.9975,"falseRejectionRate":0.0025,"falseHypothesisNonRejectionRate":null,"evidenceAbove10Rate":0.0925,"bonusEvidenceAbove10Rate":0.0925,"differenceEvidenceAbove10Rate":0.0675,"meanLogEvidenceRatio":0.6184719320150863,"meanDifferenceLogEvidenceRatio":0.38905528467689476},"all56":{"trueHypothesis":false,"rejectionRate":0.015,"nonRejectionRate":0.985,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.985,"evidenceAbove10Rate":0.0425,"bonusEvidenceAbove10Rate":0.0425,"differenceEvidenceAbove10Rate":0.0225,"meanLogEvidenceRatio":0.1675779065423682,"meanDifferenceLogEvidenceRatio":-0.30928376005892455},"all6":{"trueHypothesis":false,"rejectionRate":0.0675,"nonRejectionRate":0.9325,"falseRejectionRate":null,"falseHypothesisNonRejectionRate":0.9325,"evidenceAbove10Rate":0.015,"bonusEvidenceAbove10Rate":0.015,"differenceEvidenceAbove10Rate":0.005,"meanLogEvidenceRatio":-0.2511221921251056,"meanDifferenceLogEvidenceRatio":-1.0366980661224958}}}],"weakRows":[{"observation":{"games":5000,"bb":14,"rb":10},"ordinaryP4":0.09865472869448673,"hypotheses":[{"id":"all456","logEvidenceRatio":0.38993219558238,"familyP":0.6180650659626197,"refuted":false,"weakConditional":[0,0,0,0.7162291837809038,0.2027899926830488,0.08098082353604752]},{"id":"all56","logEvidenceRatio":0.061879875976365906,"familyP":0.17930526715777123,"refuted":false,"weakConditional":[0,0,0,0,0.7146259625460458,0.2853740374539541]},{"id":"all6","logEvidenceRatio":-0.32067931751622636,"familyP":0.07631749172263322,"refuted":false,"weakConditional":[0,0,0,0,0,1]}]},{"observation":{"games":8000,"bb":22,"rb":16},"ordinaryP4":0.03467678919473053,"hypotheses":[{"id":"all456","logEvidenceRatio":-0.2283362194135572,"familyP":0.08205350325243059,"refuted":false,"weakConditional":[0,0,0,0.8613516159976489,0.11282849485964483,0.025819889142706335]},{"id":"all56","logEvidenceRatio":-0.9855185404886662,"familyP":0.011587799211146523,"refuted":true,"weakConditional":[0,0,0,0,0.813774323238643,0.18622567676135687]},{"id":"all6","logEvidenceRatio":-1.652459408991941,"familyP":0.002985891484533165,"refuted":true,"weakConditional":[0,0,0,0,0,1]}]}],"publicData":[{"storeName":"PIA大船1","date":"2026-09-21","machine":"my","n":48,"knownSettings":false,"warnings":["設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。","全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。","ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。","根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。","2000G未満の台が14/48台あります。小稼働では設定の区別が難しくなります。","同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。","差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。"],"hypotheses":[{"id":"all456","logEvidenceRatio":-17.62855342142378,"bonusLogEvidenceRatio":-20.91549063683913,"logFamilyP":-1.3205805285322323,"worstRow":{"id":"3069","tableNo":"3069","logCompatibility":-4.101411481049183},"topConditionalAllocation":{"counts":[0,0,0,22,16,10],"label":"444444444444444444444455555555555555556666666666","probability":0.020532710560900405}},{"id":"all56","logEvidenceRatio":-29.82409251442848,"bonusLogEvidenceRatio":-33.822186055078404,"logFamilyP":-3.197175061312398,"worstRow":{"id":"3069","tableNo":"3069","logCompatibility":-5.992983225361456},"topConditionalAllocation":{"counts":[0,0,0,0,32,16],"label":"555555555555555555555555555555556666666666666666","probability":0.1309608820317951}},{"id":"all6","logEvidenceRatio":-57.206470026901,"bonusLogEvidenceRatio":-59.90423289160993,"logFamilyP":-6.651952252188741,"worstRow":{"id":"3069","tableNo":"3069","logCompatibility":-10.259071505064185},"topConditionalAllocation":{"counts":[0,0,0,0,0,48],"label":"666666666666666666666666666666666666666666666666","probability":1}}]},{"storeName":"PIA大船1","date":"2026-09-21","machine":"go","n":24,"knownSettings":false,"warnings":["設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。","全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。","ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。","根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。","2000G未満の台が11/24台あります。小稼働では設定の区別が難しくなります。","同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。","差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。"],"hypotheses":[{"id":"all456","logEvidenceRatio":-1.9785975911948182,"bonusLogEvidenceRatio":-2.9517760299218256,"logFamilyP":0,"worstRow":{"id":"3115","tableNo":"3115","logCompatibility":-1.127806478719478},"topConditionalAllocation":{"counts":[0,0,0,9,8,7],"label":"444444444555555556666666","probability":0.03545374436349274}},{"id":"all56","logEvidenceRatio":-4.107363848178492,"bonusLogEvidenceRatio":-5.072675921322473,"logFamilyP":-0.34068953530572355,"worstRow":{"id":"3115","tableNo":"3115","logCompatibility":-1.6855938868633231},"topConditionalAllocation":{"counts":[0,0,0,0,13,11],"label":"555555555555566666666666","probability":0.16421959587543836}},{"id":"all6","logEvidenceRatio":-7.095736310723064,"bonusLogEvidenceRatio":-7.453255886201687,"logFamilyP":-1.1855670796559652,"worstRow":{"id":"3115","tableNo":"3115","logCompatibility":-2.3303055233564365},"topConditionalAllocation":{"counts":[0,0,0,0,0,24],"label":"666666666666666666666666","probability":1}}]},{"storeName":"PIA大船1","date":"2026-09-21","machine":"im","n":24,"knownSettings":false,"warnings":["設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。","全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。","ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。","根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。","2000G未満の台が10/24台あります。小稼働では設定の区別が難しくなります。","同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。","差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。"],"hypotheses":[{"id":"all456","logEvidenceRatio":-0.633591035553069,"bonusLogEvidenceRatio":-0.8585368861456768,"logFamilyP":0,"worstRow":{"id":"3136","tableNo":"3136","logCompatibility":-0.6336526589207381},"topConditionalAllocation":{"counts":[0,0,0,9,8,7],"label":"444444444555555556666666","probability":0.036613256340813916}},{"id":"all56","logEvidenceRatio":-3.1368411933851377,"bonusLogEvidenceRatio":-3.0607449526599524,"logFamilyP":0,"worstRow":{"id":"3121","tableNo":"3121","logCompatibility":-1.6099812780987577},"topConditionalAllocation":{"counts":[0,0,0,0,13,11],"label":"555555555555566666666666","probability":0.17492885878335285}},{"id":"all6","logEvidenceRatio":-7.165036120826338,"bonusLogEvidenceRatio":-3.2952732677950483,"logFamilyP":0,"worstRow":{"id":"3121","tableNo":"3121","logCompatibility":-3.1455036604933753},"topConditionalAllocation":{"counts":[0,0,0,0,0,24],"label":"666666666666666666666666","probability":1}}]},{"storeName":"PIA大船1","date":"2026-09-21","machine":"fk","n":5,"knownSettings":false,"warnings":["設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。","全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。","ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。","根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。","2000G未満の台が3/5台あります。小稼働では設定の区別が難しくなります。","同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。","差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。"],"hypotheses":[{"id":"all456","logEvidenceRatio":-1.2912088136669089,"bonusLogEvidenceRatio":-1.0121161445326465,"logFamilyP":0,"worstRow":{"id":"3148","tableNo":"3148","logCompatibility":-1.010192592286728},"topConditionalAllocation":{"counts":[0,0,0,2,2,1],"label":"44556","probability":0.15536328367157706}},{"id":"all56","logEvidenceRatio":-2.2685388418296757,"bonusLogEvidenceRatio":-1.6352334379554743,"logFamilyP":0,"worstRow":{"id":"3148","tableNo":"3148","logCompatibility":-1.7652601208509395},"topConditionalAllocation":{"counts":[0,0,0,0,3,2],"label":"55566","probability":0.3503649796488914}},{"id":"all6","logEvidenceRatio":-4.332921584263521,"bonusLogEvidenceRatio":-2.910952250866643,"logFamilyP":-0.8412972555331619,"worstRow":{"id":"3148","tableNo":"3148","logCompatibility":-3.498252812591545},"topConditionalAllocation":{"counts":[0,0,0,0,0,5],"label":"66666","probability":1}}]},{"storeName":"PIA大船1","date":"2026-09-21","machine":"hp","n":5,"knownSettings":false,"warnings":["設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。","全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。","ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。","根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。","2000G未満の台が2/5台あります。小稼働では設定の区別が難しくなります。","同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。","差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。"],"hypotheses":[{"id":"all456","logEvidenceRatio":0.23581949565506477,"bonusLogEvidenceRatio":-0.7946117789547209,"logFamilyP":-0.3638562975453452,"worstRow":{"id":"3154","tableNo":"3154","logCompatibility":-0.8915406821163003},"topConditionalAllocation":{"counts":[0,0,0,2,2,1],"label":"44556","probability":0.1486876342203614}},{"id":"all56","logEvidenceRatio":-0.40953655932904187,"bonusLogEvidenceRatio":-1.5272683406830256,"logFamilyP":-0.6932592369987589,"worstRow":{"id":"3154","tableNo":"3154","logCompatibility":-1.3846111616410042},"topConditionalAllocation":{"counts":[0,0,0,0,3,2],"label":"55566","probability":0.34488989204965176}},{"id":"all6","logEvidenceRatio":-1.2519146233505056,"bonusLogEvidenceRatio":-2.4238149579512505,"logFamilyP":-1.025007847754178,"worstRow":{"id":"3154","tableNo":"3154","logCompatibility":-1.8578575393114676},"topConditionalAllocation":{"counts":[0,0,0,0,0,5],"label":"66666","probability":1}}]}]}
+79/79 commands passed
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

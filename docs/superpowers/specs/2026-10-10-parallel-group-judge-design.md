@@ -92,3 +92,7 @@ aggregateは `{games,bb,rb,diff,diffN,knownDiff,bbDenom,rbDenom,combinedDenom,mi
 - 包含事前法: https://statproofbook.github.io/P/bf-ep.html
 
 これらは数学上の一般式の確認用。JUGESTの機種確率の出典は既存のコード・テスト・本番照合を正とする。
+
+## 2026-10-13 最終レビュー後の表示識別情報
+
+reportへoptionalなreverseWarningRowsを追加。逆算警告を持つ台を元の入力順で {id,tableNo} として保持する表示専用メタデータ。既存warnings文字列と全計算フィールドは互換性のため維持し、viewでは共通rowLabelsを使って警告も現在の入力行／standaloneの対象順を表示する。旧メタデータ無しreportでは曖昧な文字列から台番号を推測せず一般警告にする。尤度・配分・反証・設定表・個別判別に変更はない。保存版と全旧reportフィールドの6条件完全一致を検査する。
