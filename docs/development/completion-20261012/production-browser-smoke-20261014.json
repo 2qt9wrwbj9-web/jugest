@@ -1,0 +1,157 @@
+{
+  "url": "https://jugest.net/",
+  "fictitiousData": true,
+  "rows": 2,
+  "groupToggleOffOn": true,
+  "sortP6": true,
+  "individualDetailMostLikely": true,
+  "editingInvalidatesGroup": true,
+  "draftReload": true,
+  "groupText": "全台系を集合で比較 2台\n合計G\n16,000\nBB\n68\nRB\n65\nBB確率\n1/235.29\nRB確率\n1/246.15\n合算\n1/120.3\n\n差枚：入力済み0/2台の合計 +0枚（未入力は補完しません）\n\n1倍超なら仮説側、1倍未満なら比較側に合います。等重みでの根拠比は、全台系の成立確率ではありません。\n\n全456\nこの検査では反証なし\n\n比較側：非全456（少なくとも1台が設定1〜3）\n\n既存モデルの根拠比\n9.468倍\nボーナスだけの根拠比\n9.468倍\n\nこの仮説の方がデータに合う · 最も整合しない台 9001\n\n全56\nこの検査では反証なし\n\n比較側：非全56（少なくとも1台が設定1〜4）\n\n既存モデルの根拠比\n5.527倍\nボーナスだけの根拠比\n5.527倍\n\nこの仮説の方がデータに合う · 最も整合しない台 9001\n\n全6\nこの検査では反証なし\n\n比較側：非全6（少なくとも1台が設定1〜5）\n\n既存モデルの根拠比\n3.847倍\nボーナスだけの根拠比\n3.847倍\n\nこの仮説の方がデータに合う · 最も整合しない台 9002\n\n差枚を含むモデルは近似です。「反証なし」は全台系の証明ではありません。低設定が混じっていても反証できない場合があります。大きい根拠比も全台系の確定ではありません。\n\n根拠比の見方・比較の前提\n\n機種が混在しています。合算確率は観測の参考値です。\n\n仮説を置いた設定配分\n配分を見る仮説\n全456\n全56\n全6\n\n仮説成立時・等重みの条件付き推定\n\nこの仮説が正しいと仮定した設定配分です。全台系の成立確率ではありません。\n\n設定4の期待台数\n0.52台\n設定5の期待台数\n0.71台\n設定6の期待台数\n0.78台\n56\n28.5%\n46\n23.0%\n45\n17.5%\n配分候補をさらに見る（上位8候補）\n各台の条件付き確率・最有力の台別割当て\n根拠比の重み感度\nボーナスの下振れ検査・前提\n全台が同じ設定だった場合の合算参考\n注意点を確認",
+  "browserErrors": [
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:57:59.592Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:57:59.594Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:58:00.655Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:58:00.657Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:01.114Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:02.094Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:02.108Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:02.108Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:03.109Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:03.125Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:03.126Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:04.157Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:04.157Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:18.567Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:18.568Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:18.579Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:19.602Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:21.232Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:48.615Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    },
+    {
+      "level": "error",
+      "message": "Error sending browser metadata to extension: Object",
+      "timestamp": "2026-10-13T21:59:48.616Z",
+      "url": "chrome-extension://kcdongibgcplmaagnmgpjhpjgmmaaaaa/content-script.bundle.js"
+    }
+  ],
+  "screenshots": [
+    "jugest-production-1791928789625.jpg",
+    "jugest-production-result-1791928828012.jpg",
+    "jugest-production-summary-1791928855918.jpg"
+  ],
+  "inputs": [
+    {
+      "machine": "my6",
+      "tableNo": "9001",
+      "games": 8000,
+      "bb": 36,
+      "rb": 35,
+      "diff": null
+    },
+    {
+      "machine": "my",
+      "tableNo": "9002",
+      "games": 8000,
+      "bb": 32,
+      "rb": 30,
+      "diff": null
+    }
+  ],
+  "observedLatest20ErrorsAreBrowserExtensionOnly": true
+}

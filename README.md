@@ -1,3 +1,9 @@
+# 最新状態：本番反映済み（2026-10-14）
+
+ヒロの明示許可後、完成版eb8a9e175cbcaeacea41481a8ffe053456b94e31を本番へ反映。稼働SHA・公開/内部health・配信ファイル一致・判別画面の実操作を確認。[本番反映記録](docs/development/completion-20261012/production-deployment-report-20261014.md)を最初に読む。記録は専用開発ブランチへ保存し、本番を追加で再反映しない。
+
+以下は完成時点・本番反映前の保全した記録。
+
 # JUGEST 並列判別・全台系 開発引き継ぎ
 
 この開発ブランチは work/parallel-group-checkpoint-20261012。正式な再開地点は a563a04e4771420ef8689593e90cf6aa97e36c3d、元の判別基準は f728b2587a9bdd81541ccb50d3ae802a8492486a。

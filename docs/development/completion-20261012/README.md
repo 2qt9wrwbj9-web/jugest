@@ -1,3 +1,9 @@
+# 最新状態：本番反映済み（2026-10-14）
+
+直前の具体的な確認に対するヒロの「いいよ」を受け、完成版eb8a9e1をdeploy/vpsへ反映。current／lastSuccessfulShaはeb8a9e1、内部・公開health200ok、配信SHA一致、本番画面で入力・全台系・詳細・並べ替え・編集失効・reloadを確認済み。[production-deployment-report-20261014.md](production-deployment-report-20261014.md)と検証JSON・images-production/を参照。最終記録コミットは開発ブランチのみへ保存。本番を記録のために再反映しない。
+
+以下は本番反映前までの保全した段階記録。
+
 # 最終状態：本番反映直前（2026-10-14）
 
 正式な再開地点a563a04から継続して完成。開発ブランチは `work/parallel-group-checkpoint-20261012`。元535ファイル／未保存2ファイル／12コミットのbundleと原環境を保全。元の設計を再実装していない。

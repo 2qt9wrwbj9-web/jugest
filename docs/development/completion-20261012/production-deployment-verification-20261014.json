@@ -1,0 +1,113 @@
+{
+  "currentTarget": "/opt/jugest/releases/eb8a9e175cbcaeacea41481a8ffe053456b94e31",
+  "deployState": {
+    "lastAttemptSha": "eb8a9e175cbcaeacea41481a8ffe053456b94e31",
+    "lastSuccessfulSha": "eb8a9e175cbcaeacea41481a8ffe053456b94e31",
+    "previousSuccessfulSha": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+    "lastResult": "success",
+    "updatedAt": "2026-10-13T21:52:05.568Z"
+  },
+  "local": {
+    "health": {
+      "status": 200,
+      "ok": true
+    },
+    "index": {
+      "status": 200,
+      "sha256": "b9ddc46ed8af3c4d252a4188d7dbcbad30a4e9255ee02898be672eb3cc7aba93",
+      "bytes": 488571,
+      "cacheControl": "no-cache",
+      "groupScripts": true
+    },
+    "app-v510.js": {
+      "status": 200,
+      "sha256": "5106ef332bd7f226956ee609e93b3675e4fcbd174b2c9b96e81cbf608dc3b406",
+      "bytes": 175875,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "app-v510.css": {
+      "status": 200,
+      "sha256": "65cc4409c4cb0ffaff8df82355b6ad041a85d2f7065d1eb9d33668c3999b3a67",
+      "bytes": 89605,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "group-judge.js": {
+      "status": 200,
+      "sha256": "fc5c6495235f9ae206944c09e9510a35826cf354af72e910d32ba7d3dda9aabc",
+      "bytes": 21469,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "group-judge-view.js": {
+      "status": 200,
+      "sha256": "0937d8ec06204eb54b672215774d6354470fdb95d6b228c62b2ca46239f5933d",
+      "bytes": 13019,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    }
+  },
+  "external": {
+    "health": {
+      "status": 200,
+      "ok": true
+    },
+    "index": {
+      "status": 200,
+      "sha256": "b9ddc46ed8af3c4d252a4188d7dbcbad30a4e9255ee02898be672eb3cc7aba93",
+      "bytes": 488571,
+      "cacheControl": "no-cache",
+      "groupScripts": true
+    },
+    "app-v510.js": {
+      "status": 200,
+      "sha256": "5106ef332bd7f226956ee609e93b3675e4fcbd174b2c9b96e81cbf608dc3b406",
+      "bytes": 175875,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "app-v510.css": {
+      "status": 200,
+      "sha256": "65cc4409c4cb0ffaff8df82355b6ad041a85d2f7065d1eb9d33668c3999b3a67",
+      "bytes": 89605,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "group-judge.js": {
+      "status": 200,
+      "sha256": "fc5c6495235f9ae206944c09e9510a35826cf354af72e910d32ba7d3dda9aabc",
+      "bytes": 21469,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    },
+    "group-judge-view.js": {
+      "status": 200,
+      "sha256": "0937d8ec06204eb54b672215774d6354470fdb95d6b228c62b2ca46239f5933d",
+      "bytes": 13019,
+      "cacheControl": "public, max-age=300",
+      "groupScripts": false
+    }
+  },
+  "sourceHashes": {
+    "group-judge.js": "fc5c6495235f9ae206944c09e9510a35826cf354af72e910d32ba7d3dda9aabc",
+    "group-judge-view.js": "0937d8ec06204eb54b672215774d6354470fdb95d6b228c62b2ca46239f5933d",
+    "app-v510.js": "5106ef332bd7f226956ee609e93b3675e4fcbd174b2c9b96e81cbf608dc3b406",
+    "app-v510.css": "65cc4409c4cb0ffaff8df82355b6ad041a85d2f7065d1eb9d33668c3999b3a67",
+    "judgement-view.js": "889b1bd21ec4d5d11b3f3cd291e6c10c23e3bdcd4fe2c948d6472771c6d03e48",
+    "judgement-model.js": "4a6af35a9ecc987f80d684f7cae9f9d12453dad28fc585bac927ff558ffc3e21",
+    "core-v510.js": "b72a71204912278d04a65f5843471d0c975dfe8068878e065cbeb6e93596f2ba",
+    "machine-names.js": "7cb86660dbe9ba30c3a880bfa17a99fa9f36a4ce25ab723cd1f184b68ad5c04c",
+    "vps/src/collectors/pia-public.mjs": "6242ea25941d0a94cc29722980979a2a1051f16fd745260d7c4659ef89b7ed79"
+  },
+  "userApproval": "2026-10-14 06:50:15 JST: いいよ（直前の具体的な本番反映確認への回答）",
+  "repository": "2qt9wrwbj9-web/jugest",
+  "deploymentBranch": "deploy/vps",
+  "deployedCommit": "eb8a9e175cbcaeacea41481a8ffe053456b94e31",
+  "previousCommit": "3a0ad0abebea9be6f05eaf6f38e4c7bbfaadc9a7",
+  "expectedShaLeaseChecked": true,
+  "forcePush": false,
+  "databaseMigrationPerformed": false,
+  "manualDatabaseWritePerformed": false,
+  "manualServiceRestartPerformed": false
+}
