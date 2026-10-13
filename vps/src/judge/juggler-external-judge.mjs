@@ -1,12 +1,10 @@
+import '../../../machine-names.js';
 import '../../../judgement-model.js';
 import {runExistingJugglerJudgementBatch} from '../analysis/runtime-adapter.mjs';
 
 export const JUGGLER_MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 
-const MACHINE_NAMES=Object.freeze({
-  my:'マイジャグV',my6:'マイジャグⅥ',im:'ネオアイムジャグラー',go:'ゴーゴージャグラー3',fk:'ファンキージャグラー2',
-  hp:'ハッピージャグラーVⅢ',gg:'ジャグラーガールズSS',mr:'ミスタージャグラー',um:'ウルトラミラクルジャグラー'
-});
+const MACHINE_NAMES=Object.freeze(Object.fromEntries(JUGGLER_MACHINE_KEYS.map(key=>[key,globalThis.JugestMachineNames.full(key)])));
 
 export function jugglerMachineName(key){return MACHINE_NAMES[key]??null}
 

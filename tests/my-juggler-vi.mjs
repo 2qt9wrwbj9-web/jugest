@@ -5,8 +5,8 @@ import {boot,plain} from './helpers/runtime.mjs';
 test('My Juggler VI is selectable in live and parallel judgement, independently named but spec-identical to V',async()=>{
   const {bridge,ctx}=await boot({loadApp:false});
   const options=plain(bridge.getObservedJudgeMachines());
-  assert.equal(options.find(m=>m.key==='my')?.name,'マイジャグV');
-  assert.equal(options.find(m=>m.key==='my6')?.name,'マイジャグⅥ');
+  assert.equal(options.find(m=>m.key==='my')?.name,'マイジャグラーⅤ');
+  assert.equal(options.find(m=>m.key==='my6')?.name,'マイジャグラーVI');
   assert.equal(options.filter(m=>['my','my6'].includes(m.key)).length,2);
   const observed={tableNo:'714',games:6000,bb:24,rb:26,diff:360};
   const a=bridge.judgeObservedMachine({machine:'my',...observed});
@@ -24,7 +24,7 @@ test('My Juggler VI is selectable in live and parallel judgement, independently 
   }
   const v=live('my'),vi=live('my6');
   assert.equal(vi.machine,'my6');
-  assert.equal(vi.machineName,'マイジャグⅥ');
+  assert.equal(vi.machineName,'マイジャグラーVI');
   assert.deepEqual(vi.defs.map(x=>x.id),v.defs.map(x=>x.id));
   assert.deepEqual(vi.q,v.q);
   assert.equal(vi.expectedSetting,v.expectedSetting);

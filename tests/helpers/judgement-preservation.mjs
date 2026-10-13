@@ -4,6 +4,16 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
+// Reverse only reviewed machine-name edits before enforcing original protected hashes.
+const APPROVED_NAME_EDITS=JSON.parse(readFileSync(new URL('./approved-machine-name-changes.json',import.meta.url),'utf8'));
+function restoreReviewedMachineNames(file,source){
+ for(const [updated,original] of APPROVED_NAME_EDITS[file]||[]){
+  assert.equal(source.split(updated).length-1,1,`unreviewed machine-name change: ${file}`);
+  source=source.replace(updated,original);
+ }
+ return source;
+}
+
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
  '  // BEGIN independent judgement UI\n':'efa1c27d4a3c0a14dbc7c95143b018a9c8289e150a1f76ab175929e6f25da75d',
@@ -92,6 +102,7 @@ function withoutMy6Additions(file,source){
  return source;
 }
 export function withoutJudgementAdditions(file,source){
+ source=restoreReviewedMachineNames(file,source);
  source=withoutMy6Additions(file,source);
  if(file==='app-v510.js'){
   source=stripLiveReverseBlock(source,'\n// BEGIN reviewed live judgement compact helpers\n','// END reviewed live judgement compact helpers\n',REVIEWED_LIVE_JUDGE_COMPACT.jsHelpers);

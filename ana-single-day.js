@@ -19,8 +19,8 @@ const shopName=inferShopName();
 const decEnt=(s='')=>{const map={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '};return String(s).replace(/&#x([0-9a-f]+);/gi,(_,x)=>String.fromCodePoint(parseInt(x,16))).replace(/&#([0-9]+);/g,(_,x)=>String.fromCodePoint(parseInt(x,10))).replace(/&([a-z]+);/gi,(z,k)=>map[k.toLowerCase()]??z)};
 const strip=(s='')=>decEnt(String(s).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<br\s*\/?\s*>/gi,'\n').replace(/<[^>]+>/g,' ')).replace(/[\u00a0\t\r ]+/g,' ').replace(/\n\s+/g,'\n').trim();
 const aliases=[
- ['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],
- ['my',['マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],
+ ['my6',['マイジャグラーVI','マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],
+ ['my',['マイジャグラーⅤ','マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],
  ['im',['ネオアイムジャグラーEX','ネオアイムジャグラー','ネオアイム']],
  ['go',['ゴーゴージャグラー3','ゴーゴージャグラーⅢ','ゴージャグ3','ゴージャグⅢ']],
  ['fk',['ファンキージャグラー2','ファンキージャグラーⅡ','ファンキー2','ファンキーⅡ']],
@@ -30,12 +30,12 @@ const aliases=[
  ['um',['ウルトラミラクルジャグラー','ウルトラミラクル','ウルミラ']],
  // HANA HANA: put New King V before King because the latter is a substring of the former.
  ['newkingv',['ニューキングハナハナV','LニューキングハナハナV','スマート沖スロニューキングハナハナV','スマスロニューキングハナハナV']],
- ['houou',['ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],
- ['dragon',['ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],
+ ['houou',['ハナハナホウオウ〜天翔〜','ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],
+ ['dragon',['ドラゴンハナハナ〜閃光〜','ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],
  ['star',['スターハナハナ','スマート沖スロスターハナハナ','Lスターハナハナ']],
  ['king',['キングハナハナ','スマート沖スロキングハナハナ','Lキングハナハナ']]
 ];
-const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};
+const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[〜～~]/g,'~').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};
 const aliasTokens=aliases.map(([k,aa])=>[k,aa.map(machineToken)]);
 const norm=(name='')=>{const s=machineToken(name);for(const [k,aa] of aliasTokens)if(aa.some(a=>s.includes(a)))return k;return''};
 const num=(v,nullable=false)=>{const s=strip(String(v??'')).replace(/,/g,'').replace(/[＋+]/g,'+').replace(/[−－–—]/g,'-').trim();if(!s||/^[―ー\-–—]+$/.test(s))return nullable?null:NaN;const q=s.match(/[+-]?\d+(?:\.\d+)?/);if(!q)return nullable?null:NaN;const n=Number(q[0]);return Number.isFinite(n)?n:(nullable?null:NaN)};
@@ -117,7 +117,7 @@ const payload={
 };
 const json=JSON.stringify(payload,null,2);
 const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const machineNames={my:'マイジャグV',my6:'マイジャグⅥ',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};
+const machineNames={my:'マイⅤ',my6:'マイVI',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};
 const counts=day.quality?.machineCounts||{};
 const countText=Object.entries(counts).filter(([,n])=>n>0).map(([k,n])=>`${machineNames[k]||k} ${n}`).join(' / ');
 const root=document.createElement('div');root.id='jugglerSingleDayExporter';

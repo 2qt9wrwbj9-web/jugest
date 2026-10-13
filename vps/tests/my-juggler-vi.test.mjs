@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,resolve} from 'node:path';
 import {judgeMachinesPublic} from '../src/mcp-handler.mjs';
+import {jugglerMachineName,JUGGLER_MACHINE_KEYS} from '../src/judge/juggler-external-judge.mjs';
+import '../../machine-names.js';
 import {normalizePiaJugglerRow} from '../src/collectors/pia-public.mjs';
 
 const rootDir=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
@@ -55,4 +57,15 @@ test('Ana-slo collectors always check VI aliases ahead of V',()=>{
     assert.ok(vi>=0&&v>vi,file+' machine alias precedence');
     assert.ok(script.includes('マイジャグラーⅥ'),file+' has VI name');
   }
+});
+
+test('MCP display labels and PIA source labels use the canonical registry, with unchanged machine keys',()=>{
+  assert.equal(JUGGLER_MACHINE_KEYS.length,9);
+  for(const key of JUGGLER_MACHINE_KEYS)assert.equal(jugglerMachineName(key),globalThis.JugestMachineNames.full(key),key);
+  const input='ＳマイジャグラーⅤＫＤ';
+  const normalized=normalizePiaJugglerRow({store_id:35,machine_no:'601',name:input,source_machine_code:'j5',
+    out:17000,special_out:2000,special_1:20,special_2d:16,difference:190});
+  assert.equal(normalized.machine,'my');
+  assert.equal(normalized.sourceRawMachineName,input);
+  assert.equal(normalized.sourceMachineName,'マイジャグラーV');
 });

@@ -1,0 +1,104 @@
+{
+  "index.html": [
+    [
+      "<html class=\"jugest-app\"><head><meta charset=\"utf-8\"/><meta content=\"width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no\" name=\"viewport\"/><meta content=\"#f9fbff\" name=\"theme-color\"/><meta content=\"yes\" name=\"mobile-web-app-capable\"/><meta content=\"yes\" name=\"apple-mobile-web-app-capable\"/><meta content=\"default\" name=\"apple-mobile-web-app-status-bar-style\"/><meta content=\"JUGEST\" name=\"apple-mobile-web-app-title\"/><link href=\"./favicon-32.png\" rel=\"icon\" sizes=\"32x32\" type=\"image/png\"/><link href=\"./icon-192.png\" rel=\"icon\" sizes=\"192x192\" type=\"image/png\"/><link href=\"./icon-512.png\" rel=\"icon\" sizes=\"512x512\" type=\"image/png\"/><link href=\"./apple-touch-icon.png?v=512-icon-tune-3\" rel=\"apple-touch-icon\" sizes=\"180x180\"/><link href=\"./site.webmanifest\" rel=\"manifest\"/><title>JUGEST v5.1.2</title><script src=\"./machine-names.js\"></script><script src=\"./judgement-model.js\"></script><script src=\"./judgement-view.js\"></script><script src=\"./core-v510.js\"></script><script defer=\"\" src=\"./app-v510.js\"></script>\n",
+      "<html class=\"jugest-app\"><head><meta charset=\"utf-8\"/><meta content=\"width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no\" name=\"viewport\"/><meta content=\"#f9fbff\" name=\"theme-color\"/><meta content=\"yes\" name=\"mobile-web-app-capable\"/><meta content=\"yes\" name=\"apple-mobile-web-app-capable\"/><meta content=\"default\" name=\"apple-mobile-web-app-status-bar-style\"/><meta content=\"JUGEST\" name=\"apple-mobile-web-app-title\"/><link href=\"./favicon-32.png\" rel=\"icon\" sizes=\"32x32\" type=\"image/png\"/><link href=\"./icon-192.png\" rel=\"icon\" sizes=\"192x192\" type=\"image/png\"/><link href=\"./icon-512.png\" rel=\"icon\" sizes=\"512x512\" type=\"image/png\"/><link href=\"./apple-touch-icon.png?v=512-icon-tune-3\" rel=\"apple-touch-icon\" sizes=\"180x180\"/><link href=\"./site.webmanifest\" rel=\"manifest\"/><title>JUGEST v5.1.2</title><script src=\"./judgement-model.js\"></script><script src=\"./judgement-view.js\"></script><script src=\"./core-v510.js\"></script><script defer=\"\" src=\"./app-v510.js\"></script>\n"
+    ],
+    [
+      "const NAMES=globalThis.JugestMachineNames;\nif(!NAMES)throw new Error(\"JUGEST機種名定義を読み込めませんでした\");\n",
+      ""
+    ],
+    [
+      "my:{name:NAMES.full(\"my\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"b0\",\"単独BIG\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n",
+      "my:{name:\"マイジャグV\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"b0\",\"単独BIG\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n"
+    ],
+    [
+      "im:{name:NAMES.full(\"im\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n",
+      "im:{name:\"ネオアイムジャグラー\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n"
+    ],
+    [
+      "go:{name:NAMES.full(\"go\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n",
+      "go:{name:\"ゴーゴージャグラー3\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n"
+    ],
+    [
+      "fk:{name:NAMES.full(\"fk\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"b0\",\"単独BIG\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n",
+      "fk:{name:\"ファンキージャグラー2\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"b0\",\"単独BIG\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n"
+    ],
+    [
+      "hp:{name:NAMES.full(\"hp\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"b0\",\"単独BIG等\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n",
+      "hp:{name:\"ハッピージャグラーVⅢ\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"b0\",\"単独BIG等\",\"big\"],[\"bc\",\"🍒BIG\",\"big\"],[\"bu\",\"不明BIG\",\"big\"],[\"r0\",\"単独REG\",\"reg\"],[\"rc\",\"🍒REG\",\"reg\"],[\"ru\",\"不明REG\",\"reg\"]],\n"
+    ],
+    [
+      "gg:{name:NAMES.full(\"gg\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 チェリー\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n",
+      "gg:{name:\"ジャグラーガールズSS\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 チェリー\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n"
+    ],
+    [
+      "mr:{name:NAMES.full(\"mr\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n",
+      "mr:{name:\"ミスタージャグラー\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n"
+    ],
+    [
+      "um:{name:NAMES.full(\"um\"),defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n",
+      "um:{name:\"ウルトラミラクルジャグラー\",defs:[[\"grape\",\"🍇 ぶどう\",\"small\"],[\"cherry\",\"🍒 非重複\",\"small\"],[\"big\",\"BIG\",\"small\"],[\"reg\",\"REG\",\"small\"]],\n"
+    ],
+    [
+      "M.my6={...M.my,name:NAMES.full(\"my6\"),defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:\"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。\"};\n",
+      "M.my6={...M.my,name:\"マイジャグⅥ\",defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:\"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。\"};\n"
+    ],
+    [
+      "if(HANA){for(const k of HANA_MACHINE_KEYS){const h=HANA.MACHINES[k];M[k]={name:NAMES.full(k),defs:[],T:[],simple:h.big.map((b,i)=>({g:h.bell[i],b,r:h.reg[i]})),note:h.sourceNote,hana:true};}}\n",
+      "if(HANA){for(const k of HANA_MACHINE_KEYS){const h=HANA.MACHINES[k];M[k]={name:h.name,defs:[],T:[],simple:h.big.map((b,i)=>({g:h.bell[i],b,r:h.reg[i]})),note:h.sourceNote,hana:true};}}\n"
+    ],
+    [
+      "const MONTH_REPORT_LABEL=Object.fromEntries(JUGGLER_MACHINE_KEYS.map(k=>[k,NAMES.short(k)]));\n",
+      "const MONTH_REPORT_LABEL={my:\"マイV\",my6:\"マイⅥ\",im:\"ネオアイム\",go:\"ゴージャグ3\",fk:\"ファンキー2\",hp:\"ハッピーVⅢ\",gg:\"ガールズSS\",mr:\"ミスター\",um:\"ウルミラ\"};\n"
+    ],
+    [
+      "function analysisMachineName(k){return NAMES.short(k)||M[k]?.name||k}\n",
+      "function analysisMachineName(k){return({my:\"マイV\",my6:\"マイⅥ\",im:\"ネオアイム\",go:\"ゴージャグ3\",fk:\"ファンキー2\",hp:\"ハッピーVⅢ\",gg:\"ガールズSS\",mr:\"ミスター\",um:\"ウルミラ\",houou:\"ホウオウ天翔\",king:\"キングハナハナ\",dragon:\"ドラゴン閃光\",star:\"スターハナハナ\",newkingv:\"ニューキングV\"})[k]||M[k]?.name||k}\n"
+    ]
+  ],
+  "ana-launcher.js": [
+    [
+      " ['my6',['マイジャグラーVI','マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ['my',['マイジャグラーⅤ','マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],\n",
+      " ['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ['my',['マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],\n"
+    ],
+    [
+      " ['houou',['ハナハナホウオウ〜天翔〜','ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],\n ['dragon',['ドラゴンハナハナ〜閃光〜','ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],\n",
+      " ['houou',['ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],\n ['dragon',['ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],\n"
+    ],
+    [
+      "const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[〜～~]/g,'~').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};\n",
+      "const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};\n"
+    ]
+  ],
+  "ana-single-day.js": [
+    [
+      " ['my6',['マイジャグラーVI','マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ['my',['マイジャグラーⅤ','マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],\n",
+      " ['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ['my',['マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],\n"
+    ],
+    [
+      " ['houou',['ハナハナホウオウ〜天翔〜','ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],\n ['dragon',['ドラゴンハナハナ〜閃光〜','ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],\n",
+      " ['houou',['ハナハナホウオウ～天翔～','ハナハナホウオウ-天翔-','ハナハナホウオウ天翔','ホウオウ～天翔～','ホウオウ天翔']],\n ['dragon',['ドラゴンハナハナ～閃光～','ドラゴンハナハナ-閃光-','ドラゴンハナハナ閃光','スマート沖スロドラゴンハナハナ～閃光～','Lドラゴンハナハナ～閃光～']],\n"
+    ],
+    [
+      "const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[〜～~]/g,'~').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};\n",
+      "const machineToken=(name='')=>{let s=String(name);try{s=s.normalize('NFKC')}catch{}return s.toUpperCase().replace(/\\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[・･]/g,'').replace(/[Φφ]/g,'Φ')};\n"
+    ],
+    [
+      "const machineNames={my:'マイⅤ',my6:'マイVI',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};\n",
+      "const machineNames={my:'マイジャグV',my6:'マイジャグⅥ',im:'ネオアイム',go:'ゴージャグ3',fk:'ファンキー2',hp:'ハッピーVⅢ',gg:'ガールズSS',mr:'ミスター',um:'ウルミラ',houou:'ホウオウ天翔',king:'キングハナハナ',dragon:'ドラゴン閃光',star:'スターハナハナ',newkingv:'ニューキングV'};\n"
+    ]
+  ],
+  "build.mjs": [
+    [
+      "const FILES=['machine-names.js','index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];\n",
+      "const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];\n"
+    ]
+  ],
+  "tests/helpers/runtime.mjs": [
+    [
+      " for(const f of ['machine-names.js','hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});\n",
+      " for(const f of ['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});\n"
+    ]
+  ]
+}

@@ -72,5 +72,6 @@
   "node tests/store-optimization-research.mjs",
   "node --test tests/judgement-page.mjs",
   "node --test tests/judgement-factor-spectrum.mjs",
-  "node --test tests/my-juggler-vi.mjs"
+  "node --test tests/my-juggler-vi.mjs",
+  "node --test tests/machine-names.mjs"
 ]

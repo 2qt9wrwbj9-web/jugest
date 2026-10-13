@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import '../../../machine-names.js';
 import {archiveRawArtifact} from '../ingest/raw-archive.mjs';
 import {ingestCollectorDay} from '../ingest/canonical-ingest.mjs';
 
@@ -8,23 +9,17 @@ export const PIA_SOURCE_STORE_ID='pia:35';
 export const PIA_STORE_NAME='PIA大船1';
 export const PIA_PARSER_BUILD='pia-rankingtop-v1';
 
-const MACHINE_ALIASES=[
-  ['my6','マイジャグラーⅥ',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],
-  ['my','マイジャグラーV',['マイジャグラーV','マイジャグラー5','マイジャグV','マイジャグ5']],
-  ['im','ネオアイムジャグラーEX',['ネオアイムジャグラーEX','ネオアイムジャグラー','ネオアイム']],
-  ['go','ゴーゴージャグラー3',['ゴーゴージャグラー3','ゴーゴージャグラーIII','ゴージャグ3','ゴージャグIII']],
-  ['fk','ファンキージャグラー2',['ファンキージャグラー2','ファンキージャグラーII','ファンキー2','ファンキーII']],
-  ['hp','ハッピージャグラーVⅢ',['ハッピージャグラーVIII','ハッピージャグラーV3','ハッピーVIII','ハッピーV3']],
-  ['gg','ジャグラーガールズSS',['ジャグラーガールズSS','ジャグラーガールズ','ガールズSS']],
-  ['mr','ミスタージャグラー',['ミスタージャグラー','ミスター']],
-  ['um','ウルトラミラクルジャグラー',['ウルトラミラクルジャグラー','ウルトラミラクル','ウルミラ']]
-];
-
-function machineToken(value=''){
-  let text=String(value);
-  try{text=text.normalize('NFKC')}catch{}
-  return text.toUpperCase().replace(/\s+/g,'').replace(/[‐‑‒–—―]/g,'-').replace(/[・･]/g,'');
-}
+const NAME_REGISTRY=globalThis.JugestMachineNames;
+const JUGGLER_KEYS=['my6','my','im','go','fk','hp','gg','mr','um'];
+// These are historical canonical-ingest SOURCE identifiers, not user-facing names.
+// Never change them just to fix a display label: long-term feature grouping uses them.
+const SOURCE_LABELS=Object.freeze({
+  my6:'マイジャグラーⅥ',my:'マイジャグラーV',im:'ネオアイムジャグラーEX',
+  go:'ゴーゴージャグラー3',fk:'ファンキージャグラー2',hp:'ハッピージャグラーVⅢ',
+  gg:'ジャグラーガールズSS',mr:'ミスタージャグラー',um:'ウルトラミラクルジャグラー'
+});
+const MACHINE_ALIASES=JUGGLER_KEYS.map(key=>[key,SOURCE_LABELS[key],[NAME_REGISTRY.full(key),...NAME_REGISTRY.aliases(key)]]);
+const machineToken=NAME_REGISTRY.token;
 const ALIAS_TOKENS=MACHINE_ALIASES.map(([key,label,aliases])=>[key,label,aliases.map(machineToken)]);
 
 function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
