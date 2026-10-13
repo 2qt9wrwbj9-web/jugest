@@ -1,0 +1,153 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: my {"machine":"my","tableNo":"0","games":1,"bb":0,"rb":0,"diff":null}
++ actual - expected
+... Skipped lines
+
+  {
+    diagnostics: {
+      logs: [
+        -0.006122173238907364,
+        -0.006306436091857877,
+...
+    },
++   machineName: 'マイジャグラーⅤ',
+-   machineName: 'マイジャグV',
+    method: 'bonus-only',
+    mostLikelySettings: [
+      1
+    ],
+    ok: true,
+
+    at file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/group-judge-regression.mjs:40:11 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    ok: true,
+    input: { machine: 'my', tableNo: '0', games: 1, bb: 0, rb: 0, diff: null },
+    machineName: 'マイジャグラーⅤ',
+    q: [
+      0.16684853549766437,
+      0.16681779434281638,
+      0.16674351003658586,
+      0.1666333656617609,
+      0.16654883138134555,
+      0.16640796307982705
+    ],
+    expectedSetting: 3.498440052325788,
+    p4: 0.49959016012293356,
+    p5: 0.3329567944611726,
+    p6: 0.16640796307982705,
+    mostLikelySettings: [ 1 ],
+    distributionConcentration: 0.000024070291848588,
+    method: 'bonus-only',
+    warnings: [],
+    reverseWarn: false,
+    estimatedGrape: NaN,
+    estimatedGrapeCount: NaN,
+    grapeCountLo: NaN,
+    grapeCountHi: NaN,
+    diagnostics: {
+      logs: [
+        -0.006122173238907364,
+        -0.006306436091857877,
+        -0.006751837320857194,
+        -0.00741261727808682,
+        -0.007920053047341414,
+        -0.008766218749720708
+      ],
+      style: 'unknown'
+    },
+    engine: {
+      judgeVersion: 'external-juggler-browser-parity-v1',
+      bridgeVersion: '5.1.0',
+      uiVersion: '5.1.2',
+      style: 'unknown',
+      table: {
+        key: 'my',
+        settings: [
+          { setting: 1, g: 5.9, b: 273.07, r: 409.6 },
+          { setting: 2, g: 5.85, b: 270.81, r: 385.51 },
+          { setting: 3, g: 5.8, b: 266.41, r: 336.08 },
+          { setting: 4, g: 5.78, b: 254.02, r: 289.98 },
+          { setting: 5, g: 5.76, b: 240.06, r: 268.59 },
+          { setting: 6, g: 5.66, b: 229.15, r: 229.15 }
+        ],
+        bbpay: 240,
+        regpay: 96,
+        replay: 7.298,
+        revch: [ 35.8884, 35.8491, 34.6769, 33.5074, 33.2693, 33.0345 ],
+        bell: 1024,
+        pier: 1024,
+        chpay: 2
+      }
+    }
+  },
+  expected: {
+    ok: true,
+    input: { machine: 'my', tableNo: '0', games: 1, bb: 0, rb: 0, diff: null },
+    machineName: 'マイジャグV',
+    q: [
+      0.16684853549766437,
+      0.16681779434281638,
+      0.16674351003658586,
+      0.1666333656617609,
+      0.16654883138134555,
+      0.16640796307982705
+    ],
+    expectedSetting: 3.498440052325788,
+    p4: 0.49959016012293356,
+    p5: 0.3329567944611726,
+    p6: 0.16640796307982705,
+    mostLikelySettings: [ 1 ],
+    distributionConcentration: 0.000024070291848588,
+    method: 'bonus-only',
+    warnings: [],
+    reverseWarn: false,
+    estimatedGrape: NaN,
+    estimatedGrapeCount: NaN,
+    grapeCountLo: NaN,
+    grapeCountHi: NaN,
+    diagnostics: {
+      logs: [
+        -0.006122173238907364,
+        -0.006306436091857877,
+        -0.006751837320857194,
+        -0.00741261727808682,
+        -0.007920053047341414,
+        -0.008766218749720708
+      ],
+      style: 'unknown'
+    },
+    engine: {
+      judgeVersion: 'external-juggler-browser-parity-v1',
+      bridgeVersion: '5.1.0',
+      uiVersion: '5.1.2',
+      style: 'unknown',
+      table: {
+        key: 'my',
+        settings: [
+          { setting: 1, g: 5.9, b: 273.07, r: 409.6 },
+          { setting: 2, g: 5.85, b: 270.81, r: 385.51 },
+          { setting: 3, g: 5.8, b: 266.41, r: 336.08 },
+          { setting: 4, g: 5.78, b: 254.02, r: 289.98 },
+          { setting: 5, g: 5.76, b: 240.06, r: 268.59 },
+          { setting: 6, g: 5.66, b: 229.15, r: 229.15 }
+        ],
+        bbpay: 240,
+        regpay: 96,
+        replay: 7.298,
+        revch: [ 35.8884, 35.8491, 34.6769, 33.5074, 33.2693, 33.0345 ],
+        bell: 1024,
+        pier: 1024,
+        chpay: 2
+      }
+    }
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

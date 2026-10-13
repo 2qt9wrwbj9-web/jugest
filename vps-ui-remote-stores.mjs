@@ -1,4 +1,5 @@
 import {createVpsAnalyticsClient} from './vps-browser-analytics.mjs';
+import {selectTrendDates} from './vps-ui-remote-trend.mjs';
 
 const UPDATE_EVENT='jugest:vps-remote-updated';
 const PUBLIC_SOURCE='pia-public-ranking-top';
@@ -37,10 +38,10 @@ function emit(target){
 export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
   if(!client||typeof client.listStores!=='function')throw new TypeError('client is required');
   let stores=[],generation=0;
-  const datesById=new Map(),daysByKey=new Map(),pending=new Map();
+  const datesById=new Map(),daysByKey=new Map(),pending=new Map(),trendDaysByKey=new Map();
   const byName=name=>stores.find(store=>store.name===String(name||'').trim())||null;
   const dayKey=(id,date)=>`${id}|${date}`;
-  function clear(){generation++;stores=[];datesById.clear();daysByKey.clear();pending.clear();emit(eventTarget)}
+  function clear(){generation++;stores=[];datesById.clear();daysByKey.clear();pending.clear();trendDaysByKey.clear();emit(eventTarget)}
 
   async function ensureDay(store,date,{notify=true}={}){
     const target=String(date||store?.latestDate||'').trim();
@@ -78,7 +79,7 @@ export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
     const next=(Array.isArray(listed)?listed:[]).filter(publicPiaStore).map(normalizeStore).filter(x=>x.id&&x.name);
     stores=next.sort((a,b)=>a.name.localeCompare(b.name,'ja'));
     await Promise.all(stores.map(async store=>{
-      const payload=await client.getStoreDaysById(store.id,{limit:120});
+      const payload=await client.getStoreDaysById(store.id,{limit:366});
       if(current!==generation)return;
       const dates=(Array.isArray(payload?.days)?payload.days:[]).map(x=>String(x?.date||'')).filter(Boolean).sort((a,b)=>b.localeCompare(a));
       datesById.set(store.id,dates);
@@ -89,8 +90,38 @@ export function createRemoteStoreCache({client,eventTarget=globalThis}={}){
     return stores.map(x=>({...x}));
     }catch(error){if(current===generation&&[401,403].includes(error.status))clear();throw error}
   }
+  // Fetch historical canonical rows only when the user requests a trend.
+  // This cache stays in memory and never alters local history or the normal judged-day cache.
+  async function loadTrendDays(name,{period='30',onProgress=()=>{}}={}){
+    const store=byName(name);
+    if(!store)throw new Error('VPSの取得対象店舗が見つかりません');
+    const dates=selectTrendDates(datesById.get(store.id)||[],period);
+    if(!dates.length)return [];
+    const epoch=generation,results=new Array(dates.length);let next=0,done=0;
+    async function worker(){
+      while(next<dates.length){
+        if(epoch!==generation)throw new Error('接続状態が変わったため取得を中断しました');
+        const index=next++,date=dates[index],key=dayKey(store.id,date);
+        let day=trendDaysByKey.get(key)||daysByKey.get(key)||null;
+        if(!day){
+          let payload;
+          try{payload=await client.getStoreDayById(store.id,date)}
+          catch(error){if(epoch===generation&&[401,403].includes(error?.status))clear();throw error}
+          if(epoch!==generation)throw new Error('接続状態が変わったため取得を中断しました');
+          day=normalizeDay(store,payload,date);
+          trendDaysByKey.set(key,day);
+        }
+        results[index]={shop:day.shop,date:day.date,rows:day.rows.map(row=>({...row,q:Array.isArray(row.q)?row.q.slice():null}))};
+        onProgress({done:++done,total:dates.length,date});
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(3,dates.length)},()=>worker()));
+    if(epoch!==generation)throw new Error('接続状態が変わったため取得を中断しました');
+    return results;
+  }
   return Object.freeze({
     refresh,clear,
+    loadTrendDays,
     getStores:()=>stores.map(x=>({...x})),
     getDates(name,limit=120){
       const store=byName(name);if(!store)return [];

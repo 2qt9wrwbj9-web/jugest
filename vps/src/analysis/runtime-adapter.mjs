@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import {fileURLToPath} from 'node:url';
 import {webcrypto} from 'node:crypto';
 
 function memoryStorage(seed={}){
@@ -36,8 +37,13 @@ async function bootRuntime(rootDir){
   };
   ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
 
-  for(const name of ['hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js']){
-    vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx,{filename:name});
+  for(const name of ['machine-names.js','hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js']){
+    const requested=path.join(root,name);
+    // Historical/test runtime roots can predate the display-only registry.
+    // Prefer the snapshot copy; only this new non-mathematical file has a source fallback.
+    const source=name==='machine-names.js'&&!fs.existsSync(requested)
+      ?fileURLToPath(new URL('../../../machine-names.js',import.meta.url)):requested;
+    vm.runInContext(fs.readFileSync(source,'utf8'),ctx,{filename:name});
   }
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)){

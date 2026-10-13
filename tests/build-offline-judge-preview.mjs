@@ -23,7 +23,7 @@ html=html.replace(/<script\b[^>]*\bsrc="\.\/([^"]+)"[^>]*>\s*<\/script>/g,(_,fil
  }
  return '<script>'+inline(code)+'</script>';
 });
-assert.equal(count,9);assert.ok(app);assert.equal((html.match(/<head\b/g)||[]).length,1);
+assert.equal(count,10);assert.ok(app);assert.equal((html.match(/<head\b/g)||[]).length,1);
 const prefix=`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none';">
 <script>
 window.fetch=async function(url,options={}){const method=String(options.method||'GET').toUpperCase();if(method==='GET'&&typeof url==='string'&&url.startsWith('/api/'))return new Response(JSON.stringify({ok:true,stores:[],items:[],receipts:[],linked:false}),{headers:{'content-type':'application/json'}});throw new TypeError('この確認用コピーは外部へ接続しません');};

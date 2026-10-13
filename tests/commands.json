@@ -72,10 +72,14 @@
   "node tests/store-optimization-research.mjs",
   "node --test tests/judgement-page.mjs",
   "node --test tests/judgement-factor-spectrum.mjs",
+  "node --test tests/my-juggler-vi.mjs",
+  "node --test tests/machine-names.mjs",
   "node --check group-judge.js",
   "node --check group-judge-view.js",
   "node --test tests/group-judge.mjs",
   "node --test tests/parallel-group-ui.mjs",
   "node tests/group-judge-regression.mjs",
-  "node tests/group-judge-simulation.mjs"
+  "node tests/group-judge-simulation.mjs",
+  "node --test tests/group-my-juggler-vi.mjs",
+  "node tests/group-current-production-regression.mjs"
 ]

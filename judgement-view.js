@@ -12,7 +12,7 @@ function fields(row,machines){
  return `<div class="observed-fields" data-observed-row="${id}"><label>機種<select data-observed-field="machine"><option value="">選択してください</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(m.name)}</option>`).join('')}</select></label>${[['tableNo','台番（任意）'],['games','通常G'],['bb','BB'],['rb','RB'],['diff','差枚（任意）']].map(([key,label])=>`<label>${label}<input type="text" inputmode="${key==='diff'?'text':'numeric'}" data-observed-field="${key}" value="${esc(x[key])}" autocomplete="off" ${row.errors[key]?`aria-invalid="true" aria-describedby="observed-${id}-${key}"`:''}>${row.errors[key]?`<small id="observed-${id}-${key}" class="observed-error">${esc(row.errors[key])}</small>`:''}</label>`).join('')}</div>${Object.entries(row.errors).filter(([key])=>!['machine','games','bb','rb','diff'].includes(key)).map(([,message])=>`<p class="observed-error" role="alert">${esc(message)}</p>`).join('')}${row.errors.machine?`<p class="observed-error" role="alert">${esc(row.errors.machine)}</p>`:''}`;
 }
 // Display aliases only; the existing machine keys and judgement inputs are unchanged.
-const shortNames=Object.freeze({my:'マイV',im:'アイム',go:'ゴー3',fk:'ファン2',hp:'ハッピー',gg:'ガールズ',mr:'ミスター',um:'ウルミラ'});
+const shortNames=Object.freeze({my:'マイV',my6:'マイⅥ',im:'アイム',go:'ゴー3',fk:'ファン2',hp:'ハッピー',gg:'ガールズ',mr:'ミスター',um:'ウルミラ'});
 function parallelEditor(rows,machines){
  const columns=[['tableNo','台番'],['machine','機種'],['games','G'],['bb','BB'],['rb','RB'],['diff','差枚']];
  const lines=rows.map((row,index)=>{

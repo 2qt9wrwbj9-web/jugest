@@ -1,0 +1,30 @@
+✔ versioned input drafts survive reload, retain explicit zero and never restore results (72.177062ms)
+✔ single drafts and every edit, add, duplicate and delete mutation persist (13.276883ms)
+✔ a real storage failure keeps the editor usable and reports only the unsaved state (6.858535ms)
+✔ one overlong field among 200 drafts preserves the last reloadable save and recovers without truncation (45.122193ms)
+✔ 1001 drafts cannot overwrite a valid save; returning to the row limit saves every row (127.514273ms)
+✔ unsupported, malformed and oversized stored drafts are ignored; 200 valid drafts retain unique ids (47.119068ms)
+✔ group mode uses cached complete results and preserves all ordinary individual distributions (35.306752ms)
+✔ unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion (26.081776ms)
+✔ standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure (11.914176ms)
+✔ parallel result rows retain compact most-likely text, including every tied setting (11.392502ms)
+✔ reverse warnings identify the current editor row even when its internal id collides with a real table number (25.959543ms)
+✔ standalone reverse warnings use target positions, preserve named escaping and never leak internal ids (12.261572ms)
+✔ warning identity metadata leaves every saved group calculation and legacy report field exactly unchanged (34.391922ms)
+✔ unnumbered sorted results keep editor identities after editing and rejudging (19.784549ms)
+✔ group row labels reject inherited or invalid editor numbers without inventing positions (15.352096ms)
+✔ group overview warns that low-setting mixtures can escape refutation despite a large ratio (7.818827ms)
+✔ sorting changes only result order with stable ties, while labels and input order remain intact (8.831495ms)
+✔ invalid, incomplete and unjudged nonempty rows block the group while empty rows are skipped (19.112499ms)
+✔ editing immediately removes only its row and the group, without rerendering input DOM (11.805227ms)
+✔ group display is pure, escaped, explanatory and separates ratios from conditional percentages (12.790347ms)
+✔ extreme ratios and tiny refutation p use their logs and impossible conditional output stays unavailable (9.985162ms)
+✔ 60-row profiles stay compact and all input controls meet the stable mobile contract (395.137978ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1063.175111

@@ -1,7 +1,8 @@
 // Store UI v2 for slot stores. Keeps JUGEST engines, persistence and event handlers unchanged.
 import {createVerificationReader,renderVerificationResults,errorMessage} from './vps-ui-store-verify.mjs';
+import {computeVpsTrend,selectTrendDates} from './vps-ui-remote-trend.mjs';
 let app=null,root=null,observer=null,pending=false;
-const verificationReader=createVerificationReader();let verificationSequence=0;
+const verificationReader=createVerificationReader();let verificationSequence=0,remoteTrendSequence=0;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>v==null||v===''||!Number.isFinite(Number(v))?'—':Math.round(Number(v)).toLocaleString('ja-JP');
 const diff=v=>v==null||v===''||!Number.isFinite(Number(v))?'—':(Number(v)>=0?'+':'')+num(v)+'枚';
@@ -113,20 +114,66 @@ function verificationScreen(screen,shop,o){
   '<div data-sv2-verification-content aria-live="polite"></div>';
  loadVerification(screen,shop);
 }
+function remoteTrendCache(shop){
+ const cache=globalThis.JUGEST_VPS_REMOTE_STORES;
+ if(!cache?.loadTrendDays||!cache?.getStores?.().some(s=>s.name===shop))return null;
+ // Never replace the existing local-history behavior when this device has local days.
+ if((bridge()?.getStoreTrendRoster?.(shop,{period:'all'})?.dayCount||0)>0)return null;
+ return cache;
+}
 function repairRemoteTrendSummary(screen,shop,o){
  if(app?.state?.screen!=='trend')return;
+ const cache=remoteTrendCache(shop);if(!cache)return;
  const summary=screen.querySelector('.trend-summary'),rosterText=summary?.querySelector('b');
  if(!summary||!rosterText||!/^0日\s*\/\s*0台$/.test(rosterText.textContent.trim()))return;
- const available=bridge()?.getStoreDates?.(shop,app?.state?.trendPeriod==='all'?366:Number(app?.state?.trendPeriod)||30)||[];
- const days=Array.isArray(available)?available.length:0,machines=Number(o?.machineRows)||0;
- if(days<=0&&machines<=0)return;
- const small=summary.querySelector('small');if(small)small.textContent='VPS蓄積（台番傾向は未同期）';
- rosterText.textContent=days+'日 / 最新'+machines+'台';
- const button=summary.querySelector('[data-trend-run]');if(button){button.disabled=true;button.textContent='端末側のデータなし'}
- if(!screen.querySelector('[data-sv2-trend-guidance]')){
+ const dates=selectTrendDates(cache.getDates(shop,366),app?.state?.trendPeriod||'30');
+ const source=bridge()?.getStoreDay?.(shop,dates[0]||'')?.rows||[];
+ const machines=[...new Map(source.filter(r=>r.machine).map(r=>[r.machine,globalThis.JugestMachineNames?.full?.(r.machine)||r.machineName||r.machine])).entries()];
+ const picker=screen.querySelector('[data-trend-machine]');
+ if(picker&&picker.options.length<=1)for(const [key,label] of machines){
+  const option=document.createElement('option');option.value=key;option.textContent=label;picker.append(option);
+ }
+ if(picker)picker.value=app?.state?.trendMachine||'';
+ const total=Number(o?.machineRows)||source.length,selected=app?.state?.trendMachine||'';
+ const count=selected?source.filter(r=>r.machine===selected).length:total;
+ const small=summary.querySelector('small');if(small)small.textContent='VPS保存済みの日別データ';
+ rosterText.textContent=dates.length+'日 / 最新'+count+'台';
+ const button=summary.querySelector('[data-trend-run]');
+ if(button&&!app.state.trendLoading){button.disabled=false;button.textContent='傾向を計算'}
+ if(!app.state.trendResult&&!screen.querySelector('[data-sv2-trend-guidance]')){
   const tip=document.createElement('p');tip.className='sv2-verify-notice';tip.dataset.sv2TrendGuidance='';
-  tip.textContent='VPS側にデータはありますが、この台番傾向計算は端末側の履歴を参照します。VPSの集計済み分析は「投入パターン」で確認できます。';
+  tip.textContent='VPSに保存された日別台データから計算します。計算を押した時だけ取得し、端末の保存履歴は変更しません。';
   summary.after(tip);
+ }
+ const preview=screen.querySelector('.roster-preview');
+ if(preview&&machines.length)preview.innerHTML=source.filter(r=>!selected||r.machine===selected).slice(0,8).map(r=>'<span>'+esc(r.tableNo)+' '+esc(globalThis.JugestMachineNames?.short?.(r.machine)||r.machineName)+'</span>').join('');
+}
+async function runRemoteTrend(){
+ const shop=String(app?.state?.activeStore||''),cache=remoteTrendCache(shop);
+ if(!cache||app.state.trendLoading)return;
+ const period=String(app.state.trendPeriod||'30'),machine=String(app.state.trendMachine||''),requestId=++remoteTrendSequence;
+ const current=()=>requestId===remoteTrendSequence&&app?.state?.activeStore===shop&&String(app.state.trendPeriod||'30')===period&&String(app.state.trendMachine||'')===machine;
+ app.state.trendLoading=true;app.state.trendResult=null;app.render();
+ try{
+  const days=await cache.loadTrendDays(shop,{period,onProgress:({done,total})=>{
+   if(!current())return;
+   const button=root?.querySelector('.store-trend-screen [data-trend-run]');
+   if(button)button.textContent='VPS取得中 '+done+'/'+total+'日';
+  }});
+  if(!current())return;
+  if(!days.length)throw new Error('指定期間のVPSデータがありません');
+  const judge=bridge()?.judgeObservedMachine;
+  if(typeof judge!=='function')throw new Error('JUGEST判別エンジンを読み込めませんでした');
+  const result=await computeVpsTrend({shop,days,machine,judge,isCurrent:current,onProgress:({done})=>{
+   if(!current())return;
+   const button=root?.querySelector('.store-trend-screen [data-trend-run]');
+   if(button)button.textContent='判別中 '+done+'台';
+  }});
+  if(current()&&result)app.state.trendResult=result;
+ }catch(error){
+  if(current())app.state.trendResult={shop,rows:[],error:String(error?.message||error)};
+ }finally{
+  if(requestId===remoteTrendSequence){app.state.trendLoading=false;app.render()}
  }
 }
 function compactDataScreen(screen){
@@ -191,7 +238,7 @@ function reconcile(){
  else compact(screen,kind,shop,o);
 }
 function schedule(){if(pending)return;pending=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{pending=false;try{reconcile()}catch(e){console.error('JUGEST Store UI v2:',e)}},0)}
-function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('input',event=>{if(!event.target?.matches?.('[data-vps-matrix-search]'))return;const summary=event.target.closest('[data-vps-store-data-summary]'),counts=summary?.querySelector('[data-vps-matrix-match-count]');if(counts)counts.hidden=!String(event.target.value||'').trim()},true);root.addEventListener('change',event=>{const select=event.target;if(!select?.matches?.('[data-sv2-machine-sort]'))return;const list=select.closest('.vps-audit-machines'),rows=list?.querySelector('.sv2-machine-mobile-rows');if(!rows||!Array.isArray(list._sv2MachineRecords))return;const opened=rows.querySelector('.sv2-machine-mobile-row[open]');const index=opened?Number(opened.dataset.machineIndex):null;rows.innerHTML=mobileMachineRows(list._sv2MachineRecords,select.value,index)},true);root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
+function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('input',event=>{if(!event.target?.matches?.('[data-vps-matrix-search]'))return;const summary=event.target.closest('[data-vps-store-data-summary]'),counts=summary?.querySelector('[data-vps-matrix-match-count]');if(counts)counts.hidden=!String(event.target.value||'').trim()},true);root.addEventListener('change',event=>{const select=event.target;if(!select?.matches?.('[data-sv2-machine-sort]'))return;const list=select.closest('.vps-audit-machines'),rows=list?.querySelector('.sv2-machine-mobile-rows');if(!rows||!Array.isArray(list._sv2MachineRecords))return;const opened=rows.querySelector('.sv2-machine-mobile-row[open]');const index=opened?Number(opened.dataset.machineIndex):null;rows.innerHTML=mobileMachineRows(list._sv2MachineRecords,select.value,index)},true);root.addEventListener('click',event=>{const trendButton=event.target?.closest?.('[data-trend-run]');if(trendButton&&app?.state?.screen==='trend'&&remoteTrendCache(app?.state?.activeStore||'')){event.preventDefault();event.stopImmediatePropagation();void runRemoteTrend();return}const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
 function boot(){if(attach(document.querySelector('jugest-app')))return;globalThis.setTimeout(boot,60)}
 if(typeof document!=='undefined')boot();
 export const __test={collectorStatus,latestSummary,nav,dateShort,machineMetricNumber,sortedMachineRecords,mobileMachineRows};

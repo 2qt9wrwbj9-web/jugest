@@ -16,7 +16,7 @@ async function observedBoot(options={}){
  return boot({...options,htmlSource:html.replace('window.V4_TEST=',probe+'window.V4_TEST=')});
 }
 
-test('all eight machines match externalJudge and the existing summaries exactly',async()=>{
+test('all nine machines match externalJudge and the existing summaries exactly',async()=>{
  const {ctx,bridge}=await observedBoot({loadApp:false});
  for(const machine of ctx.JUGESTJudgement.MACHINE_KEYS)for(const diff of [undefined,null,0,-830,830]){
   const x={...input,machine,diff},actual=bridge.judgeObservedMachine(x);

@@ -6,7 +6,7 @@
 const repository='2qt9wrwbj9-web/jugest';
 const branch='work/parallel-group-checkpoint-20261012';
 const root='/workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012';
-const read=await tools.exec_command({cmd:'cat /workspace/scratch/de64dcbbff0a/resume-upload-manifest.json',max_output_tokens:16000});
+const read=await tools.exec_command({cmd:'cat /workspace/scratch/de64dcbbff0a/resume-upload-manifest.json',login:false,max_output_tokens:16000});
 if(read.exit_code!==0)throw Error('Cannot read save manifest');
 const manifest=JSON.parse(read.output);
 const data=result=>{
@@ -15,7 +15,7 @@ const data=result=>{
 };
 async function chunk(file,offset,size){
  const cmd="python3 - <<'PY'\nfrom pathlib import Path\nimport json,base64\nb=Path("+JSON.stringify(root+'/'+file.path)+").read_bytes()\ns=b.decode('utf-8') if "+JSON.stringify(file.encoding)+" == 'utf-8' else base64.b64encode(b).decode()\nprint(json.dumps(s["+offset+':'+(offset+size)+"],ensure_ascii=False))\nPY";
- const result=await tools.exec_command({cmd,max_output_tokens:16000});
+ const result=await tools.exec_command({cmd,login:false,max_output_tokens:16000});
  if(result.exit_code!==0)throw Error('File read failed: '+file.path);
  try{
   const value=JSON.parse(result.output);
@@ -29,6 +29,7 @@ async function chunk(file,offset,size){
 }
 const elements=[];
 for(const file of manifest.files){
+ if(file.reuse){elements.push({path:file.path,mode:file.mode,type:'blob',sha:file.sha});continue}
  const chunks=[],parts=[];
  for(let offset=0;offset<file.length;offset+=12000)chunks.push({offset,size:Math.min(12000,file.length-offset)});
  for(let i=0;i<chunks.length;i+=4){

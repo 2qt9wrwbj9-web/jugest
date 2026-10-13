@@ -1,0 +1,10 @@
+PASS offline-preview/chromium/320
+PASS offline-preview/chromium/375
+PASS offline-preview/chromium/390
+PASS offline-preview/chromium/430
+Skipping host requirements validation logic because `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` env variable is set.
+PASS offline-preview/webkit/320
+PASS offline-preview/webkit/375
+PASS offline-preview/webkit/390
+PASS offline-preview/webkit/430
+{"scenarios":8,"results":[{"engine":"chromium","width":320,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"chromium","width":375,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"chromium","width":390,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"chromium","width":430,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"webkit","width":320,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"webkit","width":375,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"webkit","width":390,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0},{"engine":"webkit","width":430,"rows":5,"rejudge":true,"draftReload":true,"networkBlocked":true,"pageErrors":0}]}

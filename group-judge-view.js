@@ -74,7 +74,8 @@ function refutation(h,rowLabel){
 }
 function sameSetting(report){
  const reference=report.aggregateJudgement;
- return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
+ const familyNote=report.aggregate?.mixedMachines&&reference?.available?'<p class="observed-help">Ⅴ/VIが混在する場合は、全設定のBB・RB表が一致することを確認して参考値を算出します。各台の全台系評価へ追加する証拠にはしません。</p>':'';
+ return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${familyNote}${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
 }
 function render(report,{hypothesis='all456',rowNumbers}={}){
  if(!report)return '';

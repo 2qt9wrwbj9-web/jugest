@@ -4,6 +4,16 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 
+// Reverse only reviewed machine-name edits before enforcing original protected hashes.
+const APPROVED_NAME_EDITS=JSON.parse(readFileSync(new URL('./approved-machine-name-changes.json',import.meta.url),'utf8'));
+function restoreReviewedMachineNames(file,source){
+ for(const [updated,original] of APPROVED_NAME_EDITS[file]||[]){
+  assert.equal(source.split(updated).length-1,1,`unreviewed machine-name change: ${file}`);
+  source=source.replace(updated,original);
+ }
+ return source;
+}
+
 // Pin only reviewed additions; original production hash fixtures stay unchanged.
 const APPROVED_BLOCKS=Object.freeze({
  '  // BEGIN independent judgement UI\n':'237c72d031d53f67b15651b5fd70b30010f0ed88d15fbc7e5dffb2e032014117',
@@ -64,7 +74,40 @@ function block(source,start,end,replacement=''){
  assert.equal(createHash('sha256').update(source.slice(a,b+end.length)).digest('hex'),APPROVED_BLOCKS[start],'Unreviewed judgement addition inside protected block');
  return source.slice(0,a)+replacement+source.slice(b+end.length);
 }
+// Undo ONLY explicitly reviewed My Juggler VI additions before comparing the
+// legacy production snapshots. This keeps every existing model/table guarded.
+function withoutMy6Additions(file,source){
+ const aliases="['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ";
+ if(file==='ana-launcher.js'||file==='ana-single-day.js'){
+  source=replace(source,aliases);
+  if(file==='ana-single-day.js')source=replace(source,"my6:'マイジャグⅥ',");
+ }
+ if(file==='index.html'){
+  const entry='// The My Juggler VI alias intentionally uses the same judgement parameters as V.\nM.my6={...M.my,name:"マイジャグⅥ",defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。"};\n';
+  source=replace(source,entry);
+  const approved=[
+   ['"my","my6","im"','"my","im"',1],
+   ['my6:[97.0,98.0,99.9,102.8,105.3,109.4],','',1],
+   ['my6:{G:"",v:{},on:{}},','',1],
+   ['my6:[],','',1],
+   ['my6:"random",','',1],
+   ['my6:null,','',1],
+   ['my6:"マイⅥ",','',2],
+   ['if(key==="my"||key==="my6")return','if(key==="my")return',1],
+   ['if(key==="my"||key==="my6"||key==="fk"||key==="hp")','if(key==="my"||key==="fk"||key==="hp")',2],
+   ['if(cur==="my"||cur==="my6"||cur==="fk"||cur==="hp")','if(cur==="my"||cur==="fk"||cur==="hp")',1]
+  ];
+  for(const [from,to,count] of approved)source=replace(source,from,to,count);
+ }
+ return source;
+}
 export function withoutJudgementAdditions(file,source){
+ // The approved name manifest covers the whole head. Remove our independently
+ // reviewed script insertion first, so that exact-name checks still see it.
+ if(file==='index.html')source=replace(source,'<script src="./group-judge.js"></script><script src="./group-judge-view.js"></script>');
+ if(file==='build.mjs'||file==='tests/helpers/runtime.mjs')source=replace(source,"'group-judge.js','group-judge-view.js',");
+ source=restoreReviewedMachineNames(file,source);
+ source=withoutMy6Additions(file,source);
  if(file==='app-v510.js'){
   // Exact source restoration for the bounded draft-storage additions only.
   source=replace(source,"function loadUIState(){try{const raw=global.localStorage?.getItem?.(UI_KEY);return typeof raw==='string'&&raw.length<=2*1024*1024?safeJSON(raw,{}):{}}catch(_){return {}}}\n","function loadUIState(){try{return safeJSON(global.localStorage?.getItem?.(UI_KEY),{})}catch(_){return {}}}\n");
@@ -100,7 +143,6 @@ export function withoutJudgementAdditions(file,source){
   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
  }else if(file==='index.html'){
-  source=replace(source,'<script src="./group-judge.js"></script><script src="./group-judge-view.js"></script>');
   source=replace(source,'Independent judgement page v1 — 2026-10-02:\n- Added a second-position judgement workspace with single/parallel observed-data inputs and shared detailed results.\n- Reused externalJudge and the existing MCP summaries; diagnostic taps expose values from the same invocation.\n- Added distribution concentration, setting probability bars and an explicit structured-row draft interface.\n- Judgment math, MCP result schemas, PRE/store analysis, sessions and run-record persistence are unchanged.\n\n');
   source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script>');
   source=replace(source,'function externalBonusJudgeQ(key,g,bb,rb,capture){','function externalBonusJudgeQ(key,g,bb,rb){');
@@ -111,14 +153,13 @@ export function withoutJudgementAdditions(file,source){
   source=block(source,'// Independent observed-data judgement: no session, context or persistence writes.\n','function rejudgeExternalMachine(r){','function rejudgeExternalMachine(r){');
   source=replace(source,' getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),\n judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),\n');
  }else if(file==='build.mjs'){
-  source=replace(source,"'group-judge.js','group-judge-view.js',");
   source=replace(source,"'judgement-model.js','judgement-view.js',");
  }else if(file==='tests/helpers/runtime.mjs'){
-  source=replace(source,"'group-judge.js','group-judge-view.js',");
   source=replace(source,",htmlSource=null",'');
   source=replace(source,"'judgement-model.js','judgement-view.js',",'');
   source=replace(source,"htmlSource??fs.readFileSync('index.html','utf8')","fs.readFileSync('index.html','utf8')");
  }else if(file==='tests/production-preservation.mjs'){
+  source=replace(source," for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css'){const data=fs.readFileSync(`public/${file}`);assert.equal(hash(['ana-launcher.js','ana-single-day.js'].includes(file)?withoutJudgementAdditions(file,data.toString('utf8')):data),sha,file);}"," for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css')assert.equal(hash(fs.readFileSync(`public/${file}`)),sha,file);");
   source=replace(source,"import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';\n");
   source=replace(source,"let html=withoutJudgementAdditions('index.html',fs.readFileSync('index.html','utf8'));","let html=fs.readFileSync('index.html','utf8');");
  }

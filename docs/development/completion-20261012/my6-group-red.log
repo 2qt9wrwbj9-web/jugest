@@ -1,0 +1,29 @@
+✔ current My Juggler VI inputs remain valid in the group engine with V-identical mathematical outputs (48.874431ms)
+✖ V/VI pooled reference requires their captured bonus tables to agree and never combines incompatible tables (10.928059ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 142.834442
+
+✖ failing tests:
+
+test at tests/group-my-juggler-vi.mjs:19:1
+✖ V/VI pooled reference requires their captured bonus tables to agree and never combines incompatible tables (10.928059ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/group-my-juggler-vi.mjs:26:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,31 @@
+✔ all nine machines match externalJudge and the existing summaries exactly (54.222985ms)
+✔ input validation preserves explicit zero and rejects missing or malformed observations (17.093155ms)
+✔ diagnostics come from one execution and judgement has no session, store, storage or autosave side effects (46.307826ms)
+✔ diagnostic callbacks cannot mutate the calculated judgement (16.539543ms)
+✔ single and parallel share the same adapter, imports only fill drafts, and edits invalidate results (27.56212ms)
+✔ all maximum-probability settings are retained and detailed output is escaped (11.368997ms)
+✔ six tabs preserve old workspace keys, navigation history and safe UI restoration (7.944904ms)
+✔ built and VPS-patched sources retain the page, bridge and existing shop fixes (40.868166ms)
+✔ history restores the selected parallel row after closing details or opening another row (11.829538ms)
+✔ preservation rejects unreviewed edits inside excluded additions and duplicated boundaries (115.399515ms)
+✔ ordinary judgement omits developer DOM while retaining meaningful analysis (17.44315ms)
+✔ single: debug switching only changes UI and never reruns judgement (30.654134ms)
+✔ parallel: debug switching only changes UI and never reruns judgement (22.58305ms)
+✔ debug ON and OFF calculate identical raw sample values with one engine call each (11.205561ms)
+✔ fallback settings preserve the return destination after repeated gear clicks and history (13.570032ms)
+✔ parallel editor renders all imported rows as compact inputs and escaped comparison results (8.861931ms)
+✔ batch ignores blank rows, isolates partial errors and preserves zero, missing and negative differences (9.331426ms)
+✔ ordinary detail contains only grape estimates, moves engine labels to debug and shows warnings only when present (9.277956ms)
+✔ grape is visible in both summaries and details without rejudging or changing the result (8.546758ms)
+✔ unavailable grape values render a dash in summaries and never leak NaN or Infinity (10.11294ms)
+✔ Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact (27.382139ms)
+✔ Protected inline math and research sections remain identical to the captured Production (61.612485ms)
+✔ Fresh public build uses checked-in runtime source plus only approved bounded transforms (28.618736ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 605.22851

@@ -5,10 +5,52 @@
 <script>
 window.fetch=async function(url,options={}){const method=String(options.method||'GET').toUpperCase();if(method==='GET'&&typeof url==='string'&&url.startsWith('/api/'))return new Response(JSON.stringify({ok:true,stores:[],items:[],receipts:[],linked:false}),{headers:{'content-type':'application/json'}});throw new TypeError('この確認用コピーは外部へ接続しません');};
 try{const key='jugest:completion-preview:ui';if(!localStorage.getItem(key)){const rows=Array.from({length:5},(_,i)=>({machine:'mr',tableNo:String(101+i),games:'8000',bb:i===4?'22':'36',rb:i===4?'16':'34',diff:''}));localStorage.setItem(key,JSON.stringify({workspace:'judgement',observedMode:'parallel',observedGroup:true,observedDrafts:{version:1,single:{},rows}}));}}catch(_){}
-</script><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><title>開発確認用・JUGEST 並列判別／全台系</title><script>(function(global){
+</script><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><title>開発確認用・JUGEST 並列判別／全台系</title><script>/* JUGEST machine display-name authority. Keys are permanent identifiers; aliases are input-only. */
+(function (root) {
+  'use strict';
+  const entries = Object.freeze({
+    my: { full: 'マイジャグラーⅤ', short: 'マイⅤ', variants: ['マイジャグラーⅤ'], aliases: ['マイジャグラーV', 'マイジャグラー5', 'マイジャグV', 'マイジャグ5'] },
+    my6: { full: 'マイジャグラーVI', short: 'マイVI', variants: ['マイジャグラーVI'], aliases: ['マイジャグラーⅥ', 'マイジャグラー6', 'マイジャグⅥ', 'マイジャグVI', 'マイジャグ6'] },
+    im: { full: 'ネオアイムジャグラーEX', short: 'ネオアイム', variants: ['ネオアイムジャグラーEX'], aliases: ['ネオアイムジャグラー', 'ネオアイム'] },
+    go: { full: 'ゴーゴージャグラー3', short: 'ゴージャグ3', variants: ['ゴーゴージャグラー3'], aliases: ['ゴーゴージャグラーⅢ', 'ゴージャグ3', 'ゴージャグⅢ'] },
+    fk: { full: 'ファンキージャグラー2', short: 'ファンキー2', variants: ['ファンキージャグラー2'], aliases: ['ファンキージャグラーⅡ', 'ファンキー2', 'ファンキーⅡ'] },
+    hp: { full: 'ハッピージャグラーV Ⅲ', short: 'ハッピーVⅢ', variants: ['ハッピージャグラーV Ⅲ'], aliases: ['ハッピージャグラーVⅢ', 'ハッピージャグラーVIII', 'ハッピージャグラーV3', 'ハッピーVⅢ', 'ハッピーVIII', 'ハッピーV3'] },
+    gg: { full: 'ジャグラーガールズSS', short: 'ガールズSS', variants: ['ジャグラーガールズSS'], aliases: ['ジャグラーガールズ', 'ガールズSS'] },
+    mr: { full: 'ミスタージャグラー', short: 'ミスター', variants: ['ミスタージャグラー'], aliases: ['ミスター'] },
+    um: { full: 'ウルトラミラクルジャグラー', short: 'ウルミラ', variants: ['ウルトラミラクルジャグラー'], aliases: ['ウルトラミラクル', 'ウルミラ'] },
+    // A single JUGEST key currently covers multiple coin-size/smart-slot product variants.
+    // Keep the shared label neutral and preserve distinct manufacturer names as metadata.
+    houou: { full: 'ハナハナホウオウ〜天翔〜', short: 'ホウオウ天翔', variants: ['ハナハナホウオウ〜天翔〜', 'ハナハナホウオウ〜天翔〜-30'], aliases: ['ハナハナホウオウ-天翔-', 'ハナハナホウオウ天翔', 'ホウオウ〜天翔〜', 'ホウオウ天翔'] },
+    king: { full: 'キングハナハナ-30', short: 'キングハナハナ', variants: ['キングハナハナ-30'], aliases: ['キングハナハナ'] },
+    dragon: { full: 'ドラゴンハナハナ〜閃光〜', short: 'ドラゴン閃光', variants: ['ドラゴンハナハナ〜閃光〜', 'ドラゴンハナハナ〜閃光〜-30', 'スマート沖スロ ドラゴンハナハナ〜閃光〜'], aliases: ['ドラゴンハナハナ-閃光-', 'ドラゴンハナハナ閃光', 'Lドラゴンハナハナ〜閃光〜'] },
+    star: { full: 'スターハナハナ', short: 'スターハナハナ', variants: ['スターハナハナ-30', 'スマート沖スロ スターハナハナ'], aliases: ['スターハナハナ', 'Lスターハナハナ'] },
+    newkingv: { full: 'ニューキングハナハナV', short: 'ニューキングV', variants: ['ニューキングハナハナV-30', 'スマート沖スロ ニューキングハナハナV'], aliases: ['ニューキングハナハナV', 'LニューキングハナハナV', 'スマスロニューキングハナハナV'] }
+  });
+  const keys = Object.freeze(Object.keys(entries));
+  function token(value) {
+    let text = String(value ?? '');
+    try { text = text.normalize('NFKC'); } catch {}
+    return text.toUpperCase().replace(/\s+/g, '').replace(/[‐‑‒–—―]/g, '-').replace(/[〜～~]/g, '~').replace(/[・･]/g, '');
+  }
+  // The VI and New King V forms intentionally precede their substring families.
+  const matchOrder = ['my6', 'newkingv', ...keys.filter(key => key!=='my6' && key!=='newkingv')];
+  const matchers = matchOrder.map(key => [key, [entries[key].full, ...entries[key].variants, ...entries[key].aliases].map(token)]);
+  const api = Object.freeze({
+    keys,
+    entries,
+    full: key => entries[key]?.full ?? null,
+    short: key => entries[key]?.short ?? null,
+    variants: key => entries[key]?.variants.slice() ?? [],
+    aliases: key => entries[key]?.aliases.slice() ?? [],
+    token,
+    resolve: name => { const s=token(name); if(!s)return null; for(const [key,words] of matchers) if(words.some(word=>s.includes(word)))return key; return null; }
+  });
+  root.JugestMachineNames = api;
+})(globalThis);
+</script><script>(function(global){
 'use strict';
 const FIELDS=Object.freeze(['machine','tableNo','games','bb','rb','diff']);
-const MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
+const MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 const MESSAGES={machine:'対応する機種を選択してください。',games:'通常Gを正の整数で入力してください。',bb:'BBを0以上の整数で入力してください。',rb:'RBを0以上の整数で入力してください。',diff:'差枚を整数で入力してください。',bonus:'BBとRBの合計が通常Gを超えています。'};
 function inputRow(value={}){return Object.fromEntries(FIELDS.map(key=>[key,value[key]==null?'':String(value[key])]))}
 function observedInteger(value){
@@ -60,7 +102,7 @@ function fields(row,machines){
  return `<div class="observed-fields" data-observed-row="${id}"><label>機種<select data-observed-field="machine"><option value="">選択してください</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(m.name)}</option>`).join('')}</select></label>${[['tableNo','台番（任意）'],['games','通常G'],['bb','BB'],['rb','RB'],['diff','差枚（任意）']].map(([key,label])=>`<label>${label}<input type="text" inputmode="${key==='diff'?'text':'numeric'}" data-observed-field="${key}" value="${esc(x[key])}" autocomplete="off" ${row.errors[key]?`aria-invalid="true" aria-describedby="observed-${id}-${key}"`:''}>${row.errors[key]?`<small id="observed-${id}-${key}" class="observed-error">${esc(row.errors[key])}</small>`:''}</label>`).join('')}</div>${Object.entries(row.errors).filter(([key])=>!['machine','games','bb','rb','diff'].includes(key)).map(([,message])=>`<p class="observed-error" role="alert">${esc(message)}</p>`).join('')}${row.errors.machine?`<p class="observed-error" role="alert">${esc(row.errors.machine)}</p>`:''}`;
 }
 // Display aliases only; the existing machine keys and judgement inputs are unchanged.
-const shortNames=Object.freeze({my:'マイV',im:'アイム',go:'ゴー3',fk:'ファン2',hp:'ハッピー',gg:'ガールズ',mr:'ミスター',um:'ウルミラ'});
+const shortNames=Object.freeze({my:'マイV',my6:'マイⅥ',im:'アイム',go:'ゴー3',fk:'ファン2',hp:'ハッピー',gg:'ガールズ',mr:'ミスター',um:'ウルミラ'});
 function parallelEditor(rows,machines){
  const columns=[['tableNo','台番'],['machine','機種'],['games','G'],['bb','BB'],['rb','RB'],['diff','差枚']];
  const lines=rows.map((row,index)=>{
@@ -202,7 +244,7 @@ global.JUGESTJudgementView=Object.freeze({fields,parallelEditor,parallelResults,
 
 // Pure analysis of this invocation's observed judgements. No store or session data.
 const VERSION='parallel-group-judge-v1';
-const MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
+const MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 const HYPOTHESES=Object.freeze([
  Object.freeze({id:'all456',label:'全456',allowed:Object.freeze([4,5,6]),complementLabel:'非全456（少なくとも1台が設定1〜3）'}),
  Object.freeze({id:'all56',label:'全56',allowed:Object.freeze([5,6]),complementLabel:'非全56（少なくとも1台が設定1〜4）'}),
@@ -432,7 +474,8 @@ function aggregateRows(rows){
   mixedMachines:machines.size>1,machines:Array.from(machines.values())};
 }
 function aggregateJudgement(rows,aggregate){
- if(aggregate.mixedMachines)return {available:false,reason:'機種が混在しているため、同じ設定と仮定した合算判別は表示できません。',machine:null,q:null,expectedSetting:null,p4:null,p5:null,p6:null};
+ const sameMyBonusTables=rows.every(row=>row.input.machine==='my'||row.input.machine==='my6')&&rows.every(row=>row.settings.every((setting,i)=>setting.b===rows[0].settings[i].b&&setting.r===rows[0].settings[i].r));
+ if(aggregate.mixedMachines&&!sameMyBonusTables)return {available:false,reason:'機種が混在しているため、同じ設定と仮定した合算判別は表示できません。',machine:null,q:null,expectedSetting:null,p4:null,p5:null,p6:null};
  const logs=normalizeLogs(calculateBonusLogs(aggregate,rows[0].settings)),z=logSum(logs),q=logs.map(l=>Math.exp(l-z));
  return {available:true,reason:'全台が同じ設定だった場合のボーナスだけの参考判別です。',machine:rows[0].input.machine,q,...summary(q)};
 }
@@ -602,7 +645,8 @@ function refutation(h,rowLabel){
 }
 function sameSetting(report){
  const reference=report.aggregateJudgement;
- return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
+ const familyNote=report.aggregate?.mixedMachines&&reference?.available?'<p class="observed-help">Ⅴ/VIが混在する場合は、全設定のBB・RB表が一致することを確認して参考値を算出します。各台の全台系評価へ追加する証拠にはしません。</p>':'';
+ return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${familyNote}${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
 }
 function render(report,{hypothesis='all456',rowNumbers}={}){
  if(!report)return '';
@@ -1091,66 +1135,70 @@ body.jugest-v510 jugest-app{display:block;}
 <script>
 (()=>{"use strict";
 const rare=[7281.8,7281.8,16384,10922.7,32768,16384].reduce((a,d)=>a+1/d,0);const rareHp=1/4096+3/6553.6;
+const NAMES=globalThis.JugestMachineNames;
+if(!NAMES)throw new Error("JUGEST機種名定義を読み込めませんでした");
 const M={
-my:{name:"マイジャグV",defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["b0","単独BIG","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
+my:{name:NAMES.full("my"),defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["b0","単独BIG","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
 T:[{s:1,g:5.90,c:38.10,b0:409.60,bc:1424.70,r0:655.36,rc:1092.27},{s:2,g:5.85,c:38.10,b0:407.06,bc:1394.38,r0:601.25,rc:1074.36},{s:3,g:5.80,c:36.82,b0:399.61,bc:1365.33,r0:492.75,rc:1057.03},{s:4,g:5.78,c:35.62,b0:378.82,bc:1285.02,r0:407.06,rc:1008.25},{s:5,g:5.76,c:35.62,b0:354.25,bc:1213.63,r0:390.10,rc:862.32},{s:6,g:5.66,c:35.62,b0:337.81,bc:1129.93,r0:327.68,rc:762.05}],
 simple:[{g:5.90,b:273.07,r:409.60},{g:5.85,b:270.81,r:385.51},{g:5.80,b:266.41,r:336.08},{g:5.78,b:254.02,r:289.98},{g:5.76,b:240.06,r:268.59},{g:5.66,b:229.15,r:229.15}],
 revch:[35.8884,35.8491,34.6769,33.5074,33.2693,33.0345], bell:1024,pier:1024,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"マイジャグV：詳細フラグを多項尤度で評価。"},
-im:{name:"ネオアイムジャグラー",defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
+im:{name:NAMES.full("im"),defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
 T:[{s:1,g:6.02,b:273.07,r:439.84},{s:2,g:6.02,b:269.70,r:399.61},{s:3,g:6.02,b:269.70,r:330.99},{s:4,g:6.02,b:259.04,r:315.08},{s:5,g:6.02,b:259.04,r:255.00},{s:6,g:5.78,b:255.00,r:255.00}],
 simple:[{g:6.02,b:273.07,r:439.84},{g:6.02,b:269.70,r:399.61},{g:6.02,b:269.70,r:330.99},{g:6.02,b:259.04,r:315.08},{g:6.02,b:259.04,r:255.00},{g:5.78,b:255.00,r:255.00}],
 revch:[33.488,33.437,33.267,33.149,32.900,32.900],bell:1092.267,pier:1092.267,replay:7.298,bbpay:252,regpay:96,chpay:2,
 note:"アイムEX：🍇・BIG・REGで判別。"},
-go:{name:"ゴーゴージャグラー3",defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
+go:{name:NAMES.full("go"),defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
 T:[{s:1,g:6.25,b:259.04,r:354.25},{s:2,g:6.20,b:258.02,r:332.67},{s:3,g:6.15,b:257.00,r:306.24},{s:4,g:6.07,b:254.02,r:268.59},{s:5,g:6.00,b:247.31,r:247.31},{s:6,g:5.92,b:234.90,r:234.90}],
 simple:[{g:6.25,b:259.04,r:354.25},{g:6.20,b:258.02,r:332.67},{g:6.15,b:257.00,r:306.24},{g:6.07,b:254.02,r:268.59},{g:6.00,b:247.31,r:247.31},{g:5.92,b:234.90,r:234.90}],
 revch:[33.403,33.301,33.200,33.099,32.900,32.801],bell:1092.27,pier:1092.27,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"ゴージャグ3：🍇・BIG・REGで判別。"},
-fk:{name:"ファンキージャグラー2",defs:[["grape","🍇 ぶどう","small"],["b0","単独BIG","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
+fk:{name:NAMES.full("fk"),defs:[["grape","🍇 ぶどう","small"],["b0","単独BIG","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
 T:[{s:1,g:5.94,b0:402.06,bc:1456.36,r0:636.27,rc:1424.70,ra:6553.6,rb:6553.6,rabp:16384},{s:2,g:5.92,b0:397.19,bc:1365.33,r0:574.88,rc:1394.38,ra:5957.8,rb:5957.8,rabp:16384},{s:3,g:5.88,b0:397.19,bc:1337.47,r0:512,rc:1285.02,ra:5461.3,rb:5461.3,rabp:16384}].filter(Boolean),
 simple:[{g:5.94,b:266.41,r:439.84},{g:5.92,b:259.04,r:407.06},{g:5.88,b:256.00,r:366.12},{g:5.83,b:249.19,r:322.84},{g:5.76,b:240.06,r:299.25},{g:5.67,b:219.92,r:262.14}],
 revch:[33.9413,33.8711,33.7838,33.6796,33.5933,33.4220],bell:1092.27,pier:1092.27,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"ファンキー2：詳細判別ではレアBIGを単独/🍒BIGへ50:50配分。"},
-hp:{name:"ハッピージャグラーVⅢ",defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["b0","単独BIG等","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
+hp:{name:NAMES.full("hp"),defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["b0","単独BIG等","big"],["bc","🍒BIG","big"],["bu","不明BIG","big"],["r0","単独REG","reg"],["rc","🍒REG","reg"],["ru","不明REG","reg"]],
 T:[{s:1,g:6.04,c:62.24,b0:436.91,bc:1489.45,r0:636.27,rc:1057.03},{s:2,g:6.01,c:62.47,b0:431.16,bc:1489.45,r0:569.88,rc:992.97},{s:3,g:5.98,c:62.95,b0:412.18,bc:1489.45,r0:532.81,rc:885.62},{s:4,g:5.84,c:64.00,b0:414.78,bc:1213.63,r0:478.36,rc:809.09},{s:5,g:5.81,c:64.57,b0:376.64,bc:1213.63,r0:436.91,rc:728.18},{s:6,g:5.79,c:65.34,b0:344.93,bc:1213.63,r0:425.56,rc:642.51}],
 simple:[{g:6.04,b:273.07,r:397.19},{g:6.01,b:270.81,r:362.08},{g:5.98,b:263.20,r:332.67},{g:5.84,b:254.02,r:300.62},{g:5.81,b:239.18,r:273.07},{g:5.79,b:225.99,r:256.00}],
 revch:[56.55,56.55,56.55,56.55,56.55,56.55],bell:655.36,pier:655.36,replay:7.298,bbpay:240,regpay:96,chpay:4,
 note:"ハッピーVⅢ：ガリぞう説。単独BIG等は単独BIGに4種のレアBIG（1枚役・レアチェリー）を合算。🍇・非重複🍒・単独BIG等・🍒BIG・単独REG・🍒REGを多項尤度で評価。"},
-gg:{name:"ジャグラーガールズSS",defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 チェリー","small"],["big","BIG","small"],["reg","REG","small"]],
+gg:{name:NAMES.full("gg"),defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 チェリー","small"],["big","BIG","small"],["reg","REG","small"]],
 T:[{s:1,g:5.98,c:33.56,b:273.07,r:381.02},{s:2,g:5.98,c:33.47,b:270.81,r:350.46},{s:3,g:5.98,c:33.32,b:260.06,r:316.60},{s:4,g:5.98,c:33.15,b:250.14,r:281.27},{s:5,g:5.88,c:33.10,b:243.63,r:270.81},{s:6,g:5.83,c:32.97,b:225.99,r:252.06}],
 simple:[{g:5.98,b:273.07,r:381.02},{g:5.98,b:270.81,r:350.46},{g:5.98,b:260.06,r:316.60},{g:5.98,b:250.14,r:281.27},{g:5.88,b:243.63,r:270.81},{g:5.83,b:225.99,r:252.06}],
 revch:[33.56,33.47,33.32,33.15,33.10,32.97],bell:1092.27,pier:1092.27,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"ジャグラーガールズSS：ガリぞう説。🍇・🍒・BIG・REGで判別。"},
 
-mr:{name:"ミスタージャグラー",defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
+mr:{name:NAMES.full("mr"),defs:[["grape","🍇 ぶどう","small"],["big","BIG","small"],["reg","REG","small"]],
 T:[{s:1,g:6.29,b:268.59,r:374.49},{s:2,g:6.22,b:267.49,r:354.25},{s:3,g:6.15,b:260.06,r:330.99},{s:4,g:6.09,b:249.19,r:291.27},{s:5,g:6.02,b:240.94,r:257.00},{s:6,g:5.96,b:237.45,r:237.45}],
 simple:[{g:6.29,b:268.59,r:374.49},{g:6.22,b:267.49,r:354.25},{g:6.15,b:260.06,r:330.99},{g:6.09,b:249.19,r:291.27},{g:6.02,b:240.94,r:257.00},{g:5.96,b:237.45,r:237.45}],
 revch:[37.24,37.24,37.24,37.24,37.24,37.24],bell:655.4,pier:420.1,replay:7.298,bbpay:240,regpay:96,chpay:4,
 note:"ミスタージャグラー：ガリぞう説。判別は🍇・BIG・REG。全チェリー1/37.24は設定差なしのため後ヅモ差枚復元だけに使用。"},
 
-um:{name:"ウルトラミラクルジャグラー",defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["big","BIG","small"],["reg","REG","small"]],
+um:{name:NAMES.full("um"),defs:[["grape","🍇 ぶどう","small"],["cherry","🍒 非重複","small"],["big","BIG","small"],["reg","REG","small"]],
 T:[{s:1,g:5.93,c:37.22,b:267.49,r:425.56},{s:2,g:5.93,c:37.22,b:261.10,r:402.06},{s:3,g:5.93,c:37.22,b:256.00,r:350.46},{s:4,g:5.93,c:37.09,b:242.73,r:322.84},{s:5,g:5.87,c:36.13,b:233.22,r:297.89},{s:6,g:5.81,c:35.48,b:216.29,r:277.69}],
 simple:[{g:5.93,b:267.49,r:425.56},{g:5.93,b:261.10,r:402.06},{g:5.93,b:256.00,r:350.46},{g:5.93,b:242.73,r:322.84},{g:5.87,b:233.22,r:297.89},{g:5.81,b:216.29,r:277.69}],
 revch:[35.1,35.0,34.8,34.6,33.5,33.0],bell:1024,pier:1024,replay:7.298,bbpay:240,regpay:96,chpay:2,
 note:"ウルトラミラクルジャグラー：ガリぞう説。🍇・非重複🍒・BIG・REGで判別。後ヅモは設定別の全チェリー確率を使用。"}
 };
+// The My Juggler VI alias intentionally uses the same judgement parameters as V.
+M.my6={...M.my,name:NAMES.full("my6"),defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。"};
 // Restore full Funky detailed table
 M.fk.T=[{s:1,g:5.94,b0:402.06,bc:1456.36,r0:636.27,rc:1424.70,ra:6553.6,rb:6553.6,rabp:16384},{s:2,g:5.92,b0:397.19,bc:1365.33,r0:574.88,rc:1394.38,ra:5957.8,rb:5957.8,rabp:16384},{s:3,g:5.88,b0:397.19,bc:1337.47,r0:512,rc:1285.02,ra:5461.3,rb:5461.3,rabp:16384},{s:4,g:5.83,b0:385.51,bc:1337.47,r0:448.88,rc:1149.75,ra:5041.2,rb:5041.2,rabp:16384},{s:5,g:5.76,b0:378.82,bc:1260.31,r0:409.60,rc:1110.78,ra:4681.1,rb:4681.1,rabp:10923},{s:6,g:5.67,b0:339.56,bc:1191.56,r0:356.17,rc:992.97,ra:4369.1,rb:4369.1,rabp:10923}];
 
 const HANA=window.HanaJudge;
 const MISSING=window.JugestMissingInference;
-const JUGGLER_MACHINE_KEYS=["my","im","go","fk","hp","gg","mr","um"];
+const JUGGLER_MACHINE_KEYS=["my","my6","im","go","fk","hp","gg","mr","um"];
 const HANA_MACHINE_KEYS=["houou","king","dragon","star","newkingv"];
 const MACHINE_KEYS=JUGGLER_MACHINE_KEYS;
 const ALL_MACHINE_KEYS=[...JUGGLER_MACHINE_KEYS,...HANA_MACHINE_KEYS];
 const MACHINE_FAMILY=Object.fromEntries(ALL_MACHINE_KEYS.map(k=>[k,HANA_MACHINE_KEYS.includes(k)?"hanahana":"juggler"]));
-if(HANA){for(const k of HANA_MACHINE_KEYS){const h=HANA.MACHINES[k];M[k]={name:h.name,defs:[],T:[],simple:h.big.map((b,i)=>({g:h.bell[i],b,r:h.reg[i]})),note:h.sourceNote,hana:true};}}
-const MACHINE_RATE={my:[97.0,98.0,99.9,102.8,105.3,109.4],im:[97.0,98.0,99.5,101.1,103.3,105.5],go:[97.2,98.2,99.4,101.6,103.8,106.5],fk:[97.0,98.5,99.8,102.0,104.3,109.0],hp:[97.0,98.1,99.9,102.9,105.8,108.4],gg:[97.0,97.9,99.9,102.1,104.0,107.5],mr:[97.0,98.0,99.8,102.7,105.5,107.3],um:[97.0,98.1,99.8,102.1,104.5,108.1],houou:[97,99,101,103,106,109],king:[97,99,101,104,107,110],dragon:[97,99,101,104,107,110],star:[97,99,101,104,107,110],newkingv:[97,99,101,104,108,108]};
-let cur="my",lastMachine="my",page="judge",E={},data={my:{G:"",v:{},on:{}},im:{G:"",v:{},on:{}},go:{G:"",v:{},on:{}},fk:{G:"",v:{},on:{}},hp:{G:"",v:{},on:{}},gg:{G:"",v:{},on:{}},mr:{G:"",v:{},on:{}},um:{G:"",v:{},on:{}}};
-let cmpSeq=1,cmpData={my:[],im:[],go:[],fk:[],hp:[],gg:[],mr:[],um:[],houou:[],king:[],dragon:[],star:[],newkingv:[],all:[]};
-let revStyle={my:"random",im:"random",go:"random",fk:"random",hp:"random",gg:"random",mr:"random",um:"random"};
-let liveSessions={my:null,im:null,go:null,fk:null,hp:null,gg:null,mr:null,um:null};
+if(HANA){for(const k of HANA_MACHINE_KEYS){const h=HANA.MACHINES[k];M[k]={name:NAMES.full(k),defs:[],T:[],simple:h.big.map((b,i)=>({g:h.bell[i],b,r:h.reg[i]})),note:h.sourceNote,hana:true};}}
+const MACHINE_RATE={my:[97.0,98.0,99.9,102.8,105.3,109.4],my6:[97.0,98.0,99.9,102.8,105.3,109.4],im:[97.0,98.0,99.5,101.1,103.3,105.5],go:[97.2,98.2,99.4,101.6,103.8,106.5],fk:[97.0,98.5,99.8,102.0,104.3,109.0],hp:[97.0,98.1,99.9,102.9,105.8,108.4],gg:[97.0,97.9,99.9,102.1,104.0,107.5],mr:[97.0,98.0,99.8,102.7,105.5,107.3],um:[97.0,98.1,99.8,102.1,104.5,108.1],houou:[97,99,101,103,106,109],king:[97,99,101,104,107,110],dragon:[97,99,101,104,107,110],star:[97,99,101,104,107,110],newkingv:[97,99,101,104,108,108]};
+let cur="my",lastMachine="my",page="judge",E={},data={my:{G:"",v:{},on:{}},my6:{G:"",v:{},on:{}},im:{G:"",v:{},on:{}},go:{G:"",v:{},on:{}},fk:{G:"",v:{},on:{}},hp:{G:"",v:{},on:{}},gg:{G:"",v:{},on:{}},mr:{G:"",v:{},on:{}},um:{G:"",v:{},on:{}}};
+let cmpSeq=1,cmpData={my:[],my6:[],im:[],go:[],fk:[],hp:[],gg:[],mr:[],um:[],houou:[],king:[],dragon:[],star:[],newkingv:[],all:[]};
+let revStyle={my:"random",my6:"random",im:"random",go:"random",fk:"random",hp:"random",gg:"random",mr:"random",um:"random"};
+let liveSessions={my:null,my6:null,im:null,go:null,fk:null,hp:null,gg:null,mr:null,um:null};
 let shops=[],sessions=[],sessionSeq=1,pendingSession=null,editingSessionId=null;
 let externalDays=[],externalSeq=1,externalPreview=null,trendShopFilter="",trendMachineFilter="",trendPeriod="30",trendWeekdayFilter="",trendDateTailFilter="",jdataShopFilter="",jdataDateFilter="",jdataMachineFilter="",jdataFamily="juggler";
 let bruteShopFilter="",brutePeriod="180",bruteMinG="2000",bruteMaxDims="1",bruteMinDays="4",bruteView="single",bruteResults=null,bruteRunToken=0;
@@ -1160,7 +1208,7 @@ const DEFAULT_TAG_NAMES=["特日・イベント","過去傾向","末尾","並び
 let tags=DEFAULT_TAG_NAMES.map((name,i)=>({id:"tag_default_"+(i+1),name,active:true,createdAt:0})),tagSeq=1;
 let analysisShopFilter="",analysisMachineFilter="";
 let monthReportMachine="";
-const MONTH_REPORT_LABEL={my:"マイV",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ"};
+const MONTH_REPORT_LABEL=Object.fromEntries(JUGGLER_MACHINE_KEYS.map(k=>[k,NAMES.short(k)]));
 let strategyEntryFilter="",strategyShopFilter="",strategyMachineFilter="",strategyTagFilter="";
 let storeSort="runs",strategyShopTagShopFilter="",strategyShopTagTagFilter="",strategyShopTagSort="setting";
 let calCursor=new Date();calCursor=new Date(calCursor.getFullYear(),calCursor.getMonth(),1);
@@ -1432,7 +1480,7 @@ function styleRateText(key,style){
 /* legacy UI removed: save */
 
 
-function probsFor(key,t){if(key==="my")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0,bc:1/t.bc+rare,r0:1/t.r0,rc:1/t.rc};if(key==="hp")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0+rareHp,bc:1/t.bc,r0:1/t.r0,rc:1/t.rc};if(key==="gg"||key==="um")return{grape:1/t.g,cherry:1/t.c,big:1/t.b,reg:1/t.r};if(key==="fk"){let rr=1/t.ra+1/t.rb+1/t.rabp+1/10923+1/10923+1/32768;return{grape:1/t.g,b0:1/t.b0+.5*rr,bc:1/t.bc+.5*rr,r0:1/t.r0,rc:1/t.rc}}return{grape:1/t.g,big:1/t.b,reg:1/t.r}}
+function probsFor(key,t){if(key==="my"||key==="my6")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0,bc:1/t.bc+rare,r0:1/t.r0,rc:1/t.rc};if(key==="hp")return{grape:1/t.g,cherry:1/t.c,b0:1/t.b0+rareHp,bc:1/t.bc,r0:1/t.r0,rc:1/t.rc};if(key==="gg"||key==="um")return{grape:1/t.g,cherry:1/t.c,big:1/t.b,reg:1/t.r};if(key==="fk"){let rr=1/t.ra+1/t.rb+1/t.rabp+1/10923+1/10923+1/32768;return{grape:1/t.g,b0:1/t.b0+.5*rr,bc:1/t.bc+.5*rr,r0:1/t.r0,rc:1/t.rc}}return{grape:1/t.g,big:1/t.b,reg:1/t.r}}
 
 /* legacy UI removed: probs */
 
@@ -1518,7 +1566,7 @@ function liveBlank(key){
 function liveLikelihood(key,N,x,on,t){
  if(N<=0)return 0;
  let p=probsFor(key,t),op;
- if(key==="my"||key==="fk"||key==="hp"){
+ if(key==="my"||key==="my6"||key==="fk"||key==="hp"){
   let bt=(x.b0||0)+(x.bc||0)+(x.bu||0),rt=(x.r0||0)+(x.rc||0)+(x.ru||0);
   let qb=bt?(x.bu||0)/bt:0,qr=rt?(x.ru||0)/rt:0;
   op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}
@@ -2347,7 +2395,7 @@ function fmtPct(v,d=2){return Number.isFinite(+v)?(+v).toFixed(d)+"%":"—"}
 function fmtSetting(v){return Number.isFinite(+v)?(+v).toFixed(2):"—"}
 function hasActual(r){return r&&r.actualDiff!==null&&r.actualDiff!==""&&Number.isFinite(+r.actualDiff)}
 function clone(o){return JSON.parse(JSON.stringify(o))}
-function judgeSnapshot(key){if(!M[key])return null;if(page==="judge"&&key===cur)save();let N=+(data[key]?.G||0);if(!N)return null;let q;if(key===cur&&page==="judge")q=safeNorm(M[key].T.map(LL));else{let src=data[key]||{G:"",v:{},on:{}};let pLL=t=>{let p=probsFor(key,t),x={};M[key].defs.forEach(([id])=>x[id]=+src.v[id]||0);let op;if(key==="my"||key==="fk"||key==="hp"){let bt=x.b0+x.bc+x.bu,rt=x.r0+x.rc+x.ru,qb=bt?x.bu/bt:0,qr=rt?x.ru/rt:0;op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}}else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};let n=0,ps=0,L=0;for(let [id] of M[key].defs){if(src.on[id]===false)continue;let xx=x[id],pp=op[id];if(!pp&&xx)return-Infinity;if(xx)L+=xx*Math.log(pp);n+=xx;ps+=pp||0}let no=N-n,po=1-ps;if(no<0||po<=0)return-Infinity;if(no)L+=no*Math.log(po);return L};q=safeNorm(M[key].T.map(pLL))}if(!q)return null;return{source:"judge",machine:key,startG:0,endG:N,playedG:N,q,judgeData:clone(data[key])}}
+function judgeSnapshot(key){if(!M[key])return null;if(page==="judge"&&key===cur)save();let N=+(data[key]?.G||0);if(!N)return null;let q;if(key===cur&&page==="judge")q=safeNorm(M[key].T.map(LL));else{let src=data[key]||{G:"",v:{},on:{}};let pLL=t=>{let p=probsFor(key,t),x={};M[key].defs.forEach(([id])=>x[id]=+src.v[id]||0);let op;if(key==="my"||key==="my6"||key==="fk"||key==="hp"){let bt=x.b0+x.bc+x.bu,rt=x.r0+x.rc+x.ru,qb=bt?x.bu/bt:0,qr=rt?x.ru/rt:0;op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}}else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};let n=0,ps=0,L=0;for(let [id] of M[key].defs){if(src.on[id]===false)continue;let xx=x[id],pp=op[id];if(!pp&&xx)return-Infinity;if(xx)L+=xx*Math.log(pp);n+=xx;ps+=pp||0}let no=N-n,po=1-ps;if(no<0||po<=0)return-Infinity;if(no)L+=no*Math.log(po);return L};q=safeNorm(M[key].T.map(pLL))}if(!q)return null;return{source:"judge",machine:key,startG:0,endG:N,playedG:N,q,judgeData:clone(data[key])}}
 function liveSnapshot(key){let sess=liveSessions[key];if(!sess||!M[key])return null;let start=+sess.startG||0,now=+sess.currentG||0,selfG=Math.max(0,now-start);let pre=reverseCore(key,start,+sess.B||0,+sess.R||0,+sess.D||0,sess.style);if(!pre)return null;let afterLs=M[key].T.map(t=>liveLikelihood(key,selfG,sess.v,sess.on,t));let q=safeNorm(pre.Ls.map((v,i)=>v+afterLs[i]));if(!q)return null;return{source:"live",machine:key,startG:start,endG:now,playedG:selfG,q,judgeData:{before:{G:start,B:sess.B,R:sess.R,D:sess.D,style:sess.style},after:{v:clone(sess.v),on:clone(sess.on)}}}}
 
 
@@ -2408,7 +2456,7 @@ function signClass(v){return Number.isFinite(+v)?(+v>0?"pos":+v<0?"neg":""):""}
 
 
 function aggregate(list){let totalG=0,actualG=0,actualDiff=0,expectedDiff=0,expectedDiffActual=0,win=0,actualN=0,esNum=0,qNum=[0,0,0,0,0,0];list.forEach(r=>{let g=+r.playedG||0;if(!g)return;totalG+=g;expectedDiff+=+r.expectedDiff||0;esNum+=g*(+r.expectedSetting||expectedSetting(r.q));if(Array.isArray(r.q))r.q.forEach((v,i)=>qNum[i]+=g*(+v||0));if(hasActual(r)){actualN++;actualG+=g;actualDiff+=+r.actualDiff;expectedDiffActual+=+r.expectedDiff||0;if(+r.actualDiff>0)win++}});return{n:list.length,totalG,actualG,actualDiff,expectedDiff,expectedDiffActual,win,actualN,winRate:actualN?100*win/actualN:NaN,actualRate:actualG?100*(1+actualDiff/(3*actualG)):NaN,expectedRate:totalG?100*(1+expectedDiff/(3*totalG)):NaN,expectedSetting:totalG?esNum/totalG:NaN,qAvg:totalG?qNum.map(v=>v/totalG):null}}
-function analysisMachineName(k){return({my:"マイV",im:"ネオアイム",go:"ゴージャグ3",fk:"ファンキー2",hp:"ハッピーVⅢ",gg:"ガールズSS",mr:"ミスター",um:"ウルミラ",houou:"ホウオウ天翔",king:"キングハナハナ",dragon:"ドラゴン閃光",star:"スターハナハナ",newkingv:"ニューキングV"})[k]||M[k]?.name||k}
+function analysisMachineName(k){return NAMES.short(k)||M[k]?.name||k}
 function metricSource(r){let jd=r?.judgeData;if(!jd)return null;if(r.source==="live"&&jd.after&&jd.after.v){let g=+r.playedG||0;return g?{g,v:jd.after.v||{},on:jd.after.on||{}}:null}if(jd.v){let g=+jd.G||+r.playedG||0;return g?{g,v:jd.v||{},on:jd.on||{}}:null}return null}
 function activeMetric(src,ids){return ids.every(id=>src.on?.[id]!==false)}
 function sumIds(v,ids){return ids.reduce((z,id)=>z+(+v?.[id]||0),0)}
@@ -2943,7 +2991,7 @@ function v510JudgeState(){
   let x=Object.fromEntries(defs.map(d=>[d.id,d.value]));
   const ll=t=>{
    let p=probsFor(cur,t),op;
-   if(cur==="my"||cur==="fk"||cur==="hp"){
+   if(cur==="my"||cur==="my6"||cur==="fk"||cur==="hp"){
     let bt=(x.b0||0)+(x.bc||0)+(x.bu||0),rt=(x.r0||0)+(x.rc||0)+(x.ru||0),qb=bt?(x.bu||0)/bt:0,qr=rt?(x.ru||0)/rt:0;
     op={grape:p.grape,cherry:p.cherry,b0:(1-qb)*p.b0,bc:(1-qb)*p.bc,bu:qb*(p.b0+p.bc),r0:(1-qr)*p.r0,rc:(1-qr)*p.rc,ru:qr*(p.r0+p.rc)}
    }else op={grape:p.grape,cherry:p.cherry,big:p.big,reg:p.reg};

@@ -3,7 +3,7 @@
 
 // Pure analysis of this invocation's observed judgements. No store or session data.
 const VERSION='parallel-group-judge-v1';
-const MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
+const MACHINE_KEYS=Object.freeze(['my','my6','im','go','fk','hp','gg','mr','um']);
 const HYPOTHESES=Object.freeze([
  Object.freeze({id:'all456',label:'全456',allowed:Object.freeze([4,5,6]),complementLabel:'非全456（少なくとも1台が設定1〜3）'}),
  Object.freeze({id:'all56',label:'全56',allowed:Object.freeze([5,6]),complementLabel:'非全56（少なくとも1台が設定1〜4）'}),
@@ -233,7 +233,8 @@ function aggregateRows(rows){
   mixedMachines:machines.size>1,machines:Array.from(machines.values())};
 }
 function aggregateJudgement(rows,aggregate){
- if(aggregate.mixedMachines)return {available:false,reason:'機種が混在しているため、同じ設定と仮定した合算判別は表示できません。',machine:null,q:null,expectedSetting:null,p4:null,p5:null,p6:null};
+ const sameMyBonusTables=rows.every(row=>row.input.machine==='my'||row.input.machine==='my6')&&rows.every(row=>row.settings.every((setting,i)=>setting.b===rows[0].settings[i].b&&setting.r===rows[0].settings[i].r));
+ if(aggregate.mixedMachines&&!sameMyBonusTables)return {available:false,reason:'機種が混在しているため、同じ設定と仮定した合算判別は表示できません。',machine:null,q:null,expectedSetting:null,p4:null,p5:null,p6:null};
  const logs=normalizeLogs(calculateBonusLogs(aggregate,rows[0].settings)),z=logSum(logs),q=logs.map(l=>Math.exp(l-z));
  return {available:true,reason:'全台が同じ設定だった場合のボーナスだけの参考判別です。',machine:rows[0].input.machine,q,...summary(q)};
 }

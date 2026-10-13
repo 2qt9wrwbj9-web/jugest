@@ -1,0 +1,10 @@
+[
+  {
+    "script": "tests/parallel-group-browser.mjs",
+    "exitCode": 0
+  },
+  {
+    "script": "tests/offline-judge-preview-browser.mjs",
+    "exitCode": 0
+  }
+]

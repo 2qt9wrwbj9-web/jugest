@@ -155,7 +155,7 @@ try{
    // It must still point to the current editor row in native rendered notices.
    await openEditor();
    const warningId=await page.evaluate(()=>document.querySelector('jugest-app').observed.rows[0].id);
-   for(const [index,values] of [[0,{machine:'my',tableNo:'',games:'5000',bb:'20',rb:'20',diff:'50000'}],[1,{machine:'my',tableNo:warningId,games:'5000',bb:'20',rb:'20',diff:''}]]){
+   for(const [index,values] of [[0,{machine:'my6',tableNo:'',games:'5000',bb:'20',rb:'20',diff:'50000'}],[1,{machine:'my',tableNo:warningId,games:'5000',bb:'20',rb:'20',diff:''}]]){
     for(const [key,value] of Object.entries(values))if(key==='machine')await field(key,index).selectOption(value);else await field(key,index).fill(value);
    }
    await host.locator('[data-observed-action="judge-all"]').click();

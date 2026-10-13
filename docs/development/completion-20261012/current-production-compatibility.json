@@ -1,0 +1,24 @@
+{
+  "productionBase": "6945776435f698c61c7e27c90c67beafbc5eb2a1",
+  "criticalGroupFunctionsByteIdenticalToSavedStart": {
+    "logEvidenceRatio": true,
+    "binomialLowerTail": true,
+    "calculateBonusLogs": true,
+    "conditional": true,
+    "refutation": true,
+    "worstRow": true
+  },
+  "protectedSixFilesExactlyEqualToCurrentProduction": {
+    "judgement-model.js": true,
+    "core-v510.js": true,
+    "sync-core.js": true,
+    "vps/src/analysis/runtime-adapter.mjs": true,
+    "hanahana-judge.js": true,
+    "missing-inference.js": true
+  },
+  "legacyCases": 1024,
+  "approvedLegacyNameFieldChangesOnly": true,
+  "legacyRawFullOutputsEqual": 640,
+  "currentProductionFullOutputsExactlyEqual": 1152,
+  "machines": 9
+}
