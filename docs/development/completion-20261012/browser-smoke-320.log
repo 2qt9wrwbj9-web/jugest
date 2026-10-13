@@ -1,0 +1,2 @@
+PASS chromium/built/320
+{"scenarios":1,"results":[{"engine":"chromium","browserVersion":"153.0.8010.0","delivery":"built","width":320,"rows":5,"negativeDifference":true,"draftReload":true,"workspaceSwitch":true,"groupToggle":true,"sort":true,"conditionalModes":true,"duplicate":true,"duplicateNumberBlocked":true,"partialInputBlocked":true,"unnumberedEditorIdentity":true,"skippedBlankIdentity":true,"modalSettingVisible":true,"focusAndScrollStable":true,"caretStable":true,"escaped":true,"pageErrors":0}]}

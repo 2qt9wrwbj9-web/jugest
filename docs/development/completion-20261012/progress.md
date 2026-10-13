@@ -10,3 +10,5 @@ Task 6: Ruling: offline preview uses the actual product sources with a developme
 Task 6: Ruling: retain historical scratch ledgers, patches, failed logs and bundle — explicit user preservation takes priority over skill cleanup — costs repository evidence size only.
 
 Environment: local empty /var/lib/jugest recreated for the existing VPS fixture; no product or test expectation changes. WebKit binary cache had expired; restored only local test runtime/dependencies. Neither action touches production.
+
+Task 6: browser16/16 and offline preview8/8 pass with exit0. Actual screenshots16; no page errors or remote requests. Preview CSP/head insertion RED→GREEN. Final review pending. Browser fixture clarified complete-empty row including machine; bottom-nav home selector disambiguated, no weakened assertions.

@@ -1,0 +1,16 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.evaluate: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('jugest-app').locator('details[data-observed-editor]')[22m
+
+    at /workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/offline-judge-preview-browser.mjs:25:80 {
+  log: [
+    "  - waiting for locator('jugest-app').locator('details[data-observed-editor]')"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.19.0

@@ -22,8 +22,8 @@ const built=createServer((req,res)=>{
 for(const s of [patched,built]){s.listen(0,'127.0.0.1');await once(s,'listening')}
 const wanted=process.env.JUGEST_BROWSER_ENGINE;
 assert.ok(!wanted||['chromium','webkit'].includes(wanted),'choose chromium or webkit');
-const widths=process.env.JUGEST_BROWSER_WIDTHS?process.env.JUGEST_BROWSER_WIDTHS.split(',').map(Number):[320,375,390];
-assert.ok(widths.length&&widths.every(w=>[320,375,390].includes(w)),'choose widths from 320,375,390');
+const widths=process.env.JUGEST_BROWSER_WIDTHS?process.env.JUGEST_BROWSER_WIDTHS.split(',').map(Number):[320,375,390,430];
+assert.ok(widths.length&&widths.every(w=>[320,375,390,430].includes(w)),'choose widths from 320,375,390,430');
 const deliveries=[['built',built],['patched',patched]].filter(([name])=>!process.env.JUGEST_BROWSER_DELIVERY||name===process.env.JUGEST_BROWSER_DELIVERY);
 assert.ok(deliveries.length,'choose built or patched delivery');
 const results=[];
@@ -61,10 +61,11 @@ try{
     for(const [key,value] of Object.entries({tableNo:String(100+i),games:'5000',bb:String(12+i*3),rb:String(14+i*4),diff:i?'0':''}))await field(key,i).fill(value);
    }
    await field('diff',2).fill('-500');await geometry();
-   if(width===390){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(evidence,`${name}-${delivery}-input.png`)})}
+   if(delivery==='patched'){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(evidence,`${name}-${delivery}-${width}-input.png`),scale:'css'})}
    await host.locator('[data-observed-group-toggle]').check();
    await host.locator('[data-observed-action="judge-all"]').click();
    assert.equal(await host.locator('[data-row-summary]').count(),5);
+   for(const row of await host.locator('[data-row-summary]').all())assert.match(await row.innerText(),/最有力 設定/);
    await host.locator('[data-observed-group-report]').waitFor();
    assert.match(await host.locator('[data-observed-group-report]').innerText(),/全456/);
    assert.match(await host.locator('[data-observed-group-report]').innerText(),/成立確率|確率では/);
@@ -118,13 +119,38 @@ try{
    assert.match(await host.locator('[data-observed-group-report]').innerText(),/入力|未判別|確認/);
    await field('bb',0).fill('12');await host.locator('[data-observed-action="judge-all"]').click();
    await host.locator('[data-observed-allocation]').selectOption('all456');await geometry();
-   if(width===390){
+   if(delivery==='patched'){
     await host.locator('[data-observed-group-report]').evaluate(e=>{
      const top=e.getRootNode().querySelector('.topbar')?.getBoundingClientRect().bottom||0;
      scrollTo({top:scrollY+e.getBoundingClientRect().top-top-8,behavior:'instant'});
     });
-    await page.screenshot({path:path.join(evidence,`${name}-${delivery}-group.png`)});
+    await page.screenshot({path:path.join(evidence,`${name}-${delivery}-${width}-group.png`),scale:'css'});
    }
+   // Stable internal IDs are not visible editor positions. Exercise the whole
+   // editor, including a skipped empty row, duplicate insertion and deletion.
+   await openEditor();await field('tableNo',0).fill('');await field('tableNo',4).fill('');
+   for(const [key,value] of Object.entries({games:'8000',bb:'4',rb:'1',diff:''}))await field(key,0).fill(value);
+   const identities=async()=>{
+    await host.locator('[data-observed-action="judge-all"]').click();
+    for(const details of await host.locator('[data-observed-group-report] details').all())if(!await details.evaluate(e=>e.open))await details.locator('summary').first().click();
+    const wanted=await page.evaluate(()=>{
+     const o=document.querySelector('jugest-app').observed,report=o.groupReport;
+     if(!report?.ok)throw Error(JSON.stringify(report));
+     const label=r=>r.tableNo||`台番なし（${o.rows.findIndex(x=>x.id===r.id)+1}行目）`;
+     const h=report.hypotheses.find(x=>x.id===o.allocation);
+     return{n:report.n,worst:report.hypotheses.map(x=>label(x.worstRow)),conditional:h.conditional.rows.map(label),p:h.refutation.rows.map(label),individual:Object.fromEntries(o.rows.filter(x=>x.result).map((x,i)=>[x.id,x.input.tableNo||`台番なし（${o.rows.indexOf(x)+1}行目）`]))};
+    });
+    assert.equal(wanted.n,5);
+    assert.deepEqual(await host.locator('.observed-group-meaning b').allTextContents(),wanted.worst);
+    assert.deepEqual(await host.locator('.observed-group-conditional-row>b').allTextContents(),wanted.conditional);
+    assert.deepEqual(await host.locator('.observed-group-p-row>b').allTextContents(),wanted.p);
+    for(const row of await host.locator('[data-observed-result-row]').all())assert.equal(await row.locator('.observed-result-main>b').innerText(),wanted.individual[await row.getAttribute('data-observed-result-row')]);
+    await geometry();
+   };
+   await identities();await openEditor();await host.locator('[data-observed-action="duplicate"]').first().click();
+   for(const key of ['tableNo','games','bb','rb','diff'])await field(key,0).fill('');
+   await field('machine',0).selectOption('');
+   await identities();await openEditor();await host.locator('[data-observed-action="delete"]').first().click();await identities();
    await openEditor();await field('tableNo',0).fill('<img src=x onerror=alert(1)>');
    await host.locator('[data-observed-action="judge-all"]').click();assert.equal(await host.locator('[data-row-summary] img').count(),0);await geometry();
    const saved=await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input)));
@@ -133,8 +159,11 @@ try{
    assert.equal(await host.locator('[data-row-summary]').count(),0,'never restore stale results');
    assert.equal(await host.locator('[data-observed-group-report]').count(),0,'never restore stale group');
    assert.ok(await host.locator('[data-observed-group-toggle]').isChecked());await geometry();
+   await host.locator('.bottom-nav [data-workspace="home"]').click();await host.locator('.bottom-nav [data-workspace="judgement"]').click();
+   assert.equal(await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input))),saved,'workspace changes preserve all drafts');
    assert.deepEqual(errors,[],`${name}/${delivery}/${width} page errors`);
-   results.push({engine:name,browserVersion:browser.version(),delivery,width,rows:5,negativeDifference:true,draftReload:true,groupToggle:true,sort:true,conditionalModes:true,duplicate:true,duplicateNumberBlocked:true,partialInputBlocked:true,focusAndScrollStable:true,caretStable:true,escaped:true,pageErrors:0});
+   results.push({engine:name,browserVersion:browser.version(),delivery,width,rows:5,negativeDifference:true,draftReload:true,workspaceSwitch:true,groupToggle:true,sort:true,conditionalModes:true,duplicate:true,duplicateNumberBlocked:true,partialInputBlocked:true,unnumberedEditorIdentity:true,skippedBlankIdentity:true,modalSettingVisible:true,focusAndScrollStable:true,caretStable:true,escaped:true,pageErrors:0});
+   console.error(`PASS ${name}/${delivery}/${width}`);
    await context.close();
   }
   await browser.close();browser=null;

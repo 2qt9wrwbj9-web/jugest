@@ -1,0 +1,14 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Error: {"ok":false,"errors":["入力済み6台のうち1台が未判別、または入力に不備があります。各行を確認して「まとめて判別」を押してください。"]}
+    at eval (eval at evaluate (:311:30), <anonymous>:3:27)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at identities (/workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/parallel-group-browser.mjs:136:29)
+    at async file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/parallel-group-browser.mjs:152:4 {
+  log: []
+}
+
+Node.js v24.19.0

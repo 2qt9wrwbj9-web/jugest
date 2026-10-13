@@ -96,7 +96,7 @@ VPS解析runtimeへのgroupファイル追加は不要と判明したため、�
 
 **Interfaces:** Consumes completed UI/model; Produces fresh all-suite results, mobile evidence and reviewable development preview.
 
-- [ ] Chromium/WebKit × built/patched × 320/375/390/430px。入力、空台番の対応、複製・削除・空行、再判別、並べ替え、画面切替、reloadを実操作。
+- [x] Chromium/WebKit × built/patched × 320/375/390/430px。入力、空台番の対応、複製・削除・空行、再判別、並べ替え、画面切替、reloadを実操作。
 - [x] npm test／npm --prefix vps test。Expected: 全件成功、旧73/553や保存時79/553は最新結果の代用にしない。
 - [ ] 別コンテキストの最終レビュー。重要指摘は再現テストから修正。公開本番へは反映しない。
 - [ ] ヒロが画面・計算例を確認できる開発成果、全ログ、レビュー結果、次回READMEをGitHub保存し遠隔SHAを照合。

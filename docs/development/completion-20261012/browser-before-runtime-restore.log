@@ -1,0 +1,27 @@
+PASS chromium/built/320
+PASS chromium/built/375
+PASS chromium/built/390
+PASS chromium/built/430
+PASS chromium/patched/320
+PASS chromium/patched/375
+PASS chromium/patched/390
+PASS chromium/patched/430
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/webkit-2336/pw_run.sh
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at /workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/parallel-group-browser.mjs:34:51 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v24.19.0
