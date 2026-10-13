@@ -47,7 +47,7 @@ function expectedBuiltIndex(){
  return patchStoreAnalysisHtml(html);
 }
 test('Production icons, parser, math libraries and untouched Vercel APIs remain byte-exact',()=>{
- for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css')assert.equal(hash(fs.readFileSync(`public/${file}`)),sha,file);
+ for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css'){const data=fs.readFileSync(`public/${file}`);assert.equal(hash(['ana-launcher.js','ana-single-day.js'].includes(file)?withoutJudgementAdditions(file,data.toString('utf8')):data),sha,file);}
  assert.equal(fs.readFileSync('public/app-v510.css','utf8'),expectedFixedChromeCss(),'public CSS differs only by approved fixed-chrome centering');
  assert.equal(fs.readFileSync('public/app-v510.js','utf8'),expectedCollectorUi(),'public app differs only by approved Collector/UI view transforms');
  for(const [file,sha] of Object.entries(baseline.api))if(!intentionalBackendChanges.has(file))assert.equal(hash(fs.readFileSync(file)),sha,file);

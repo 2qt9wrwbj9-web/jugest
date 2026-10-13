@@ -64,7 +64,35 @@ function block(source,start,end,replacement=''){
  assert.equal(createHash('sha256').update(source.slice(a,b+end.length)).digest('hex'),APPROVED_BLOCKS[start],'Unreviewed judgement addition inside protected block');
  return source.slice(0,a)+replacement+source.slice(b+end.length);
 }
+// Undo ONLY explicitly reviewed My Juggler VI additions before comparing the
+// legacy production snapshots. This keeps every existing model/table guarded.
+function withoutMy6Additions(file,source){
+ const aliases="['my6',['マイジャグラーⅥ','マイジャグラーVI','マイジャグラー6','マイジャグⅥ','マイジャグVI','マイジャグ6']],\n ";
+ if(file==='ana-launcher.js'||file==='ana-single-day.js'){
+  source=replace(source,aliases);
+  if(file==='ana-single-day.js')source=replace(source,"my6:'マイジャグⅥ',");
+ }
+ if(file==='index.html'){
+  const entry='// The My Juggler VI alias intentionally uses the same judgement parameters as V.\nM.my6={...M.my,name:"マイジャグⅥ",defs:M.my.defs.map(row=>[...row]),T:M.my.T.map(row=>({...row})),simple:M.my.simple.map(row=>({...row})),revch:[...M.my.revch],note:"マイジャグⅥ：マイジャグⅤと同一の判別用スペックを使用。"};\n';
+  source=replace(source,entry);
+  const approved=[
+   ['"my","my6","im"','"my","im"',1],
+   ['my6:[97.0,98.0,99.9,102.8,105.3,109.4],','',1],
+   ['my6:{G:"",v:{},on:{}},','',1],
+   ['my6:[],','',1],
+   ['my6:"random",','',1],
+   ['my6:null,','',1],
+   ['my6:"マイⅥ",','',2],
+   ['if(key==="my"||key==="my6")return','if(key==="my")return',1],
+   ['if(key==="my"||key==="my6"||key==="fk"||key==="hp")','if(key==="my"||key==="fk"||key==="hp")',2],
+   ['if(cur==="my"||cur==="my6"||cur==="fk"||cur==="hp")','if(cur==="my"||cur==="fk"||cur==="hp")',1]
+  ];
+  for(const [from,to,count] of approved)source=replace(source,from,to,count);
+ }
+ return source;
+}
 export function withoutJudgementAdditions(file,source){
+ source=withoutMy6Additions(file,source);
  if(file==='app-v510.js'){
   source=stripLiveReverseBlock(source,'\n// BEGIN reviewed live judgement compact helpers\n','// END reviewed live judgement compact helpers\n',REVIEWED_LIVE_JUDGE_COMPACT.jsHelpers);
   for(const name of Object.keys(REVIEWED_LIVE_JUDGE_COMPACT.methods))source=restoreCompactJudgementMethod(source,name);
@@ -111,6 +139,7 @@ export function withoutJudgementAdditions(file,source){
   source=replace(source,"'judgement-model.js','judgement-view.js',",'');
   source=replace(source,"htmlSource??fs.readFileSync('index.html','utf8')","fs.readFileSync('index.html','utf8')");
  }else if(file==='tests/production-preservation.mjs'){
+  source=replace(source," for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css'){const data=fs.readFileSync(`public/${file}`);assert.equal(hash(['ana-launcher.js','ana-single-day.js'].includes(file)?withoutJudgementAdditions(file,data.toString('utf8')):data),sha,file);}"," for(const [file,sha] of Object.entries(baseline.public))if(file!=='app-v510.css')assert.equal(hash(fs.readFileSync(`public/${file}`)),sha,file);");
   source=replace(source,"import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';\n");
   source=replace(source,"let html=withoutJudgementAdditions('index.html',fs.readFileSync('index.html','utf8'));","let html=fs.readFileSync('index.html','utf8');");
  }

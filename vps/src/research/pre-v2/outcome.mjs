@@ -1,6 +1,6 @@
 import {expectedRelevance} from './relevance.mjs';
 
-const JUGGLER_KEYS=new Set(['my','im','go','fk','hp','gg','mr','um']);
+const JUGGLER_KEYS=new Set(['my','my6','im','go','fk','hp','gg','mr','um']);
 const HANA_KEYS=new Set(['houou','king','dragon','star']);
 const NEW_KING_V='newkingv';
 
