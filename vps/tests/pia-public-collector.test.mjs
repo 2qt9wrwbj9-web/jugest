@@ -129,3 +129,73 @@ test('midnight source date lag waits 30 minutes and preserves the baseline until
     assert.equal(shouldAttemptPiaCollection(f.db,{now:new Date('2026-09-22T16:05:00.000Z')}).reason,'done_today');
   }finally{await f.close()}
 });
+
+test('PIA machine replacement resets history to one day without dropping its data',async()=>{
+  const f=await fixture();
+  try{
+    const prev=snapshot('2026-10-13',{advance:false});
+    const next=snapshot('2026-10-14',{advance:true});
+    next.ranking=next.ranking.filter(x=>x.machine_no!==3090);
+    next.ranking.push(row({no:3090,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:61}));
+    assert.equal(validatePiaSnapshot(next,{minMachineCount:2,previousSnapshot:prev}).shortenedMachineCount,1);
+    const derived=derivePiaBusinessDay(prev,next,'2026-10-14',{minComparable:2});
+    assert.equal(derived.ready,true);
+    assert.equal(derived.businessDate,'2026-10-13');
+    assert.deepEqual(derived.machines.map(x=>x.machine),['my6','go']);
+    assert.deepEqual(derived.machines.map(x=>x.tableNo),['3090','3118']);
+    let data=prev;
+    const fetchImpl=async()=>response(data);
+    assert.equal((await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2})).status,'seeded');
+    data=next;
+    const ingested=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2});
+    assert.equal(ingested.status,'ingested');
+    assert.equal(ingested.businessDate,'2026-10-13');
+    assert.equal(ingested.machineCount,2);
+    assert.deepEqual(f.db.prepare('SELECT payload_json FROM machine_day_data WHERE business_date=? ORDER BY machine_key')
+      .all('2026-10-13').map(x=>JSON.parse(x.payload_json).machine),['my6','go']);
+    const dayThree=snapshot('2026-10-15',{advance:true});
+    dayThree.ranking=dayThree.ranking.filter(x=>x.machine_no!==3090).filter(x=>x.final_start!==2);
+    dayThree.ranking.push(row({no:3118,name:'Ｓゴーゴージャグラー３ＫＡ',code:'00088',id:32}));
+    dayThree.ranking.push(row({no:3090,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:61}));
+    dayThree.ranking.push(row({no:3090,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:62}));
+    // On day two a new model has two history entries, not thirty.
+    assert.equal(validatePiaSnapshot(dayThree,{minMachineCount:2,previousSnapshot:next}).shortenedMachineCount,1);
+    assert.equal(derivePiaBusinessDay(next,dayThree,'2026-10-15',{minComparable:2}).ready,true);
+    data=dayThree;
+    const second=await collectPiaPublicOnce(f.db,{rawRoot:f.rawRoot,fetchImpl,minMachineCount:2});
+    assert.equal(second.status,'ingested');
+    assert.equal(second.businessDate,'2026-10-14');
+    assert.equal(second.machineCount,2);
+  }finally{await f.close()}
+});
+
+test('PIA rejects unexplained shortened history, mixed machine identity and multi-row replacement',()=>{
+  const prev=snapshot('2026-10-13',{advance:false});
+  const sameModel=snapshot('2026-10-14',{advance:true});
+  sameModel.ranking=sameModel.ranking.filter(x=>x.machine_no!==3090);
+  sameModel.ranking.push(row({no:3090,name:'ＳマイジャグラーⅤＫＤ',code:'00087',id:61}));
+  assert.throws(()=>validatePiaSnapshot(sameModel,{minMachineCount:2,previousSnapshot:prev}),/unexpected rolling history transition/);
+  const missing=snapshot('2026-10-14',{advance:true});
+  missing.ranking.pop();
+  assert.throws(()=>validatePiaSnapshot(missing,{minMachineCount:2,previousSnapshot:prev}),/unexpected rolling history transition/);
+  const replacement=snapshot('2026-10-14',{advance:true});
+  replacement.ranking=replacement.ranking.filter(x=>x.machine_no!==3090);
+  replacement.ranking.push(row({no:3090,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:61}));
+  replacement.ranking.push(row({no:3090,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:62}));
+  assert.throws(()=>validatePiaSnapshot(replacement,{minMachineCount:2,previousSnapshot:prev}),/unexpected rolling history transition/);
+  const mixed=snapshot('2026-10-14',{advance:true});
+  mixed.ranking[0]={...mixed.ranking[0],name:'ＳマイジャグラーⅥＫＫ'};
+  assert.throws(()=>validatePiaSnapshot(mixed,{minMachineCount:2,previousSnapshot:prev}),/mixed machine identities/);
+});
+
+test('PIA accepts a newly introduced table number only when it has one business-day row',()=>{
+  const prev=snapshot('2026-10-13',{advance:false});
+  const current=snapshot('2026-10-14',{advance:true});
+  current.ranking.push(row({no:3190,name:'ＳマイジャグラーⅥＫＫ',code:'00999',id:61}));
+  assert.equal(validatePiaSnapshot(current,{minMachineCount:2,previousSnapshot:prev}).shortenedMachineCount,1);
+  const derived=derivePiaBusinessDay(prev,current,'2026-10-14',{minComparable:2});
+  assert.equal(derived.ready,true);
+  assert.equal(derived.diagnostics.newMachines,1);
+  assert.equal(derived.machines.length,3);
+  assert.equal(derived.machines.find(x=>x.tableNo==='3190').machine,'my6');
+});
