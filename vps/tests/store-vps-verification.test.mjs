@@ -63,5 +63,7 @@ test('store UI does not expose synchronous legacy model or replay controls',()=>
  const block=code.slice(code.indexOf('function verificationScreen'),code.indexOf('function repairRemoteTrendSummary'));
  assert.ok(!block.includes('data-model-run'));
  assert.ok(!block.includes('data-replay-run'));
- assert.ok(code.includes('VPS蓄積（台番傾向は未同期）'));
+ assert.ok(code.includes('VPS保存済みの日別データ'),'remote-only trend has a VPS-backed calculation path');
+ assert.ok(code.includes('void runRemoteTrend();return'),'remote trend click uses the read-only VPS calculation');
+ assert.ok(!code.includes("button.textContent='端末側のデータなし'"),'a remote-only store is no longer blocked');
 });
