@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
+import {execFileSync} from 'node:child_process';
 import {boot,memoryStorage,plain} from './helpers/runtime.mjs';
 
 const UI_KEY='jugest:v510:ui';
@@ -234,6 +236,26 @@ test('standalone reverse warnings use target positions, preserve named escaping 
  const mapped=ctx.JUGESTGroupJudgeView.render(report,{rowNumbers:{'9001':4,'9002':7}});
  assert.match(mapped,/台番なし（4行目）：差枚の逆算に警告があります。/);
  assert.deepEqual(structuredClone(report),before,'warning display never mutates evidence or reports');
+});
+
+test('warning identity metadata leaves every saved group calculation and legacy report field exactly unchanged',async()=>{
+ const {ctx,bridge}=await ready({loadApp:false});
+ const saved={};
+ vm.runInNewContext(execFileSync('git',['show','a563a04e4771420ef8689593e90cf6aa97e36c3d:group-judge.js']).toString(),saved);
+ const cases=[
+  [{...sample,tableNo:'',diff:50000},{...sample,tableNo:'2',diff:''}],
+  [{...sample,diff:0},{...sample,tableNo:'103',diff:-500}],
+  [{...sample,games:100,bb:0,rb:0,diff:''},{...sample,tableNo:'103',games:100,bb:0,rb:0,diff:''}],
+  [{...sample,machine:'mr',games:8000,bb:40,rb:44,diff:''},{...sample,tableNo:'103',machine:'go',games:8000,bb:40,rb:44,diff:''}],
+  [{...sample,games:10000000,bb:1,rb:0,diff:''},{...sample,tableNo:'103',games:10000000,bb:0,rb:1,diff:''}],
+  [{...sample,games:10000001,diff:''},{...sample,tableNo:'103',diff:''}],
+ ];
+ for(const inputs of cases){
+  const entries=inputs.map((input,i)=>({id:String(9001+i),result:bridge.judgeObservedMachine(input)}));
+  const current=structuredClone(ctx.JUGESTGroupJudge.analyze(entries));
+  const {reverseWarningRows,...legacyFields}=current;
+  assert.deepEqual(legacyFields,structuredClone(saved.JUGESTGroupJudge.analyze(entries)),'preserve logs, ratios, p-values, distributions, totals, errors and original warnings exactly');
+ }
 });
 
 test('unnumbered sorted results keep editor identities after editing and rejudging',async()=>{
