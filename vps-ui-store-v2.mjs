@@ -50,12 +50,41 @@ function overview(screen,shop,o){
  `<div class="sv2-collector"><div><b>${s.warn?'△':'✓'} ${esc(s.label)}</b><small>${esc(s.description)}</small></div><button type="button" class="sv2-inline-action" data-action="data-collector">取得管理 →</button></div>`+
  card('その他の分析','詳細画面へ',`<div class="sv2-mini-grid"><button type="button" class="sv2-inline-action" data-action="store-analysis">店舗解析 →</button><button type="button" class="sv2-inline-action" data-action="store-replay">リプレイ →</button><button type="button" class="sv2-inline-action" data-action="store-model">モデル性能 →</button></div>`);
 }
+// Mobile comparison uses labels already supplied by the store summary; no judgement is run here.
+const machineMetric=(record,label)=>record.metrics.find(metric=>metric.label===label)?.value||'—';
+function machineMetricNumber(value){
+ const match=String(value??'').replaceAll(',','').match(/^[+-]?(?:\d+\.?\d*|\.\d+)/);
+ return match?Number(match[0]):null;
+}
+function sortedMachineRecords(records,sort='diff'){
+ const label={diff:'平均差枚',games:'平均G',win:'勝率'}[sort];
+ if(!label)return records.slice();
+ return records.slice().sort((a,b)=>{
+  const av=machineMetricNumber(machineMetric(a,label)),bv=machineMetricNumber(machineMetric(b,label));
+  if(av===null)return bv===null?a.index-b.index:1;
+  if(bv===null)return -1;
+  return bv-av||a.index-b.index;
+ });
+}
+function mobileMachineRows(records,sort='diff',openedIndex=null){
+ return sortedMachineRecords(records,sort).map(row=>{
+  const value=label=>machineMetric(row,label),average=value('平均差枚'),n=machineMetricNumber(average);
+  const tone=n===null?'':n>0?'sv2-positive':n<0?'sv2-negative':'';
+  const win=value('勝率'),shortWin=win.match(/^\d+(?:\.\d+)?%/)?.[0]||'—';
+  const details=['総差枚','平均差枚','平均G','台数','勝率','平均出率','平均設定'];
+  return `<details class="sv2-machine-mobile-row" name="sv2-machine-detail" data-machine-index="${row.index}" ${openedIndex===row.index?'open':''}><summary class="sv2-machine-mobile-summary"><span class="sv2-machine-mobile-name">${esc(row.name)}</span><span class="sv2-machine-mobile-value ${tone}">${esc(average)}</span><span class="sv2-machine-mobile-value">${esc(value('平均G'))}</span><span class="sv2-machine-mobile-value">${esc(shortWin)}</span><span class="sv2-machine-chevron" aria-hidden="true">⌄</span></summary><div class="sv2-machine-mobile-detail">${details.map(label=>`<div class="sv2-machine-detail-stat"><small>${esc(label)}</small><b class="${label.includes('差枚')?tone:''}">${esc(value(label))}</b></div>`).join('')}</div></details>`;
+ }).join('');
+}
 function machineTable(screen){
  const list=screen.querySelector('.vps-audit-summary .vps-audit-machines');if(!list||list.dataset.sv2Table)return;
  const cards=[...list.querySelectorAll(':scope > .vps-audit-machine')];if(!cards.length)return;
- const records=cards.map(card=>({name:card.querySelector(':scope > b')?.textContent||'—',metrics:[...card.querySelectorAll('.vps-audit-machine-grid > div')].map(x=>({label:x.querySelector('small')?.textContent||'',value:x.querySelector('b')?.textContent||'—'}))}));
- const heads=['機種',...records[0].metrics.map(x=>x.label)];
- list.innerHTML=`<div class="sv2-machine-table-scroll"><table class="sv2-machine-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${records.map(row=>`<tr><td>${esc(row.name)}</td>${heads.slice(1).map((_,i)=>`<td>${esc(row.metrics[i]?.value||'—')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+ const records=cards.map((card,index)=>({index,name:card.querySelector(':scope > b')?.textContent||'—',metrics:[...card.querySelectorAll('.vps-audit-machine-grid > div')].map(x=>({label:x.querySelector('small')?.textContent||'',value:x.querySelector('b')?.textContent||'—'}))}));
+ // Desktop: preserve the existing six-column presentation and original row order.
+ const heads=['機種','総差枚','平均差枚','平均G','平均出率','平均設定'];
+ const desktop=`<div class="sv2-machine-table-scroll"><table class="sv2-machine-table"><thead><tr>${heads.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${records.map(row=>`<tr><td>${esc(row.name)}</td>${heads.slice(1).map(label=>`<td>${esc(machineMetric(row,label))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+ const mobile=`<div class="sv2-machine-mobile"><div class="sv2-machine-sortbar"><label for="sv2-machine-sort">表示順</label><select id="sv2-machine-sort" data-sv2-machine-sort><option value="diff">平均差枚順</option><option value="games">平均G順</option><option value="win">勝率順</option><option value="original">元の順</option></select></div><div class="sv2-machine-mobile-list"><div class="sv2-machine-mobile-head"><span>機種</span><span>平均差枚</span><span>平均G</span><span>勝率</span><span></span></div><div class="sv2-machine-mobile-rows">${mobileMachineRows(records)}</div></div></div>`;
+ list.innerHTML=desktop+mobile;
+ list._sv2MachineRecords=records;
  list.dataset.sv2Table='1';
 }
 function verificationMode(){return app?.state?.screen==='replay'?'historical':'live'}
@@ -162,8 +191,8 @@ function reconcile(){
  else compact(screen,kind,shop,o);
 }
 function schedule(){if(pending)return;pending=true;(globalThis.requestAnimationFrame||globalThis.setTimeout)(()=>{pending=false;try{reconcile()}catch(e){console.error('JUGEST Store UI v2:',e)}},0)}
-function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('input',event=>{if(!event.target?.matches?.('[data-vps-matrix-search]'))return;const summary=event.target.closest('[data-vps-store-data-summary]'),counts=summary?.querySelector('[data-vps-matrix-match-count]');if(counts)counts.hidden=!String(event.target.value||'').trim()},true);root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
+function attach(candidate){if(app===candidate&&root===candidate?.shadowRoot)return !!root;observer?.disconnect();app=candidate;root=candidate?.shadowRoot||null;if(!root)return false;observer=new MutationObserver(schedule);observer.observe(root,{childList:true,subtree:true});root.addEventListener('input',event=>{if(!event.target?.matches?.('[data-vps-matrix-search]'))return;const summary=event.target.closest('[data-vps-store-data-summary]'),counts=summary?.querySelector('[data-vps-matrix-match-count]');if(counts)counts.hidden=!String(event.target.value||'').trim()},true);root.addEventListener('change',event=>{const select=event.target;if(!select?.matches?.('[data-sv2-machine-sort]'))return;const list=select.closest('.vps-audit-machines'),rows=list?.querySelector('.sv2-machine-mobile-rows');if(!rows||!Array.isArray(list._sv2MachineRecords))return;const opened=rows.querySelector('.sv2-machine-mobile-row[open]');const index=opened?Number(opened.dataset.machineIndex):null;rows.innerHTML=mobileMachineRows(list._sv2MachineRecords,select.value,index)},true);root.addEventListener('click',event=>{const button=event.target?.closest?.('[data-sv2-verify-refresh]');if(!button)return;const screen=button.closest('section.sv2-verify');if(screen){verificationReader.clear(app?.state?.activeStore||'');loadVerification(screen,app?.state?.activeStore||'',{force:true})}},true);schedule();return true}
 function boot(){if(attach(document.querySelector('jugest-app')))return;globalThis.setTimeout(boot,60)}
 if(typeof document!=='undefined')boot();
-export const __test={collectorStatus,latestSummary,nav,dateShort};
+export const __test={collectorStatus,latestSummary,nav,dateShort,machineMetricNumber,sortedMachineRecords,mobileMachineRows};
 
