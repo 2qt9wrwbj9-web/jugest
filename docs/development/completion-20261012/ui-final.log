@@ -1,0 +1,27 @@
+✔ versioned input drafts survive reload, retain explicit zero and never restore results (63.219651ms)
+✔ single drafts and every edit, add, duplicate and delete mutation persist (11.119685ms)
+✔ a real storage failure keeps the editor usable and reports only the unsaved state (6.824002ms)
+✔ one overlong field among 200 drafts preserves the last reloadable save and recovers without truncation (49.819964ms)
+✔ 1001 drafts cannot overwrite a valid save; returning to the row limit saves every row (122.19126ms)
+✔ unsupported, malformed and oversized stored drafts are ignored; 200 valid drafts retain unique ids (40.877225ms)
+✔ group mode uses cached complete results and preserves all ordinary individual distributions (30.988878ms)
+✔ unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion (22.919998ms)
+✔ standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure (11.612028ms)
+✔ parallel result rows retain compact most-likely text, including every tied setting (7.361062ms)
+✔ unnumbered sorted results keep editor identities after editing and rejudging (23.055573ms)
+✔ group row labels reject inherited or invalid editor numbers without inventing positions (13.83222ms)
+✔ group overview warns that low-setting mixtures can escape refutation despite a large ratio (7.970221ms)
+✔ sorting changes only result order with stable ties, while labels and input order remain intact (7.333399ms)
+✔ invalid, incomplete and unjudged nonempty rows block the group while empty rows are skipped (16.076277ms)
+✔ editing immediately removes only its row and the group, without rerendering input DOM (10.275361ms)
+✔ group display is pure, escaped, explanatory and separates ratios from conditional percentages (10.510316ms)
+✔ extreme ratios and tiny refutation p use their logs and impossible conditional output stays unavailable (7.523197ms)
+✔ 60-row profiles stay compact and all input controls meet the stable mobile contract (278.446661ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 831.065169

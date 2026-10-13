@@ -78,7 +78,7 @@ VPS解析runtimeへのgroupファイル追加は不要と判明したため、�
 - [x] 既存16件を実行し13成功・3失敗を再現。Expected: 行番号と最有力表示の3件だけが失敗。
 - [x] 許容設定や計算を変えず、入力全行の番号対応を渡して全表示を統一。最有力表示も復帰。Expected: 16/16成功。
 - [x] 並べ替え後の編集・再判別、番号情報の型／継承境界を追加。Expected: 18/18成功。
-- [ ] 保護検査と個別1,024件を確認、途中保存。Expected: 既存数学・保護fixtureは変更なし。
+- [x] 保護検査と個別1,024件を確認、途中保存。Expected: 既存数学・保護fixtureは変更なし。
 
 ### Task 5: 数学と反証能力の最終確認
 
@@ -86,9 +86,9 @@ VPS解析runtimeへのgroupファイル追加は不要と判明したため、�
 
 **Interfaces:** Consumes existing model/tables; Produces reproducible rates that distinguish true-hypothesis rejection, false-hypothesis nonrejection and evidence ratio from event probability.
 
-- [ ] 既存SciPy412CDF／独立列挙27／エンジン17件／個別1,024件を新ログで再検証。
-- [ ] 既存7条件を維持し、近い低設定混在・2台・低稼働・差枚入力有無の検証を追加。真偽両側の反証率・否定できない率を保存。
-- [ ] 限界・低い反証能力を画面の既存説明と照合し、結果を記録して途中保存。
+- [x] 既存SciPy412CDF／独立列挙27／エンジン17件／個別1,024件を新ログで再検証。
+- [x] 既存7条件を維持し、近い低設定混在・2台・低稼働・差枚入力有無の検証を追加。真偽両側の反証率・否定できない率を保存。
+- [x] 限界・低い反証能力を画面の既存説明と照合し、結果を記録して途中保存。
 
 ### Task 6: 全体・ブラウザ・独立レビュー・保存
 
@@ -97,6 +97,6 @@ VPS解析runtimeへのgroupファイル追加は不要と判明したため、�
 **Interfaces:** Consumes completed UI/model; Produces fresh all-suite results, mobile evidence and reviewable development preview.
 
 - [ ] Chromium/WebKit × built/patched × 320/375/390/430px。入力、空台番の対応、複製・削除・空行、再判別、並べ替え、画面切替、reloadを実操作。
-- [ ] npm test／npm --prefix vps test。Expected: 全件成功、旧73/553や保存時79/553は最新結果の代用にしない。
+- [x] npm test／npm --prefix vps test。Expected: 全件成功、旧73/553や保存時79/553は最新結果の代用にしない。
 - [ ] 別コンテキストの最終レビュー。重要指摘は再現テストから修正。公開本番へは反映しない。
 - [ ] ヒロが画面・計算例を確認できる開発成果、全ログ、レビュー結果、次回READMEをGitHub保存し遠隔SHAを照合。

@@ -237,6 +237,14 @@ test('group row labels reject inherited or invalid editor numbers without invent
  }
 });
 
+test('group overview warns that low-setting mixtures can escape refutation despite a large ratio',async()=>{
+ const {ctx,bridge}=await ready({loadApp:false});
+ const report=ctx.JUGESTGroupJudge.analyze(rows.map((input,i)=>({id:String(i),result:bridge.judgeObservedMachine(input)})));
+ assert.equal(report.ok,true);const html=ctx.JUGESTGroupJudgeView.render(report);
+ assert.ok(html.includes('低設定が混じっていても反証できない場合があります。'));
+ assert.ok(html.includes('大きい根拠比も全台系の確定ではありません。'));
+});
+
 test('sorting changes only result order with stable ties, while labels and input order remain intact',async()=>{
  const {app,ctx}=await ready();app.acceptMachineRows([...rows,{...sample,tableNo:'101'}]);app.handleObservedAction('judge-all');
  const inputs=plain(app.observed.rows.map(r=>({id:r.id,input:r.input})));

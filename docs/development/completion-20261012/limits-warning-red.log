@@ -1,0 +1,28 @@
+✖ group overview warns that low-setting mixtures can escape refutation despite a large ratio (50.353584ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 154.395176
+
+✖ failing tests:
+
+test at tests/parallel-group-ui.mjs:240:1
+✖ group overview warns that low-setting mixtures can escape refutation despite a large ratio (50.353584ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(html.includes('低設定が混じっていても反証できない場合があります。'))
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/de64dcbbff0a/jugest-checkpoint-20261012/tests/parallel-group-ui.mjs:244:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
