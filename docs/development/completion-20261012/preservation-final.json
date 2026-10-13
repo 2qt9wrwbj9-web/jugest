@@ -1,0 +1,16 @@
+{
+  "originalHead": "d8d3e9cfcdb2c0ea8f006ecae61aace574257896",
+  "originalBranch": "work/parallel-group-judge-20261010",
+  "originalSourceFiles": 535,
+  "savedSnapshotMatchesOriginalFiles": 535,
+  "mismatches": [],
+  "groupEngineUnchangedSinceSavedStart": true,
+  "protectedFilesIdenticalToProductionBaseline": {
+    "judgement-model.js": true,
+    "core-v510.js": true,
+    "sync-core.js": true,
+    "vps/src/analysis/runtime-adapter.mjs": true,
+    "hanahana-judge.js": true,
+    "missing-inference.js": true
+  }
+}

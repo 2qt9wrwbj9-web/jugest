@@ -204,6 +204,38 @@ test('parallel result rows retain compact most-likely text, including every tied
  assert.deepEqual(structuredClone(result),before);
 });
 
+test('reverse warnings identify the current editor row even when its internal id collides with a real table number',async()=>{
+ const {app}=await ready();
+ app.acceptMachineRows([{...sample,tableNo:'',diff:50000},{...sample,tableNo:'2',diff:''}]);
+ const [warned,normal]=app.observed.rows;
+ assert.equal(warned.id,normal.input.tableNo,'reproduces the ambiguous raw warning label');
+ change(app,'data-observed-group-toggle',null,true);app.handleObservedAction('judge-all');
+ const check=ordinal=>{
+  assert.equal(app.observed.groupReport.ok,true);
+  assert.match(app.mount.innerHTML,new RegExp(`台番なし（${ordinal}行目）：差枚の逆算に警告があります。`));
+  assert.doesNotMatch(app.mount.innerHTML,/台2：差枚の逆算に警告があります。/,'the normal table2 must never be blamed');
+ };
+ check(1);app.handleObservedAction('duplicate',warned.id);
+ for(const key of ['machine','tableNo','games','bb','rb','diff'])edit(app,warned,key,'');
+ app.handleObservedAction('judge-all');check(2);
+ app.handleObservedAction('delete',warned.id);app.handleObservedAction('judge-all');check(1);
+});
+
+test('standalone reverse warnings use target positions, preserve named escaping and never leak internal ids',async()=>{
+ const {ctx,bridge}=await ready({loadApp:false});
+ const report=ctx.JUGESTGroupJudge.analyze([
+  {id:'9001',result:bridge.judgeObservedMachine({...sample,tableNo:'',diff:50000})},
+  {id:'9002',result:bridge.judgeObservedMachine({...sample,tableNo:'<台2>',diff:50000})},
+ ]);assert.equal(report.ok,true);
+ const before=structuredClone(report),html=ctx.JUGESTGroupJudgeView.render(report);
+ assert.match(html,/台番なし（対象1台目）：差枚の逆算に警告があります。/);
+ assert.match(html,/&lt;台2&gt;：差枚の逆算に警告があります。/);
+ assert.doesNotMatch(html,/台900[12]：差枚の逆算|<台2>/);
+ const mapped=ctx.JUGESTGroupJudgeView.render(report,{rowNumbers:{'9001':4,'9002':7}});
+ assert.match(mapped,/台番なし（4行目）：差枚の逆算に警告があります。/);
+ assert.deepEqual(structuredClone(report),before,'warning display never mutates evidence or reports');
+});
+
 test('unnumbered sorted results keep editor identities after editing and rejudging',async()=>{
  const {app}=await ready();
  app.acceptMachineRows([{...sample,tableNo:'',bb:4,rb:1,diff:''},{...sample,tableNo:'',bb:35,rb:40,diff:''}]);

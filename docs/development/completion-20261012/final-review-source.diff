@@ -1,0 +1,1924 @@
+diff --git a/app-v510.css b/app-v510.css
+index 41f9a48..8ad79de 100644
+--- a/app-v510.css
++++ b/app-v510.css
+@@ -129,26 +129,38 @@
+ .observed-details>summary,.observed-diagnostic-rows summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700}
+ .observed-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.6;max-width:100%}
+ .observed-page .observed-modes{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+-.observed-parallel-editor{margin-inline:-8px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+-.observed-table-head,.observed-table-row{display:grid;grid-template-columns:minmax(0,40fr) minmax(0,72fr) minmax(0,46fr) minmax(0,32fr) minmax(0,32fr) minmax(0,54fr) minmax(0,24fr);gap:1px;align-items:center}
+-.observed-table-head{padding:6px 0;font-size:12px;font-weight:700;text-align:center;color:var(--muted)}
+-.observed-table-row{margin:3px 0}
+-.observed-table-row input,.observed-table-row select{width:100%;min-width:0;height:44px;padding:2px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;font-variant-numeric:tabular-nums}
+-.observed-table-row input{padding-inline:1px}
+-.observed-table-row select{appearance:none;-webkit-appearance:none;padding-inline:2px;color:var(--accent)}
+-.observed-table-row button{width:100%;min-width:0;padding:0;border:0;border-radius:5px;background:var(--surface-2);color:var(--muted);font-size:20px}
++.observed-parallel-editor{padding:0 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-width:0}
++.observed-table-row{padding:7px 0;border-bottom:1px solid var(--line);min-width:0}
++.observed-table-row:last-child{border-bottom:0}
++.observed-table-identity{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.25fr) 92px;gap:4px;align-items:end}
++.observed-table-numbers{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr) minmax(0,.75fr) minmax(0,1.25fr);gap:4px;margin-top:3px}
++.observed-table-row label{display:grid;gap:2px;min-width:0}
++.observed-table-row label>span{font-size:10px;font-weight:750;color:var(--muted);line-height:1.2}
++.observed-table-row input,.observed-table-row select{width:100%;min-width:0;height:44px;padding:2px 3px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;font-variant-numeric:tabular-nums;box-sizing:border-box}
++.observed-table-row select{appearance:none;-webkit-appearance:none;padding-inline:3px;color:var(--accent)}
++.observed-table-actions{display:grid;grid-template-columns:44px 44px;gap:4px}
++.observed-table-row button{width:44px;min-width:44px;height:44px;padding:0;border:1px solid var(--line);border-radius:5px;background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:750}
++.observed-table-row button[data-observed-action="delete"]{font-size:20px}
+ .observed-table-row [aria-invalid]{border-color:var(--error);background:var(--error-soft)}
+ .observed-row-errors{grid-column:1/-1;margin:4px 2px}
+-.observed-parallel-actions{display:grid;gap:10px;margin:12px 0}
++.observed-parallel-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:6px;margin:8px 0}
+ .observed-parallel-actions button{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface)}
+ .observed-parallel-actions .primary-btn{background:var(--accent);color:#fff}
+-.observed-parallel-results{margin-top:20px}
+-.observed-result-row{display:grid;gap:8px;width:100%;padding:12px 8px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;font-size:13px;font-variant-numeric:tabular-nums}
+-.observed-result-main{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+-.observed-result-main>*{min-width:0;overflow-wrap:anywhere}
+-.observed-result-main>b{max-width:100%}
+-.observed-result-probs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;font-size:12px}
++.observed-parallel-results{margin-top:16px;min-width:0}
++.observed-result-heading{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}
++.observed-result-heading h2{margin:0;flex:1;font-size:16px}
++.observed-result-heading label{display:grid;gap:2px;font-size:10px;color:var(--muted);max-width:100%;min-width:0}
++.observed-result-heading select{font-size:16px;min-height:44px;max-width:100%;width:100%;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);padding:3px}
++.observed-result-row{display:grid;gap:5px;width:100%;padding:8px;margin:5px 0;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:left;font-size:12px;font-variant-numeric:tabular-nums;min-width:0}
++.observed-result-main{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px;min-width:0}
++.observed-result-main>*{min-width:0}
++.observed-result-main>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
++.observed-result-main strong{font-size:16px;color:var(--accent)}
++.observed-result-probs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;font-size:11px}
+ .observed-result-probs span{min-width:0;overflow-wrap:anywhere}
++.observed-result-probs span:last-child{grid-column:1/-1}
++.observed-result-band{display:flex;height:7px;border-radius:3px;overflow:hidden;width:100%;background:var(--surface-2)}
++.observed-result-band>span{height:100%;flex:0 0 auto;min-width:0}
+ @media(min-width:560px){.observed-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.observed-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ 
+ .observed-page .observed-factor-card{padding:12px 14px}
+@@ -261,6 +273,42 @@
+ .observed-unified-card .observed-spec-table th,.observed-unified-card .observed-spec-table td{padding:3px 1px}
+ .observed-unified-card .observed-factor-details{margin-top:5px;padding-top:2px}
+ .observed-unified-card .observed-factor-details>summary{min-height:26px}
++/* Parallel group display uses the same restrained cards and probability bands. */
++.observed-group-toggle{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 9px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
++.observed-group-toggle input{width:24px;height:24px;flex:0 0 24px;accent-color:var(--accent)}
++.observed-group-toggle span{min-width:0}.observed-group-toggle b{display:block;font-size:13px}.observed-group-toggle small{display:block;font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4}
++.observed-page .observed-group-report{padding:10px;margin:10px 0;overflow-wrap:anywhere}
++.observed-group-report h2{font-size:16px;margin:0 0 8px}.observed-group-report h2 small{font-size:11px;color:var(--muted)}
++.observed-group-report .observed-help{font-size:11px;line-height:1.6;margin:5px 0}
++.observed-group-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 4px;margin:0 0 6px;font-variant-numeric:tabular-nums}
++.observed-group-totals>div{min-width:0}.observed-group-totals dt{font-size:10px;color:var(--muted)}.observed-group-totals dd{font-size:14px;font-weight:750;margin:2px 0 0}
++.observed-group-diff{font-size:11px;font-weight:650;line-height:1.5;margin:6px 0}
++.observed-group-hypotheses{margin:8px 0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
++.observed-group-hypothesis{padding:8px;border-bottom:1px solid var(--line);min-width:0}.observed-group-hypothesis:last-child{border-bottom:0}
++.observed-group-report .observed-group-hypothesis h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 8px;font-size:15px;margin:0 0 3px}
++.observed-group-hypothesis h3>span{font-size:10px;font-weight:650}.observed-group-status{color:var(--muted)}
++.observed-group-complement,.observed-group-meaning{font-size:10px;line-height:1.5;color:var(--muted);margin:3px 0}
++.observed-group-meaning b{color:var(--ink)}
++.observed-group-evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:5px 0}
++.observed-group-evidence>div{min-width:0}.observed-group-evidence dt{font-size:10px;color:var(--muted)}.observed-group-evidence dd{font-size:14px;font-weight:800;color:var(--accent);margin:2px 0 0}
++.observed-group-warnings{padding:4px 7px;background:var(--surface-2);border-radius:7px;margin:7px 0;font-size:11px;line-height:1.6;color:var(--muted)}.observed-group-warnings p{margin:3px 0}
++.observed-group-allocation-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;margin-top:10px;min-width:0}
++.observed-group-report .observed-group-allocation-head h3{font-size:13px;margin:0}
++.observed-group-allocation-head label{display:grid;gap:3px;min-width:0;font-size:10px;color:var(--muted)}
++.observed-group-allocation-head select{font-size:16px;min-height:44px;max-width:100%;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);padding:3px}
++.observed-group-assumption{font-size:11px;font-weight:800;color:var(--accent);line-height:1.6;margin:6px 0 2px}
++.observed-group-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin:8px 0;font-variant-numeric:tabular-nums}
++.observed-group-counts dt{font-size:10px;color:var(--muted)}.observed-group-counts dd{font-size:13px;font-weight:750;margin:2px 0}
++.observed-group-allocations{list-style:none;padding:0;margin:6px 0;display:grid;gap:3px}
++.observed-group-allocations li{display:flex;justify-content:space-between;gap:6px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:11px;font-variant-numeric:tabular-nums;min-width:0}
++.observed-group-allocations b{min-width:0;overflow-wrap:anywhere}.observed-group-allocations span{flex:0 0 auto;color:var(--accent);font-weight:750}
++.observed-group-details{border-top:1px solid var(--line);margin-top:7px;min-width:0}.observed-group-details>summary{display:flex;align-items:center;min-height:44px;font-size:11px;font-weight:750;cursor:pointer;line-height:1.5}
++.observed-group-conditional-row{font-size:11px;border-bottom:1px solid var(--line);padding:8px 0;min-width:0}.observed-group-conditional-row>b{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.observed-group-conditional-row>span{display:block;margin:4px 0;font-size:10px;color:var(--muted)}
++.observed-group-band{display:flex;overflow:hidden;height:8px;border-radius:4px;background:var(--surface-2);width:100%}.observed-group-band>span{flex:0 0 auto;height:100%;min-width:0}
++.observed-group-q{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;text-align:center;margin:4px 0;font-variant-numeric:tabular-nums}.observed-group-q span{font-size:9px;color:var(--muted);min-width:0}.observed-group-q b{display:block;font-size:10px;color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
++.observed-group-sensitivity{display:grid;gap:3px;font-size:11px;margin:7px 0;padding:6px;border:1px solid var(--line);border-radius:6px}.observed-group-sensitivity span{font-size:10px;color:var(--muted)}
++.observed-group-p-row{display:flex;gap:8px;justify-content:space-between;font-size:10px;margin:5px 0}.observed-group-p-row b{min-width:0;overflow-wrap:anywhere}.observed-group-p-row span{flex:0 0 auto}
++.observed-group-report .observed-input-summary{gap:8px;margin:5px 0}.observed-group-report .observed-input-summary dt{font-size:10px}.observed-group-report .observed-input-summary dd{font-size:12px}
+ /* END independent judgement styles */
+ /* BEGIN reviewed live reverse compact styles */
+ /* Live reverse compact UI; read-only additions use existing reverse probabilities. */
+diff --git a/app-v510.js b/app-v510.js
+index ad41948..3fdad37 100644
+--- a/app-v510.js
++++ b/app-v510.js
+@@ -15,7 +15,7 @@ const MOTION=Object.freeze({fast:160,view:220,sheet:320});
+ 
+ function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+ function safeJSON(raw,fallback){try{const v=JSON.parse(raw);return v&&typeof v==='object'?v:fallback}catch(_){return fallback}}
+-function loadUIState(){try{return safeJSON(global.localStorage?.getItem?.(UI_KEY),{})}catch(_){return {}}}
++function loadUIState(){try{const raw=global.localStorage?.getItem?.(UI_KEY);return typeof raw==='string'&&raw.length<=2*1024*1024?safeJSON(raw,{}):{}}catch(_){return {}}}
+ function formatCount(value,suffix=''){const n=Number(value);return Number.isFinite(n)?`${n.toLocaleString('ja-JP')}${suffix}`:`0${suffix}`}
+ function pct(value){const n=Number(value);return Number.isFinite(n)?`${(n*100).toFixed(1)}%`:'—'}
+ function fmtES(value){const n=Number(value);return Number.isFinite(n)&&n>0?n.toFixed(2):'—'}
+@@ -116,7 +116,8 @@ class JugestApp extends HTMLElement{
+     this.shadowRoot.append(link,this.mount);
+     const saved=loadUIState();this.noticeLedger={active:Array.isArray(saved.noticeLedger?.active)?saved.noticeLedger.active:[],read:Array.isArray(saved.noticeLedger?.read)?saved.noticeLedger.read:[]};this.recentAnalyses=[];this._jobChanged=()=>{this.state.analysisLoading=analysisJob.status==='running';if(this.state.activeStore===analysisJob.shop)this.state.analysisResult=analysisJob.result;this.render();if(analysisJob.status==='completed'){this.loadRecentAnalyses();global.clearTimeout(this._chipTimer);this._chipTimer=global.setTimeout(()=>this.render(),60000)}};
+     this.state={workspace:validWorkspace(saved.workspace),screen:'hub',activeStore:String(saved.activeStore||''),storeSelectorOpen:false,storeQuery:'',summary:{},stores:[],error:'',judge:null,storeDate:'',storeDataLimit:24,trendPeriod:'30',trendMachine:'',trendResult:null,trendLoading:false,trendLimit:24,calendarCursor:new Date(),recordLimit:20,dataBusy:false,rev:{machine:'',G:'',B:'',R:'',D:'',style:'random'},pickup:null,compareBucket:'all',compareSort:'p4',moveInput:{G:'',B:'',R:'',D:''},moveResult:null,planDate:new Date().toISOString().slice(0,10),planLottery:'',planQueue:'',planMode:'new',planResult:null,planLoading:false,analysisOpts:{period:'180',minG:'2000',maxDims:'1',minDays:'4'},analysisResult:null,analysisLoading:false,analysisHistory:[],analysisHistoryOpen:null,analysisHistoryLoading:false,replayDate:'',replayResult:null,replayLoading:false,modelResult:null,modelLoading:false,strategyFilters:{entry:'',shopId:'',machine:'',tagId:''},strategyData:null,storeEditor:null,jsonRaw:'',jsonPreview:null,jsonBusy:false,storeManageQuery:'',storeManageFilter:'all',storeManageSort:'name',hana:null,syncCode:'',syncBusy:false,syncMessage:'',syncReloadRequired:false,collectorMessage:'',recordEditor:null,recordTagName:'',storeFinanceSort:'runs',storeFinanceEditor:null,calendarSelectedDate:'',notificationOpen:false};
+-    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true};
++    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true,groupEnabled:saved.observedGroup===true,groupReport:null,sort:['input','tableNo','expectedSetting','p4','p5','p6'].includes(saved.observedSort)?saved.observedSort:'input',allocation:['all456','all56','all6'].includes(saved.observedAllocation)?saved.observedAllocation:'all456'};
++    this.restoreObservedDrafts(saved.observedDrafts);
+     this._planCache={new:null,legacy:null};this._planTask=null;this._planRequestedKey='';this._runExternalNewPlan=null;
+     analysisJob.listeners.add(this._jobChanged);this.state.analysisLoading=analysisJob.status==='running';
+     this._boundClick=e=>this.onClick(e);this._boundInput=e=>this.onInput(e);this._boundChange=e=>this.onChange(e);this._boundPop=e=>this.onPopState(e);this._unsubscribe=null;this._collectorPoll=null;this._collectorRefreshing=false;this._boundResume=()=>{if(!document.hidden)this.refreshCollectorStatus()};
+@@ -129,8 +130,51 @@ class JugestApp extends HTMLElement{
+   renderObservedSettings(){return `<section class="panel observed-display-settings"><h2>開発者向け</h2><label class="observed-debug-setting"><input type="checkbox" role="switch" data-observed-debug-toggle ${this.observed.debug?'checked':''}><span><b>高度なデバッグ情報を表示</b><small>判別エンジンの検証用情報を表示します。通常はOFFで問題ありません。</small></span></label></section>`}
+   setObservedDebug(enabled){this.observed.debug=enabled===true;this.persist();this.render()}
+   newObservedRow(value={machine:'my'}){return{id:String(++this.observed.seq),input:global.JUGESTJudgement.inputRow(value),result:null,errors:{}}}
++  observedDraftError(drafts){
++    if(!drafts||drafts.version!==1||!Array.isArray(drafts.rows))return '入力の保存形式を確認できません。';
++    if(drafts.rows.length>1000)return '並列入力が1,000行を超えています。保存するには行数を減らしてください。';
++    const labels={machine:'機種',tableNo:'台番',games:'G',bb:'BB',rb:'RB',diff:'差枚'};
++    for(const value of [...(drafts.single==null?[]:[drafts.single]),...Array.from(drafts.rows)]){
++      if(!value||typeof value!=='object'||Array.isArray(value))return '保存できない形式の入力行があります。';
++      for(const key of global.JUGESTJudgement.FIELDS){
++        const text=value[key];if(text==null)continue;
++        if(!['string','number'].includes(typeof text)||(typeof text==='number'&&!Number.isFinite(text)))return `${labels[key]}に保存できない形式の値があります。`;
++        if(String(text).length>2048)return `${labels[key]}が2,048文字を超えています。保存するには入力を短くしてください。`;
++      }
++    }
++    return '';
++  }
++  restoreObservedDrafts(drafts){
++    if(this.observedDraftError(drafts))return;
++    if(drafts.single!=null)this.observed.single=this.newObservedRow(drafts.single);
++    this.observed.rows=drafts.rows.map(value=>this.newObservedRow(value));
++  }
++  observedDrafts(){return {version:1,single:this.observed.single?global.JUGESTJudgement.inputRow(this.observed.single.input):null,rows:this.observed.rows.map(row=>global.JUGESTJudgement.inputRow(row.input))}}
++  observedPersistenceText(){return `入力を端末に保存できませんでした。${this.observed.persistenceReason||''}画面を閉じる前に入力を控えてください。`}
++  patchObservedPersistenceNotice(){const notice=this.shadowRoot.querySelector('[data-observed-persistence-status]');if(notice){notice.hidden=!this.observed.persistenceFailed;notice.textContent=this.observedPersistenceText()}}
+   isObservedRowEmpty(row){return global.JUGESTJudgement.FIELDS.every(key=>String(row.input[key]??'').trim()==='')}
+   observedRow(id){return [this.observed.single,...this.observed.rows].find(row=>row?.id===String(id))}
++  invalidateObservedGroup(){this.observed.groupReport=null;this.shadowRoot.querySelector('[data-observed-group-report]')?.remove()}
++  refreshObservedGroup(){
++    this.observed.groupReport=null;
++    if(!this.observed.groupEnabled)return;
++    const rows=this.observed.rows.filter(row=>!this.isObservedRowEmpty(row));
++    const incomplete=rows.filter(row=>!row.result?.ok||Object.keys(row.errors).length);
++    if(incomplete.length){this.observed.groupReport={ok:false,errors:[`入力済み${rows.length}台のうち${incomplete.length}台が未判別、または入力に不備があります。各行を確認して「まとめて判別」を押してください。`]};return}
++    const analyze=global.JUGESTGroupJudge?.analyze;
++    if(typeof analyze!=='function'){this.observed.groupReport={ok:false,errors:['全台系の判別を準備できませんでした。再読み込みしてください。']};return}
++    try{this.observed.groupReport=analyze(rows.map(row=>({id:row.id,result:row.result})))}
++    catch(_){this.observed.groupReport={ok:false,errors:['全台系を比較できませんでした。入力値を確認してください。']}}
++  }
++  handleObservedControl(element){
++    const toggle=element.closest?.('[data-observed-group-toggle]');
++    if(toggle){this.observed.groupEnabled=toggle.checked===true;this.invalidateObservedGroup();if(this.observed.groupEnabled&&this.observed.rows.some(row=>row.result||Object.keys(row.errors).length))this.refreshObservedGroup();this.persist();this.render();return true}
++    const sort=element.closest?.('[data-observed-sort]');
++    if(sort){if(['input','tableNo','expectedSetting','p4','p5','p6'].includes(sort.value))this.observed.sort=sort.value;this.persist();this.render();return true}
++    const allocation=element.closest?.('[data-observed-allocation]');
++    if(allocation){if(['all456','all56','all6'].includes(allocation.value))this.observed.allocation=allocation.value;this.persist();this.render();return true}
++    return false;
++  }
+   restoreObservedHistory(state){
+     if(['single','parallel'].includes(state.observedMode))this.observed.mode=state.observedMode;
+     const row=this.observed.mode==='parallel'?this.observed.rows.find(row=>row.id===String(state.observedRowId)):null;
+@@ -146,13 +190,14 @@ class JugestApp extends HTMLElement{
+     if(append){this.observed.rows.push(...drafts);this.observed.mode='parallel'}
+     else if(drafts.length===1){this.observed.single=drafts[0];this.observed.mode='single'}
+     else{this.observed.rows=drafts;this.observed.mode='parallel'}
+-    this.observed.selectedId=null;this.navigate('judgement');return drafts.map(row=>row.id);
++    this.observed.selectedId=null;this.invalidateObservedGroup();this.navigate('judgement');return drafts.map(row=>row.id);
+   }
+   editObservedField(element){
+     const id=element.closest('[data-observed-row]')?.dataset.observedRow,row=this.observedRow(id),field=element.dataset.observedField;
+     if(!row||!global.JUGESTJudgement.FIELDS.includes(field))return;
+     if(row.input[field]===element.value)return;
+     row.input[field]=element.value;row.result=null;row.errors={};
++    this.invalidateObservedGroup();this.persist();
+     const card=element.closest('[data-observed-card]');
+     card?.querySelector('[data-row-summary]')?.remove();
+     this.shadowRoot.querySelector(`[data-observed-result-row="${row.id}"]`)?.remove();
+@@ -175,13 +220,14 @@ class JugestApp extends HTMLElement{
+       this.observed.mode=action;this.observed.selectedId=null;
+       if(action==='parallel'&&!this.observed.rows.length)this.observed.rows.push(this.newObservedRow({machine:''}));
+       this.navigate('judgement','hub',{replace:true});return;
+-    }else if(action==='add')this.observed.rows.push(this.newObservedRow({machine:''}));
+-    else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null}
+-    else if(action==='judge-all'){for(const row of this.observed.rows){if(this.isObservedRowEmpty(row)){row.result=null;row.errors={};continue}this.judgeObservedRow(row)}}
++    }else if(action==='add'){this.observed.rows.push(this.newObservedRow({machine:''}));this.invalidateObservedGroup()}
++    else if(action==='delete'){this.observed.rows=this.observed.rows.filter(row=>row.id!==id);if(this.observed.selectedId===id)this.observed.selectedId=null;this.invalidateObservedGroup()}
++    else if(action==='duplicate'){const index=this.observed.rows.findIndex(row=>row.id===id);if(index>=0)this.observed.rows.splice(index+1,0,this.newObservedRow({...this.observed.rows[index].input,tableNo:''}));this.invalidateObservedGroup()}
++    else if(action==='judge-all'){for(const row of this.observed.rows){if(this.isObservedRowEmpty(row)){row.result=null;row.errors={};continue}this.judgeObservedRow(row)}this.refreshObservedGroup()}
+     else if(action==='judge'){const row=this.observedRow(id);if(row)this.judgeObservedRow(row)}
+     else if(action==='detail'){const row=this.observedRow(id);if(row?.result){this.observed.selectedId=id;this.navigate('judgement','detail');return}}
+     else if(action==='close-detail'){this.observed.selectedId=null;this.navigate('judgement');return}
+-    this.render();
++    this.persist();this.render();
+     if(action==='judge'&&this.observed.mode==='single')global.requestAnimationFrame?.(()=>this.shadowRoot.querySelector('[data-observed-result]')?.scrollIntoView?.({block:'start'}));
+   }
+   renderObservedPage(){
+@@ -194,14 +240,14 @@ class JugestApp extends HTMLElement{
+ 
+     let body;
+     if(selected?.result)body=`<div data-observed-detail><button type="button" class="back-row" data-observed-action="close-detail">‹ 並列一覧へ</button>${view.result(selected.result,{debug:o.debug})}</div>`;
+-    else if(o.mode==='parallel')body=`${view.parallelEditor(o.rows,machines)}<div class="observed-parallel-actions"><button type="button" data-observed-action="add">＋ 行を追加</button><button type="button" class="primary-btn" data-observed-action="judge-all">まとめて判別</button></div><p class="observed-help">空行は飛ばします。差枚は任意、BB・RBが0回なら0を入力。結果を見るだけで実戦は開始しません。</p>${view.parallelResults(o.rows)}`;
++    else if(o.mode==='parallel')body=`${view.parallelEditor(o.rows,machines)}<div class="observed-parallel-actions"><button type="button" data-observed-action="add">＋ 行を追加</button><button type="button" class="primary-btn" data-observed-action="judge-all">まとめて判別</button></div><p class="observed-help">空行は飛ばします。差枚は任意、BB・RBが0回なら0を入力。複製は台番を空にします。</p><label class="observed-group-toggle"><input type="checkbox" role="switch" data-observed-group-toggle ${o.groupEnabled?'checked':''}><span><b>全台系を比較する</b><small>入力した全台の全456・全56・全6を検討</small></span></label>${o.groupEnabled&&o.groupReport?global.JUGESTGroupJudgeView?.render(o.groupReport,{hypothesis:o.allocation,rowNumbers:Object.fromEntries(o.rows.map((row,i)=>[row.id,i+1]))})||'':''}${view.parallelResults(o.rows,{sort:o.sort})}`;
+     else body=`${o.single.result?`<div data-observed-detail>${view.result(o.single.result,{debug:o.debug})}</div>`:'<p class="observed-help">差枚は任意です。BB・RBが0回の場合は0を入力してください。</p>'}<section class="panel observed-card" data-observed-card><h2>${o.single.result?'入力を変更':'台データを入力'}</h2>${view.fields(o.single,machines)}<button type="button" class="primary-btn" data-observed-action="judge" data-row-id="${o.single.id}">判別する</button></section>`;
+-    return `<section class="workspace observed-page"><div class="kicker">JUDGEMENT</div><h1>判別</h1><p class="lead">観測した台データから設定を分析・比較。</p>${controls}${body}</section>`;
++    return `<section class="workspace observed-page"><div class="kicker">JUDGEMENT</div><h1>判別</h1><p class="lead">観測した台データから設定を分析・比較。</p>${controls}${body}<p class="observed-error" data-observed-persistence-status ${o.persistenceFailed?'':'hidden'} role="status">${esc(this.observedPersistenceText())}</p></section>`;
+   }
+   // END independent judgement UI
+   connectBridge(){const bridge=this.bridge();if(!bridge){this.state.error='JUGESTコアを準備中…';this.render();this._connectTimer=setTimeout(()=>this.connectBridge(),50);return}this.state.error='';if(this.state.activeStore)bridge.setActiveStore?.(this.state.activeStore,{silent:true});this.refreshFromBridge();this._unsubscribe=bridge.subscribe?.(()=>this.refreshFromBridge())||null;this.render();this.loadRecentAnalyses();this.refreshCollectorStatus()}
+   refreshFromBridge(){const bridge=this.bridge();if(!bridge)return;this.state.summary=bridge.getSummary?.()||{};this.state.stores=Array.isArray(bridge.getStores?.())?bridge.getStores():[];const bridgeStore=bridge.getActiveStore?.()||'';this.state.activeStore=bridgeStore||this.state.activeStore||this.state.stores[0]?.name||'';if(this.state.workspace==='live'&&this.state.screen==='judge')try{this.state.judge=bridge.getJudgeState?.()||this.state.judge}catch(_){}this.persist();this.render()}
+-  persist(){try{global.localStorage?.setItem?.(UI_KEY,JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug}))}catch(_){}}
++  persist(){let reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';try{const drafts=this.observedDrafts();reason=this.observedDraftError(drafts);if(reason)throw Error('保存できない入力');const value=JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug,observedGroup:this.observed.groupEnabled,observedSort:this.observed.sort,observedAllocation:this.observed.allocation,observedDrafts:drafts});if(value.length>2*1024*1024){reason='保存データのサイズが上限を超えています。';throw Error('保存データの上限超過')}reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';if(typeof global.localStorage?.setItem!=='function')throw Error('UI保存を利用できません');global.localStorage.setItem(UI_KEY,value);this.observed.persistenceFailed=false;this.observed.persistenceReason=''}catch(_){this.observed.persistenceFailed=true;this.observed.persistenceReason=reason}this.patchObservedPersistenceNotice()}
+   navigate(workspace,screen='hub',{replace=false}={}){const next=validWorkspace(workspace);if(next==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.workspace=next;this.state.screen=screen;this.state.error='';this.state.storeSelectorOpen=false;this.state.notificationOpen=false;this.persist();const state={jugestV510:true,workspace:next,screen,...(next==='judgement'?{observedMode:this.observed.mode,observedRowId:this.observed.selectedId}:{})};try{replace?global.history.replaceState(state,''):global.history.pushState(state,'')}catch(_){}this.render()}
+   onPopState(event){if(this.state.syncBusy||this.state.syncReloadRequired)return;const s=event.state;if(s?.jugestV510){this.state.workspace=validWorkspace(s.workspace);if(this.state.workspace==='home')this.state.summary=this.bridge()?.getSummary?.()||this.state.summary;this.state.screen=s.screen||'hub';if(this.state.workspace==='judgement')this.restoreObservedHistory(s);this.state.storeSelectorOpen=false;this.persist();this.render()}}
+   onInput(event){
+@@ -228,6 +274,7 @@ class JugestApp extends HTMLElement{
+   }
+   onChange(event){
+     if(this.state.syncBusy||this.state.syncReloadRequired)return;
++    if(this.handleObservedControl(event.target))return;
+     const observedDebug=event.target.closest?.('[data-observed-debug-toggle]');if(observedDebug){this.setObservedDebug(observedDebug.checked);return}
+     const observedField=event.target.closest?.('[data-observed-field]');if(observedField){this.editObservedField(observedField);return}
+     const machine=event.target.closest?.('[data-judge-machine]');if(machine){this.state.judge=this.bridge()?.setJudgeMachine?.(machine.value)||this.state.judge;this.render();return}
+diff --git a/build.mjs b/build.mjs
+index 1ef6517..e55995d 100644
+--- a/build.mjs
++++ b/build.mjs
+@@ -8,7 +8,7 @@ import { patchAnalysisJitterApp } from './build-analysis-jitter-fix.mjs';
+ 
+ const root=path.dirname(fileURLToPath(import.meta.url));
+ const out=path.join(root,'public');
+-const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
++const FILES=['index.html','app-v510.js','app-v510.css','core-v510.js','judgement-model.js','judgement-view.js','group-judge.js','group-judge-view.js','hanahana-judge.js','missing-inference.js','sync-core.js','ana-launcher.js','ana-single-day.js','relay-bridge.html','site.webmanifest','assets/jugest-mark.png'];
+ fs.rmSync(out,{recursive:true,force:true});
+ fs.mkdirSync(path.join(out,'assets'),{recursive:true});
+ for(const rel of FILES){
+diff --git a/group-judge-view.js b/group-judge-view.js
+new file mode 100644
+index 0000000..9061d85
+--- /dev/null
++++ b/group-judge-view.js
+@@ -0,0 +1,89 @@
++(function(global){
++'use strict';
++// Pure display: consumes the captured report, never calls a judgement engine.
++const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
++const number=(value,digits=2)=>Number.isFinite(value)?value.toLocaleString('ja-JP',{maximumFractionDigits:digits}):'—';
++const percent=value=>Number.isFinite(value)?`${(value*100).toFixed(1)}%`:'—';
++const pair=(label,value)=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
++function rowLabels(report,rowNumbers={}){
++ const targets=new Map((report.hypotheses[0]?.refutation?.rows||[]).map((row,i)=>[String(row.id),i+1]));
++ return row=>{
++  const id=String(row?.id),ordinal=Object.prototype.hasOwnProperty.call(rowNumbers||{},id)?rowNumbers[id]:undefined;
++  const fallback=Number.isSafeInteger(ordinal)&&ordinal>0?`台番なし（${ordinal}行目）`:targets.has(id)?`台番なし（対象${targets.get(id)}台目）`:'台番なし';
++  const value=String(row?.tableNo||fallback);return value.length>40?value.slice(0,39)+'…':value;
++ };
++}
++const colors=['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'];
++function evidence(logRatio){
++ if(logRatio===Infinity)return '比較側の支持なし';
++ if(logRatio===-Infinity)return 'この仮説の支持なし';
++ if(!Number.isFinite(logRatio))return '算出不可';
++ const exponent=logRatio/Math.LN10;
++ return Math.abs(exponent)>=3?`約10^${number(exponent,2)}倍`:`${number(Math.exp(logRatio),3)}倍`;
++}
++function evidenceMeaning(logRatio){return logRatio>0?'この仮説の方がデータに合う':logRatio<0?'比較側の方がデータに合う':'両側の適合は同じ';}
++function tinyP(logP){
++ if(logP===-Infinity)return '計算上の下限未満';
++ if(!Number.isFinite(logP)||logP>0)return '算出不可';
++ if(logP===0)return '1';
++ return logP<Math.log(.001)?`約10^${number(logP/Math.LN10,2)}`:number(Math.exp(logP),4);
++}
++function distribution(q){
++ const data=Array.from({length:6},(_,i)=>q?.[i]);
++ const label=data.map((p,i)=>`設定${i+1} ${percent(p)}`).join('、');
++ return `<div class="observed-group-band" role="img" aria-label="${esc(label)}">${data.map((p,i)=>`<span style="width:${Number.isFinite(p)?Math.max(0,Math.min(100,p*100)):0}%;background:${colors[i]}"></span>`).join('')}</div><div class="observed-group-q">${data.map((p,i)=>`<span>設定${i+1}<b>${percent(p)}</b></span>`).join('')}</div>`;
++}
++function allocationLabel(profile){
++ const counts=profile.counts||[];
++ if(counts.reduce((a,n)=>a+n,0)<=12)return profile.label||counts.map((n,i)=>String(i+1).repeat(n)).join('');
++ return counts.flatMap((n,i)=>n>0?[`設定${i+1} ${number(n,0)}台`]:[]).join(' · ');
++}
++function conditional(h,rowLabel){
++ const c=h.conditional;
++ if(!c?.available)return `<p class="observed-error" role="status">${esc(c?.reason||'この仮説での配分を推定できません。')}</p>`;
++ const profileList=profiles=>`<ol class="observed-group-allocations">${profiles.map(profile=>`<li data-observed-count-profile><b>${esc(allocationLabel(profile))}</b><span>${percent(profile.probability)}</span></li>`).join('')}</ol>`;
++ return `<p class="observed-group-assumption">仮説成立時・等重みの条件付き推定</p><p class="observed-help">この仮説が正しいと仮定した設定配分です。全台系の成立確率ではありません。</p>
++  <dl class="observed-group-counts">${h.allowed.map(s=>pair(`設定${s}の期待台数`,`${number(c.expectedCounts[s-1])}台`)).join('')}</dl>
++  ${profileList(c.topAllocations.slice(0,3))}${c.topAllocations.length>3?`<details class="observed-group-details"><summary>配分候補をさらに見る（上位8候補）</summary>${profileList(c.topAllocations.slice(3,8))}</details>`:''}
++  <details class="observed-group-details"><summary>各台の条件付き確率・最有力の台別割当て</summary><p class="observed-help">台別の最有力割当ては、上の無順序配分で最も確率が高い候補と異なる場合があります。</p>
++   ${c.rows.map(row=>{const assignment=c.mapAssignment.find(x=>x.id===row.id);return `<div class="observed-group-conditional-row"><b>${esc(rowLabel(row))}</b><span>期待設定 ${number(row.expectedSetting)} · 最有力 設定${number(assignment?.setting,0)}</span>${distribution(row.q)}</div>`;}).join('')}
++  </details>`;
++}
++function sensitivity(h){
++ return `<details class="observed-group-details"><summary>根拠比の重み感度</summary><p class="observed-help">設定の配分重みを変えた比較です。店舗の実績から得た頻度や、全台系を使う頻度ではありません。</p>${(h.sensitivity||[]).map(s=>`<div class="observed-group-sensitivity"><b>${esc(s.label)}</b><span>既存モデル ${esc(evidence(s.logEvidenceRatio))}</span><span>ボーナスだけ ${esc(evidence(s.bonusLogEvidenceRatio))}</span></div>`).join('')}</details>`;
++}
++function refutation(h,rowLabel){
++ const r=h.refutation;
++ return `<details class="observed-group-details"><summary>ボーナスの下振れ検査・前提</summary><dl class="observed-input-summary">${pair('3仮説も考慮したp値',tinyP(r.logFamilyP))}${pair('最も下振れした台',rowLabel(r.weakestRow))}${pair('台数補正後のp値',tinyP(r.logP))}${pair('最も整合しない台のログ差',number(-h.worstRow.logCompatibility,3))}</dl>
++ <p class="observed-help">BB・RB・合算の下側累積確率を設定ごとに調べ、3項目の補正後、許容設定の中で最も保守的な値を使います。全台数と画面の3仮説も補正し、p値が0.05未満なら「反証あり」です。</p>
++ <p class="observed-help">p値は成立確率ではありません。「この検査では反証なし」は全台系の証明ではありません。停止時刻と対象台を事前に決めた試行が前提で、結果を見て選んだ集合や途中終了では解釈に限界があります。根拠比と同じデータを使うため、独立した追加証拠として合成しません。</p>
++ ${(r.rows||[]).map(row=>`<div class="observed-group-p-row"><b>${esc(rowLabel(row))}</b><span>下振れp値 ${esc(tinyP(row.logP))}</span></div>`).join('')}
++ </details>`;
++}
++function sameSetting(report){
++ const reference=report.aggregateJudgement;
++ return `<details class="observed-group-details"><summary>全台が同じ設定だった場合の合算参考</summary><p class="observed-help">合計G・BB・RBだけの参考判別です。同じ設定と仮定しています。全456などの評価や、各台に加える追加証拠には使いません。差枚は合算逆算しません。</p>${reference?.available?`<dl class="observed-input-summary">${pair('期待設定',number(reference.expectedSetting))}${pair('設定4以上（P4+）',percent(reference.p4))}${pair('設定5以上（P5+）',percent(reference.p5))}${pair('設定6（P6）',percent(reference.p6))}</dl>${distribution(reference.q)}`:`<p class="observed-help">${esc(reference?.reason||'参考判別を表示できません。')}</p>`}</details>`;
++}
++function render(report,{hypothesis='all456',rowNumbers}={}){
++ if(!report)return '';
++ if(!report.ok)return `<section class="panel observed-group-report" data-observed-group-report aria-label="全台系判別"><h2>全台系の入力を確認</h2><div class="observed-error" role="alert">${(report.errors||['判別できませんでした。']).map(error=>`<p>${esc(error)}</p>`).join('')}</div><p class="observed-help">入力した台をすべて個別判別してから、2〜60台の集合として比較します。</p></section>`;
++ const a=report.aggregate,h=report.hypotheses.find(x=>x.id===hypothesis)||report.hypotheses[0];
++ const rowLabel=rowLabels(report,rowNumbers);
++ const low=(report.warnings||[]).find(w=>w.startsWith('2000G未満の台が'))?.match(/台が(\d+)\//)?.[1];
++ const reverse=(report.warnings||[]).filter(w=>w.startsWith('台')&&w.includes('：差枚の逆算に警告があります。')).length;
++ const severe=[...(low?[`2000G未満 ${low}/${report.n}台：小稼働では区別が難しくなります。`]:[]),...(a.mixedMachines?['機種が混在しています。合算確率は観測の参考値です。']:[]),...(reverse?[`差枚の逆算に警告 ${reverse}台。各台の入力を確認してください。`]:[])];
++ const diff=a.diffN===report.n?`全${report.n}台の差枚合計 ${a.diff>=0?'+':''}${number(a.diff,0)}枚`:`差枚：入力済み${a.diffN}/${report.n}台の合計 ${a.knownDiff>=0?'+':''}${number(a.knownDiff,0)}枚（未入力は補完しません）`;
++ return `<section class="panel observed-group-report" data-observed-group-report aria-label="全台系判別">
++ <h2>全台系を集合で比較 <small>${report.n}台</small></h2><dl class="observed-group-totals">${pair('合計G',number(a.games,0))}${pair('BB',number(a.bb,0))}${pair('RB',number(a.rb,0))}${pair('BB確率',a.bbDenom?`1/${number(a.bbDenom)}`:'0回')}${pair('RB確率',a.rbDenom?`1/${number(a.rbDenom)}`:'0回')}${pair('合算',a.combinedDenom?`1/${number(a.combinedDenom)}`:'0回')}</dl><p class="observed-group-diff">${esc(diff)}</p>
++ <p class="observed-help">1倍超なら仮説側、1倍未満なら比較側に合います。等重みでの根拠比は、全台系の成立確率ではありません。</p>
++ <div class="observed-group-hypotheses">${report.hypotheses.map(item=>`<article class="observed-group-hypothesis"><h3>${esc(item.label)} <span class="${item.refutation.logFamilyP<Math.log(.05)?'observed-error':'observed-group-status'}">${item.refutation.logFamilyP<Math.log(.05)?'ボーナスの下振れから反証あり':'この検査では反証なし'}</span></h3><p class="observed-group-complement">比較側：${esc(item.complementLabel)}</p><dl class="observed-group-evidence">${pair('既存モデルの根拠比',evidence(item.logEvidenceRatio))}${pair('ボーナスだけの根拠比',evidence(item.bonusLogEvidenceRatio))}</dl><p class="observed-group-meaning">${esc(evidenceMeaning(item.logEvidenceRatio))} · 最も整合しない台 <b>${esc(rowLabel(item.worstRow))}</b></p></article>`).join('')}</div>
++ <p class="observed-help">差枚を含むモデルは近似です。「反証なし」は全台系の証明ではありません。低設定が混じっていても反証できない場合があります。大きい根拠比も全台系の確定ではありません。</p>
++ <details class="observed-group-details"><summary>根拠比の見方・比較の前提</summary><p class="observed-help">根拠比は、各仮説と、その比較側である「少なくとも1台が許容設定の外」のデータへの適合を比べる倍率です。設定1〜6を等重みとし、各仮説の許容集合で重みを正規化します。店舗が全台系を使う事前頻度は採用していません。</p><p class="observed-help">既存モデルとボーナスだけの比は同じ観測の別計算です。独立証拠として掛け合わせません。全6 ⊂ 全56 ⊂ 全456なので、3仮説は足して100%になる分類ではありません。</p></details>
++ ${severe.length?`<div class="observed-group-warnings" role="status">${severe.map(w=>`<p>${esc(w)}</p>`).join('')}</div>`:''}
++ <div class="observed-group-allocation-head"><h3>仮説を置いた設定配分</h3><label>配分を見る仮説<select data-observed-allocation aria-label="配分を見る仮説">${report.hypotheses.map(item=>`<option value="${esc(item.id)}" ${h.id===item.id?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label></div>
++ ${conditional(h,rowLabel)}${sensitivity(h)}${refutation(h,rowLabel)}${sameSetting(report)}
++ <details class="observed-group-details"><summary>注意点を確認</summary>${(report.warnings||[]).map(w=>`<p class="observed-help">${esc(w)}</p>`).join('')}</details>
++ </section>`;
++}
++global.JUGESTGroupJudgeView=Object.freeze({render});
++})(typeof globalThis!=='undefined'?globalThis:this);
+diff --git a/group-judge.js b/group-judge.js
+new file mode 100644
+index 0000000..b78bd5a
+--- /dev/null
++++ b/group-judge.js
+@@ -0,0 +1,328 @@
++(function(global){
++'use strict';
++
++// Pure analysis of this invocation's observed judgements. No store or session data.
++const VERSION='parallel-group-judge-v1';
++const MACHINE_KEYS=Object.freeze(['my','im','go','fk','hp','gg','mr','um']);
++const HYPOTHESES=Object.freeze([
++ Object.freeze({id:'all456',label:'全456',allowed:Object.freeze([4,5,6]),complementLabel:'非全456（少なくとも1台が設定1〜3）'}),
++ Object.freeze({id:'all56',label:'全56',allowed:Object.freeze([5,6]),complementLabel:'非全56（少なくとも1台が設定1〜4）'}),
++ Object.freeze({id:'all6',label:'全6',allowed:Object.freeze([6]),complementLabel:'非全6（少なくとも1台が設定1〜5）'})
++]);
++const WEIGHTS=Object.freeze([
++ Object.freeze({id:'equal',label:'等重み（各設定1/6）',weights:Object.freeze([1/6,1/6,1/6,1/6,1/6,1/6])}),
++ Object.freeze({id:'lower',label:'低設定寄り（3・3・2・1・1・1 / 11）',weights:Object.freeze([3/11,3/11,2/11,1/11,1/11,1/11])}),
++ Object.freeze({id:'upper',label:'高設定寄り（1・1・1・2・3・3 / 11）',weights:Object.freeze([1/11,1/11,1/11,2/11,3/11,3/11])})
++]);
++const LOG3=Math.log(3),LOG05=Math.log(.05),LOG2PI=Math.log(2*Math.PI);
++class NumericalError extends Error {}
++
++function logAdd(a,b){
++ if(a===-Infinity)return b;if(b===-Infinity)return a;
++ return Math.max(a,b)+Math.log1p(Math.exp(-Math.abs(a-b)));
++}
++function logSum(values){let sum=-Infinity;for(const value of values)sum=logAdd(sum,value);return sum}
++function log1mexp(value){
++ if(value>0||Number.isNaN(value))throw new NumericalError('補集合の重みを安全に計算できませんでした。');
++ if(value===0)return-Infinity;
++ return value<-Math.LN2?Math.log1p(-Math.exp(value)):Math.log(-Math.expm1(value));
++}
++function logProduct(a,b){
++ if(a===-Infinity||b===-Infinity)return-Infinity;
++ const value=a+b;
++ if(!Number.isFinite(value))throw new NumericalError('ログ値の合計が安全な計算範囲を超えています。');
++ return value;
++}
++function normalizeLogs(logs){
++ const maximum=Math.max(...logs);
++ return logs.map(value=>{
++  if(value===-Infinity)return value;
++  const normalized=value-maximum;
++  if(!Number.isFinite(normalized))throw new NumericalError('ログ値の差が安全な計算範囲を超えています。');
++  return normalized;
++ });
++}
++function probability(logP){return {p:Math.exp(logP),logP}}
++function summary(q){return {expectedSetting:q.reduce((sum,p,i)=>sum+p*(i+1),0),p4:q[3]+q[4]+q[5],p5:q[4]+q[5],p6:q[5]}}
++
++// Loader's binomial normalization avoids subtraction of large log-gamma values.
++// Integer Stirling errors below 16 are constants; the asymptotic remainder at 16
++// is below double precision. The deviance series is used near its zero.
++const SMALL_STIRLING=Object.freeze([0,.08106146679532726,.041340695955409295,.02767792568499834,
++ .020790672103765093,.016644691189821192,.013876128823070748,.01189670994589177,
++ .010411265261972096,.009255462182712733,.008330563433362872,.007573675487951841,
++ .006942840107209529,.006408994188004207,.005951370112758848,.005554733551962801]);
++function stirlingError(n){
++ if(n<16)return SMALL_STIRLING[n];
++ const inverse=1/n,square=inverse*inverse;
++ return inverse*(1/12-square*(1/360-square*(1/1260-square*(1/1680-square/1188))));
++}
++function deviance(x,mean){
++ if(x===0)return mean;
++ if(Math.abs(x-mean)<.1*(x+mean)){
++  let v=(x-mean)/(x+mean),sum=(x-mean)*v,term=2*x*v;
++  const square=v*v;
++  for(let j=1;j<1000;j++){
++   term*=square;const next=sum+term/(2*j+1);
++   if(next===sum)return sum;
++   sum=next;
++  }
++  throw new NumericalError('二項分布の計算が収束しませんでした。');
++ }
++ return x*Math.log(x/mean)+mean-x;
++}
++function logBinomialPMF(n,k,p){
++ if(k===0)return n*Math.log1p(-p);
++ if(k===n)return n*Math.log(p);
++ const failures=n-k;
++ return stirlingError(n)-stirlingError(k)-stirlingError(failures)
++  -deviance(k,n*p)-deviance(failures,n*(1-p))
++  -.5*(LOG2PI+Math.log(k)+Math.log1p(-k/n));
++}
++function betaFraction(a,b,x){
++ const tiny=1e-300,epsilon=8e-15;
++ const floor=value=>Math.abs(value)<tiny?(value<0?-tiny:tiny):value;
++ const total=a+b,plus=a+1,minus=a-1;
++ let c=1,d=1/floor(1-total*x/plus),h=d;
++ for(let m=1;m<=10000;m++){
++  const twice=2*m;
++  let aa=m*(b-m)*x/((minus+twice)*(a+twice));
++  d=1/floor(1+aa*d);c=floor(1+aa/c);h*=d*c;
++  aa=-(a+m)*(total+m)*x/((a+twice)*(plus+twice));
++  d=1/floor(1+aa*d);c=floor(1+aa/c);
++  const delta=d*c;h*=delta;
++  if(Math.abs(delta-1)<=epsilon){
++   if(!(h>0)||!Number.isFinite(h))throw new NumericalError('二項分布の計算結果を安全に取得できませんでした。');
++   return h;
++  }
++ }
++ throw new NumericalError('二項分布の計算が収束しませんでした。');
++}
++function binomialLowerTail(n,k,p){
++ if(!Number.isSafeInteger(n)||n<0||n>10000000||!Number.isSafeInteger(k)||!Number.isFinite(p)||p<0||p>1)
++  throw new NumericalError('二項分布の入力が計算範囲外です。');
++ if(k<0)return probability(-Infinity);
++ if(k>=n||p===0)return probability(0);
++ if(p===1)return probability(-Infinity);
++ if(k===0)return probability(n*Math.log1p(-p));
++ if(k===n-1)return probability(log1mexp(n*Math.log(p)));
++ const a=k+1,b=n-k;
++ // x^a (1-x)^b / B(a,b) = (n-k) p Pr(X=k), with x=p.
++ const logFront=logBinomialPMF(n,k,p)+Math.log(b)+Math.log(p);
++ let logP;
++ if(p<(a+1)/(a+b+2)){
++  const logUpper=logFront+Math.log(betaFraction(a,b,p))-Math.log(a);
++  if(logUpper>1e-11)throw new NumericalError('二項分布の上側確率を安全に計算できませんでした。');
++  logP=log1mexp(Math.min(0,logUpper));
++ }else logP=logFront+Math.log(betaFraction(b,a,1-p))-Math.log(b);
++ if(!Number.isFinite(logP)||logP>1e-11)throw new NumericalError('二項分布の下側確率を安全に計算できませんでした。');
++ return probability(Math.min(0,logP));
++}
++
++function checkedWeights(weights){
++ if(!Array.isArray(weights)||weights.length!==6||Array.from(weights).some(w=>!Number.isFinite(w)||w<=0))
++  throw new NumericalError('設定配分の重みが不正です。');
++ const total=weights.reduce((sum,w)=>sum+w,0);
++ if(!Number.isFinite(total)||Math.abs(total-1)>1e-10)throw new NumericalError('設定配分の重みの合計が1ではありません。');
++ return {weights,total};
++}
++function logEvidenceRatio(logRows,allowed,weights=WEIGHTS[0].weights){
++ const {total}=checkedWeights(weights),allowedSet=new Set(allowed);
++ if(!allowed.length||allowed.length>=6||allowed.some(s=>!Number.isInteger(s)||s<1||s>6)||allowedSet.size!==allowed.length)
++  throw new NumericalError('仮説の許容設定が不正です。');
++ const mass=weights.reduce((sum,w,i)=>sum+(allowedSet.has(i+1)?w:0),0);
++ const outsideMass=weights.reduce((sum,w,i)=>sum+(allowedSet.has(i+1)?0:w),0);
++ const logMass=mass>outsideMass?Math.log1p(-outsideMass/total):Math.log(mass/total);
++ const logComplementPrior=log1mexp(logRows.length*logMass);
++ const logWeights=weights.map(w=>Math.log(w/total));
++ let allInside=0,someOutside=-Infinity;
++ for(const original of logRows){
++  const logs=normalizeLogs(original);
++  const inside=logSum(logs.flatMap((value,i)=>allowedSet.has(i+1)?[value+logWeights[i]]:[]));
++  const outside=logSum(logs.flatMap((value,i)=>allowedSet.has(i+1)?[]:[value+logWeights[i]]));
++  // Disjoint states: already outside (any next setting), or first outside now.
++  someOutside=logAdd(logProduct(someOutside,logAdd(inside,outside)),logProduct(allInside,outside));
++  allInside=logProduct(allInside,inside);
++ }
++ if(allInside===-Infinity)return-Infinity;
++ if(someOutside===-Infinity)return Infinity;
++ const ratio=(allInside-logRows.length*logMass)-(someOutside-logComplementPrior);
++ if(!Number.isFinite(ratio))throw new NumericalError('根拠比が安全な計算範囲を超えています。');
++ return ratio;
++}
++
++// Keep the exact individual validation semantics available in a standalone Node
++// script too. Browser callers use the existing shared validator when loaded.
++function localValidate(raw){
++ if(!raw||typeof raw!=='object'||Array.isArray(raw))return {ok:false,errors:{result:'台データを入力してください。'}};
++ const integer=value=>{
++  if(typeof value!=='string'&&typeof value!=='number')return null;
++  const text=String(value).trim();if(!/^[+-]?\d+$/.test(text))return null;
++  const n=Number(text);return Number.isSafeInteger(n)?n:null;
++ };
++ const errors={},games=integer(raw.games),bb=integer(raw.bb),rb=integer(raw.rb);
++ const missing=raw.diff==null||typeof raw.diff==='string'&&raw.diff.trim()==='',diff=missing?null:integer(raw.diff);
++ if(!MACHINE_KEYS.includes(raw.machine))errors.machine='対応する機種を選択してください。';
++ if(games==null||games<=0)errors.games='通常Gを正の整数で入力してください。';
++ if(bb==null||bb<0)errors.bb='BBを0以上の整数で入力してください。';
++ if(rb==null||rb<0)errors.rb='RBを0以上の整数で入力してください。';
++ if(!missing&&diff==null)errors.diff='差枚を整数で入力してください。';
++ if(games!=null&&bb!=null&&rb!=null&&bb+rb>games)errors.bonus='BBとRBの合計が通常Gを超えています。';
++ return Object.keys(errors).length?{ok:false,errors}:{ok:true,input:{machine:raw.machine,tableNo:String(raw.tableNo??'').trim(),games,bb,rb,diff}};
++}
++function validateEntries(entries){
++ const errors=[],rows=[],ids=new Set(),tableNos=new Set(),machineTables=new Map();
++ if(!Array.isArray(entries)||entries.length<2||entries.length>60)return {errors:['全台系は2〜60台をすべて判別してから確認してください。'],rows};
++ for(let i=0;i<entries.length;i++){
++  const entry=entries[i],prefix=`${i+1}台目：`;
++  if(!entry||typeof entry!=='object'||Array.isArray(entry)){errors.push(prefix+'台の結果が不足しています。');continue}
++  const id=entry.id,idValid=typeof id==='string'&&id.trim()!==''||typeof id==='number'&&Number.isSafeInteger(id);
++  if(!idValid)errors.push(prefix+'行の識別番号が不足しています。');
++  else {const key=String(id).trim();if(ids.has(key))errors.push(prefix+'行の識別番号が重複しています。');ids.add(key)}
++  const result=entry.result;
++  if(!result||result.ok!==true){errors.push(prefix+'成功した個別判別結果が必要です。');continue}
++  const validator=global.JUGESTJudgement?.validateInput||localValidate,checked=validator(result.input);
++  if(!checked.ok){errors.push(...Object.values(checked.errors).map(message=>prefix+message));continue}
++  const input=checked.input;
++  if(input.games>10000000)errors.push(prefix+'全台系の通常Gは10,000,000以下にしてください。');
++  if(input.tableNo){if(tableNos.has(input.tableNo))errors.push(prefix+'入力済みの台番が重複しています。');tableNos.add(input.tableNo)}
++  const logs=result.diagnostics?.logs;
++  if(!Array.isArray(logs)||logs.length!==6||Array.from(logs).some(l=>typeof l!=='number'||!(Number.isFinite(l)||l===-Infinity))||!logs.some(Number.isFinite)){
++   errors.push(prefix+'設定別のログ値が不足しているか不正です。');continue;
++  }
++  const q=result.q;
++  if(!Array.isArray(q)||q.length!==6||Array.from(q).some(p=>!Number.isFinite(p)||p<0)||Math.abs(q.reduce((a,b)=>a+b,0)-1)>1e-7){
++   errors.push(prefix+'個別判別結果の設定分布が不正です。');continue;
++  }
++  const table=result.engine?.table,settings=table?.settings;
++  if(!Array.isArray(settings)||settings.length!==6||Array.from(settings).some((s,i)=>!s||s.setting!==i+1||!Number.isFinite(s.b)||s.b<=0||!Number.isFinite(s.r)||s.r<=0||!(1/s.b+1/s.r<1))){
++   errors.push(prefix+'設定1〜6のボーナス確率表が不足しているか不正です。');continue;
++  }
++  if(table.key!=null&&table.key!==input.machine)errors.push(prefix+'機種と判別に使った設定表が一致しません。');
++  const tableSignature=JSON.stringify(settings.map(s=>[s.b,s.r]));
++  if(machineTables.has(input.machine)&&machineTables.get(input.machine)!==tableSignature)errors.push(prefix+'同じ機種の設定表が一致しません。個別判別をやり直してください。');
++  machineTables.set(input.machine,tableSignature);
++  rows.push({id,input,logs:Array.from(logs),settings:settings.map(s=>({setting:s.setting,b:s.b,r:s.r})),machineName:result.machineName||input.machine,reverseWarn:!!result.reverseWarn||!!result.warnings?.length});
++ }
++ if(errors.length)return {errors,rows};
++ for(const field of ['games','bb','rb','diff']){
++  const sum=rows.reduce((sum,row)=>sum+BigInt(row.input[field]??0),0n),limit=BigInt(Number.MAX_SAFE_INTEGER);
++  if(sum>limit||sum<-limit)errors.push(`全台の${{games:'通常G',bb:'BB',rb:'RB',diff:'入力済み差枚'}[field]}の合計が安全な整数の範囲を超えています。`);
++ }
++ return {errors,rows};
++}
++function calculateBonusLogs(input,settings){
++ const other=input.games-input.bb-input.rb;
++ return settings.map(s=>{
++  const pb=1/s.b,pr=1/s.r;
++  return (input.bb?input.bb*Math.log(pb):0)+(input.rb?input.rb*Math.log(pr):0)+(other?other*Math.log(1-pb-pr):0);
++ });
++}
++function aggregateRows(rows){
++ const machines=new Map();let diffN=0,diff=0n;
++ const aggregate={games:0,bb:0,rb:0};
++ for(const row of rows){
++  const x=row.input;aggregate.games+=x.games;aggregate.bb+=x.bb;aggregate.rb+=x.rb;
++  if(x.diff!==null){diffN++;diff+=BigInt(x.diff)}
++  if(!machines.has(x.machine))machines.set(x.machine,{key:x.machine,name:row.machineName,n:0});
++  machines.get(x.machine).n++;
++ }
++ return {...aggregate,diff:diffN===rows.length?Number(diff):null,diffN,knownDiff:Number(diff),
++  bbDenom:aggregate.bb?aggregate.games/aggregate.bb:null,rbDenom:aggregate.rb?aggregate.games/aggregate.rb:null,
++  combinedDenom:aggregate.bb+aggregate.rb?aggregate.games/(aggregate.bb+aggregate.rb):null,
++  mixedMachines:machines.size>1,machines:Array.from(machines.values())};
++}
++function aggregateJudgement(rows,aggregate){
++ if(aggregate.mixedMachines)return {available:false,reason:'機種が混在しているため、同じ設定と仮定した合算判別は表示できません。',machine:null,q:null,expectedSetting:null,p4:null,p5:null,p6:null};
++ const logs=normalizeLogs(calculateBonusLogs(aggregate,rows[0].settings)),z=logSum(logs),q=logs.map(l=>Math.exp(l-z));
++ return {available:true,reason:'全台が同じ設定だった場合のボーナスだけの参考判別です。',machine:rows[0].input.machine,q,...summary(q)};
++}
++function conditional(rows,allowed){
++ const distributions=[];
++ for(const row of rows){
++  const logs=normalizeLogs(row.logs),z=logSum(allowed.map(s=>logs[s-1]));
++  if(z===-Infinity)return {available:false,reason:'この仮説で許される設定の尤度が0の台があり、条件付き配分は計算できません。',rows:[],expectedCounts:[0,0,0,0,0,0],topAllocations:[],mapAssignment:[]};
++  const logQ=logs.map((l,i)=>allowed.includes(i+1)?l-z:-Infinity),q=logQ.map(Math.exp);
++  distributions.push({id:row.id,tableNo:row.input.tableNo,q,expectedSetting:summary(q).expectedSetting,logQ});
++ }
++ let coefficients=new Map([[allowed.map(()=>0).join(','),0]]);
++ for(const row of distributions){
++  const next=new Map();
++  for(const [key,value] of coefficients){
++   const counts=key.split(',').map(Number);
++   for(let j=0;j<allowed.length;j++){
++    const term=logProduct(value,row.logQ[allowed[j]-1]);if(term===-Infinity)continue;
++    counts[j]++;const target=counts.join(',');counts[j]--;
++    next.set(target,logAdd(next.get(target)??-Infinity,term));
++   }
++  }
++  coefficients=next;
++ }
++ const allocations=Array.from(coefficients,([key,logP])=>{
++  const counts=[0,0,0,0,0,0];key.split(',').forEach((count,i)=>counts[allowed[i]-1]=Number(count));
++  return {counts,label:counts.map((count,i)=>String(i+1).repeat(count)).join(''),probability:Math.exp(logP),logP};
++ });
++ allocations.sort((a,b)=>b.logP-a.logP||(a.label<b.label?-1:a.label>b.label?1:0));
++ const expectedCounts=[0,0,0,0,0,0],mapAssignment=[];
++ const conditionalRows=distributions.map(row=>{
++  row.q.forEach((p,i)=>expectedCounts[i]+=p);
++  let setting=allowed[0];for(const s of allowed)if(row.logQ[s-1]>row.logQ[setting-1])setting=s;
++  mapAssignment.push({id:row.id,tableNo:row.tableNo,setting,probability:row.q[setting-1]});
++  return {id:row.id,tableNo:row.tableNo,q:row.q,expectedSetting:row.expectedSetting};
++ });
++ return {available:true,rows:conditionalRows,expectedCounts,topAllocations:allocations.slice(0,8).map(({logP,...allocation})=>allocation),mapAssignment};
++}
++function cdfRows(rows){
++ return rows.map(row=>row.settings.map(s=>{
++  const x=row.input,channels={bb:binomialLowerTail(x.games,x.bb,1/s.b),rb:binomialLowerTail(x.games,x.rb,1/s.r),total:binomialLowerTail(x.games,x.bb+x.rb,1/s.b+1/s.r)};
++  const logP=Math.min(0,LOG3+Math.min(channels.bb.logP,channels.rb.logP,channels.total.logP));
++  return {setting:s.setting,...probability(logP),channels};
++ }));
++}
++function precedes(a,b){return String(a.id)<String(b.id)}
++function refutation(rows,cdfs,allowed){
++ const tested=rows.map((row,i)=>{
++  const settings=allowed.map(s=>cdfs[i][s-1]);let best=settings[0];
++  for(const setting of settings)if(setting.logP>best.logP)best=setting;
++  return {id:row.id,tableNo:row.input.tableNo,p:best.p,logP:best.logP,setting:best.setting,channels:best.channels,settings};
++ });
++ let weakest=tested[0];for(const row of tested)if(row.logP<weakest.logP||row.logP===weakest.logP&&precedes(row,weakest))weakest=row;
++ const logP=Math.min(0,Math.log(rows.length)+weakest.logP),logFamilyP=Math.min(0,LOG3+logP);
++ return {...probability(logP),familyP:Math.exp(logFamilyP),logFamilyP,weakestRow:{id:weakest.id,tableNo:weakest.tableNo,p:weakest.p,logP:weakest.logP},rows:tested,refuted:logFamilyP<LOG05};
++}
++function worstRow(rows,allowed){
++ let worst=null;
++ for(const row of rows){
++  const logs=normalizeLogs(row.logs),value={id:row.id,tableNo:row.input.tableNo,logCompatibility:Math.max(...allowed.map(s=>logs[s-1]))};
++  if(!worst||value.logCompatibility<worst.logCompatibility||value.logCompatibility===worst.logCompatibility&&precedes(value,worst))worst=value;
++ }
++ return worst;
++}
++function analyze(entries){
++ try{
++  const {errors,rows}=validateEntries(entries);if(errors.length)return {ok:false,errors};
++  const aggregate=aggregateRows(rows),reference=aggregateJudgement(rows,aggregate),bonusLogs=rows.map(row=>calculateBonusLogs(row.input,row.settings));
++  const capturedLogs=rows.map(row=>row.logs),cdfs=cdfRows(rows),warnings=[
++   '設定配分の重みは等重みです。低設定寄り・高設定寄りは感度比較で、店舗実績から得た頻度ではありません。',
++   '全台系の成立確率は計算していません。条件付き設定配分は仮説が成立した場合の値です。',
++   'ボーナスの検査は独立試行を仮定し、停止時刻と台の集合を事前に決めた場合の検査です。結果を見てから選別した集合では解釈に限界があります。',
++   '根拠比と反証検査は同じ観測の別計算です。独立した追加証拠として合成しません。'
++  ];
++  const low=rows.filter(row=>row.input.games<2000);if(low.length)warnings.push(`2000G未満の台が${low.length}/${rows.length}台あります。小稼働では設定の区別が難しくなります。`);
++  if(aggregate.diffN<rows.length)warnings.push(`差枚は${aggregate.diffN}/${rows.length}台のみ入力済みです。入力済みの合計を別に表示し、欠損を0で補いません。`);
++  if(aggregate.mixedMachines)warnings.push('機種が混在しています。合算BB・RB・合算分母は観測の参考値です。');
++  else warnings.push('同じ設定と仮定した合算判別は参考値です。全台系の評価や追加証拠には使いません。');
++  for(const row of rows)if(row.reverseWarn)warnings.push(`台${row.input.tableNo||row.id}：差枚の逆算に警告があります。通常G・BB・RB・差枚の組み合わせを確認してください。`);
++  if(aggregate.diffN)warnings.push('差枚を含む根拠比は既存の近似モデルによる値です。現実の全台系の成立確率として扱わないでください。');
++  const hypotheses=HYPOTHESES.map(h=>{
++   const sensitivity=WEIGHTS.map(w=>({id:w.id,label:w.label,weights:Array.from(w.weights),logEvidenceRatio:logEvidenceRatio(capturedLogs,h.allowed,w.weights),bonusLogEvidenceRatio:logEvidenceRatio(bonusLogs,h.allowed,w.weights)}));
++   const distribution=conditional(rows,h.allowed);if(!distribution.available)warnings.push(`${h.label}：${distribution.reason}`);
++   return {id:h.id,label:h.label,allowed:Array.from(h.allowed),complementLabel:h.complementLabel,
++    logEvidenceRatio:sensitivity[0].logEvidenceRatio,bonusLogEvidenceRatio:sensitivity[0].bonusLogEvidenceRatio,sensitivity,
++    worstRow:worstRow(rows,h.allowed),refutation:refutation(rows,cdfs,h.allowed),conditional:distribution};
++  });
++  return {ok:true,version:VERSION,n:rows.length,aggregate,aggregateJudgement:reference,hypotheses,warnings};
++ }catch(error){return {ok:false,errors:[error instanceof NumericalError?error.message:'集合の判別に必要な情報を安全に読み取れませんでした。']}}
++}
++global.JUGESTGroupJudge=Object.freeze({VERSION,analyze,__test:Object.freeze({binomialLowerTail,logEvidenceRatio,log1mexp})});
++})(typeof globalThis!=='undefined'?globalThis:this);
+diff --git a/index.html b/index.html
+index afc4f1c..a8ad003 100644
+--- a/index.html
++++ b/index.html
+@@ -526,7 +526,7 @@ NOTE
+ - v3.9.0 test is the first release governed by the permanent changelog rule above.
+ - Earlier project history remains in prior handoff/recovery artifacts; future changes must be recorded here.
+ -->
+-<html class="jugest-app"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><link href="./favicon-32.png" rel="icon" sizes="32x32" type="image/png"/><link href="./icon-192.png" rel="icon" sizes="192x192" type="image/png"/><link href="./icon-512.png" rel="icon" sizes="512x512" type="image/png"/><link href="./apple-touch-icon.png?v=512-icon-tune-3" rel="apple-touch-icon" sizes="180x180"/><link href="./site.webmanifest" rel="manifest"/><title>JUGEST v5.1.2</title><script src="./judgement-model.js"></script><script src="./judgement-view.js"></script><script src="./core-v510.js"></script><script defer="" src="./app-v510.js"></script>
++<html class="jugest-app"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" name="viewport"/><meta content="#f9fbff" name="theme-color"/><meta content="yes" name="mobile-web-app-capable"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="JUGEST" name="apple-mobile-web-app-title"/><link href="./favicon-32.png" rel="icon" sizes="32x32" type="image/png"/><link href="./icon-192.png" rel="icon" sizes="192x192" type="image/png"/><link href="./icon-512.png" rel="icon" sizes="512x512" type="image/png"/><link href="./apple-touch-icon.png?v=512-icon-tune-3" rel="apple-touch-icon" sizes="180x180"/><link href="./site.webmanifest" rel="manifest"/><title>JUGEST v5.1.2</title><script src="./judgement-model.js"></script><script src="./judgement-view.js"></script><script src="./group-judge.js"></script><script src="./group-judge-view.js"></script><script src="./core-v510.js"></script><script defer="" src="./app-v510.js"></script>
+ <style id="JUGEST_V510_HOST_STYLE">
+ html.jugest-app,html.jugest-app body.jugest-v510{margin:0;min-height:100%;background:linear-gradient(180deg,#f9fbff 0,#f4f8ff 55%,#f8faff 100%);}
+ body.jugest-v510{min-height:100dvh;overflow-x:hidden;color:#101a33;}
+diff --git a/judgement-view.js b/judgement-view.js
+index 4b5e3e5..a46e6e1 100644
+--- a/judgement-view.js
++++ b/judgement-view.js
+@@ -17,22 +17,27 @@ function parallelEditor(rows,machines){
+  const columns=[['tableNo','台番'],['machine','機種'],['games','G'],['bb','BB'],['rb','RB'],['diff','差枚']];
+  const lines=rows.map((row,index)=>{
+   const errorId=`observed-row-errors-${esc(row.id)}`,x=row.input;
+-  const cells=columns.map(([key,label])=>{
++  const cells=Object.fromEntries(columns.map(([key,label])=>{
+    const invalid=row.errors[key]?` aria-invalid="true" aria-describedby="${errorId}"`:'';
+    const attrs=`data-observed-field="${key}" aria-label="${index+1}行目 ${label}"${invalid}`;
+-   return key==='machine'?`<select ${attrs}><option value="">選択</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(shortNames[m.key]||m.name)}</option>`).join('')}</select>`:`<input type="text" inputmode="${key==='diff'?'text':'numeric'}" ${attrs} value="${esc(x[key])}" autocomplete="off" autocorrect="off" spellcheck="false">`;
+-  }).join('');
++   const input=key==='machine'?`<select ${attrs}><option value="">選択</option>${machines.map(m=>`<option value="${esc(m.key)}" ${x.machine===m.key?'selected':''}>${esc(shortNames[m.key]||m.name)}</option>`).join('')}</select>`:`<input type="text" inputmode="${key==='diff'?'text':'numeric'}" ${attrs} value="${esc(x[key])}" autocomplete="off" autocorrect="off" spellcheck="false">`;
++   return [key,`<label><span>${key==='tableNo'?`${index+1} · `:''}${label}${key==='diff'?'（任意）':''}</span>${input}</label>`];
++  }));
+   const errors=Object.values(row.errors);
+-  return `<div class="observed-table-row" data-observed-row="${esc(row.id)}" data-observed-card>${cells}<button type="button" data-observed-action="delete" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を削除">×</button>${errors.length?`<div class="observed-error observed-row-errors" id="${errorId}" role="alert">${index+1}行目：${errors.map(esc).join(' ')}</div>`:''}</div>`;
++  return `<div class="observed-table-row" data-observed-row="${esc(row.id)}" data-observed-card><div class="observed-table-identity">${cells.tableNo}${cells.machine}<div class="observed-table-actions"><button type="button" data-observed-action="duplicate" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を複製">複製</button><button type="button" data-observed-action="delete" data-row-id="${esc(row.id)}" aria-label="${index+1}行目を削除">×</button></div></div><div class="observed-table-numbers">${['games','bb','rb','diff'].map(key=>cells[key]).join('')}</div>${errors.length?`<div class="observed-error observed-row-errors" id="${errorId}" role="alert">${index+1}行目：${errors.map(esc).join(' ')}</div>`:''}</div>`;
+  }).join('');
+- return `<div class="observed-parallel-editor" data-observed-parallel-editor role="group" aria-label="並列判別の台データ"><div class="observed-table-head" aria-hidden="true">${columns.map(([,label])=>`<span>${label}${label==='機種'?' ▾':''}</span>`).join('')}<span>削除</span></div>${lines||'<p class="observed-help">行を追加して入力してください。</p>'}</div>`;
++ return `<div class="observed-parallel-editor" data-observed-parallel-editor role="group" aria-label="並列判別の台データ">${lines||'<p class="observed-help">行を追加して入力してください。</p>'}</div>`;
+ }
+-function parallelResults(rows){
+- const judged=rows.filter(row=>row.result);
++function parallelResults(rows,{sort='input'}={}){
++ const judged=rows.filter(row=>row.result).slice();
+  if(!judged.length)return '';
+- return `<section class="observed-parallel-results" aria-label="並列判別結果"><h2>判別結果</h2>${judged.map((row,index)=>{
++ if(sort==='tableNo')judged.sort((a,b)=>String(a.result.input.tableNo||'').localeCompare(String(b.result.input.tableNo||''),'ja',{numeric:true})||rows.indexOf(a)-rows.indexOf(b));
++ else if(['expectedSetting','p4','p5','p6'].includes(sort))judged.sort((a,b)=>b.result[sort]-a.result[sort]||rows.indexOf(a)-rows.indexOf(b));
++ const order=[['input','入力順'],['tableNo','台番順'],['expectedSetting','期待設定が高い順'],['p4','設定4以上（P4+）'],['p5','設定5以上（P5+）'],['p6','設定6（P6）']];
++ return `<section class="observed-parallel-results" aria-label="並列判別結果"><div class="observed-result-heading"><h2>個別の判別結果</h2><label>並べ替え<select data-observed-sort aria-label="結果の並べ替え">${order.map(([value,label])=>`<option value="${value}" ${sort===value?'selected':''}>${label}</option>`).join('')}</select></label></div>${judged.map(row=>{
+   const r=row.result;
+-  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span><span>${esc(top(r))}</span></span><span class="observed-result-probs"><span>P4+ <b>${percent(r.p4)}</b></span><span>P5+ <b>${percent(r.p5)}</b></span><span>P6 <b>${percent(r.p6)}</b></span></span><span>推定ブドウ <b>${grape(r.estimatedGrape)}</b></span></button>`;
++  const label=(r.q||[]).map((p,i)=>`設定${i+1} ${percent(p)}`).join('、');
++  return `<button type="button" class="observed-result-row" data-row-summary data-observed-result-row="${esc(row.id)}" data-observed-action="detail" data-row-id="${esc(row.id)}"><span class="observed-result-main"><b>${esc(r.input.tableNo||`台番なし（${rows.indexOf(row)+1}行目）`)}</b><span>${esc(shortNames[r.input.machine]||r.machineName)}</span><span>期待設定 <strong>${number(r.expectedSetting)}</strong></span></span><span class="observed-result-probs"><span title="設定4以上の確率" aria-label="設定4以上 ${percent(r.p4)}">P4+ <b>${percent(r.p4)}</b></span><span title="設定5以上の確率" aria-label="設定5以上 ${percent(r.p5)}">P5+ <b>${percent(r.p5)}</b></span><span title="設定6の確率">P6 <b>${percent(r.p6)}</b></span><span>推定ブドウ <b>${grape(r.estimatedGrape)}</b> · 最有力 <b>${esc(top(r))}</b></span></span><span class="observed-result-band" role="img" aria-label="${esc(label)}">${(r.q||[]).map((p,i)=>`<span style="width:${Number.isFinite(p)?Math.max(0,p*100):0}%;background:${['#c6d0fa','#a8b9fa','#8ba0f6','#6f89f2','#5271eb','#3657dd'][i]}"></span>`).join('')}</span></button>`;
+  }).join('')}<p class="observed-help">結果をタップすると詳細を表示します。</p></section>`;
+ }
+ function summary(result){return `<dl class="observed-summary">${pair('期待設定',number(result.expectedSetting))}${pair('最有力設定',top(result))}${pair('P4+',percent(result.p4))}${pair('P5+',percent(result.p5))}${pair('P6',percent(result.p6))}${pair('推定ブドウ',grape(result.estimatedGrape))}${pair('分布集中度',`${number(result.distributionConcentration,1)}%`)}</dl>`}
+diff --git a/tests/build-offline-judge-preview.mjs b/tests/build-offline-judge-preview.mjs
+new file mode 100644
+index 0000000..1a1fe61
+--- /dev/null
++++ b/tests/build-offline-judge-preview.mjs
+@@ -0,0 +1,40 @@
++// Makes an isolated review copy from the actual product files, without deploying.
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import path from 'node:path';
++import {createHash} from 'node:crypto';
++const destination=path.resolve('docs/development/completion-20261012/preview.html');
++const sources={};
++const read=file=>{const bytes=fs.readFileSync(file);sources[file]=createHash('sha256').update(bytes).digest('hex');return bytes};
++const inline=text=>text.replace(/<\/script/gi,'<\\/script');
++const css='data:text/css;base64,'+read('app-v510.css').toString('base64');
++const logo='data:image/png;base64,'+read('assets/jugest-mark.png').toString('base64');
++// The source changelog contains literal <head> text. Remove comments from the
++// generated copy before locating real elements; the original source is retained.
++let html=read('index.html').toString().replace(/<!--[^]*?-->/g,'');
++html=html.replace(/<link\b[^>]*\brel="(?:icon|apple-touch-icon|manifest)"[^>]*>/g,'');
++html=html.replace(/<title>[^]*?<\/title>/,'<title>開発確認用・JUGEST 並列判別／全台系</title>');
++let app='';let count=0;
++html=html.replace(/<script\b[^>]*\bsrc="\.\/([^"]+)"[^>]*>\s*<\/script>/g,(_,file)=>{
++ count++;let code=read(file).toString();
++ if(file==='app-v510.js'){
++  code=code.replaceAll('jugest:v510:ui','jugest:completion-preview:ui').replaceAll('./app-v510.css',css).replaceAll('./assets/jugest-mark.png',logo);
++  app='<script>'+inline(code)+'</script>';return '';
++ }
++ return '<script>'+inline(code)+'</script>';
++});
++assert.equal(count,9);assert.ok(app);assert.equal((html.match(/<head\b/g)||[]).length,1);
++const prefix=`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' data:; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none';">
++<script>
++window.fetch=async function(url,options={}){const method=String(options.method||'GET').toUpperCase();if(method==='GET'&&typeof url==='string'&&url.startsWith('/api/'))return new Response(JSON.stringify({ok:true,stores:[],items:[],receipts:[],linked:false}),{headers:{'content-type':'application/json'}});throw new TypeError('この確認用コピーは外部へ接続しません');};
++try{const key='jugest:completion-preview:ui';if(!localStorage.getItem(key)){const rows=Array.from({length:5},(_,i)=>({machine:'mr',tableNo:String(101+i),games:'8000',bb:i===4?'22':'36',rb:i===4?'16':'34',diff:''}));localStorage.setItem(key,JSON.stringify({workspace:'judgement',observedMode:'parallel',observedGroup:true,observedDrafts:{version:1,single:{},rows}}));}}catch(_){}
++</script>`;
++html=html.replace(/<head\b[^>]*>/,m=>m+prefix);
++const finish=`<script>
++customElements.whenDefined('jugest-app').then(()=>{const app=document.querySelector('jugest-app');let attempts=0;const boot=()=>{if(!app.bridge()?.judgeObservedMachine){if(attempts++<100)setTimeout(boot,20);return;}app.navigate('judgement');app.handleObservedAction('judge-all');const decorate=()=>{const root=app.shadowRoot;for(const b of root.querySelectorAll('[data-workspace]'))if(b.dataset.workspace!=='judgement')b.disabled=true;const page=root.querySelector('.observed-page');if(page&&!page.querySelector('[data-development-note]')){const p=document.createElement('p');p.dataset.developmentNote='';p.className='observed-help';p.textContent='開発確認用：本番には接続しません。架空の5台を入力済みで、自由に変更・再判別できます。';page.prepend(p);}};new MutationObserver(decorate).observe(app.shadowRoot,{childList:true,subtree:true});decorate();};boot();});
++</script>`;
++assert.equal((html.match(/<\/body>/g)||[]).length,1);
++html=html.replace('</body>',app+finish+'</body>');
++fs.mkdirSync(path.dirname(destination),{recursive:true});fs.writeFileSync(destination,html);
++fs.writeFileSync(destination.replace(/\.html$/,'.sources.json'),JSON.stringify({artifact:'preview.html',sha256:createHash('sha256').update(html).digest('hex'),sources},null,2)+'\n');
++console.log(JSON.stringify({artifact:destination,bytes:Buffer.byteLength(html),sourceFiles:Object.keys(sources).length}));
+diff --git a/tests/commands.json b/tests/commands.json
+index 454dd2c..0966d93 100644
+--- a/tests/commands.json
++++ b/tests/commands.json
+@@ -71,5 +71,11 @@
+   "node --test tests/store-plan-modes.mjs",
+   "node tests/store-optimization-research.mjs",
+   "node --test tests/judgement-page.mjs",
+-  "node --test tests/judgement-factor-spectrum.mjs"
++  "node --test tests/judgement-factor-spectrum.mjs",
++  "node --check group-judge.js",
++  "node --check group-judge-view.js",
++  "node --test tests/group-judge.mjs",
++  "node --test tests/parallel-group-ui.mjs",
++  "node tests/group-judge-regression.mjs",
++  "node tests/group-judge-simulation.mjs"
+ ]
+diff --git a/tests/group-judge-independent.py b/tests/group-judge-independent.py
+new file mode 100644
+index 0000000..43b28a8
+--- /dev/null
++++ b/tests/group-judge-independent.py
+@@ -0,0 +1,54 @@
++"""Independent SciPy / full-enumeration audit. Requires scipy in test runtime only."""
++import itertools,json,math,os,random,subprocess
++from pathlib import Path
++from scipy.stats import binom
++from scipy.special import logsumexp
++
++ROOT=Path(__file__).resolve().parents[1]
++NODE=os.environ.get('JUGEST_TEST_NODE','node')
++random.seed(20261010)
++cases=[]
++for n in [1,2,10,500,8000,100000,10000000]:
++ for p in [.0001,1/409.6,1/229.15,.01,.5,.99,1-1e-7]:
++  center=n*p
++  for k in sorted(set([0,n,n-1,max(0,min(n,int(center))),max(0,min(n,int(center-3*math.sqrt(n*p*(1-p))))),max(0,min(n,int(center+3*math.sqrt(n*p*(1-p)))))])):
++   cases.append([n,k,p])
++cases += [[10,0,0],[10,0,1],[10,10,1],[0,0,.3],[10000000,0,1/230],[10000000,1,1/230]]
++for _ in range(200):
++ n=random.choice([100,1000,8000,100000,10000000]);p=random.uniform(.0001,.02)
++ k=max(0,min(n,int(n*p+random.uniform(-10,10)*math.sqrt(n*p*(1-p)))))
++ cases.append([n,k,p])
++
++js="""import './group-judge.js';let text='';for await(const part of process.stdin)text+=part;const x=JSON.parse(text),t=globalThis.JUGESTGroupJudge.__test;process.stdout.write(JSON.stringify({cdf:x.cdf.map(a=>t.binomialLowerTail(...a)),ratios:x.enumerations.map(e=>t.logEvidenceRatio(e.logs,e.allowed,e.weights))}));"""
++enums=[]
++for n in [2,3,4]:
++ for allowed in [[4,5,6],[5,6],[6]]:
++  for weights in [[1/6]*6,[3/11,3/11,2/11,1/11,1/11,1/11],[1/11,1/11,1/11,2/11,3/11,3/11]]:
++   enums.append({'logs':[[random.uniform(-30,0) for _ in range(6)] for _ in range(n)],'allowed':allowed,'weights':weights})
++result=subprocess.run([NODE,'--input-type=module','-e',js],cwd=ROOT,input=json.dumps({'cdf':cases,'enumerations':enums}),text=True,capture_output=True,check=True)
++observed=json.loads(result.stdout)
++max_absolute=max_log=0
++for (n,k,p),actual in zip(cases,observed['cdf']):
++ expected=float(binom.cdf(k,n,p));expected_log=float(binom.logcdf(k,n,p))
++ got=actual['p'];error=abs(got-expected);max_absolute=max(max_absolute,error)
++ assert error<3e-8,((n,k,p),actual,expected,error)
++ if math.isfinite(expected_log) and expected_log < -1e-5:
++  log_error=abs(actual['logP']-expected_log);max_log=max(max_log,log_error)
++  assert log_error<2e-7*max(1,abs(expected_log)),((n,k,p),actual,expected_log,log_error)
++ if got==0 and 0<p<1 and k<n:
++  assert actual['logP'] is not None and math.isfinite(actual['logP']), 'must retain underflow log probability'
++max_enum=0
++for e,actual in zip(enums,observed['ratios']):
++ highs=[];lows=[];highpriors=[];lowpriors=[]
++ for assignment in itertools.product(range(6),repeat=len(e['logs'])):
++  logprior=sum(math.log(e['weights'][s]) for s in assignment)
++  score=logprior+sum(row[s] for row,s in zip(e['logs'],assignment))
++  target=all(s+1 in e['allowed'] for s in assignment)
++  (highs if target else lows).append(score)
++  (highpriors if target else lowpriors).append(logprior)
++ expected=logsumexp(highs)-logsumexp(highpriors)-logsumexp(lows)+logsumexp(lowpriors)
++ # The test helper accepts the same human setting numbers as the public API.
++ if isinstance(actual,dict):actual=actual.get('logEvidenceRatio',actual.get('logRatio'))
++ error=abs(float(actual)-float(expected));max_enum=max(max_enum,error)
++ assert error<1e-10,(e,actual,float(expected))
++print(json.dumps({'binomialCases':len(cases),'maxAbsoluteCdfError':max_absolute,'maxLogCdfError':max_log,'independentFullSettingEnumerations':len(enums),'maxEnumerationLogRatioError':max_enum}))
+diff --git a/tests/group-judge-regression.mjs b/tests/group-judge-regression.mjs
+new file mode 100644
+index 0000000..aff916b
+--- /dev/null
++++ b/tests/group-judge-regression.mjs
+@@ -0,0 +1,41 @@
++import assert from 'node:assert/strict';
++import {execFileSync} from 'node:child_process';
++import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
++import {tmpdir} from 'node:os';
++import path from 'node:path';
++import {boot} from './helpers/runtime.mjs';
++
++const BASE='f728b2587a9bdd81541ccb50d3ae802a8492486a';
++const root=process.cwd(),oldDir=mkdtempSync(path.join(tmpdir(),'jugest-group-baseline-'));
++const files=['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js','sync-core.js','index.html'];
++let seed=0x20261010;
++const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32};
++try{
++ for(const name of files)writeFileSync(path.join(oldDir,name),execFileSync('git',['show',`${BASE}:${name}`],{cwd:root,maxBuffer:20*1024*1024}));
++ // A current loader may include the newly added pure files; old individual
++ // outputs still execute the exact baseline index/model/core source above.
++ for(const name of ['group-judge.js','group-judge-view.js']){
++  try{writeFileSync(path.join(oldDir,name),execFileSync('git',['show',`HEAD:${name}`],{cwd:root,stdio:['ignore','pipe','ignore']}))}catch{writeFileSync(path.join(oldDir,name),'')}
++ }
++ process.chdir(oldDir);const old=await boot({loadApp:false});
++ process.chdir(root);const current=await boot({loadApp:false});
++ let checked=0;
++ for(const machine of old.ctx.JUGESTJudgement.MACHINE_KEYS){
++  const observations=[];
++  for(let i=0;i<128;i++){
++   const games=[1,50,500,1500,4000,8000,12500,100000][i%8];
++   const bb=i%16===0?0:Math.min(games,Math.floor(games*(.001+random()*.008)));
++   const rb=i%16===1?0:Math.min(games-bb,Math.floor(games*(.0005+random()*.009)));
++   const diff=[null,undefined,'',0,-2000,2000,Math.round((random()-.5)*games*2)][i%7];
++   observations.push({machine,tableNo:String(i),games,bb,rb,diff});
++  }
++  for(const x of observations){
++   // Retain undefined and nonfinite numbers; JSON would silently turn them
++   // into missing fields/null and could hide an output regression.
++   const before=structuredClone(old.bridge.judgeObservedMachine(x));
++   const after=structuredClone(current.bridge.judgeObservedMachine(x));
++   assert.deepEqual(after,before,`${machine} ${JSON.stringify(x)}`);checked++;
++  }
++ }
++ console.log(JSON.stringify({baseline:BASE,machines:8,inputsPerMachine:128,fullOutputsExactlyEqual:checked}));
++}finally{process.chdir(root);rmSync(oldDir,{recursive:true,force:true})}
+diff --git a/tests/group-judge-simulation.mjs b/tests/group-judge-simulation.mjs
+new file mode 100644
+index 0000000..33f9947
+--- /dev/null
++++ b/tests/group-judge-simulation.mjs
+@@ -0,0 +1,105 @@
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import vm from 'node:vm';
++import {boot} from './helpers/runtime.mjs';
++
++const {ctx,bridge}=await boot({loadApp:false});
++vm.runInContext(fs.readFileSync('group-judge.js','utf8'),ctx);
++const engine=ctx.JUGESTGroupJudge;
++const tables=Object.fromEntries(ctx.JUGESTJudgement.MACHINE_KEYS.map(machine=>[machine,bridge.judgeObservedMachine({machine,games:100,bb:0,rb:0}).engine.table]));
++const specs=Object.fromEntries(Object.entries(tables).map(([key,t])=>[key,t.settings]));
++// Reuse the unchanged legacy capture rates; this is a declared role simulator,
++// not an empirical calibration of the approximate difference likelihood.
++const source=fs.readFileSync('index.html','utf8'),styleStart=source.indexOf('function styleRates(key,style){'),styleEnd=source.indexOf('\nfunction ',styleStart+1);
++assert.ok(styleStart>=0&&styleEnd>styleStart);
++const styleRates=vm.runInNewContext('('+source.slice(styleStart,styleEnd)+')');
++let seed=0x20261010;
++const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
++function observation(machine,setting,games,tableNo){
++ const t=specs[machine][setting-1],m=tables[machine],rt=styleRates(machine,'random');
++ const probabilities=[1/t.b,1/t.r,1/t.g,1/m.replay,rt.c/m.revch[setting-1],rt.b/m.bell,rt.p/m.pier];
++ const limits=[];let total=0;for(const p of probabilities){assert.ok(p>=0&&p<1);limits.push(total+=p)}assert.ok(total<1);
++ const counts=Array(8).fill(0);
++ for(let i=0;i<games;i++){const u=random();const role=limits.findIndex(limit=>u<limit);counts[role<0?7:role]++}
++ const [bb,rb,grape,replay,cherry,bell,pier]=counts;
++ assert.equal(counts.reduce((a,b)=>a+b,0),games);
++ const generatedDiff=-3*games+m.bbpay*bb+m.regpay*rb-(bb+rb)+8*grape+3*replay+(m.chpay||2)*cherry+14*bell+10*pier;
++ assert.ok(Number.isSafeInteger(generatedDiff));
++ return{input:{machine,tableNo,games,bb,rb,diff:null},generatedDiff};
++}
++const trials=400;
++const cases=[
++ {id:'low-mixed',settings:[1,2,4,5,6],games:8000},
++ {id:'all456',settings:[4,4,5,5,6],games:8000,trueHypotheses:['all456']},
++ {id:'all56',settings:[5,5,6,6,6],games:8000,trueHypotheses:['all456','all56']},
++ {id:'all6',settings:[6,6,6,6,6],games:8000,trueHypotheses:['all456','all56','all6']},
++ {id:'all6-weak-observation',settings:[6,6,6,6,6],games:8000,forceWeak:true},
++ {id:'low-exposure',settings:[4,4,5,5,6],games:100,trueHypotheses:['all456']},
++ {id:'mixed-machines',settings:[4,4,5,5,6],games:8000,machines:['my','go','im','hp','mr'],trueHypotheses:['all456']},
++ {id:'deceptive-low-mixed',settings:[3,6,6,6,6],games:8000},
++ {id:'two-all6',settings:[6,6],games:8000,trueHypotheses:['all456','all56','all6']},
++ {id:'two-low-close',settings:[3,6],games:8000},
++ {id:'two-low-exposure',settings:[1,6],games:100},
++ {id:'two-all456',settings:[4,5],games:8000,trueHypotheses:['all456']}
++];
++const simulations=[];
++for(const c of cases){
++ const stats=Object.fromEntries(['all456','all56','all6'].map(id=>[id,{rejected:0,strongExistingEvidence:0,strongBonusEvidence:0,strongDifferenceEvidence:0,logEvidenceRatioSum:0,differenceLogRatioSum:0,truth:null}]));
++ let minimumDiff=Infinity,maximumDiff=-Infinity,negativeDiffRows=0,positiveDiffRows=0;
++ for(let t=0;t<trials;t++){
++  const observations=c.settings.map((setting,i)=>observation(c.machines?.[i]||'mr',setting,c.games,String(i+1)));
++  const inputs=observations.map(o=>o.input);
++  if(c.forceWeak){const old=inputs[4],m=tables[old.machine];observations[4].generatedDiff+=(10-old.bb)*(m.bbpay-1)+(6-old.rb)*(m.regpay-1);inputs[4]={...old,bb:10,rb:6}}
++  const entries=inputs.map((x,i)=>({id:String(i),result:bridge.judgeObservedMachine(x)}));
++  const before=structuredClone(entries),report=engine.analyze(entries);
++  assert.equal(report.ok,true,JSON.stringify(report.errors));assert.deepEqual(structuredClone(entries),before);
++  const withDiff=inputs.map((x,i)=>({...x,diff:observations[i].generatedDiff}));
++  for(const x of withDiff){minimumDiff=Math.min(minimumDiff,x.diff);maximumDiff=Math.max(maximumDiff,x.diff);if(x.diff<0)negativeDiffRows++;if(x.diff>0)positiveDiffRows++}
++  const differenceEntries=withDiff.map((x,i)=>({id:String(i),result:bridge.judgeObservedMachine(x)}));
++  const differenceBefore=structuredClone(differenceEntries),differenceReport=engine.analyze(differenceEntries);
++  assert.equal(differenceReport.ok,true,JSON.stringify(differenceReport.errors));assert.deepEqual(structuredClone(differenceEntries),differenceBefore);
++  assert.equal(differenceReport.aggregate.diffN,inputs.length);assert.equal(report.aggregate.diffN,0);
++  for(const [index,h] of report.hypotheses.entries()){
++   const dh=differenceReport.hypotheses[index];
++   assert.equal(dh.bonusLogEvidenceRatio,h.bonusLogEvidenceRatio,'difference never changes bonus-only evidence');
++   assert.equal(dh.refutation.logFamilyP,h.refutation.logFamilyP,'difference never changes the bonus refutation');
++   const s=stats[h.id];if(h.refutation.logFamilyP<Math.log(.05))s.rejected++;
++   s.truth=c.settings.every(setting=>h.allowed.includes(setting));
++   if(h.logEvidenceRatio>Math.log(10))s.strongExistingEvidence++;
++   if(h.bonusLogEvidenceRatio>Math.log(10))s.strongBonusEvidence++;
++   if(dh.logEvidenceRatio>Math.log(10))s.strongDifferenceEvidence++;
++   s.logEvidenceRatioSum+=h.logEvidenceRatio;
++   s.differenceLogRatioSum+=dh.logEvidenceRatio;
++   assert.ok(Math.abs(h.conditional.rows[0].q.reduce((a,b)=>a+b,0)-1)<1e-12);
++   assert.ok(Math.abs(h.conditional.expectedCounts.reduce((a,b)=>a+b,0)-inputs.length)<1e-10);
++  }
++  const [h4,h5,h6]=report.hypotheses;
++  assert.ok(h4.refutation.logFamilyP>=h5.refutation.logFamilyP-1e-12);
++  assert.ok(h5.refutation.logFamilyP>=h6.refutation.logFamilyP-1e-12);
++ }
++ for(const id of c.trueHypotheses||[])assert.ok(stats[id].rejected/trials<=.08,`${c.id} ${id}: excessive false rejection`);
++ simulations.push({case:c.id,trials,rows:c.settings.length,trueSettings:c.settings,gamesPerRow:c.games,machines:c.machines||c.settings.map(()=> 'mr'),forcedWeakObservation:!!c.forceWeak,difference:{style:'random',minimumDiff,maximumDiff,negativeDiffRows,positiveDiffRows,pairedTrials:trials},hypotheses:Object.fromEntries(Object.entries(stats).map(([id,s])=>[id,{trueHypothesis:s.truth,rejectionRate:s.rejected/trials,nonRejectionRate:1-s.rejected/trials,falseRejectionRate:s.truth&&!c.forceWeak?s.rejected/trials:null,falseHypothesisNonRejectionRate:!s.truth&&!c.forceWeak?1-s.rejected/trials:null,evidenceAbove10Rate:s.strongExistingEvidence/trials,bonusEvidenceAbove10Rate:s.strongBonusEvidence/trials,differenceEvidenceAbove10Rate:s.strongDifferenceEvidence/trials,meanLogEvidenceRatio:s.logEvidenceRatioSum/trials,meanDifferenceLogEvidenceRatio:s.differenceLogRatioSum/trials}]))});
++}
++// A weak individual posterior is not itself a hypothesis-level rejection.
++// These fixed observations exercise that distinction without calibrating rates.
++const weakRows=[];
++for(const x of [{games:5000,bb:14,rb:10},{games:8000,bb:22,rb:16}]){
++ const entries=Array.from({length:5},(_,i)=>({id:String(i),result:bridge.judgeObservedMachine({machine:'mr',tableNo:String(i+1),games:x.games,bb:i===4?x.bb:Math.round(x.games/220),rb:i===4?x.rb:Math.round(x.games/237),diff:null})}));
++ const before=JSON.stringify(entries),report=engine.analyze(entries);
++ assert.equal(report.ok,true);assert.equal(JSON.stringify(entries),before);
++ assert.ok(entries[4].result.p4<.15,'fixed weak row has low ordinary P4+');
++ const [h4,h5,h6]=report.hypotheses;
++ assert.equal(h4.refutation.refuted,false,'low individual P4+ does not prove conflict with all456');
++ assert.ok(h4.conditional.rows[4].q[3]>.7,'conditional inference explains the weak row mostly as setting4');
++ if(x.games===5000){assert.equal(h5.refutation.refuted,false);assert.equal(h6.refutation.refuted,false)}
++ else {assert.equal(h5.refutation.refuted,true);assert.equal(h6.refutation.refuted,true)}
++ weakRows.push({observation:x,ordinaryP4:entries[4].result.p4,hypotheses:report.hypotheses.map(h=>({id:h.id,logEvidenceRatio:h.logEvidenceRatio,familyP:h.refutation.familyP,refuted:h.refutation.refuted,weakConditional:h.conditional.rows[4].q}))});
++}
++const archived=JSON.parse(fs.readFileSync('tests/fixtures/group-pia-observed-20260921.json','utf8'));
++const publicData=[];
++for(const machine of [...new Set(archived.rows.map(x=>x.machine))]){
++ const rows=archived.rows.filter(x=>x.machine===machine),entries=rows.map(x=>({id:x.tableNo,result:bridge.judgeObservedMachine(x)})),report=engine.analyze(entries);
++ assert.equal(report.ok,true,JSON.stringify(report.errors));
++ publicData.push({storeName:archived.storeName,date:archived.date,machine,n:rows.length,knownSettings:false,warnings:report.warnings,hypotheses:report.hypotheses.map(h=>({id:h.id,logEvidenceRatio:h.logEvidenceRatio,bonusLogEvidenceRatio:h.bonusLogEvidenceRatio,logFamilyP:h.refutation.logFamilyP,worstRow:h.worstRow,topConditionalAllocation:h.conditional.topAllocations[0]}))});
++}
++console.log(JSON.stringify({seed:'0x20261010',trialsPerCase:trials,totalTrials:trials*cases.length,simulationModel:'Fixed exposure; mutually exclusive BB/RB/grape/replay/caught-cherry/bell/pierrot/other roles from existing tables, fixed random capture style. Bonus marginals exactly preserve the previous seed and observations. Difference uses the unchanged reverse equation; approximate difference scores are NOT empirically calibrated.',pairedDifferenceChecks:trials*cases.length,limits:['Forced weak observations are diagnostic checks, not false-rejection calibration.','Evidence above 10 can occur for false hypotheses; it is not an event probability.','Role multinomial and fixed capture style are declared simulation assumptions; actual overlap/covariance and play selection may differ.','Nonrejection measures missed contradictions and never proves all-high settings.'],simulations,weakRows,publicData}));
+diff --git a/tests/group-judge.mjs b/tests/group-judge.mjs
+new file mode 100644
+index 0000000..8023ce3
+--- /dev/null
++++ b/tests/group-judge.mjs
+@@ -0,0 +1,280 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import vm from 'node:vm';
++import {boot,plain} from './helpers/runtime.mjs';
++
++const context=vm.createContext({});
++for(const file of ['judgement-model.js','group-judge.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
++const engine=context.JUGESTGroupJudge;
++const weights=[1/6,1/6,1/6,1/6,1/6,1/6];
++const settings=Array.from({length:6},(_,i)=>({setting:i+1,g:6-i*.05,b:300-i*12,r:450-i*36}));
++function fixture(id,logs=[0,0,0,0,0,0],input={},table=settings){
++ const value={machine:'my',tableNo:String(id),games:4000,bb:15,rb:12,diff:null,...input};
++ return {id:String(id),result:{ok:true,input:value,machineName:value.machine==='my'?'マイジャグV':'機種 '+value.machine,
++  q:[1/6,1/6,1/6,1/6,1/6,1/6],method:value.diff==null?'bonus-only':'reverse-diff',reverseWarn:false,warnings:[],
++  diagnostics:{logs:logs.slice()},engine:{table:{key:value.machine,settings:structuredClone(table)}}}};
++}
++function close(actual,expected,tolerance=2e-11){assert.ok(Math.abs(actual-expected)<=tolerance*Math.max(1,Math.abs(expected)),`${actual} ≈ ${expected}`)}
++function logAdd(a,b){if(a===-Infinity)return b;if(b===-Infinity)return a;return Math.max(a,b)+Math.log1p(Math.exp(-Math.abs(a-b)))}
++function enumerateRatio(logs,allowed,w=weights){
++ let inside=-Infinity,outside=-Infinity;
++ function visit(i,value,inHypothesis){
++  if(i===logs.length){if(inHypothesis)inside=logAdd(inside,value);else outside=logAdd(outside,value);return}
++  for(let s=1;s<=6;s++)visit(i+1,value+Math.log(w[s-1])+logs[i][s-1],inHypothesis&&allowed.includes(s));
++ }
++ visit(0,0,true);
++ const mass=allowed.reduce((sum,s)=>sum+w[s-1],0),prior=mass**logs.length;
++ return inside-Math.log(prior)-outside+Math.log1p(-prior);
++}
++function bonusLogs(entry){const {games,bb,rb}=entry.result.input;return entry.result.engine.table.settings.map(s=>bb*Math.log(1/s.b)+rb*Math.log(1/s.r)+(games-bb-rb)*Math.log1p(-1/s.b-1/s.r))}
++function enumerateAllocations(rows,allowed){
++ const map=new Map();
++ function visit(i,counts,p){
++  if(i===rows.length){const key=counts.join(',');map.set(key,(map.get(key)||0)+p);return}
++  for(const s of allowed){counts[s-1]++;visit(i+1,counts,p*rows[i].q[s-1]);counts[s-1]--}
++ }
++ visit(0,[0,0,0,0,0,0],1);
++ return map;
++}
++function directCDF(n,k,p){
++ if(k<0)return 0;if(k>=n)return 1;if(p===0)return 1;if(p===1)return 0;
++ let term=(1-p)**n,sum=term;
++ for(let j=1;j<=k;j++){term*=((n-j+1)/j)*(p/(1-p));sum+=term}
++ return sum;
++}
++function freeze(value){if(value&&typeof value==='object'){Object.freeze(value);for(const child of Object.values(value))freeze(child)}return value}
++
++test('two and three rows match finite enumeration for each hypothesis and weight sensitivity',()=>{
++ for(const logs of [
++  [[-1,-2,-3,-.2,-.3,-.6],[-.8,-2,-1,-1.4,-.6,0]],
++  [[-.5,-.7,-1.2,-.4,-1,-2],[-2,-1,-.7,0,-.4,-.2],[-1,-.8,-.6,-.3,-.2,0]]
++ ]){
++  const entries=logs.map((l,i)=>fixture(i+1,l)),result=engine.analyze(entries);
++  assert.equal(result.ok,true);assert.equal(result.version,engine.VERSION);assert.equal(result.n,entries.length);
++  assert.deepEqual(Array.from(result.hypotheses,h=>h.id),['all456','all56','all6']);
++  for(const h of result.hypotheses){
++   close(h.logEvidenceRatio,enumerateRatio(logs,Array.from(h.allowed)));
++   close(h.bonusLogEvidenceRatio,enumerateRatio(entries.map(bonusLogs),Array.from(h.allowed)));
++   assert.deepEqual(Array.from(h.sensitivity,s=>s.id),['equal','lower','upper']);
++   for(const sensitivity of h.sensitivity){
++    assert.equal(sensitivity.weights.length,6);close(sensitivity.weights.reduce((a,b)=>a+b,0),1);
++    close(sensitivity.logEvidenceRatio,enumerateRatio(logs,Array.from(h.allowed),Array.from(sensitivity.weights)));
++    close(sensitivity.bonusLogEvidenceRatio,enumerateRatio(entries.map(bonusLogs),Array.from(h.allowed),Array.from(sensitivity.weights)));
++   }
++  }
++ }
++});
++
++test('neutral logs give zero evidence ratios and conditional weight restrictions',()=>{
++ const result=engine.analyze([fixture(1),fixture(2),fixture(3)]);assert.equal(result.ok,true);
++ for(const h of result.hypotheses){
++  close(h.logEvidenceRatio,0);
++  for(const s of h.sensitivity)close(s.logEvidenceRatio,0);
++  for(const row of h.conditional.rows)for(let s=1;s<=6;s++)close(row.q[s-1],h.allowed.includes(s)?1/h.allowed.length:0);
++  close(h.conditional.expectedCounts.reduce((a,b)=>a+b,0),3);
++ }
++});
++
++test('unordered allocation profiles include every assignment and preserve multiplicities',()=>{
++ const result=engine.analyze([fixture(1),fixture(2),fixture(3)]);
++ const h=result.hypotheses[0],expected=enumerateAllocations(h.conditional.rows,h.allowed);
++ assert.equal(expected.size,10);assert.equal(h.conditional.topAllocations.length,8);
++ for(const allocation of h.conditional.topAllocations){
++  assert.equal(allocation.counts.length,6);close(allocation.probability,expected.get(allocation.counts.join(',')));
++  assert.equal(allocation.counts.reduce((a,b)=>a+b,0),3);
++ }
++ assert.equal(h.conditional.topAllocations[0].label,'456');close(h.conditional.topAllocations[0].probability,6/27);
++ assert.deepEqual(Array.from(h.conditional.mapAssignment,row=>row.setting),[4,4,4]);
++ assert.equal(h.conditional.topAllocations[0].counts[3],1,'modal count profile is not the per-row argmax assignment');
++});
++
++test('nonuniform three-row allocation DP agrees with every profile of an independent full enumeration',()=>{
++ const logs=[[-4,-3,-2,0,-.8,-2],[-3,-4,-2,-.6,0,-1],[-3,-2,-4,-1.5,-.4,0]];
++ const result=engine.analyze(logs.map((l,i)=>fixture(i+1,l)));
++ for(const h of result.hypotheses){
++  const expected=enumerateAllocations(h.conditional.rows,h.allowed);
++  for(const allocation of h.conditional.topAllocations)close(allocation.probability,expected.get(allocation.counts.join(',')));
++  for(let s=0;s<6;s++)close(h.conditional.expectedCounts[s],h.conditional.rows.reduce((a,row)=>a+row.q[s],0));
++  for(const row of h.conditional.rows)close(row.expectedSetting,row.q.reduce((a,q,i)=>a+q*(i+1),0));
++ }
++});
++
++test('per-row offsets and entry order do not change evidence or conditional allocations',()=>{
++ const entries=[fixture(1,[-4,-3,-2,-1,-.5,0]),fixture(2,[-1,0,-2,-3,-4,-5]),fixture(3,[-2,-3,-4,-1,0,-.4])];
++ const shifted=structuredClone(entries).reverse();shifted.forEach((entry,i)=>entry.result.diagnostics.logs=entry.result.diagnostics.logs.map(v=>v+[10000,-5000,800][i]));
++ const before=engine.analyze(entries),after=engine.analyze(shifted);
++ assert.equal(after.ok,true);
++ for(let i=0;i<3;i++){
++  const a=before.hypotheses[i],b=after.hypotheses[i];close(a.logEvidenceRatio,b.logEvidenceRatio,2e-10);
++  close(a.bonusLogEvidenceRatio,b.bonusLogEvidenceRatio);
++  const counts=new Map(b.conditional.topAllocations.map(x=>[x.label,x.probability]));
++  for(const x of a.conditional.topAllocations)close(x.probability,counts.get(x.label),2e-10);
++  assert.equal(a.worstRow.id,b.worstRow.id);close(a.worstRow.logCompatibility,b.worstRow.logCompatibility);
++ }
++});
++
++test('two-state complement DP remains finite at extreme all-high likelihood concentration',()=>{
++ const logs=[[-900,-901,-902,0,-.1,-.2],[-920,-921,-922,-.1,0,-.2],[-930,-931,-932,-.2,-.1,0]];
++ const result=engine.analyze(logs.map((l,i)=>fixture(i+1,l)));assert.equal(result.ok,true);
++ const ratio=result.hypotheses[0].logEvidenceRatio;assert.ok(Number.isFinite(ratio));assert.ok(ratio>900);
++ close(ratio,enumerateRatio(logs,[4,5,6]));
++ const almostAllSix=[1e-12,1e-12,1e-12,1e-12,1e-12,1-5e-12];
++ close(engine.__test.logEvidenceRatio([[0,0,0,0,0,0],[0,0,0,0,0,0]],[6],almostAllSix),0,2e-12);
++});
++
++test('zero support is represented as impossible evidence and unavailable conditional, not fake distributions',()=>{
++ const entries=[fixture(1,[0,-Infinity,-Infinity,-Infinity,-Infinity,-Infinity]),fixture(2,[0,-1,-2,-3,-4,-5])];
++ const result=engine.analyze(entries);assert.equal(result.ok,true);
++ for(const h of result.hypotheses){assert.equal(h.logEvidenceRatio,-Infinity);assert.equal(h.conditional.available,false);assert.equal(h.conditional.rows.length,0);assert.equal(h.conditional.topAllocations.length,0)}
++ const certain=engine.analyze([fixture(1,[-Infinity,-Infinity,-Infinity,0,0,0]),fixture(2,[-Infinity,-Infinity,-Infinity,0,0,0])]);
++ assert.equal(certain.hypotheses[0].logEvidenceRatio,Infinity);
++});
++
++test('binomial lower CDF agrees with independent PMF sums and exact boundary identities',()=>{
++ const tail=engine.__test.binomialLowerTail;
++ for(const n of [1,2,10,30,100])for(const p of [0,.001,.1,.5,.9,1])for(let k=0;k<=n;k++)close(tail(n,k,p).p,directCDF(n,k,p),2e-12);
++ assert.equal(tail(10,-1,.4).p,0);assert.equal(tail(10,10,.4).p,1);assert.equal(tail(0,0,.4).p,1);
++ close(tail(10000000,0,.004).logP,10000000*Math.log1p(-.004));
++ close(tail(10000000,9999999,.9999999).logP,Math.log(-Math.expm1(10000000*Math.log(.9999999))));
++ for(const args of [[-1,0,.1],[1.5,0,.1],[10,1,-.1],[10,1,1.1],[10,1,NaN]])assert.throws(()=>tail(...args));
++});
++
++test('binomial CDF certified SciPy 1.17 / decimal reference vectors cover large n and extreme p',()=>{
++ // SciPy binom.logcdf references; near-one cases and the extreme final tail use
++ // Decimal(80-digit) PMF sums, beyond rounded CDF-to-log conversion precision.
++ const vectors=[
++  [100,5,.12,-4.185031520377106],
++  [10000000,36000,.0036,-.6903476277798662],
++  [10000000,34000,.0036,-60.07025793337349],
++  [10000000,5000000,.5,-.6928948991396866],
++  [10000000,4990000,.5,-22.784945856044214],
++  [10000000,0,1e-12,-1.0000000000005e-5],
++  [10000000,1,1e-12,-4.9999661669266644e-11],
++  [10000000,9999998,1-1e-12,-23.719049120945105],
++  [10000000,9963000,.9964,-16.41442114582744],
++  [10000000,1,1e-7,-.3068528194400542],
++  [10000000,40,1e-5,-25.613683862210966],
++  [10000000,2,1e-12,-1.6666536667241998e-16],
++  [10000000,10,.004,-39989.3117158913]
++ ];
++ for(const [n,k,p,expected] of vectors){const actual=engine.__test.binomialLowerTail(n,k,p);close(actual.logP,expected,2e-11);assert.ok(actual.p>=0&&actual.p<=1)}
++ const almostOne=engine.__test.binomialLowerTail(10000000,1,1e-12);close(almostOne.logP/-4.9999661669266644e-11,1,1e-11);
++ const nearOne=engine.__test.binomialLowerTail(10000000,2,1e-12);assert.ok(nearOne.logP<0);close(nearOne.logP/-1.6666536667241998e-16,1,1e-10);
++ const tiny=engine.__test.binomialLowerTail(10000000,10,.004);assert.equal(tiny.p,0);assert.ok(Number.isFinite(tiny.logP));
++});
++
++test('refutation uses the setting-wise channel minimum, allowed-setting maximum, rows and three-hypothesis corrections',()=>{
++ const entries=[fixture(1,[-6,-5,-4,-3,-2,-1],{games:80,bb:0,rb:0}),fixture(2,[-1,-2,-3,-4,-5,-6],{games:100,bb:1,rb:0})];
++ const result=engine.analyze(entries);assert.equal(result.ok,true);
++ for(const h of result.hypotheses){
++  const ps=entries.map(entry=>{
++   const {games,bb,rb}=entry.result.input;
++   return Math.max(...Array.from(h.allowed,s=>{const row=entry.result.engine.table.settings[s-1];return Math.min(1,3*Math.min(directCDF(games,bb,1/row.b),directCDF(games,rb,1/row.r),directCDF(games,bb+rb,1/row.b+1/row.r)))}));
++  });
++  for(let i=0;i<ps.length;i++){close(h.refutation.rows[i].p,ps[i]);close(h.refutation.rows[i].logP,Math.log(ps[i]));assert.deepEqual(Object.keys(h.refutation.rows[i].channels),['bb','rb','total'])}
++  close(h.refutation.p,Math.min(1,2*Math.min(...ps)));close(h.refutation.familyP,Math.min(1,3*h.refutation.p));
++  close(h.refutation.logFamilyP,Math.log(h.refutation.familyP));
++  assert.equal(h.refutation.weakestRow.id,String(ps[0]<=ps[1]?1:2));
++ }
++ const weak=engine.analyze([fixture(1,undefined,{games:10000000,bb:0,rb:0}),fixture(2)]);
++ assert.ok(weak.hypotheses[0].refutation.logP<-10000);assert.ok(Number.isFinite(weak.hypotheses[0].refutation.logFamilyP));
++ assert.equal(weak.hypotheses[0].refutation.refuted,true);
++});
++
++test('worst compatibility row uses maximum logs and not q or the lower-tail weakest row',()=>{
++ const result=engine.analyze([fixture(1,[0,-1,-2,-8,-9,-10]),fixture(2,[-1,0,-2,-2,-3,-4])]);
++ for(const h of result.hypotheses){assert.equal(h.worstRow.id,'1');close(h.worstRow.logCompatibility,Math.max(...Array.from(h.allowed,s=>[-8,-9,-10][s-4])))}
++});
++
++test('aggregates retain explicit zero differences and separate partial differences without zero filling',()=>{
++ const entries=[fixture(1,undefined,{games:4000,bb:10,rb:8,diff:0}),fixture(2,undefined,{games:5000,bb:20,rb:15,diff:null})];
++ const result=engine.analyze(entries);assert.equal(result.ok,true);
++ assert.equal(result.aggregate.games,9000);assert.equal(result.aggregate.bb,30);assert.equal(result.aggregate.rb,23);
++ assert.equal(result.aggregate.diff,null);assert.equal(result.aggregate.diffN,1);assert.equal(result.aggregate.knownDiff,0);
++ close(result.aggregate.bbDenom,9000/30);close(result.aggregate.rbDenom,9000/23);close(result.aggregate.combinedDenom,9000/53);
++ assert.ok(result.warnings.some(w=>w.includes('差枚')));
++ entries[1].result.input.diff=-600;const complete=engine.analyze(entries);
++ assert.equal(complete.aggregate.diff,-600);assert.equal(complete.aggregate.diffN,2);
++ const zeroBonuses=engine.analyze([fixture(1,undefined,{bb:0,rb:0}),fixture(2,undefined,{bb:0,rb:0})]);
++ assert.equal(zeroBonuses.aggregate.bbDenom,null);assert.equal(zeroBonuses.aggregate.rbDenom,null);assert.equal(zeroBonuses.aggregate.combinedDenom,null);
++});
++
++test('homogeneous reference is bonus-only same-setting aggregate, while mixed machines remain valid',()=>{
++ const entries=[fixture(1,[-6,-5,-4,-3,-2,-1],{diff:-300}),fixture(2,[-1,-2,-3,-4,-5,-6],{diff:900})];
++ const result=engine.analyze(entries);assert.equal(result.aggregateJudgement.available,true);
++ const totalLogs=settings.map(s=>30*Math.log(1/s.b)+24*Math.log(1/s.r)+(8000-54)*Math.log1p(-1/s.b-1/s.r));
++ const max=Math.max(...totalLogs),values=totalLogs.map(l=>Math.exp(l-max)),sum=values.reduce((a,b)=>a+b,0),q=values.map(x=>x/sum);
++ q.forEach((x,i)=>close(result.aggregateJudgement.q[i],x));close(result.aggregateJudgement.p4,q[3]+q[4]+q[5]);close(result.aggregateJudgement.p5,q[4]+q[5]);close(result.aggregateJudgement.p6,q[5]);
++ const mixed=structuredClone(entries);mixed[1].result.input.machine='go';mixed[1].result.engine.table.key='go';mixed[1].result.engine.table.settings.forEach(s=>{s.b*=.95;s.r*=.9});
++ const analysis=engine.analyze(mixed);assert.equal(analysis.ok,true);assert.equal(analysis.aggregate.mixedMachines,true);assert.equal(analysis.aggregateJudgement.available,false);assert.ok(analysis.aggregateJudgement.reason.includes('混在'));
++ close(analysis.hypotheses[0].bonusLogEvidenceRatio,enumerateRatio(mixed.map(bonusLogs),[4,5,6]));
++});
++
++test('complete input contract rejects duplicates, missing results, malformed logs/tables and limits',()=>{
++ const invalid=[
++  [],[fixture(1)],Array.from({length:61},(_,i)=>fixture(i)),
++  [fixture(1),fixture(1)],
++  [fixture(1),fixture(2,undefined,{tableNo:' 1 '})],
++  [fixture(1),{id:'2',result:null}],
++  [fixture(1),{...fixture(2),id:''}],
++ ];
++ for(const patch of [{games:0},{games:10000001},{games:'1.5'},{games:true},{bb:''},{bb:-1},{bb:4001},{rb:null},{diff:'oops'},{diff:9007199254740992},{machine:'unknown'}])invalid.push([fixture(1),fixture(2,undefined,patch)]);
++ for(const patch of [
++  r=>r.ok=false,
++  r=>delete r.input,
++  r=>delete r.diagnostics,
++  r=>r.diagnostics.logs=[0,0,0,0,0],
++  r=>r.diagnostics.logs=[0,0,0,0,0,NaN],
++  r=>r.diagnostics.logs=[0,0,0,0,0,Infinity],
++  r=>r.diagnostics.logs=Array(6).fill(-Infinity),
++  r=>{r.q=Array(6);r.q[0]=1},
++  r=>r.q=[1,0,0,0,0,NaN],
++  r=>r.q=[0,0,0,0,0,0],
++  r=>r.engine.table.settings.pop(),
++  r=>r.engine.table.settings[0].setting=2,
++  r=>r.engine.table.settings[0].b=0,
++  r=>r.engine.table.settings[0].r=Infinity,
++  r=>{r.engine.table.settings[0].b=1;r.engine.table.settings[0].r=1},
++  r=>r.engine.table.key='go',
++  r=>r.engine.table.settings[0].b+=1,
++ ]){const entries=[fixture(1),fixture(2)];patch(entries[1].result);invalid.push(entries)}
++ invalid.push([fixture(1,undefined,{diff:Number.MAX_SAFE_INTEGER}),fixture(2,undefined,{diff:1})]);
++ for(const entries of invalid){const actual=engine.analyze(entries);assert.equal(actual.ok,false,JSON.stringify(entries));assert.ok(actual.errors.length>0);assert.ok(actual.errors.every(e=>typeof e==='string'&&/[ぁ-んァ-ヶ一-龯]/u.test(e)))}
++ const blanks=engine.analyze([fixture(1,undefined,{tableNo:''}),fixture(2,undefined,{tableNo:' '})]);assert.equal(blanks.ok,true);
++ const max=engine.analyze([fixture(1,undefined,{games:10000000}),fixture(2,undefined,{games:10000000})]);assert.equal(max.ok,true);
++ const cancelling=engine.analyze([fixture(1,undefined,{diff:Number.MAX_SAFE_INTEGER}),fixture(2,undefined,{diff:Number.MAX_SAFE_INTEGER}),fixture(3,undefined,{diff:-Number.MAX_SAFE_INTEGER})]);assert.equal(cancelling.ok,true);assert.equal(cancelling.aggregate.diff,Number.MAX_SAFE_INTEGER);
++});
++
++test('60-row allocation and refutation calculations stay bounded and normalized',()=>{
++ const entries=Array.from({length:60},(_,i)=>fixture(i+1));
++ const result=engine.analyze(entries);assert.equal(result.ok,true);assert.equal(result.n,60);
++ for(const h of result.hypotheses){
++  close(h.logEvidenceRatio,0);close(h.conditional.expectedCounts.reduce((a,b)=>a+b,0),60);
++  assert.equal(h.conditional.rows.length,60);assert.equal(h.refutation.rows.length,60);
++  assert.equal(h.conditional.topAllocations.length,h.allowed.length===1?1:8);
++  for(const allocation of h.conditional.topAllocations){assert.equal(allocation.counts.reduce((a,b)=>a+b,0),60);assert.ok(allocation.probability>0&&allocation.probability<=1)}
++ }
++ const h=result.hypotheses[0],balanced=h.conditional.topAllocations[0];
++ assert.deepEqual(Array.from(balanced.counts),[0,0,0,20,20,20]);
++ const logFactorial=n=>Array.from({length:n},(_,i)=>Math.log(i+1)).reduce((a,b)=>a+b,0);
++ close(Math.log(balanced.probability),logFactorial(60)-3*logFactorial(20)-60*Math.log(3));
++});
++
++test('warnings describe low exposure, inverse warnings, weight assumptions and selected-after-observation limits',()=>{
++ const entries=[fixture(1,undefined,{games:1000,bb:3,rb:2,diff:0}),fixture(2)];entries[0].result.reverseWarn=true;
++ const result=engine.analyze(entries);assert.equal(result.ok,true);
++ for(const marker of ['2000','差枚','重み','選別','同じ設定'])assert.ok(result.warnings.some(w=>w.includes(marker)),marker);
++ assert.ok(result.warnings.some(w=>w.includes('独立')));
++});
++
++test('real adapter output works for all eight machines; analyze is pure and does not rewrite individual q',async()=>{
++ const {ctx,bridge}=await boot({loadApp:false});
++ for(const machine of ctx.JUGESTJudgement.MACHINE_KEYS){
++  const entries=[1,2].map(id=>({id:String(id),result:bridge.judgeObservedMachine({machine,tableNo:String(id),games:7859,bb:31,rb:35,diff:id===1?1500:null})}));
++  const before=structuredClone(entries);freeze(entries);
++  const first=engine.analyze(entries),second=engine.analyze(entries);
++  assert.equal(first.ok,true,machine);assert.deepEqual(plain(first),plain(second));assert.deepEqual(structuredClone(entries),before);
++ }
++ assert.ok(Object.isFrozen(engine));assert.ok(Object.isFrozen(engine.__test));
++});
+diff --git a/tests/helpers/judgement-preservation.mjs b/tests/helpers/judgement-preservation.mjs
+index 7048185..b82c6e1 100644
+--- a/tests/helpers/judgement-preservation.mjs
++++ b/tests/helpers/judgement-preservation.mjs
+@@ -6,8 +6,8 @@ import {createHash} from 'node:crypto';
+ 
+ // Pin only reviewed additions; original production hash fixtures stay unchanged.
+ const APPROVED_BLOCKS=Object.freeze({
+- '  // BEGIN independent judgement UI\n':'efa1c27d4a3c0a14dbc7c95143b018a9c8289e150a1f76ab175929e6f25da75d',
+- '/* BEGIN independent judgement styles */\n':'962b94a63ae73dc83ae4bc756154f70af0bf02a5a29da2f2c6f1f8714c2e7862',
++ '  // BEGIN independent judgement UI\n':'237c72d031d53f67b15651b5fd70b30010f0ed88d15fbc7e5dffb2e032014117',
++ '/* BEGIN independent judgement styles */\n':'df15e1246ed3b28a7d16b0522c361aeaf9cc494cd56f023b1d5af9a8b01d2729',
+  '// Independent observed-data judgement: no session, context or persistence writes.\n':'8bcf1c9f5394ea7b75c960c7df3ef064273942555543d03a6f12c6992b57a5c4'
+ });
+ const REVIEWED_LIVE_REVERSE=Object.freeze({
+@@ -66,6 +66,9 @@ function block(source,start,end,replacement=''){
+ }
+ export function withoutJudgementAdditions(file,source){
+  if(file==='app-v510.js'){
++  // Exact source restoration for the bounded draft-storage additions only.
++  source=replace(source,"function loadUIState(){try{const raw=global.localStorage?.getItem?.(UI_KEY);return typeof raw==='string'&&raw.length<=2*1024*1024?safeJSON(raw,{}):{}}catch(_){return {}}}\n","function loadUIState(){try{return safeJSON(global.localStorage?.getItem?.(UI_KEY),{})}catch(_){return {}}}\n");
++  source=replace(source,"  persist(){let reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';try{const drafts=this.observedDrafts();reason=this.observedDraftError(drafts);if(reason)throw Error('保存できない入力');const value=JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug,observedGroup:this.observed.groupEnabled,observedSort:this.observed.sort,observedAllocation:this.observed.allocation,observedDrafts:drafts});if(value.length>2*1024*1024){reason='保存データのサイズが上限を超えています。';throw Error('保存データの上限超過')}reason='端末の保存領域に書き込めません。空き容量やブラウザの保存設定を確認してください。';if(typeof global.localStorage?.setItem!=='function')throw Error('UI保存を利用できません');global.localStorage.setItem(UI_KEY,value);this.observed.persistenceFailed=false;this.observed.persistenceReason=''}catch(_){this.observed.persistenceFailed=true;this.observed.persistenceReason=reason}this.patchObservedPersistenceNotice()}\n","  persist(){try{global.localStorage?.setItem?.(UI_KEY,JSON.stringify({workspace:this.state.workspace,activeStore:this.state.activeStore,noticeLedger:this.noticeLedger,observedMode:this.observed.mode,observedDebug:this.observed.debug}))}catch(_){}}\n");
+   source=stripLiveReverseBlock(source,'\n// BEGIN reviewed live judgement compact helpers\n','// END reviewed live judgement compact helpers\n',REVIEWED_LIVE_JUDGE_COMPACT.jsHelpers);
+   for(const name of Object.keys(REVIEWED_LIVE_JUDGE_COMPACT.methods))source=restoreCompactJudgementMethod(source,name);
+   source=stripLiveReverseBlock(source,'// BEGIN reviewed live reverse display helpers\n','// END reviewed live reverse display helpers\n',REVIEWED_LIVE_REVERSE.helpers);
+@@ -76,7 +79,9 @@ export function withoutJudgementAdditions(file,source){
+    ["['home','judgement','live','store','records','data']","['home','live','store','records','data']"],
+    ["home:'ホーム',judgement:'判別',live:","home:'ホーム',live:"],
+    ["home:'⌂',judgement:'▥',live:","home:'⌂',live:"],
+-   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true};\n",''],
++   ["    this.observed={mode:saved.observedMode==='parallel'?'parallel':'single',single:null,rows:[],seq:0,selectedId:null,debug:saved.observedDebug===true,groupEnabled:saved.observedGroup===true,groupReport:null,sort:['input','tableNo','expectedSetting','p4','p5','p6'].includes(saved.observedSort)?saved.observedSort:'input',allocation:['all456','all56','all6'].includes(saved.observedAllocation)?saved.observedAllocation:'all456'};\n",''],
++   ["    this.restoreObservedDrafts(saved.observedDrafts);\n",''],
++   ["    if(this.handleObservedControl(event.target))return;\n",''],
+    [',observedDebug:this.observed.debug',''],
+    [',observedMode:this.observed.mode',''],
+    ['${this.renderObservedSettingsButton()}',''],
+@@ -95,6 +100,7 @@ export function withoutJudgementAdditions(file,source){
+   source=block(source,'/* BEGIN independent judgement styles */\n','\n/* END independent judgement styles */\n');
+   source=replace(source,'grid-template-columns:repeat(6,1fr)','grid-template-columns:repeat(5,1fr)');
+  }else if(file==='index.html'){
++  source=replace(source,'<script src="./group-judge.js"></script><script src="./group-judge-view.js"></script>');
+   source=replace(source,'Independent judgement page v1 — 2026-10-02:\n- Added a second-position judgement workspace with single/parallel observed-data inputs and shared detailed results.\n- Reused externalJudge and the existing MCP summaries; diagnostic taps expose values from the same invocation.\n- Added distribution concentration, setting probability bars and an explicit structured-row draft interface.\n- Judgment math, MCP result schemas, PRE/store analysis, sessions and run-record persistence are unchanged.\n\n');
+   source=replace(source,'<script src="./judgement-model.js"></script><script src="./judgement-view.js"></script>');
+   source=replace(source,'function externalBonusJudgeQ(key,g,bb,rb,capture){','function externalBonusJudgeQ(key,g,bb,rb){');
+@@ -105,8 +111,10 @@ export function withoutJudgementAdditions(file,source){
+   source=block(source,'// Independent observed-data judgement: no session, context or persistence writes.\n','function rejudgeExternalMachine(r){','function rejudgeExternalMachine(r){');
+   source=replace(source,' getObservedJudgeMachines:()=>JUGGLER_MACHINE_KEYS.map(key=>({key,name:M[key].name})),\n judgeObservedMachine:(input)=>v510JudgeObservedMachine(input||{}),\n');
+  }else if(file==='build.mjs'){
++  source=replace(source,"'group-judge.js','group-judge-view.js',");
+   source=replace(source,"'judgement-model.js','judgement-view.js',");
+  }else if(file==='tests/helpers/runtime.mjs'){
++  source=replace(source,"'group-judge.js','group-judge-view.js',");
+   source=replace(source,",htmlSource=null",'');
+   source=replace(source,"'judgement-model.js','judgement-view.js',",'');
+   source=replace(source,"htmlSource??fs.readFileSync('index.html','utf8')","fs.readFileSync('index.html','utf8')");
+diff --git a/tests/helpers/runtime.mjs b/tests/helpers/runtime.mjs
+index 8845820..ad28978 100644
+--- a/tests/helpers/runtime.mjs
++++ b/tests/helpers/runtime.mjs
+@@ -17,7 +17,7 @@ export async function boot({storage=memoryStorage(),fetch=async()=>{throw Error(
+  history:{pushState(){},replaceState(){}},confirm:()=>true,fetch,
+  HTMLElement:class {constructor(){this.isConnected=true}attachShadow(){this.shadowRoot=makeElement()}},customElements:{get:k=>classes.get(k),define:(k,v)=>classes.set(k,v)}};
+  ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
+- for(const f of ['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
++ for(const f of ['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','group-judge.js','group-judge-view.js','core-v510.js'])vm.runInContext(fs.readFileSync(f,'utf8'),ctx,{filename:f});
+  const html=htmlSource??fs.readFileSync('index.html','utf8');for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].trim())vm.runInContext(m[1],ctx,{filename:'index-inline.js'});
+  if(sync)ctx.JUGESTDeviceSync=sync;else vm.runInContext(fs.readFileSync('sync-core.js','utf8'),ctx,{filename:'sync-core.js'});
+  for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
+diff --git a/tests/offline-judge-preview-browser.mjs b/tests/offline-judge-preview-browser.mjs
+new file mode 100644
+index 0000000..308d8e6
+--- /dev/null
++++ b/tests/offline-judge-preview-browser.mjs
+@@ -0,0 +1,42 @@
++// Development artifact only. Never opens a remote page or permits network access.
++import assert from 'node:assert/strict';
++import {createRequire} from 'node:module';
++import {pathToFileURL} from 'node:url';
++import path from 'node:path';
++const {chromium,webkit,devices}=createRequire(import.meta.url)('playwright');
++const file=path.resolve('docs/development/completion-20261012/preview.html');
++const results=[];
++for(const engine of process.env.JUGEST_BROWSER_ENGINE?[process.env.JUGEST_BROWSER_ENGINE]:['chromium','webkit']){
++ const browser=await (engine==='webkit'?webkit:chromium).launch({headless:true,...(engine==='chromium'?{executablePath:process.env.JUGEST_BROWSER_EXECUTABLE_PATH,args:['--no-sandbox']}: {})});
++ try{
++  for(const width of process.env.JUGEST_BROWSER_WIDTHS?process.env.JUGEST_BROWSER_WIDTHS.split(',').map(Number):[320,375,390,430]){
++   const context=await browser.newContext({...devices['iPhone 13'],viewport:{width,height:844},serviceWorkers:'block'});
++   const external=[],errors=[];
++   await context.route('**/*',route=>/^(file:|data:|blob:)/.test(route.request().url())?route.continue():(external.push(route.request().url()),route.abort()));
++   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
++   await page.goto(pathToFileURL(file).href);
++   await page.waitForFunction(()=>document.querySelector('jugest-app')?.bridge()?.judgeObservedMachine);
++   assert.equal(await page.locator('meta[http-equiv="Content-Security-Policy"]').count(),1,'a real CSP meta element must block network access');
++   await page.waitForFunction(()=>document.querySelector('jugest-app')?.observed.groupReport?.ok===true,null,{timeout:10000});
++   const host=page.locator('jugest-app');
++   assert.equal(await host.locator('[data-observed-result-row]').count(),5);
++   assert.equal(await host.locator('[data-development-note]').count(),1);
++   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
++   const editor=host.locator('details[data-observed-editor]');if(await editor.count()&&!await editor.evaluate(e=>e.open))await editor.locator('summary').click();
++   const number=host.locator('[data-observed-field="tableNo"]').first();
++   await number.fill('');
++   assert.equal(await host.locator('[data-observed-group-report]').count(),0,'editing immediately invalidates the group');
++   await host.locator('[data-observed-action="judge-all"]').click();
++   assert.equal(await page.evaluate(()=>document.querySelector('jugest-app').observed.groupReport.ok),true);
++   await page.reload();
++   await page.waitForFunction(()=>document.querySelector('jugest-app')?.observed.groupReport?.ok===true);
++   assert.equal(await page.evaluate(()=>document.querySelector('jugest-app').observed.rows[0].input.tableNo),'','the preview preserves edited drafts on reload');
++   const blocked=await page.evaluate(async()=>{try{await fetch('https://jugest.net/api/health');return false}catch{return true}});
++   assert.equal(blocked,true,'even GET requests to production must fail');
++   assert.deepEqual(external,[],'no remote request may be attempted');assert.deepEqual(errors,[]);
++   results.push({engine,width,rows:5,rejudge:true,draftReload:true,networkBlocked:true,pageErrors:0});
++   console.error(`PASS offline-preview/${engine}/${width}`);await context.close();
++  }
++ }finally{await browser.close()}
++}
++console.log(JSON.stringify({scenarios:results.length,results}));
+diff --git a/tests/parallel-group-browser.mjs b/tests/parallel-group-browser.mjs
+new file mode 100644
+index 0000000..58f27d4
+--- /dev/null
++++ b/tests/parallel-group-browser.mjs
+@@ -0,0 +1,174 @@
++// Run explicitly with Playwright. All HTTP/data are local; production is blocked.
++import assert from 'node:assert/strict';
++import {createRequire} from 'node:module';
++import {createServer} from 'node:http';
++import {once} from 'node:events';
++import fs from 'node:fs';
++import path from 'node:path';
++import {tmpdir} from 'node:os';
++import {createWebServer} from '../vps/src/web-server.mjs';
++
++const {chromium,webkit,devices}=createRequire(import.meta.url)('playwright');
++const root=process.cwd(),dir=fs.mkdtempSync(path.join(tmpdir(),'jugest-parallel-browser-'));
++const evidence=path.resolve(process.env.JUGEST_UI_EVIDENCE_DIR||path.join(dir,'evidence'));fs.mkdirSync(evidence,{recursive:true});
++const patched=createWebServer({rootDir:root,relayDbPath:path.join(dir,'relay.sqlite'),canonicalDbPath:path.join(dir,'canonical.sqlite'),rawRoot:path.join(dir,'raw'),accessConfig:null});
++const built=createServer((req,res)=>{
++ const u=new URL(req.url,'http://localhost');
++ if(u.pathname.startsWith('/api/')){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,stores:[],items:[],receipts:[],linked:false}));return}
++ const file=path.resolve(root,'public','.'+(u.pathname==='/'?'/index.html':u.pathname));
++ if(!file.startsWith(path.resolve(root,'public')+path.sep)){res.writeHead(403);res.end();return}
++ try{const body=fs.readFileSync(file);res.writeHead(200,{'content-type':{'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png'}[path.extname(file)]||'application/octet-stream'});res.end(body)}catch{res.writeHead(404);res.end()}
++});
++for(const s of [patched,built]){s.listen(0,'127.0.0.1');await once(s,'listening')}
++const wanted=process.env.JUGEST_BROWSER_ENGINE;
++assert.ok(!wanted||['chromium','webkit'].includes(wanted),'choose chromium or webkit');
++const widths=process.env.JUGEST_BROWSER_WIDTHS?process.env.JUGEST_BROWSER_WIDTHS.split(',').map(Number):[320,375,390,430];
++assert.ok(widths.length&&widths.every(w=>[320,375,390,430].includes(w)),'choose widths from 320,375,390,430');
++const deliveries=[['built',built],['patched',patched]].filter(([name])=>!process.env.JUGEST_BROWSER_DELIVERY||name===process.env.JUGEST_BROWSER_DELIVERY);
++assert.ok(deliveries.length,'choose built or patched delivery');
++const results=[];
++let browser;
++try{
++ for(const name of wanted?[wanted]:['chromium','webkit']){
++  const executable=process.env.JUGEST_BROWSER_EXECUTABLE_PATH;
++  browser=await (name==='webkit'?webkit:chromium).launch({headless:true,...(name==='chromium'?{...(executable?{executablePath:executable}:{}),args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
++  for(const [delivery,server] of deliveries)for(const width of widths){
++   const origin=`http://127.0.0.1:${server.address().port}`;
++   const context=await browser.newContext({...devices['iPhone 13'],viewport:{width,height:844},serviceWorkers:'block'});
++   await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
++   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
++   await page.goto(origin,{waitUntil:'networkidle'});
++   await page.waitForFunction(()=>document.querySelector('jugest-app')?.state&&window.JUGESTGroupJudge);
++   const host=page.locator('jugest-app');
++   await host.locator('[data-workspace="judgement"]').click();
++   await host.locator('[data-observed-action="parallel"]').click();
++   const openEditor=async()=>{const e=host.locator('details[data-observed-editor]');if(await e.count()&&!await e.evaluate(x=>x.open))await e.locator('summary').first().click()};
++   const field=(key,i)=>host.locator(`[data-observed-field="${key}"]`).nth(i);
++   const stable=async()=>host.locator('.observed-page').evaluate(e=>Promise.all(e.getAnimations().map(a=>a.finished)));
++   const geometry=async()=>{
++    await stable();
++    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&document.body.scrollWidth<=innerWidth+1));
++    const overflow=await host.locator('.observed-page').evaluate(e=>[...e.querySelectorAll('*')].filter(x=>{const r=x.getBoundingClientRect();return r.width&&(r.left< -1||r.right>innerWidth+1)}).map(x=>({tag:x.tagName,cls:x.className,text:x.textContent.slice(0,40)})));
++    assert.deepEqual(overflow,[],`${name}/${delivery}/${width} element overflow`);
++    for(const input of await host.locator('[data-observed-parallel-editor] input,[data-observed-parallel-editor] select').all())assert.ok(await input.evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
++    for(const button of await host.locator('[data-observed-parallel-editor] button').all()){
++     if(!await button.isVisible())continue;const b=await button.boundingBox();assert.ok(b.width>=43.5&&b.height>=43.5,JSON.stringify(b));
++    }
++   };
++   for(let i=0;i<5;i++){
++    if(i)await host.locator('[data-observed-action="add"]').click();
++    await field('machine',i).selectOption('mr');
++    for(const [key,value] of Object.entries({tableNo:String(100+i),games:'5000',bb:String(12+i*3),rb:String(14+i*4),diff:i?'0':''}))await field(key,i).fill(value);
++   }
++   await field('diff',2).fill('-500');await geometry();
++   if(delivery==='patched'){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(evidence,`${name}-${delivery}-${width}-input.png`),scale:'css'})}
++   await host.locator('[data-observed-group-toggle]').check();
++   await host.locator('[data-observed-action="judge-all"]').click();
++   assert.equal(await host.locator('[data-row-summary]').count(),5);
++   for(const row of await host.locator('[data-row-summary]').all())assert.match(await row.innerText(),/最有力 設定/);
++   await host.locator('[data-observed-group-report]').waitFor();
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/全456/);
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/成立確率|確率では/);
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/入力済み|4\/5|4台/);
++   const original=await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.result.q)));
++   const inputOrder=await page.evaluate(()=>document.querySelector('jugest-app').observed.rows.map(r=>r.id));
++   for(const key of ['expectedSetting','p4','p5','p6','tableNo']){
++    await host.locator('[data-observed-sort]').selectOption(key);
++    const wantedOrder=await page.evaluate(key=>document.querySelector('jugest-app').observed.rows.slice().sort((a,b)=>key==='tableNo'?Number(a.input.tableNo)-Number(b.input.tableNo):b.result[key]-a.result[key]).map(r=>String(r.id)),key);
++    const shownOrder=await host.locator('[data-observed-result-row]').evaluateAll(nodes=>nodes.map(e=>e.dataset.observedResultRow));
++    assert.deepEqual(shownOrder,wantedOrder,`${key} result order`);
++   }
++   const expected=await page.evaluate(()=>document.querySelector('jugest-app').observed.rows.map(r=>r.id));
++   assert.deepEqual(expected,inputOrder,'sorting results preserves input order');
++   await host.locator('[data-observed-allocation]').selectOption('all56');
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/全56/);
++   await host.locator('[data-observed-allocation]').selectOption('all6');
++   await host.locator('[data-observed-group-toggle]').uncheck();
++   assert.equal(await host.locator('[data-observed-group-report]').count(),0);
++   await host.locator('[data-observed-group-toggle]').check();
++   assert.equal(await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.result.q))),original);
++   await geometry();
++   await host.locator('[data-observed-action="detail"]').first().click();
++   assert.equal(await host.locator('[data-observed-unified]').count(),1);
++   await host.locator('[data-observed-action="close-detail"]').click();
++   assert.equal(await host.locator('[data-row-summary]').count(),5);
++   await openEditor();
++   await field('rb',0).focus();
++   const scroll=await page.evaluate(()=>scrollY);await field('rb',0).fill('15');
++   assert.equal(await host.locator('[data-observed-group-report]').count(),0);
++   assert.ok(await field('rb',0).evaluate(e=>e.getRootNode().activeElement===e));
++   assert.ok(Math.abs(await page.evaluate(()=>scrollY)-scroll)<3,'typing preserves scroll');
++   await field('rb',0).press('ArrowLeft');
++   const caret=await field('rb',0).evaluate(e=>e.selectionStart);
++   await field('rb',0).press('0');
++   assert.deepEqual(await field('rb',0).evaluate(e=>[e.selectionStart,e.selectionEnd]),[caret+1,caret+1],'editing preserves the native caret');
++   assert.ok(await field('rb',0).evaluate(e=>e.getRootNode().activeElement===e));
++   await field('rb',0).fill('15');
++   await host.locator('[data-observed-action="judge-all"]').click();
++   await openEditor();await host.locator('[data-observed-action="duplicate"]').first().click();
++   assert.equal(await host.locator('[data-observed-row]').count(),6);
++   const draft=await page.evaluate(()=>document.querySelector('jugest-app').observed.rows.map(r=>r.input));
++   const duplicateIndex=draft.findIndex((r,i)=>i>0&&r.tableNo==='');
++   assert.ok(duplicateIndex>=0,'duplicate clears machine number');
++   await field('tableNo',duplicateIndex).fill('100');await host.locator('[data-observed-action="judge-all"]').click();
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/重複|同じ台番/);
++   await openEditor();await host.locator('[data-observed-action="delete"]').nth(duplicateIndex).click();
++   await host.locator('[data-observed-action="judge-all"]').click();
++   await openEditor();await field('bb',0).fill('');await host.locator('[data-observed-action="judge-all"]').click();
++   assert.equal(await host.locator('[data-row-summary]').count(),4);
++   assert.match(await host.locator('[data-observed-group-report]').innerText(),/入力|未判別|確認/);
++   await field('bb',0).fill('12');await host.locator('[data-observed-action="judge-all"]').click();
++   await host.locator('[data-observed-allocation]').selectOption('all456');await geometry();
++   if(delivery==='patched'){
++    await host.locator('[data-observed-group-report]').evaluate(e=>{
++     const top=e.getRootNode().querySelector('.topbar')?.getBoundingClientRect().bottom||0;
++     scrollTo({top:scrollY+e.getBoundingClientRect().top-top-8,behavior:'instant'});
++    });
++    await page.screenshot({path:path.join(evidence,`${name}-${delivery}-${width}-group.png`),scale:'css'});
++   }
++   // Stable internal IDs are not visible editor positions. Exercise the whole
++   // editor, including a skipped empty row, duplicate insertion and deletion.
++   await openEditor();await field('tableNo',0).fill('');await field('tableNo',4).fill('');
++   for(const [key,value] of Object.entries({games:'8000',bb:'4',rb:'1',diff:''}))await field(key,0).fill(value);
++   const identities=async()=>{
++    await host.locator('[data-observed-action="judge-all"]').click();
++    for(const details of await host.locator('[data-observed-group-report] details').all())if(!await details.evaluate(e=>e.open))await details.locator('summary').first().click();
++    const wanted=await page.evaluate(()=>{
++     const o=document.querySelector('jugest-app').observed,report=o.groupReport;
++     if(!report?.ok)throw Error(JSON.stringify(report));
++     const label=r=>r.tableNo||`台番なし（${o.rows.findIndex(x=>x.id===r.id)+1}行目）`;
++     const h=report.hypotheses.find(x=>x.id===o.allocation);
++     return{n:report.n,worst:report.hypotheses.map(x=>label(x.worstRow)),conditional:h.conditional.rows.map(label),p:h.refutation.rows.map(label),individual:Object.fromEntries(o.rows.filter(x=>x.result).map((x,i)=>[x.id,x.input.tableNo||`台番なし（${o.rows.indexOf(x)+1}行目）`]))};
++    });
++    assert.equal(wanted.n,5);
++    assert.deepEqual(await host.locator('.observed-group-meaning b').allTextContents(),wanted.worst);
++    assert.deepEqual(await host.locator('.observed-group-conditional-row>b').allTextContents(),wanted.conditional);
++    assert.deepEqual(await host.locator('.observed-group-p-row>b').allTextContents(),wanted.p);
++    for(const row of await host.locator('[data-observed-result-row]').all())assert.equal(await row.locator('.observed-result-main>b').innerText(),wanted.individual[await row.getAttribute('data-observed-result-row')]);
++    await geometry();
++   };
++   await identities();await openEditor();await host.locator('[data-observed-action="duplicate"]').first().click();
++   for(const key of ['tableNo','games','bb','rb','diff'])await field(key,0).fill('');
++   await field('machine',0).selectOption('');
++   await identities();await openEditor();await host.locator('[data-observed-action="delete"]').first().click();await identities();
++   await openEditor();await field('tableNo',0).fill('<img src=x onerror=alert(1)>');
++   await host.locator('[data-observed-action="judge-all"]').click();assert.equal(await host.locator('[data-row-summary] img').count(),0);await geometry();
++   const saved=await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input)));
++   await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>document.querySelector('jugest-app')?.observed?.rows?.length===5);
++   assert.equal(await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input))),saved);
++   assert.equal(await host.locator('[data-row-summary]').count(),0,'never restore stale results');
++   assert.equal(await host.locator('[data-observed-group-report]').count(),0,'never restore stale group');
++   assert.ok(await host.locator('[data-observed-group-toggle]').isChecked());await geometry();
++   await host.locator('.bottom-nav [data-workspace="home"]').click();await host.locator('.bottom-nav [data-workspace="judgement"]').click();
++   assert.equal(await page.evaluate(()=>JSON.stringify(document.querySelector('jugest-app').observed.rows.map(r=>r.input))),saved,'workspace changes preserve all drafts');
++   assert.deepEqual(errors,[],`${name}/${delivery}/${width} page errors`);
++   results.push({engine:name,browserVersion:browser.version(),delivery,width,rows:5,negativeDifference:true,draftReload:true,workspaceSwitch:true,groupToggle:true,sort:true,conditionalModes:true,duplicate:true,duplicateNumberBlocked:true,partialInputBlocked:true,unnumberedEditorIdentity:true,skippedBlankIdentity:true,modalSettingVisible:true,focusAndScrollStable:true,caretStable:true,escaped:true,pageErrors:0});
++   console.error(`PASS ${name}/${delivery}/${width}`);
++   await context.close();
++  }
++  await browser.close();browser=null;
++ }
++ console.log(JSON.stringify({scenarios:results.length,results}));
++}finally{
++ await browser?.close();for(const s of [patched,built]){s.closeAllConnections();await new Promise(r=>s.close(r))}fs.rmSync(dir,{recursive:true,force:true});
++}
+diff --git a/tests/parallel-group-ui.mjs b/tests/parallel-group-ui.mjs
+new file mode 100644
+index 0000000..5fb3c6b
+--- /dev/null
++++ b/tests/parallel-group-ui.mjs
+@@ -0,0 +1,322 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import {boot,memoryStorage,plain} from './helpers/runtime.mjs';
++
++const UI_KEY='jugest:v510:ui';
++const sample={machine:'my',tableNo:'102',games:5000,bb:20,rb:20,diff:-500};
++const rows=[sample,{...sample,tableNo:'101',bb:25,rb:25,diff:''}];
++async function ready(options={}){
++ const runtime=await boot(options);
++ assert.ok(runtime.ctx.JUGESTGroupJudge,'the shared runtime loads the group engine');
++ assert.ok(runtime.ctx.JUGESTGroupJudgeView,'the shared runtime loads the pure display');
++ return runtime;
++}
++function control(attribute,value,checked){return {value,checked,closest:s=>s===`[${attribute}]`?{value,checked}:null};}
++function edit(app,row,key,value){const node={dataset:{observedField:key},value,closest:s=>s==='[data-observed-row]'?{dataset:{observedRow:row.id}}:null};app.editObservedField(node);return node;}
++function change(app,attribute,value,checked){app.onChange({target:control(attribute,value,checked)});}
++
++test('versioned input drafts survive reload, retain explicit zero and never restore results',async()=>{
++ const {app,storage}=await ready();
++ app.acceptMachineRows([{...sample,bb:0,rb:0,diff:0},rows[1]]);
++ change(app,'data-observed-group-toggle',null,true);
++ app.handleObservedAction('judge-all');
++ assert.equal(app.observed.groupReport.ok,true);
++ const before=plain(app.observed.rows.map(r=>r.input));
++ const saved=JSON.parse(storage.getItem(UI_KEY));
++ assert.equal(saved.observedDrafts.version,1);
++ assert.ok(!JSON.stringify(saved.observedDrafts).includes('diagnostics'));
++ assert.ok(!JSON.stringify(saved.observedDrafts).includes('result'));
++ const reload=await ready({storage});
++ assert.deepEqual(plain(reload.app.observed.rows.map(r=>r.input)),before);
++ assert.equal(reload.app.observed.rows[0].input.bb,'0');
++ assert.equal(reload.app.observed.rows[0].input.diff,'0');
++ assert.ok(reload.app.observed.rows.every(r=>r.result===null));
++ assert.equal(reload.app.observed.groupEnabled,true);
++ assert.equal(reload.app.observed.groupReport,null);
++ assert.equal(reload.app.observed.selectedId,null);
++ reload.app.render();assert.doesNotMatch(reload.app.mount.innerHTML,/data-observed-group-report/);
++});
++
++test('single drafts and every edit, add, duplicate and delete mutation persist',async()=>{
++ const {app,storage}=await ready();app.acceptMachineRows([sample]);
++ edit(app,app.observed.single,'diff','0');
++ assert.equal(JSON.parse(storage.getItem(UI_KEY)).observedDrafts.single.diff,'0');
++ app.acceptMachineRows(rows);app.handleObservedAction('judge-all');
++ const first=app.observed.rows[0];app.handleObservedAction('duplicate',first.id);
++ assert.equal(app.observed.rows.length,3);
++ const copy=app.observed.rows[1];assert.notEqual(copy.id,first.id);
++ assert.equal(copy.input.tableNo,'');
++ assert.deepEqual(plain({...copy.input,tableNo:first.input.tableNo}),plain(first.input));
++ assert.equal(copy.result,null);assert.deepEqual(plain(copy.errors),{});
++ assert.equal(JSON.parse(storage.getItem(UI_KEY)).observedDrafts.rows.length,3);
++ app.handleObservedAction('add');assert.equal(JSON.parse(storage.getItem(UI_KEY)).observedDrafts.rows.length,4);
++ app.handleObservedAction('delete',copy.id);assert.equal(JSON.parse(storage.getItem(UI_KEY)).observedDrafts.rows.length,3);
++});
++
++test('a real storage failure keeps the editor usable and reports only the unsaved state',async()=>{
++ const {app,storage}=await ready();app.acceptMachineRows(rows);
++ const save=storage.setItem;storage.setItem=()=>{throw Error('quota exceeded')};
++ edit(app,app.observed.rows[0],'bb','21');
++ assert.equal(app.observed.rows[0].input.bb,'21');assert.equal(app.observed.persistenceFailed,true);
++ app.render();assert.match(app.mount.innerHTML,/入力を端末に保存できませんでした/);
++ assert.doesNotMatch(app.mount.innerHTML,/data-observed-persistence-status hidden/);
++ storage.setItem=save;app.persist();assert.equal(app.observed.persistenceFailed,false);
++ app.render();assert.match(app.mount.innerHTML,/data-observed-persistence-status hidden/);
++});
++
++test('one overlong field among 200 drafts preserves the last reloadable save and recovers without truncation',async()=>{
++ const {app,storage}=await ready();
++ const many=Array.from({length:200},(_,i)=>({...sample,tableNo:String(i)}));app.acceptMachineRows(many);
++ const saved=storage.getItem(UI_KEY),before=plain(app.observed.rows.map(row=>row.input));
++ const bad=app.observed.rows[199];edit(app,bad,'tableNo','x'.repeat(2049));
++ assert.equal(app.observed.persistenceFailed,true);
++ assert.equal(storage.getItem(UI_KEY),saved,'an unreloadable payload cannot overwrite the last valid save');
++ assert.equal(bad.input.tableNo.length,2049,'the live draft is never truncated');
++ app.render();assert.match(app.mount.innerHTML,/台番.*2,048|台番.*2048/);
++ assert.equal(storage.getItem(UI_KEY),saved,'a render-time save cannot bypass the same validation');
++ const reload=await ready({storage:memoryStorage({[UI_KEY]:saved})});
++ assert.deepEqual(plain(reload.app.observed.rows.map(row=>row.input)),before);
++ edit(app,app.observed.rows[0],'bb','21');assert.equal(storage.getItem(UI_KEY),saved);
++ edit(app,bad,'tableNo','199');assert.equal(app.observed.persistenceFailed,false);
++ const recovered=await ready({storage:memoryStorage({[UI_KEY]:storage.getItem(UI_KEY)})});
++ assert.equal(recovered.app.observed.rows.length,200);assert.equal(recovered.app.observed.rows[0].input.bb,'21');
++ assert.equal(recovered.app.observed.rows[199].input.tableNo,'199');
++});
++
++test('1001 drafts cannot overwrite a valid save; returning to the row limit saves every row',async()=>{
++ const {app,storage}=await ready();
++ app.acceptMachineRows(Array.from({length:1000},(_,i)=>({...sample,tableNo:String(i)})));
++ const saved=storage.getItem(UI_KEY);assert.equal(app.observed.persistenceFailed,false);
++ app.handleObservedAction('add');assert.equal(app.observed.rows.length,1001);
++ assert.equal(app.observed.persistenceFailed,true);assert.equal(storage.getItem(UI_KEY),saved);
++ assert.match(app.mount.innerHTML,/1,000.*行|1000.*行/);
++ const reload=await ready({storage:memoryStorage({[UI_KEY]:saved})});assert.equal(reload.app.observed.rows.length,1000);
++ app.handleObservedAction('delete',app.observed.rows.at(-1).id);
++ assert.equal(app.observed.persistenceFailed,false);assert.equal(app.observed.rows.length,1000);
++ const recovered=await ready({storage:memoryStorage({[UI_KEY]:storage.getItem(UI_KEY)})});
++ assert.deepEqual(plain(recovered.app.observed.rows.map(row=>row.input)),plain(app.observed.rows.map(row=>row.input)));
++});
++
++test('unsupported, malformed and oversized stored drafts are ignored; 200 valid drafts retain unique ids',async()=>{
++ for(const value of [
++  {version:99,rows:[sample]},
++  {version:1,rows:[{...sample,games:{bad:true}}]},
++  {version:1,rows:'bad'},
++  {version:1,rows:[{...sample,tableNo:'x'.repeat(2049)}]},
++ ]){
++  const storage=memoryStorage({[UI_KEY]:JSON.stringify({observedMode:'parallel',observedDebug:true,observedDrafts:value})});
++  const {app}=await ready({storage});assert.equal(app.observed.rows.length,0);assert.equal(app.observed.debug,true);
++ }
++ const many=Array.from({length:200},(_,i)=>({...sample,tableNo:String(i),bb:'0',diff:''}));
++ const storage=memoryStorage({[UI_KEY]:JSON.stringify({observedMode:'parallel',observedDrafts:{version:1,single:null,rows:many}})});
++ const {app}=await ready({storage});assert.equal(app.observed.rows.length,200);
++ assert.equal(new Set(app.observed.rows.map(r=>r.id)).size,200);
++ app.handleObservedAction('add');assert.equal(new Set(app.observed.rows.map(r=>r.id)).size,201);
++ const huge=memoryStorage({[UI_KEY]:JSON.stringify({observedDrafts:{version:1,rows:[]},unused:'x'.repeat(2*1024*1024)})});
++ const result=await ready({storage:huge});assert.equal(result.app.observed.rows.length,0);
++});
++
++test('group mode uses cached complete results and preserves all ordinary individual distributions',async()=>{
++ const {app,ctx,bridge}=await ready();app.acceptMachineRows(rows);
++ let judgeCalls=0,groupCalls=0;const oldJudge=bridge.judgeObservedMachine,oldGroup=ctx.JUGESTGroupJudge;
++ ctx.JUGEST_CORE_BRIDGE={...bridge,judgeObservedMachine:x=>{judgeCalls++;return oldJudge(x)}};
++ ctx.JUGESTGroupJudge={...oldGroup,analyze:entries=>{groupCalls++;return oldGroup.analyze(entries)}};
++ app.handleObservedAction('judge-all');assert.equal(judgeCalls,2);assert.equal(groupCalls,0);
++ const q=plain(app.observed.rows.map(r=>r.result.q)),ids=app.observed.rows.map(r=>r.id);
++ change(app,'data-observed-group-toggle',null,true);assert.equal(groupCalls,1);
++ assert.equal(app.observed.groupReport.ok,true);
++ for(const key of ['tableNo','expectedSetting','p4','p5','p6','input'])change(app,'data-observed-sort',key);
++ for(const key of ['all56','all6','all456'])change(app,'data-observed-allocation',key);
++ app.handleObservedAction('detail',ids[0]);app.handleObservedAction('close-detail');
++ assert.equal(judgeCalls,2);assert.equal(groupCalls,1,'display controls never recompute');
++ change(app,'data-observed-group-toggle',null,false);assert.equal(app.observed.groupReport,null);
++ change(app,'data-observed-group-toggle',null,true);assert.equal(judgeCalls,2);assert.equal(groupCalls,2);
++ assert.deepEqual(plain(app.observed.rows.map(r=>r.result.q)),q);
++ assert.deepEqual(app.observed.rows.map(r=>r.id),ids);
++});
++
++test('unnumbered group rows use current editor ordinals after single mode, skipped blanks, duplication and deletion',async()=>{
++ const {app,ctx}=await ready();app.navigate('judgement');
++ assert.equal(app.observed.single.id,'1');app.handleObservedAction('parallel');
++ const weak=app.observed.rows[0];assert.equal(weak.id,'2');
++ const fill=(row,values)=>{for(const [key,value] of Object.entries(values))edit(app,row,key,String(value));};
++ fill(weak,{machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''});
++ app.handleObservedAction('add');const strong=app.observed.rows[1];assert.equal(strong.id,'3');
++ fill(strong,{machine:'mr',tableNo:'',games:8000,bb:40,rb:44,diff:''});
++ change(app,'data-observed-group-toggle',null,true);
++ const check=(weakRow,weakOrdinal,strongOrdinal)=>{
++  app.handleObservedAction('judge-all');assert.equal(app.observed.groupReport.ok,true);
++  assert.equal(app.observed.groupReport.n,2);
++  for(const h of app.observed.groupReport.hypotheses){assert.equal(h.worstRow.id,weakRow.id);assert.equal(h.refutation.weakestRow.id,weakRow.id);}
++  const html=app.mount.innerHTML.match(/<section class="panel observed-group-report"[\s\S]*?<\/section>/)?.[0];assert.ok(html);
++  const label=`台番なし（${weakOrdinal}行目）`;
++  assert.ok(html.includes(`最も整合しない台 <b>${label}</b>`),'the main warning identifies the actual editor row');
++  assert.ok(html.includes(`<dt>最も下振れした台</dt><dd>${label}</dd>`),'weakest row agrees with the main warning');
++  for(const ordinal of [weakOrdinal,strongOrdinal]){
++   const current=`台番なし（${ordinal}行目）`;
++   assert.ok(html.includes(`<div class="observed-group-conditional-row"><b>${current}</b>`),'conditional rows retain editor positions');
++   assert.ok(html.includes(`<div class="observed-group-p-row"><b>${current}</b>`),'p-value rows retain editor positions');
++  }
++ };
++ check(weak,1,2);const originalQ=plain(weak.result.q);
++ app.handleObservedAction('duplicate',weak.id);const copy=app.observed.rows[1];
++ for(const key of ctx.JUGESTJudgement.FIELDS)edit(app,weak,key,'');
++ check(copy,2,3);assert.deepEqual(plain(copy.result.q),originalQ,'display numbering never changes ordinary judgement');
++ app.handleObservedAction('duplicate',weak.id);const blankCopy=app.observed.rows[1];
++ check(copy,3,4);
++ app.handleObservedAction('delete',weak.id);check(copy,2,3);
++ app.handleObservedAction('delete',blankCopy.id);check(copy,1,2);
++});
++
++test('standalone group labels use target ordinals instead of internal ids, and optional editor metadata stays pure',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});
++ const report=ctx.JUGESTGroupJudge.analyze([
++  {id:'9001',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''})},
++  {id:'9002',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:40,rb:44,diff:''})},
++ ]);assert.equal(report.ok,true);
++ const before=structuredClone(report),rowNumbers=Object.freeze({'9001':4,'9002':7});
++ const view=ctx.JUGESTGroupJudgeView;
++ const fallback=view.render(report);
++ assert.ok(fallback.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
++ assert.ok(fallback.includes('<dt>最も下振れした台</dt><dd>台番なし（対象1台目）</dd>'));
++ assert.ok(fallback.includes('<div class="observed-group-conditional-row"><b>台番なし（対象2台目）</b>'));
++ assert.ok(fallback.includes('<div class="observed-group-p-row"><b>台番なし（対象2台目）</b>'));
++ assert.doesNotMatch(fallback,/行900[12]|900[12]行目/);
++ for(const hypothesis of ['all456','all56','all6']){
++  const html=view.render(report,{hypothesis,rowNumbers});
++  assert.ok(html.includes('最も整合しない台 <b>台番なし（4行目）</b>'));
++  assert.ok(html.includes('<dt>最も下振れした台</dt><dd>台番なし（4行目）</dd>'));
++  assert.ok(html.includes('<div class="observed-group-conditional-row"><b>台番なし（7行目）</b>'));
++  assert.ok(html.includes('<div class="observed-group-p-row"><b>台番なし（7行目）</b>'));
++ }
++ assert.deepEqual(structuredClone(report),before);assert.deepEqual(rowNumbers,{'9001':4,'9002':7});
++});
++
++test('parallel result rows retain compact most-likely text, including every tied setting',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});const view=ctx.JUGESTJudgementView;
++ const result=bridge.judgeObservedMachine(sample),before=structuredClone(result);
++ const html=view.parallelResults([{id:'1',result}]);
++ assert.ok(html.includes(`最有力 <b>${result.mostLikelySettings.map(s=>`設定${s}`).join(' / ')}</b>`));
++ for(const label of ['期待設定','P4+','P5+','P6','推定ブドウ','observed-result-band'])assert.ok(html.includes(label),label);
++ const tied=view.parallelResults([{id:'2',result:{...result,mostLikelySettings:[2,4]}}]);
++ assert.ok(tied.includes('最有力 <b>設定2 / 設定4</b>'));
++ assert.deepEqual(structuredClone(result),before);
++});
++
++test('unnumbered sorted results keep editor identities after editing and rejudging',async()=>{
++ const {app}=await ready();
++ app.acceptMachineRows([{...sample,tableNo:'',bb:4,rb:1,diff:''},{...sample,tableNo:'',bb:35,rb:40,diff:''}]);
++ const [weak,strong]=app.observed.rows;
++ change(app,'data-observed-group-toggle',null,true);app.handleObservedAction('judge-all');
++ change(app,'data-observed-sort','p4');
++ const labels=()=>[...app.mount.innerHTML.matchAll(/data-observed-result-row="([^"]+)"[\s\S]*?<b>([^<]+)<\/b>/g)].map(m=>[m[1],m[2]]);
++ assert.deepEqual(labels(),[[strong.id,'台番なし（2行目）'],[weak.id,'台番なし（1行目）']]);
++ const oldResult=weak.result;edit(app,weak,'rb','20');
++ assert.equal(weak.result,null);assert.equal(app.observed.groupReport,null);
++ app.render();assert.deepEqual(labels(),[[strong.id,'台番なし（2行目）']]);
++ app.handleObservedAction('judge-all');assert.notEqual(weak.result,oldResult);assert.equal(weak.result.input.rb,20);
++ assert.deepEqual(app.observed.rows.map(r=>r.id),[weak.id,strong.id]);
++ assert.ok(app.mount.innerHTML.includes('最も整合しない台 <b>台番なし（1行目）</b>'));
++ change(app,'data-observed-sort','input');
++ assert.deepEqual(labels(),[[weak.id,'台番なし（1行目）'],[strong.id,'台番なし（2行目）']]);
++});
++
++test('group row labels reject inherited or invalid editor numbers without inventing positions',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});
++ const report=ctx.JUGESTGroupJudge.analyze([
++  {id:'9001',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'',games:8000,bb:4,rb:1,diff:''})},
++  {id:'9002',result:bridge.judgeObservedMachine({machine:'mr',tableNo:'007',games:8000,bb:40,rb:44,diff:''})}
++ ]);
++ const view=ctx.JUGESTGroupJudgeView;
++ for(const rowNumbers of [Object.create({'9001':99}),null,...[0,-1,2.5,Infinity,'7',true].map(n=>({'9001':n}))]){
++  const html=view.render(report,{rowNumbers});
++  assert.ok(html.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
++  assert.ok(html.includes('<div class="observed-group-conditional-row"><b>007</b>'));
++  assert.doesNotMatch(html,/台番なし（(?:99|9001)行目）/);
++ }
++});
++
++test('group overview warns that low-setting mixtures can escape refutation despite a large ratio',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});
++ const report=ctx.JUGESTGroupJudge.analyze(rows.map((input,i)=>({id:String(i),result:bridge.judgeObservedMachine(input)})));
++ assert.equal(report.ok,true);const html=ctx.JUGESTGroupJudgeView.render(report);
++ assert.ok(html.includes('低設定が混じっていても反証できない場合があります。'));
++ assert.ok(html.includes('大きい根拠比も全台系の確定ではありません。'));
++});
++
++test('sorting changes only result order with stable ties, while labels and input order remain intact',async()=>{
++ const {app,ctx}=await ready();app.acceptMachineRows([...rows,{...sample,tableNo:'101'}]);app.handleObservedAction('judge-all');
++ const inputs=plain(app.observed.rows.map(r=>({id:r.id,input:r.input})));
++ const html=ctx.JUGESTJudgementView.parallelResults(app.observed.rows,{sort:'tableNo'});
++ const ids=[...html.matchAll(/data-observed-result-row="([^"]+)"/g)].map(m=>m[1]);
++ assert.deepEqual(ids,[app.observed.rows[1].id,app.observed.rows[2].id,app.observed.rows[0].id]);
++ for(const key of ['expectedSetting','p4','p5','p6']){
++  const rendered=ctx.JUGESTJudgementView.parallelResults(app.observed.rows,{sort:key});
++  const sorted=[...rendered.matchAll(/data-observed-result-row="([^"]+)"/g)].map(m=>app.observed.rows.find(r=>r.id===m[1]).result[key]);
++  assert.ok(sorted.every((n,i)=>!i||sorted[i-1]>=n));
++ }
++ assert.deepEqual(plain(app.observed.rows.map(r=>({id:r.id,input:r.input}))),inputs);
++ assert.match(html,/設定4以上/);assert.match(html,/推定ブドウ/);assert.match(html,/設定1/);
++});
++
++test('invalid, incomplete and unjudged nonempty rows block the group while empty rows are skipped',async()=>{
++ const {app}=await ready();change(app,'data-observed-group-toggle',null,true);
++ app.acceptMachineRows([...rows,{machine:'',games:'',bb:'',rb:'',diff:'',tableNo:''}]);app.handleObservedAction('judge-all');
++ assert.equal(app.observed.groupReport.ok,true);assert.equal(app.observed.groupReport.n,2);
++ app.handleObservedAction('add');const partial=app.observed.rows.at(-1);edit(app,partial,'machine','my');edit(app,partial,'games','5000');app.handleObservedAction('judge-all');
++ assert.equal(app.observed.groupReport.ok,false);assert.match(app.mount.innerHTML,/data-observed-group-report/);
++ assert.match(app.mount.innerHTML,/入力|未判別|確認/);assert.equal(app.observed.rows.filter(r=>r.result).length,2);
++ app.handleObservedAction('delete',partial.id);app.handleObservedAction('judge-all');
++ app.handleObservedAction('duplicate',app.observed.rows[0].id);
++ change(app,'data-observed-group-toggle',null,false);change(app,'data-observed-group-toggle',null,true);
++ assert.equal(app.observed.groupReport.ok,false,'unjudged duplicated draft cannot disappear from group');
++ edit(app,app.observed.rows[1],'tableNo',sample.tableNo);app.handleObservedAction('judge-all');
++ assert.equal(app.observed.groupReport.ok,false);assert.match(app.observed.groupReport.errors.join(' '),/重複|同じ台番/);
++});
++
++test('editing immediately removes only its row and the group, without rerendering input DOM',async()=>{
++ const {app}=await ready();app.acceptMachineRows(rows);change(app,'data-observed-group-toggle',null,true);app.handleObservedAction('judge-all');
++ const keep=app.observed.rows[1].result,first=app.observed.rows[0],removed=[];
++ app.shadowRoot.querySelector=s=>['[data-observed-group-report]',`[data-observed-result-row="${first.id}"]`].includes(s)?{remove:()=>removed.push(s)}:null;
++ const before=app.mount.innerHTML;app.render=()=>{throw Error('typing rerendered input DOM')};
++ edit(app,first,'rb','21');assert.equal(app.observed.groupReport,null);assert.equal(first.result,null);
++ assert.equal(app.observed.rows[1].result,keep);assert.equal(app.mount.innerHTML,before);
++ assert.ok(removed.includes('[data-observed-group-report]'));
++ assert.ok(removed.includes(`[data-observed-result-row="${first.id}"]`));
++});
++
++test('group display is pure, escaped, explanatory and separates ratios from conditional percentages',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});const report=ctx.JUGESTGroupJudge.analyze(rows.map((r,i)=>({id:String(i),result:bridge.judgeObservedMachine({...r,tableNo:i?'<img src=x onerror=alert(1)>':r.tableNo})})));
++ const before=plain(report),view=ctx.JUGESTGroupJudgeView;
++ for(const hypothesis of ['all456','all56','all6']){
++  const html=view.render(report,{hypothesis});
++  for(const label of ['全456','非全456','既存モデルの根拠比','ボーナスだけの根拠比','仮説成立時・等重み','成立確率','根拠比の重み感度','最も整合しない台','条件付き','同じ設定'])assert.ok(html.includes(label),label);
++  assert.match(html,/&lt;img/);assert.doesNotMatch(html,/<img src=x|NaN|Infinity/);
++  assert.match(html,/data-observed-allocation/);
++  assert.match(html,/入力済み.*1\/2/);
++ }
++ assert.deepEqual(plain(report),before);
++});
++
++test('extreme ratios and tiny refutation p use their logs and impossible conditional output stays unavailable',async()=>{
++ const {ctx,bridge}=await ready({loadApp:false});
++ const report=ctx.JUGESTGroupJudge.analyze(rows.map((r,i)=>({id:String(i),result:bridge.judgeObservedMachine(r)})));
++ report.hypotheses[0].logEvidenceRatio=1200;report.hypotheses[0].bonusLogEvidenceRatio=-1200;
++ report.hypotheses[0].refutation.familyP=0;report.hypotheses[0].refutation.logFamilyP=-1200;
++ report.hypotheses[0].conditional={available:false,reason:'許容設定の支持がありません',rows:[],topAllocations:[],expectedCounts:[],mapAssignment:[]};
++ const html=ctx.JUGESTGroupJudgeView.render(report);
++ assert.doesNotMatch(html,/NaN|Infinity|p\s*=\s*0(?:[^.\d]|$)/);
++ assert.match(html,/10|対数/);assert.match(html,/反証あり/);assert.match(html,/許容設定の支持がありません/);
++ assert.doesNotMatch(html,/data-observed-count-profile/);
++});
++
++test('60-row profiles stay compact and all input controls meet the stable mobile contract',async()=>{
++ const {ctx,bridge,app}=await ready();
++ const report=ctx.JUGESTGroupJudge.analyze(Array.from({length:60},(_,i)=>({id:String(i),result:bridge.judgeObservedMachine({...sample,tableNo:String(i)})})));
++ const html=ctx.JUGESTGroupJudgeView.render(report);
++ assert.match(html,/設定4.*台/);assert.doesNotMatch(html,/>[456]{30,}</);
++ app.acceptMachineRows(rows);app.handleObservedAction('judge-all');app.render();
++ for(const attr of ['data-observed-group-toggle','role="switch"','data-observed-sort','data-observed-action="duplicate"'])assert.ok(app.mount.innerHTML.includes(attr),attr);
++ const css=fs.readFileSync('app-v510.css','utf8');assert.match(css,/observed-table-row/);assert.match(css,/font-size:16px/);
++});

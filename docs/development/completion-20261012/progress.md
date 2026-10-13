@@ -12,3 +12,7 @@ Task 6: Ruling: retain historical scratch ledgers, patches, failed logs and bund
 Environment: local empty /var/lib/jugest recreated for the existing VPS fixture; no product or test expectation changes. WebKit binary cache had expired; restored only local test runtime/dependencies. Neither action touches production.
 
 Task 6: browser16/16 and offline preview8/8 pass with exit0. Actual screenshots16; no page errors or remote requests. Preview CSP/head insertion RED→GREEN. Final review pending. Browser fixture clarified complete-empty row including machine; bottom-nav home selector disambiguated, no weakened assertions.
+
+Task 6: Ruling: merge already-published store comparison commits de812821 into development only — latest production differs from the original f728 baseline in four disjoint files, and deployment must preserve that update — if wrong, integration may affect shared delivery; byte-exact import checks and rerun root/VPS/browser cover the boundary. Production refs are not written.
+
+Final review continuity: Work runtime lost the active reviewer before final report. Its concrete Important warning identity and Minor out-of-range target ordinal are preserved in final-review-interim.md. Resume the same final-review seat, not a second opinion or post-fix re-review. Product source is still unchanged; two regression tests already RED.

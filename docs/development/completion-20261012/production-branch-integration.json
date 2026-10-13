@@ -1,0 +1,14 @@
+{
+  "inspectedUtc": "2026-10-13",
+  "remoteBranch": "deploy/vps",
+  "productionBranchHead": "de8128215302f05be7816bcaf40e5b1bc99a839b",
+  "featureOriginalBase": "f728b2587a9bdd81541ccb50d3ae802a8492486a",
+  "developmentMergeSource": "de8128215302f05be7816bcaf40e5b1bc99a839b",
+  "sourceFilesIdentical": {
+    "vps-ui-audit-store.mjs": true,
+    "vps-ui-store-v2.css": true,
+    "vps-ui-store-v2.mjs": true,
+    "vps/tests/store-machine-mobile.test.mjs": true
+  },
+  "productionWasNotWritten": true
+}
