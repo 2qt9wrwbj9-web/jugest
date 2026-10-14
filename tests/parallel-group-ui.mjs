@@ -153,7 +153,7 @@ test('unnumbered group rows use current editor ordinals after single mode, skipp
   for(const h of app.observed.groupReport.hypotheses){assert.equal(h.worstRow.id,weakRow.id);assert.equal(h.refutation.weakestRow.id,weakRow.id);}
   const html=app.mount.innerHTML.match(/<section class="panel observed-group-report"[\s\S]*?<\/section>/)?.[0];assert.ok(html);
   const label=`台番なし（${weakOrdinal}行目）`;
-  assert.ok(html.includes(`最も整合しない台 <b>${label}</b>`),'the main warning identifies the actual editor row');
+  assert.ok(html.includes(`全台系に合わない台 <b>${label}</b>`),'the main warning identifies the actual editor row');
   assert.ok(html.includes(`<dt>最も下振れした台</dt><dd>${label}</dd>`),'weakest row agrees with the main warning');
   for(const ordinal of [weakOrdinal,strongOrdinal]){
    const current=`台番なし（${ordinal}行目）`;
@@ -180,14 +180,14 @@ test('standalone group labels use target ordinals instead of internal ids, and o
  const before=structuredClone(report),rowNumbers=Object.freeze({'9001':4,'9002':7});
  const view=ctx.JUGESTGroupJudgeView;
  const fallback=view.render(report);
- assert.ok(fallback.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
+ assert.ok(fallback.includes('全台系に合わない台 <b>台番なし（対象1台目）</b>'));
  assert.ok(fallback.includes('<dt>最も下振れした台</dt><dd>台番なし（対象1台目）</dd>'));
  assert.ok(fallback.includes('<div class="observed-group-conditional-row"><b>台番なし（対象2台目）</b>'));
  assert.ok(fallback.includes('<div class="observed-group-p-row"><b>台番なし（対象2台目）</b>'));
  assert.doesNotMatch(fallback,/行900[12]|900[12]行目/);
  for(const hypothesis of ['all456','all56','all6']){
   const html=view.render(report,{hypothesis,rowNumbers});
-  assert.ok(html.includes('最も整合しない台 <b>台番なし（4行目）</b>'));
+  assert.ok(html.includes('全台系に合わない台 <b>台番なし（4行目）</b>'));
   assert.ok(html.includes('<dt>最も下振れした台</dt><dd>台番なし（4行目）</dd>'));
   assert.ok(html.includes('<div class="observed-group-conditional-row"><b>台番なし（7行目）</b>'));
   assert.ok(html.includes('<div class="observed-group-p-row"><b>台番なし（7行目）</b>'));
@@ -272,7 +272,7 @@ test('unnumbered sorted results keep editor identities after editing and rejudgi
  app.render();assert.deepEqual(labels(),[[strong.id,'台番なし（2行目）']]);
  app.handleObservedAction('judge-all');assert.notEqual(weak.result,oldResult);assert.equal(weak.result.input.rb,20);
  assert.deepEqual(app.observed.rows.map(r=>r.id),[weak.id,strong.id]);
- assert.ok(app.mount.innerHTML.includes('最も整合しない台 <b>台番なし（1行目）</b>'));
+ assert.ok(app.mount.innerHTML.includes('全台系に合わない台 <b>台番なし（1行目）</b>'));
  change(app,'data-observed-sort','input');
  assert.deepEqual(labels(),[[weak.id,'台番なし（1行目）'],[strong.id,'台番なし（2行目）']]);
 });
@@ -286,18 +286,18 @@ test('group row labels reject inherited or invalid editor numbers without invent
  const view=ctx.JUGESTGroupJudgeView;
  for(const rowNumbers of [Object.create({'9001':99}),null,...[0,-1,2.5,Infinity,'7',true].map(n=>({'9001':n}))]){
   const html=view.render(report,{rowNumbers});
-  assert.ok(html.includes('最も整合しない台 <b>台番なし（対象1台目）</b>'));
+  assert.ok(html.includes('全台系に合わない台 <b>台番なし（対象1台目）</b>'));
   assert.ok(html.includes('<div class="observed-group-conditional-row"><b>007</b>'));
   assert.doesNotMatch(html,/台番なし（(?:99|9001)行目）/);
  }
 });
 
-test('group overview warns that low-setting mixtures can escape refutation despite a large ratio',async()=>{
+test('group overview gives the correct probability caution without duplicate mathematical paragraphs',async()=>{
  const {ctx,bridge}=await ready({loadApp:false});
  const report=ctx.JUGESTGroupJudge.analyze(rows.map((input,i)=>({id:String(i),result:bridge.judgeObservedMachine(input)})));
  assert.equal(report.ok,true);const html=ctx.JUGESTGroupJudgeView.render(report);
- assert.ok(html.includes('低設定が混じっていても反証できない場合があります。'));
- assert.ok(html.includes('大きい根拠比も全台系の確定ではありません。'));
+ assert.ok(html.includes('倍率は全台系になる確率ではありません。'));
+ assert.doesNotMatch(html,/この検査では反証なし|差枚を含むモデルは近似です/);
 });
 
 test('sorting changes only result order with stable ties, while labels and input order remain intact',async()=>{
@@ -341,12 +341,12 @@ test('editing immediately removes only its row and the group, without rerenderin
  assert.ok(removed.includes(`[data-observed-result-row="${first.id}"]`));
 });
 
-test('group display is pure, escaped, explanatory and separates ratios from conditional percentages',async()=>{
+test('group display is pure, escaped and concise, and keeps ratios separate from conditional percentages',async()=>{
  const {ctx,bridge}=await ready({loadApp:false});const report=ctx.JUGESTGroupJudge.analyze(rows.map((r,i)=>({id:String(i),result:bridge.judgeObservedMachine({...r,tableNo:i?'<img src=x onerror=alert(1)>':r.tableNo})})));
  const before=plain(report),view=ctx.JUGESTGroupJudgeView;
  for(const hypothesis of ['all456','all56','all6']){
   const html=view.render(report,{hypothesis});
-  for(const label of ['全456','非全456','既存モデルの根拠比','ボーナスだけの根拠比','仮説成立時・等重み','成立確率','根拠比の重み感度','最も整合しない台','条件付き','同じ設定'])assert.ok(html.includes(label),label);
+  for(const label of ['全456','全6','全データで比べる','全台系になる確率ではありません','設定の組み合わせ（仮定）','詳しい数字','全台系に合わない台','台ごとの設定予想','全台同じ設定として合算'])assert.ok(html.includes(label),label);
   assert.match(html,/&lt;img/);assert.doesNotMatch(html,/<img src=x|NaN|Infinity/);
   assert.match(html,/data-observed-allocation/);
   assert.match(html,/入力済み.*1\/2/);
@@ -362,7 +362,7 @@ test('extreme ratios and tiny refutation p use their logs and impossible conditi
  report.hypotheses[0].conditional={available:false,reason:'許容設定の支持がありません',rows:[],topAllocations:[],expectedCounts:[],mapAssignment:[]};
  const html=ctx.JUGESTGroupJudgeView.render(report);
  assert.doesNotMatch(html,/NaN|Infinity|p\s*=\s*0(?:[^.\d]|$)/);
- assert.match(html,/10|対数/);assert.match(html,/反証あり/);assert.match(html,/許容設定の支持がありません/);
+ assert.match(html,/10|対数/);assert.match(html,/ボーナス回数も厳しい/);assert.match(html,/許容設定の支持がありません/);
  assert.doesNotMatch(html,/data-observed-count-profile/);
 });
 
