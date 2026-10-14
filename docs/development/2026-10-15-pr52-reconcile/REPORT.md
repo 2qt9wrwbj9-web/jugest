@@ -47,3 +47,15 @@
 - 復元試験: 実本番の3DB `jugest.sqlite` / `relay.sqlite` / `pachinko.sqlite` を読み取り専用オンラインバックアップ→隔離復元→`PRAGMA quick_check=ok`・元との主要テーブル件数一致を確認。アクセス管理DBの隔離コピーも`quick_check=ok`。
 - 原本raw archive 2,468ファイルを隔離コピーし、コピー前・コピー後・原本のファイルごとのSHA256完全一致を確認。いずれも一時コピーを削除。
 - **未検証**: 旧Vercel Blobの実共有データ・実revisionの二重読み取りと移行、iPhone実機Safari/Shortcut、本番停止・再開とデータ切替後の観測。したがって本番同期を解放する許可や適用はまだ求めない。
+
+
+## 2026-10-15 旧head-only互換移行設計の修正と回帰検証
+
+旧Vercelの実オブジェクト調査でhead 3件、immutable commit 0件が分かった。現行の同期エンジン `getRecord` がheadを正本としてその次のcommitのみを探索することを確認し、隔離importの旧版過剰拒否条件を修正。revisionが正数のheadだけの旧形式を暗号化データ・ID・authHashをそのまま取り込む。未来に欠けたcommitがあると拒否し、移行時に履歴を捏造しない。古いtokenを使ったpull/push・409競合の実API経路の模擬テストを追加。Blobの架空head 3件の二重読込→隔離DBへの復元も成功。旧Blobの実payload/revisionは未確認、本番同期の切替はNO-GO。詳しくは [SYNC-CUTOVER.md](SYNC-CUTOVER.md)。
+
+### 現行ブランチ変更後の最終回帰テスト
+
+- `node --test vps/tests/sync-export-blob.test.mjs vps/tests/sync-import-offline.test.mjs`: **10/10 PASS**
+- `npm --prefix vps test`: **645/645 PASS、0 fail、0 skip**
+- `npm test`: **85/85 コマンドPASS**（既存の判別数学・保護APIを含む）
+- 現行本番release `1f8c29fc458f34e11e546fb57944d0fc31db98a5` とweb serviceは一切変更していない。

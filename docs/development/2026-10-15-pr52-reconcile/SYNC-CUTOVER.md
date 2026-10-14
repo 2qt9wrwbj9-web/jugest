@@ -46,3 +46,11 @@
 - 一時的な集計用の検証ブランチからAPI入口と診断コードを削除し、元の `package.json` に復旧。手元の一時的な認証情報は削除した。旧プレビューデプロイはプラットフォーム上に履歴として残る可能性があるため、**旧Previewで同期操作をしない**。
 - 端末同期に関する擬似iPhoneライフサイクル／再接続等のテスト **22/22**、新VPSの同期耐久テスト **7/7** PASS。これは**実iPhoneのSafari/Shortcuts上の試験ではない**。
 - この監査では旧Blob・本番DB・設定・Scheduler・本番リリースには書込みしていない。PRはdraftのままで、本番同期の切替は依然禁止。
+
+## 2026-10-15 履歴0件の旧headのみ移行 — 数学とAPI無変更の追加検証
+
+- **コード調査で確認**: 現行 `api/_sync-web.js` の `getRecord` は共有の `sync/<ID>` headからrevisionを読み、その次の `sync-commit/<ID>/<revision+1>` を順に探索する。現行headがrevision Nで正しく保存されていれば、過去のcommit 1..Nは読取必須条件ではない。次のpushはN+1のcommitを発行する。これは既存同期APIの読み方そのものであり、同期APIは変更しない。
+- **修正**: `vps/scripts/sync-import-offline.mjs` で、暗号化payloadとauthHash、createdAt、更新番号が正しい旧headのみのアーカイブを許容する。以前の「正数revisionなのに1..Nのcommitがないと拒否」は誤って過剰に厳しい。**過去commitを捏造しない**。欠けてよいのは「headが既にカバーする過去」。headの後に未連続の未来commitがあるケースや、同じrevisionのheadとcommit不一致、ID/authHash/createdAt不一致は今までどおり拒否。
+- **自動検証**: 架空の旧head 3件（revision 0/2/9、commit 0件）をSQLiteへ移した後、旧共有コードと同じ認証tokenでpull、次のpush、古い更新番号の409拒否をすべて成功。headの暗号化JSONはバイト一致。Vercel Blob互換の架空3-headオブジェクトをread-only列挙・各head二重取得→同じraw JSONで隔離SQLiteへ取り込む連携検証にも成功。
+- `vps/scripts/sync-export-blob.mjs` はVercel接続環境の **従来型 `BLOB_READ_WRITE_TOKEN` または OIDC `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`** に対応。資格情報を表示・GitHub・ログに保存しない。実Blobへの書出しはまだ実施していない。
+- **注意**: 旧Blobの実head 3件について、暗号化payloadやrevisionが正しいことは**まだ確認されていない**。0件だったcommitだけでこれらを検証済みと誤認しない。実headの読み出し・停止期間内での二重export一致・インポート後の確認は依然本番切替の必須条件。

@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createSyncRuntime} from '../../api/_sync-web.js';
 import {createRelayStore} from '../src/relay-store.mjs';
-import {SYNC_NAMESPACE} from '../scripts/sync-import-offline.mjs';
+import {SYNC_NAMESPACE,inspectDbAndImport} from '../scripts/sync-import-offline.mjs';
 import {buildLegacyArchive,writePrivateArchive} from '../scripts/sync-export-blob.mjs';
 async function origin(t){
  const dir=await mkdtemp(join(tmpdir(),'legacy-blob-export-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));
@@ -43,4 +43,45 @@ test('source head change between reads fails instead of exporting stale state',a
   return r;
  };
  await assert.rejects(buildLegacyArchive({...s,get}),/export_head_changed/);
+});
+
+test('three historic head-only Blob objects export unchanged and import into a scratch SQLite relay',async t=>{
+ const s=await origin(t);
+ const originalValue=await new Response((await s.get(s.prefix+'sync/'+s.auth.syncId)).stream).text();
+ const current=JSON.parse(originalValue);
+ const ids=[s.auth.syncId,'HistoricalSecondId_02','HistoricalThirdId__03'];
+ const values=[
+   originalValue,
+   JSON.stringify({...current,revision:0,payload:null}),
+   JSON.stringify({...current,revision:7,payload:{v:1,zip:'none',iv:'abcdefghijklmnop',ct:'OLDciphertxt900'}})
+ ];
+ const entries=ids.map((id,i)=>({pathname:s.prefix+'sync/'+id,value:values[i]}));
+ let reads=0;
+ const fake={
+   list:async({prefix})=>({blobs:entries.filter(x=>x.pathname.startsWith(prefix)).map(x=>({pathname:x.pathname})),cursor:null}),
+   get:async pathname=>{
+     reads++;
+     const value=entries.find(x=>x.pathname===pathname)?.value;
+     return value?{statusCode:200,stream:new Blob([value]).stream()}:{statusCode:404};
+   }
+ };
+ const {archive,summary}=await buildLegacyArchive(fake);
+ assert.equal(reads,6,'read each head twice to ensure unchanged source during export');
+ assert.equal(summary.shareCount,3);
+ assert.equal(summary.recordCount,3);
+ assert.equal(summary.skippedTransient,0);
+ for(let i=0;i<3;i++)assert.equal(archive.objects.find(o=>o.key==='sync/'+ids[i]).value,values[i]);
+ const target=join(s.dir,'3-head-only.sqlite');
+ inspectDbAndImport(archive,{dbPath:target,apply:true});
+ const restored=createRelayStore('juggler-device-sync-v1',{dbPath:target});
+ for(let i=0;i<3;i++)assert.equal(await restored.get('sync/'+ids[i]),values[i]);
+});
+
+test('unknown namespace objects fail closed rather than vanish silently',async t=>{
+ const s=await origin(t);
+ const invalid={
+   list:async()=>({blobs:[{pathname:s.prefix+'unrecognized/key'}],cursor:null}),
+   get:async()=>{throw new Error('never reach blob get')}
+ };
+ await assert.rejects(buildLegacyArchive(invalid),/export_unrecognized_source_key/);
 });

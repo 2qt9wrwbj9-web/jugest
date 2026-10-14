@@ -37,13 +37,30 @@ export function validateArchive(archive){
   if(groups.size===0)fail('no_shares_to_import');
   for(const g of groups.values()){
     if(g.heads.length!==1)fail('missing_head');
-    const head=g.heads[0],max=Math.max(0,...g.commits.keys());
-    if(head.revision>max&&head.revision!==0)fail('head_without_commit');
+    const head=g.heads[0];
     if(head.revision===0&&head.payload!==null)fail('invalid_empty_head');
-    for(let i=1;i<=max;i++)if(!g.commits.has(i))fail('missing_revision');
-    if(max-head.revision>=1024)fail('unbounded_recovery_gap');
-    for(const v of g.all)if(v.createdAt!==head.createdAt||v.authHash!==head.authHash)fail('share_identity_mismatch');
-    if(head.revision>0&&JSON.stringify(head)!==JSON.stringify(g.commits.get(head.revision)))fail('head_commit_disagree');
+
+    // Historic Blob shares can have a durable head at revision N without
+    // accompanying immutable commit objects: those were introduced later.
+    // The current sync runtime reads that head directly and commits N+1 on
+    // its next push. Preserve it exactly; NEVER invent missing commits.
+    //
+    // Only commits *after* the head must be contiguous. A gap there would
+    // make the live runtime stop early and hide a later committed write.
+    const highest=Math.max(head.revision,...g.commits.keys());
+    if(highest-head.revision>=1024)fail('unbounded_recovery_gap');
+    for(let revision=head.revision+1;revision<=highest;revision++){
+      if(!g.commits.has(revision))fail('missing_revision_after_head');
+    }
+    for(const v of g.all){
+      if(v.createdAt!==head.createdAt||v.authHash!==head.authHash)
+        fail('share_identity_mismatch');
+    }
+    // An existing checkpoint for the head cannot disagree with the head
+    // itself. Older commits are retained verbatim for forensic rollback.
+    if(g.commits.has(head.revision)&&
+       JSON.stringify(head)!==JSON.stringify(g.commits.get(head.revision)))
+      fail('head_commit_disagree');
   }
   const fingerprints=[...items].sort(([a],[b])=>a.localeCompare(b))
     .map(([k,v])=>JSON.stringify([k,sha(v)]));

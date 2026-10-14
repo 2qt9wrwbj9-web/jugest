@@ -72,9 +72,9 @@ export function writePrivateArchive(pathname,archive){
 if(process.argv[1]&&realpathSync(process.argv[1])===realpathSync(new URL(import.meta.url))){
  try{
   if(process.argv.length!==4||process.argv[2]!=='--output')throw new Error('Usage: sync-export-blob.mjs --output /private-dir/export.json');
-  // The token must be provided by the platform's protected environment.
-  // Never include the token itself in diagnostics or CLI options.
-  if(!process.env.BLOB_READ_WRITE_TOKEN)throw new Error('legacy_blob_connection_unavailable');
+  // The platform must provide either the legacy Blob token or an OIDC token
+  // with the connected store ID. Never log tokens or pass them via CLI args.
+  if(!process.env.BLOB_READ_WRITE_TOKEN&&!(process.env.VERCEL_OIDC_TOKEN&&process.env.BLOB_STORE_ID))throw new Error('legacy_blob_connection_unavailable');
   const {get,list}=await import('@vercel/blob');
   const {archive,summary}=await buildLegacyArchive({get,list});
   writePrivateArchive(process.argv[3],archive);
