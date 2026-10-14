@@ -71,8 +71,9 @@ test('real SHADOW_PREDICT worker persists the current JUGEST ranking for the nex
     assert.equal(complete.status,'predicted');
     const verify=openDatabase(dbPath);migrate(verify);
     try{
-      const rows=listLivePredictions(verify,{storeId,targetDate:target,engine:'current_shadow'});
+      const rows=listLivePredictions(verify,{storeId,targetDate:complete.targetDate,engine:'current_shadow'});
       assert.equal(rows.length,1);
+      assert.ok(Date.parse(rows[0].createdAt)<Date.parse(`${rows[0].targetDate}T00:00:00+09:00`),'real worker must save before the target day starts');
       assert.equal(rows[0].sourceFrontierDate,frontier);
       assert.ok(rows[0].rankings.length>0);
       assert.equal(getShadowRefreshState(verify,{storeId}).completedFrontierDate,frontier);

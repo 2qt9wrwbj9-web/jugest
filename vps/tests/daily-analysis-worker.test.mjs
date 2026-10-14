@@ -112,7 +112,10 @@ test('fewer than three valid days completes as insufficient data without burning
   }finally{f.cleanup()}
 });
 
-test('daily analysis advances PRE v2 formal live trial against the newest canonical day',async()=>{
+test('daily analysis advances PRE v2 formal live trial against the newest canonical day',async t=>{
+  // This fixture asserts an exact completion timestamp. Freeze its clock rather
+  // than making production predictions use an earlier, fabricated completion time.
+  t.mock.timers.enable({apis:['Date'],now:Date.parse('2026-09-11T09:04:00.000Z')});
   const f=fixture();
   try{
     const seen=[];

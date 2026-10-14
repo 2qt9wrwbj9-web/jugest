@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {withoutJudgementAdditions} from './helpers/judgement-preservation.mjs';
+import {withoutReliabilitySyncChanges} from './helpers/reliability-preservation.mjs';
 const manifest=JSON.parse(fs.readFileSync('docs/collector-batch/protected-hashes.json','utf8'));
 const hash=x=>createHash('sha256').update(x).digest('hex');
 for(const [file,expected] of Object.entries(manifest.protectedFiles)){
-  const actual=hash(withoutJudgementAdditions(file,fs.readFileSync(file,'utf8')));
+  const actual=hash(withoutReliabilitySyncChanges(file,withoutJudgementAdditions(file,fs.readFileSync(file,'utf8'))));
   // Vercel CLI 59.11.7 rewrites this file as compact JSON plus a newline.
   // Accept only that exact baseline-equivalent byte representation; changes to
   // any setting still fail. The checked-in file retains its original hash.

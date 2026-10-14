@@ -1,6 +1,7 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
 import {requestStoreAnalysisRefresh} from '../analysis/refresh-state.mjs';
 import {archiveRawArtifact} from './raw-archive.mjs';
+import {inspectDay,saveDayIntegrity,saveIngestReceipt} from './day-integrity.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const PARSER_VERSION='device-indexeddb-backfill-v1';
@@ -84,14 +85,19 @@ export async function ingestDeviceBackfillDay(db,input={}){
         updated_at=excluded.updated_at`)
       .run(storeId,shop,sourceMetadata,nowIso,nowIso);
 
+    const check=inspectDay(db,{storeId,date:businessDate,day,nowIso});
+    const qualityStatus=check.eligibleForAnalysis?'valid':check.status==='invalid'?'invalid':check.status==='provisional'||check.status==='unpublished'?'pending':'partial';
+
     db.prepare(`INSERT INTO store_days(store_id,business_date,parser_version,source_hash,normalized_payload_hash,quality_status,raw_artifact_path,created_at,updated_at)
-      VALUES(?,?,?,?,?,'valid',?,?,?)`)
-      .run(storeId,businessDate,PARSER_VERSION,artifact.sha256,normalizedHash,artifact.path,nowIso,nowIso);
+      VALUES(?,?,?,?,?,?,?,?,?)`)
+      .run(storeId,businessDate,PARSER_VERSION,artifact.sha256,normalizedHash,qualityStatus,artifact.path,nowIso,nowIso);
 
     const insert=db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)');
     day.machines.forEach((machine,index)=>insert.run(storeId,businessDate,String(index).padStart(6,'0'),canonicalJson(machine)));
+    saveDayIntegrity(db,{storeId,date:businessDate,normalizedHash,check,nowIso});
+    saveIngestReceipt(db,{storeId,date:businessDate,normalizedHash,source:PARSER_VERSION,rawArtifactPath:artifact.path,accepted:true,check,nowIso});
 
-    const refresh=requestStoreAnalysisRefresh(db,{storeId,analysisVersion:ANALYSIS_VERSION,nowIso,dirty:true});
+    const refresh=check.eligibleForAnalysis?requestStoreAnalysisRefresh(db,{storeId,analysisVersion:ANALYSIS_VERSION,nowIso,dirty:true}):{job:null};
     job=refresh.job;
     db.exec('COMMIT');
   }catch(error){

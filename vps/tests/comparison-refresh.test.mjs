@@ -7,6 +7,7 @@ import {openDatabase} from '../src/db.mjs';
 import {migrate} from '../src/schema.mjs';
 import {persistLivePrediction,listLivePredictions} from '../src/research/live-comparison.mjs';
 import {scoreAvailableComparisonDays} from '../src/analysis/comparison-refresh.mjs';
+import {inspectDay,saveDayIntegrity} from '../src/ingest/day-integrity.mjs';
 
 const NOW='2026-09-15T09:00:00.000Z';
 
@@ -28,6 +29,8 @@ function insertTargetDay(db,date='2026-09-14'){
     {machine:'my',sourceMachineName:'マイジャグラーV',tableNo:'103',games:6000,bb:18,rb:15,diff:-800}
   ];
   rows.forEach((row,index)=>db.prepare('INSERT INTO machine_day_data(store_id,business_date,machine_key,payload_json) VALUES(?,?,?,?)').run('store-a',date,String(index).padStart(6,'0'),JSON.stringify(row)));
+  const check=inspectDay(db,{storeId:'store-a',date,day:{machines:rows,quality:{expectedMachineKeys:rows.map(r=>r.tableNo)}},nowIso:NOW});
+  saveDayIntegrity(db,{storeId:'store-a',date,normalizedHash:'norm-target',check,nowIso:NOW});
 }
 
 test('completed canonical target day scores both engines against one immutable outcome hash',()=>{
@@ -62,7 +65,7 @@ test('completed canonical target day scores both engines against one immutable o
   }finally{f.cleanup()}
 });
 
-test('canonical comparison outcome excludes machines whose diff is missing',async()=>{
+test('canonical comparison outcome holds the whole day when a machine diff is missing',async()=>{
   const {__test}=await import('../src/analysis/comparison-refresh.mjs');
   const f=fixture();
   try{
@@ -70,8 +73,8 @@ test('canonical comparison outcome excludes machines whose diff is missing',asyn
     const row=f.db.prepare("SELECT machine_key,payload_json FROM machine_day_data WHERE store_id='store-a' AND business_date='2026-09-14' ORDER BY machine_key LIMIT 1").get();
     const payload=JSON.parse(row.payload_json);payload.diff=null;
     f.db.prepare("UPDATE machine_day_data SET payload_json=? WHERE store_id='store-a' AND business_date='2026-09-14' AND machine_key=?").run(JSON.stringify(payload),row.machine_key);
+    f.db.prepare("UPDATE store_days SET normalized_payload_hash='partial' WHERE store_id='store-a' AND business_date='2026-09-14'").run();
     const outcome=__test.loadCanonicalOutcome(f.db,{storeId:'store-a',targetDate:'2026-09-14'});
-    assert.equal(outcome.outcomeRows.length,2);
-    assert.ok(outcome.outcomeRows.every(x=>x.machineKey!=='101'));
+    assert.equal(outcome,null);
   }finally{f.cleanup()}
 });

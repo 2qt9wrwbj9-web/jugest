@@ -4,7 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 const STORE_NAME='juggler-device-sync-v1';
 const MAX_BODY_BYTES=5_700_000,MAX_PAYLOAD_BYTES=4_900_000,SYNC_CHUNK_CHARS=700_000,SYNC_DIRECT_CHARS=2_500_000,SYNC_UPLOAD_TTL_MS=20*60*1000,SYNC_MAX_CHUNKS=16;
 function originAllowed(req){const origin=req.headers.get('origin')||'';if(!origin)return true;try{return origin===new URL(req.url).origin}catch{return false}}
-const store=()=>createBlobStore(STORE_NAME),now=()=>Date.now(),token=(bytes=32)=>randomBytes(bytes).toString('base64url'),digest=value=>createHash('sha256').update(String(value||'')).digest('hex'),byteLength=value=>Buffer.byteLength(typeof value==='string'?value:JSON.stringify(value),'utf8');
+const now=()=>Date.now(),token=(bytes=32)=>randomBytes(bytes).toString('base64url'),digest=value=>createHash('sha256').update(String(value||'')).digest('hex'),byteLength=value=>Buffer.byteLength(typeof value==='string'?value:JSON.stringify(value),'utf8');
 function secureMatch(raw,expectedHash){if(!raw||!expectedHash)return false;const a=Buffer.from(digest(raw),'hex'),b=Buffer.from(String(expectedHash),'hex');return a.length===b.length&&timingSafeEqual(a,b)}
 function headers(req){const origin=req.headers.get('origin')||'';let allowed='';try{allowed=originAllowed(req)&&origin?origin:new URL(req.url).origin}catch{}return{'Access-Control-Allow-Origin':allowed,'Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type','Vary':'Origin','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'}}
 function json(req,body,status=200){return new Response(JSON.stringify(body),{status,headers:headers(req)})}
@@ -15,19 +15,42 @@ function validPayload(p){if(!p||+p.v!==1)return false;if(!['gzip','none'].includ
 
 const syncKey=syncId=>`sync/${syncId}`;
 const commitKey=(syncId,revision)=>`sync-commit/${syncId}/${String(revision).padStart(12,'0')}`;
+function validateRecord(rec){
+  if(!rec||rec.version!==1||!Number.isSafeInteger(rec.revision)||rec.revision<0||!Number.isFinite(rec.updatedAt)||!Number.isFinite(rec.createdAt)||!/^[0-9a-f]{64}$/.test(String(rec.authHash||''))||(rec.revision>0&&!validPayload(rec.payload)))throw new Error('同期保存データが破損しているよ。空のデータとしては扱わないよ');
+  return rec;
+}
+async function strictSnapshot(s,key){
+  if(typeof s.getWithMetadata!=='function')throw new Error('同期保存先に条件付き更新の保証がないよ');
+  const snapshot=await s.getWithMetadata(key);
+  if(!snapshot)return null;
+  if(!snapshot.etag)throw new Error('同期保存先の更新識別値が不明だよ');
+  validateRecord(snapshot.value);return snapshot;
+}
+async function advanceHead(s,syncId,rec){
+  for(let attempt=0;attempt<4;attempt++){
+    const snapshot=await strictSnapshot(s,syncKey(syncId));
+    if(!snapshot)throw new Error('同期共有領域がなくなっているよ');
+    if(snapshot.value.revision>=rec.revision)return snapshot.value;
+    try{await s.setJSON(syncKey(syncId),rec,{ifMatch:snapshot.etag});return rec}
+    catch(error){if(Number(error?.status||error?.statusCode)!==412&&!String(error?.name||'').includes('PreconditionFailed'))throw error}
+  }
+  throw new Error('同期保存が競合したよ。最新状態を取得して再試行してね');
+}
 async function getRecord(s,syncId){
   if(!validSyncId(syncId))return null;
-  let rec=await s.get(syncKey(syncId),{type:'json',useCache:false});
+  let rec=(await strictSnapshot(s,syncKey(syncId)))?.value;
   if(!rec)return null;
   let advanced=false;
-  for(let i=0;i<64;i++){
+  // Bound recovery work, but never report success with an unfinished prefix.
+  for(let i=0;i<1024;i++){
     const nextRevision=(+rec.revision||0)+1;
-    const committed=await s.get(commitKey(syncId,nextRevision),{type:'json',useCache:false});
+    const committed=(await strictSnapshot(s,commitKey(syncId,nextRevision)))?.value;
     if(!committed)break;
-    if((+committed.revision||0)!==nextRevision)throw new Error('同期revision履歴が不正だよ');
+    if(committed.revision!==nextRevision||committed.authHash!==rec.authHash||committed.createdAt!==rec.createdAt)throw new Error('同期revision履歴が不正だよ');
     rec=committed;advanced=true;
+    if(i===1023)throw new Error('同期復旧の処理上限に達したよ。最新状態を確定できていないよ');
   }
-  if(advanced)await s.setJSON(syncKey(syncId),rec);
+  if(advanced)rec=await advanceHead(s,syncId,rec);
   return rec;
 }
 async function authenticate(s,syncId,authToken){const rec=await getRecord(s,syncId);if(!rec||rec.revokedAt||!secureMatch(authToken,rec.authHash))return null;return rec}
@@ -35,7 +58,7 @@ async function commitRecord(s,syncId,rec){
   const revision=+rec.revision||0;
   const claim=await s.setJSON(commitKey(syncId,revision),rec,{onlyIfNew:true});
   if(!claim?.modified)return false;
-  await s.setJSON(syncKey(syncId),rec);
+  await advanceHead(s,syncId,rec);
   return true;
 }
 async function conflictRevision(s,syncId,fallback){try{return +((await getRecord(s,syncId))?.revision)||fallback}catch{return fallback}}
@@ -70,6 +93,7 @@ async function pushCommitSync(req,s,body){
 }
 async function pullChunkSync(req,s,body){const rec=await authenticate(s,body.syncId,body.authToken);if(!rec)return fail(req,401,'共有コードが無効だよ。もう一度連携してね','unauthorized');const revision=Math.max(0,+body.revision||0),current=+rec.revision||0;if(revision!==current)return fail(req,409,'同期中にクラウドデータが更新されたよ。もう一度同期してね','revision_conflict',{revision:current});if(!rec.payload)return fail(req,404,'同期データがまだないよ','payload_missing');const text=JSON.stringify(rec.payload),total=Math.ceil(text.length/SYNC_CHUNK_CHARS),index=+body.index;if(!Number.isInteger(index)||index<0||index>=total)return fail(req,400,'同期チャンク番号が不正だよ','bad_chunk_index');return json(req,{ok:true,revision:current,index,totalChunks:total,chunk:text.slice(index*SYNC_CHUNK_CHARS,(index+1)*SYNC_CHUNK_CHARS)})}
 
-export default async req=>{if(req.method==='OPTIONS')return new Response('',{status:204,headers:headers(req)});if(req.method!=='POST')return fail(req,405,'POSTで呼んでね','method_not_allowed');const origin=req.headers.get('origin')||'';if(origin&&!originAllowed(req))return fail(req,403,'このページからは同期APIを使えないよ','origin_denied');try{const body=await readBody(req),action=String(body.action||''),s=store();if(action==='create')return await createSync(req,s);if(action==='pull')return await pullSync(req,s,body);if(action==='pullChunk')return await pullChunkSync(req,s,body);if(action==='push')return await pushSync(req,s,body);if(action==='pushStart')return await pushStartSync(req,s,body);if(action==='pushChunk')return await pushChunkSync(req,s,body);if(action==='pushCommit')return await pushCommitSync(req,s,body);return fail(req,400,'同期APIの操作を認識できないよ','bad_action')}catch(e){console.error('[juggler-sync]',e);return fail(req,+e?.status||500,e?.message||'同期APIでエラーが起きたよ','server_error')}};
+export const createSyncRuntime=({createStore=createBlobStore}={})=>({default:async req=>{if(req.method==='OPTIONS')return new Response('',{status:204,headers:headers(req)});if(req.method!=='POST')return fail(req,405,'POSTで呼んでね','method_not_allowed');const origin=req.headers.get('origin')||'';if(origin&&!originAllowed(req))return fail(req,403,'このページからは同期APIを使えないよ','origin_denied');try{const body=await readBody(req),action=String(body.action||''),s=createStore(STORE_NAME);if(action==='create')return await createSync(req,s);if(action==='pull')return await pullSync(req,s,body);if(action==='pullChunk')return await pullChunkSync(req,s,body);if(action==='push')return await pushSync(req,s,body);if(action==='pushStart')return await pushStartSync(req,s,body);if(action==='pushChunk')return await pushChunkSync(req,s,body);if(action==='pushCommit')return await pushCommitSync(req,s,body);return fail(req,400,'同期APIの操作を認識できないよ','bad_action')}catch(e){console.error('[juggler-sync]',e);return fail(req,+e?.status||500,e?.message||'同期APIでエラーが起きたよ','server_error')}}});
+export default async req=>createSyncRuntime().default(req);
 export const config={path:'/api/sync',rateLimit:{windowLimit:60,windowSize:60,aggregateBy:['ip','domain']}};
 export const __test={pullSync,pushSync,pullChunkSync,pushStartSync,pushChunkSync,pushCommitSync,validPayload};

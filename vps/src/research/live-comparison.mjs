@@ -1,4 +1,8 @@
 import {canonicalJson,hashCanonical} from '../canonical-json.mjs';
+import {readEvaluationState,evaluationInputVersion} from './evaluation-state.mjs';
+import {isProspectivePrediction,sameCandidateSet,createRunClock} from './prediction-policy.mjs';
+import {requestPredictionEvaluation} from '../analysis/prediction-refresh-state.mjs';
+import {withSavepoint} from '../sqlite-savepoint.mjs';
 
 export const SCORER_VERSION='pre-shadow-scorer-v2';
 export const OUTCOME_PROXY_VERSION='canonical-diff-proxy-v2';
@@ -22,7 +26,9 @@ function normalizeRanking(row,index){
 }
 function normalizeRankings(rows){
   if(!Array.isArray(rows)||!rows.length)throw new TypeError('rankings are required');
-  return Object.freeze(rows.map(normalizeRanking).sort((a,b)=>a.rank-b.rank||b.score-a.score||a.machineKey.localeCompare(b.machineKey)));
+  const normalized=rows.map(normalizeRanking).sort((a,b)=>a.rank-b.rank||b.score-a.score||a.machineKey.localeCompare(b.machineKey));
+  if(new Set(normalized.map(r=>r.machineKey)).size!==normalized.length||new Set(normalized.map(r=>r.rank)).size!==normalized.length)throw new TypeError('duplicate ranking key or rank');
+  return Object.freeze(normalized);
 }
 
 function rowFromDb(row){
@@ -45,18 +51,27 @@ function scoreRowFromDb(row){
   });
 }
 
-export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersion,modelFingerprint='',featureVersion=null,sourceFrontierDate,inputHash,rankings,createdAt=new Date().toISOString()}={}){
+export function persistLivePrediction(db,{storeId,targetDate,engine,engineVersion,modelFingerprint='',featureVersion=null,sourceFrontierDate,inputHash,rankings,createdAt=new Date().toISOString(),prospective=false,clock=null}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=requiredText(storeId,'storeId'),target=validDate(targetDate,'targetDate'),kind=requiredText(engine,'engine');
   if(!ENGINES.has(kind))throw new TypeError('engine is invalid');
   const version=requiredText(engineVersion,'engineVersion'),fingerprint=String(modelFingerprint??'').trim(),frontier=validDate(sourceFrontierDate,'sourceFrontierDate'),input=requiredText(inputHash,'inputHash'),at=validIso(createdAt);
   if(frontier>=target)throw new TypeError('sourceFrontierDate must be before targetDate');
   const normalized=normalizeRankings(rankings),payload=Object.freeze({rankings:normalized}),payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
+  const currentTime=clock??createRunClock(at);
+  return withSavepoint(db,'live_prediction_save',()=>{
   const result=db.prepare(`INSERT INTO store_prediction_snapshots(store_id,target_date,engine,engine_version,model_fingerprint,feature_version,source_frontier_date,input_hash,payload_json,payload_hash,created_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(store_id,target_date,engine,engine_version,model_fingerprint) DO NOTHING`)
     .run(id,target,kind,version,fingerprint,featureVersion==null?null:String(featureVersion),frontier,input,payloadJson,payloadHash,at);
+  if(prospective&&result.changes){
+    const persistedAt=currentTime();if(!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:persistedAt}))throw Object.assign(new Error('prospective prediction deadline passed while acquiring storage'),{code:'prediction_deadline_passed'});
+    db.prepare('UPDATE store_prediction_snapshots SET created_at=? WHERE id=?').run(persistedAt,result.lastInsertRowid);
+  }
   const row=db.prepare(`SELECT * FROM store_prediction_snapshots WHERE store_id=? AND target_date=? AND engine=? AND engine_version=? AND model_fingerprint=?`).get(id,target,kind,version,fingerprint);
-  return Object.freeze({inserted:Number(result.changes||0)>0,row:rowFromDb(row)});
+  requestPredictionEvaluation(db,{storeId:id,nowIso:at,dirty:Number(result.changes||0)>0});
+  if(prospective&&result.changes&&!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:currentTime()}))throw Object.assign(new Error('prospective prediction deadline passed before commit'),{code:'prediction_deadline_passed'});
+  return Object.freeze({inserted:Number(result.changes||0)>0,conflict:row.payload_hash!==payloadHash||row.input_hash!==input||row.source_frontier_date!==frontier,row:rowFromDb(row)});
+  });
 }
 
 export function listLivePredictions(db,{storeId,targetDate=null,engine=null}={}){
@@ -130,13 +145,20 @@ function winnerFromScores(pre,current){
   return delta>0?'pre_research':'current_shadow';
 }
 
-export function scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows,outcomeInputHash,nowIso=new Date().toISOString()}={}){
+export function scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows,outcomeInputHash,nowIso=new Date().toISOString(),operational=false}={}){
   if(!db?.prepare)throw new TypeError('db is required');
   const id=requiredText(storeId,'storeId'),target=validDate(targetDate,'targetDate'),outcomeHash=requiredText(outcomeInputHash,'outcomeInputHash'),at=validIso(nowIso,'nowIso');
   if(!Array.isArray(outcomeRows)||!outcomeRows.length)throw new TypeError('outcomeRows are required');
   const existingHashes=db.prepare('SELECT DISTINCT outcome_input_hash AS hash FROM store_prediction_scores WHERE store_id=? AND target_date=?').all(id,target).map(row=>row.hash);
   if(existingHashes.some(hash=>hash!==outcomeHash))return Object.freeze({storeId:id,targetDate:target,winner:null,scores:Object.freeze({}),excludedReason:'outcome_hash_conflict'});
   const predictions=firstPredictionsForDay(db,id,target),scores={};let conflict=false;
+  if(operational){
+    for(const prediction of Object.values(predictions)){
+      const reason=!isProspectivePrediction(prediction)?'historical_prediction':!sameCandidateSet(prediction.rankings,outcomeRows)?'machine_identity_changed':null;
+      if(reason)return Object.freeze({storeId:id,targetDate:target,winner:null,scores:Object.freeze({}),excludedReason:reason});
+    }
+    if(predictions.pre_research&&predictions.current_shadow&&!sameCandidateSet(predictions.pre_research.rankings,predictions.current_shadow.rankings))return Object.freeze({storeId:id,targetDate:target,winner:null,scores:Object.freeze({}),excludedReason:'candidate_set_mismatch'});
+  }
   for(const engine of ['pre_research','current_shadow']){
     const prediction=predictions[engine];if(!prediction)continue;
     const result=persistPredictionScore(db,{prediction,outcomeRows,outcomeInputHash:outcomeHash,nowIso:at});
@@ -176,6 +198,11 @@ function comparisonRows(db,storeId,limit){
     if(!predictions.pre_research)excludedReason='missing_pre_research';
     else if(!predictions.current_shadow)excludedReason='missing_current_shadow';
     else if(!scores.pre_research||!scores.current_shadow)excludedReason='unscored';
+    const evaluation=readEvaluationState(db,{storeId,targetDate});
+    if(evaluation&&evaluation.state!=='complete')excludedReason=evaluation.reason||evaluation.state;
+    if(evaluation?.state==='complete'){
+      if(evaluation.details.inputVersion!==evaluationInputVersion(db,{storeId,targetDate}))excludedReason='outcome_hash_conflict';
+    }
     const winner=excludedReason?null:winnerFromScores(scores.pre_research,scores.current_shadow);
     return Object.freeze({targetDate,winner,excludedReason,scores:Object.freeze(scores),predictions:Object.freeze({
       pre_research:predictions.pre_research?Object.freeze({engineVersion:predictions.pre_research.engineVersion,modelFingerprint:predictions.pre_research.modelFingerprint,featureVersion:predictions.pre_research.featureVersion,sourceFrontierDate:predictions.pre_research.sourceFrontierDate,payloadHash:predictions.pre_research.payloadHash,createdAt:predictions.pre_research.createdAt}):null,

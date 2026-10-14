@@ -40,8 +40,8 @@ async function jsonBody(req){
 }
 export function canReadPiaRoute(parts,method){
   if(!['GET','HEAD'].includes(method)||parts[0]!=='api'||parts[1]!=='vps')return false;
-  if(parts.length===3&&parts[2]==='stores')return true;
-  return parts[2]==='stores'&&((parts.length===5&&parts[4]==='days')||(parts.length===6&&parts[4]==='days'));
+  if(parts.length===3&&['stores','operations'].includes(parts[2]))return true;
+  return parts[2]==='stores'&&((parts.length===5&&['days','operations','performance'].includes(parts[4]))||(parts.length===6&&parts[4]==='days'));
 }
 
 export function createAccessHandler({config}={}){
