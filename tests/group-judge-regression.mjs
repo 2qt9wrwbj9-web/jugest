@@ -5,20 +5,21 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import {boot} from './helpers/runtime.mjs';
+import {historicalSource} from './helpers/historical-source.mjs';
 
 const BASE='f728b2587a9bdd81541ccb50d3ae802a8492486a';
 const APPROVED_NAMES_BASE='6945776435f698c61c7e27c90c67beafbc5eb2a1';
 const approvedNames={};
-vm.runInNewContext(execFileSync('git',['show',`${APPROVED_NAMES_BASE}:machine-names.js`]).toString(),approvedNames);
+vm.runInNewContext((await historicalSource(APPROVED_NAMES_BASE,'machine-names.js')).toString(),approvedNames);
 const root=process.cwd(),oldDir=mkdtempSync(path.join(tmpdir(),'jugest-group-baseline-'));
 const files=['hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js','sync-core.js','index.html'];
 let seed=0x20261010;
 const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32};
 try{
- for(const name of files)writeFileSync(path.join(oldDir,name),execFileSync('git',['show',`${BASE}:${name}`],{cwd:root,maxBuffer:20*1024*1024}));
+ for(const name of files)writeFileSync(path.join(oldDir,name),await historicalSource(BASE,name,{cwd:root}));
  // The current loader needs the already-approved display registry. The frozen
  // baseline model/index remain unchanged and do not consume that new registry.
- writeFileSync(path.join(oldDir,'machine-names.js'),execFileSync('git',['show','6945776435f698c61c7e27c90c67beafbc5eb2a1:machine-names.js'],{cwd:root}));
+ writeFileSync(path.join(oldDir,'machine-names.js'),await historicalSource(APPROVED_NAMES_BASE,'machine-names.js',{cwd:root}));
  // A current loader may include the newly added pure files; old individual
  // outputs still execute the exact baseline index/model/core source above.
  for(const name of ['group-judge.js','group-judge-view.js']){

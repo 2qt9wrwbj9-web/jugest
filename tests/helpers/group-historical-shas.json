@@ -1,0 +1,21 @@
+{
+  "f728b2587a9bdd81541ccb50d3ae802a8492486a": {
+    "hanahana-judge.js": "46891c0654deae4fcebaf25c8a5bbebdd5434db1",
+    "missing-inference.js": "0f17a2c98582b17c467169746f9b43e8d1644f7c",
+    "judgement-model.js": "a90544e434805a6f89ef41da96eca2eb4bdda7c4",
+    "judgement-view.js": "4b5e3e5917a5cc8d64aecb3fabdc4f2f80cbe753",
+    "core-v510.js": "3dd3a1415b509d9d9113d2e8e3ba70a48f44ad74",
+    "sync-core.js": "349a187e2dca684603af573263f9025a954a0427",
+    "index.html": "afc4f1ccec2c0eb2971304f34b327fc8d04bdcd5"
+  },
+  "6945776435f698c61c7e27c90c67beafbc5eb2a1": {
+    "machine-names.js": "208694ffb32410dfe54d4107d0018a434f79f7bc",
+    "hanahana-judge.js": "46891c0654deae4fcebaf25c8a5bbebdd5434db1",
+    "missing-inference.js": "0f17a2c98582b17c467169746f9b43e8d1644f7c",
+    "judgement-model.js": "9695aaffaa59a835887a6f645a01ba183c5d41c3",
+    "judgement-view.js": "8ea55ece1d51151ddb1ba2ac32fc1c0df2801dc0",
+    "core-v510.js": "3dd3a1415b509d9d9113d2e8e3ba70a48f44ad74",
+    "sync-core.js": "349a187e2dca684603af573263f9025a954a0427",
+    "index.html": "e4466b3d84a3b9400cdadb35b98844afee2e0f9f"
+  }
+}

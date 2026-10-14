@@ -4,13 +4,14 @@ import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {boot} from './helpers/runtime.mjs';
+import {historicalSource} from './helpers/historical-source.mjs';
 const BASE='6945776435f698c61c7e27c90c67beafbc5eb2a1';
 const root=process.cwd(),snapshot=mkdtempSync(path.join(tmpdir(),'jugest-current-compat-'));
 const files=['machine-names.js','hanahana-judge.js','missing-inference.js','judgement-model.js','judgement-view.js','core-v510.js','sync-core.js','index.html'];
 let seed=0x20261010;
 const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32};
 try{
- for(const file of files)writeFileSync(path.join(snapshot,file),execFileSync('git',['show',`${BASE}:${file}`],{cwd:root,maxBuffer:20*1024*1024}));
+ for(const file of files)writeFileSync(path.join(snapshot,file),await historicalSource(BASE,file,{cwd:root}));
  for(const file of ['group-judge.js','group-judge-view.js'])writeFileSync(path.join(snapshot,file),'');
  process.chdir(snapshot);const old=await boot({loadApp:false});process.chdir(root);const current=await boot({loadApp:false});
  assert.deepEqual(structuredClone(current.ctx.JUGESTJudgement.MACHINE_KEYS),structuredClone(old.ctx.JUGESTJudgement.MACHINE_KEYS));
