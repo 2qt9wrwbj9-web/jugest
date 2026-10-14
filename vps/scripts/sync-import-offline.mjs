@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Offline, fail-closed legacy encrypted sync import. Never contacts the source.
-import {readFileSync,lstatSync,realpathSync,existsSync,readlinkSync} from 'node:fs';
+import {readFileSync,lstatSync,realpathSync,existsSync,readlinkSync,statSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
 import path from 'node:path';
@@ -10,7 +10,7 @@ const ID=/^[A-Za-z0-9_-]{12,80}$/;
 function fail(message){throw new Error('sync_import_'+message)}
 const sha=data=>createHash('sha256').update(data).digest('hex');
 function validPayload(p){
-  return p&&p.v===1&&['none','gzip'].includes(p.zip)&&
+  return p&&Buffer.byteLength(JSON.stringify(p),'utf8')<=4_900_000&&p.v===1&&['none','gzip'].includes(p.zip)&&
    typeof p.iv==='string'&&/^[A-Za-z0-9_-]{12,40}$/.test(p.iv)&&
    typeof p.ct==='string'&&/^[A-Za-z0-9_-]+$/.test(p.ct);
 }
@@ -67,11 +67,17 @@ export function validateArchive(archive){
   return {items:[...items],shareCount:groups.size,recordCount:items.size,
     fingerprint:sha(fingerprints.join('\n'))};
 }
-function safeFile(p){
+export function safePrivateArchivePath(p){
   if(typeof p!=='string'||!path.isAbsolute(p))fail('absolute_path_required');
-  if(!existsSync(p)||!lstatSync(p).isFile()||lstatSync(p).isSymbolicLink())fail('archive_missing_or_link');
-  if((lstatSync(p).mode&0o077)!==0)fail('archive_permissions_must_be_0600');
+  const st=lstatSync(p);
+  if(!st.isFile()||st.isSymbolicLink())fail('archive_missing_or_link');
+  if((st.mode&0o077)!==0)fail('archive_permissions_must_be_0600');
+  const parent=statSync(path.dirname(realpathSync(p)));
+  if(!parent.isDirectory()||(parent.mode&0o077)!==0)fail('archive_parent_requires_0700');
   return realpathSync(p);
+}
+export function loadPrivateArchive(p){
+  return JSON.parse(readFileSync(safePrivateArchivePath(p),'utf8'));
 }
 function protectedPath(value){return ['/var/lib/jugest','/opt/jugest'].some(root=>value===root||value.startsWith(root+'/'))}
 function destinationIdentity(value,depth=0){
@@ -93,7 +99,11 @@ function safeTarget(p){
   const requested=path.resolve(p),identity=destinationIdentity(requested);
   if(protectedPath(requested)||protectedPath(identity))fail('production_target_not_allowed');
   try{if(lstatSync(requested).isSymbolicLink())fail('target_symlink')}catch(e){if(e.code!=='ENOENT')throw e}
-  // Import is only into a scratch DB. Live cutover requires separate approval.
+  const parent=destinationIdentity(path.dirname(requested));
+  const stat=statSync(parent);
+  if(!stat.isDirectory()||(stat.mode&0o077)!==0)fail('target_parent_requires_0700');
+  // Import is only into an existing private scratch directory. Live cutover
+  // requires a different explicitly approved script.
   return requested;
 }
 export function inspectDbAndImport(archive,{dbPath,apply=false}={}){
@@ -133,8 +143,7 @@ export function parseArgs(args){
 if(process.argv[1]&&realpathSync(process.argv[1])===realpathSync(new URL(import.meta.url))){
   try{
     const a=parseArgs(process.argv.slice(2));
-    const text=readFileSync(safeFile(a.archive),'utf8');
-    const body=JSON.parse(text);
+    const body=loadPrivateArchive(a.archive);
     const summary=inspectDbAndImport(body,{dbPath:a.db,apply:a.apply});
     console.log(JSON.stringify({dryRun:summary.dryRun,shareCount:summary.shareCount,
       recordCount:summary.recordCount,fingerprint:summary.fingerprint}));

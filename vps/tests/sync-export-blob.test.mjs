@@ -85,3 +85,13 @@ test('unknown namespace objects fail closed rather than vanish silently',async t
  };
  await assert.rejects(buildLegacyArchive(invalid),/export_unrecognized_source_key/);
 });
+
+test('unfinished chunk upload stops export rather than silently omitting in-progress edits',async t=>{
+ const s=await origin(t);
+ const previous=await s.list();
+ const list=async options=>{
+   const old=await s.list(options);
+   return{...old,blobs:[...old.blobs,{pathname:s.prefix+'sync-upload/SomeUserUploadID_1234/meta'}]};
+ };
+ await assert.rejects(buildLegacyArchive({list,get:s.get}),/export_pending_uploads/);
+});

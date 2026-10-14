@@ -59,3 +59,18 @@
 - `npm --prefix vps test`: **645/645 PASS、0 fail、0 skip**
 - `npm test`: **85/85 コマンドPASS**（既存の判別数学・保護APIを含む）
 - 現行本番release `1f8c29fc458f34e11e546fb57944d0fc31db98a5` とweb serviceは一切変更していない。
+
+
+## 2026-10-15 08:27 以降の切替直前安全工程
+
+- 読取専用の旧Blob二重export照合CLIを追加。ID・暗号化データを表示せず、2つの私有保存ファイルの内容と件数・fingerprintが一致しないと拒否。
+- 未完了チャンクがあればexport拒否。インポート先は私有0700ディレクトリのみ。暗号化payloadの上限4.9MBを適用。
+- 元のVPS relay.sqliteの読み取り専用オンラインバックアップを隔離し、架空のhead3件を投入→同期APIでpull、既存2,427件の全行ハッシュ一致とSQLiteのquick_check=okを確認。隔離コピーは削除済み、本番未変更。
+- 実Blobのhead3件の中身検品・二重export、iPhone実機は未実施。本番の切替は引き続き保留。
+
+### 二重export検証後の最終テスト結果
+
+- `node --test vps/tests/sync-verify-two-exports.test.mjs vps/tests/sync-export-blob.test.mjs vps/tests/sync-import-offline.test.mjs`: **16/16 PASS**。
+- `npm --prefix vps test`: **651/651 PASS**。
+- `npm test`: **85/85 コマンドPASS**。
+- 保護対象のVercel端末同期API・判別数学・本番配信設定は未変更。現行本番の `/opt/jugest/current` のリリースも従来の `1f8c29f`。

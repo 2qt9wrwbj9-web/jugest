@@ -165,3 +165,24 @@ test('command line reads only owner-only archive, dry-run never creates a DB, an
  assert.notEqual(denied.status,0);
  assert.match(denied.stderr,/permissions_must_be_0600/);
 });
+
+test('oversized legacy ciphertext is rejected before touching a destination file',async t=>{
+ const f=await fixture(t);
+ const modified=structuredClone(f.archive);
+ const head=modified.objects.find(o=>o.key.startsWith('sync/'));
+ const record=JSON.parse(head.value);
+ record.payload=payload('X'.repeat(4_900_001));
+ head.value=JSON.stringify(record);
+ const dest=join(f.dir,'oversized.sqlite');
+ assert.throws(()=>inspectDbAndImport(modified,{dbPath:dest,apply:true}),/invalid_record/);
+ assert.equal((await import('node:fs')).existsSync(dest),false);
+});
+test('a world-readable target directory is not an approved isolation boundary',async t=>{
+ const f=await fixture(t);
+ const parent=join(f.dir,'public-target');
+ await (await import('node:fs/promises')).mkdir(parent,{mode:0o755});
+ await chmod(parent,0o755);
+ const dest=join(parent,'new.sqlite');
+ assert.throws(()=>inspectDbAndImport(f.archive,{dbPath:dest,apply:true}),/target_parent_requires_0700/);
+ assert.equal((await import('node:fs')).existsSync(dest),false);
+});

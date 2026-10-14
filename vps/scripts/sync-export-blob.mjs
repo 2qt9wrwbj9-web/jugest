@@ -37,6 +37,7 @@ async function collectNames(list){
 export async function buildLegacyArchive({list,get}){
  if(typeof list!=='function'||typeof get!=='function')throw new Error('export_source_functions_required');
  const first=await collectNames(list),objects=[];let totalBytes=0;
+ if(first.skipped>0)throw new Error('export_pending_uploads');
  for(const pathname of first.entries){
   const result=await get(pathname,{access:'private',useCache:false});
   if(!result||result.statusCode!==200||!result.stream)throw new Error('export_missing_or_unreadable_blob');
@@ -46,6 +47,7 @@ export async function buildLegacyArchive({list,get}){
   objects.push({key:pathname.slice(PREFIX.length),value});
  }
  const second=await collectNames(list);
+ if(second.skipped>0)throw new Error('export_pending_uploads');
  if(JSON.stringify(first.entries)!==JSON.stringify(second.entries))throw new Error('export_inventory_changed');
  // At least each head must still match its captured content. Full source write
  // freeze + a second identical export are required to rule out later writes.

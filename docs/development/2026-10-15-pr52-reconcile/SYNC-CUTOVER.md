@@ -6,7 +6,7 @@
 
 - 現行本番VPS release は `1f8c29fc458f34e11e546fb57944d0fc31db98a5`。この作業では再起動・更新していない。
 - 現行VPSの `/var/lib/jugest/relay.sqlite` の端末同期専用保存領域 `jugest/juggler-device-sync-v1` は **0件**（読み取り専用SQLで確認）。空だから旧共有データも空とは言えない。
-- Vercel側にプロジェクト `jugest` が接続する有効なBlobストアはある。**旧共有IDや暗号化保存内容が存在するか／件数／現在のrevisionは未確認**。ストアの存在・更新日時だけでは証明できない。
+- Vercel側の旧端末同期Blob保存先には、読取り専用の名前一覧検査で**共有headが3件、過去commitが0件**あると確認済み。ただし、3件の暗号化payload・更新番号・実共有コードの妥当性はまだ確認できていない。
 - VercelのPreviewも同じBlob接続設定を持つため、**Previewの同期APIを叩くと実データ書込みの危険がある。Previewでは同期機能を絶対に実行しないこと。** Vercel同期APIは既存の保護対象であり、ソースの変更は回帰テストが明示的に拒否するため行わない。安全な接続切り離しを別途設計するまではPreviewは画面の閲覧に限定する。
 - VPSの新しい同期保存先も、明示的な移行確認が終わるまで503 `sync_migration_required` を返す安全装置を追加。新しい共有領域の作成もできない。許可後の環境設定 `JUGEST_SYNC_CUTOVER_APPROVED=verified-migration-and-approval` を明示しない限り開かない。**現時点では設定していない**。
 - これは「移行完了」を保証する自動判定ではない。フラグを有効にする前に以下の確認とヒロの承認が必要。
@@ -54,3 +54,12 @@
 - **自動検証**: 架空の旧head 3件（revision 0/2/9、commit 0件）をSQLiteへ移した後、旧共有コードと同じ認証tokenでpull、次のpush、古い更新番号の409拒否をすべて成功。headの暗号化JSONはバイト一致。Vercel Blob互換の架空3-headオブジェクトをread-only列挙・各head二重取得→同じraw JSONで隔離SQLiteへ取り込む連携検証にも成功。
 - `vps/scripts/sync-export-blob.mjs` はVercel接続環境の **従来型 `BLOB_READ_WRITE_TOKEN` または OIDC `VERCEL_OIDC_TOKEN` + `BLOB_STORE_ID`** に対応。資格情報を表示・GitHub・ログに保存しない。実Blobへの書出しはまだ実施していない。
 - **注意**: 旧Blobの実head 3件について、暗号化payloadやrevisionが正しいことは**まだ確認されていない**。0件だったcommitだけでこれらを検証済みと誤認しない。実headの読み出し・停止期間内での二重export一致・インポート後の確認は依然本番切替の必須条件。
+
+
+## 2026-10-15 08:27以降 — 最終二重照合・隔離領域制約・本番Relayコピー試験
+
+- `vps/scripts/sync-verify-two-exports.mjs` を追加。`--first` と `--second` で異なる2つの **0600ファイル** を受け取り、両ファイルの正確な共有ID／履歴・暗号化レコードのSHA-256証明を一致照合。出力は件数とfingerprintのみ、**生ID・暗号化payload・認証hashは表示しない**。ファイルが同一、シンボリックリンク、他者閲覧可能なら拒否。検証時はDBや元Blobに一切書き込まない。
+- `sync-export-blob.mjs` は未完了のチャンクアップロードが1個でもあれば**即中止**し、途中データを黙って無視しない。旧Blob接続の既存レコードは変更しない。
+- `sync-import-offline.mjs` の暗号化payload検査は運用APIと同じ最大4.9MBを適用。保存先の親ディレクトリはモード0700の私有領域に限定し、依然 `/var/lib/jugest` と `/opt/jugest` に書き込めない。保存元の2つのJSONも0600で親は0700必須。
+- **本番Relay実レイアウトの照合**: `/var/lib/jugest/relay.sqlite` からSQLiteオンラインバックアップAPIで読み取り専用コピーを取り、隔離先にのみ架空head3件を取り込んだ。架空コードでpull成功。元から存在した同期以外の**2,427レコードの全行hashが完全に同じ**で、`PRAGMA quick_check=ok`、追加した3件だけが存在した。試験用のDBコピーを削除。本番VPSは稼働中、データ変更なし。
+- 現在できていないのは**実旧head3件の暗号化保存内容を権限ある管理環境で照合して2回exportし、隔離先への取り込みを検証する工程**と、iPhone Safari・Shortcutsの実機確認。ここは実施済みと誤記せず、本番切替のNO-GO条件として維持する。
