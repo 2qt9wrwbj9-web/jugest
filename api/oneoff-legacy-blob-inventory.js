@@ -26,7 +26,7 @@ export default async function handler(req,res){
        const key=String(b.pathname||'');
        if(!key.startsWith(prefix)){counts.unknown++;continue}
        const part=key.slice(prefix.length);
-       if(/^sync\/[A-Za-z0-9_-]{12,80}$/.test(part))counts.heads++;
+       if(/^sync\/[A-Za-z0-9_-]{12,80}$/.test(part))counts.heads++;privateHeadPaths.push(key);
        else if(/^sync-commit\/[A-Za-z0-9_-]{12,80}\/\d{12}$/.test(part))counts.commits++;
        else if(part.startsWith('sync-upload/'))counts.uploads++;
        else counts.unknown++;
