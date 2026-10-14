@@ -79,7 +79,7 @@ async function resolveStaticFile(rootDir,segments){
   return {path:resolved,size:info.size,mtime:info.mtime};
 }
 
-export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,pachinkoDbPath=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true}),accessConfig=readAccessConfig()}={}){
+export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,rawRoot=null,pachinkoDbPath=null,enterCollectorBarrier=async()=>({ok:true,noCoordinator:true}),syncCutoverEnabled=false,accessConfig=readAccessConfig()}={}){
   if(typeof rootDir!=='string'||!rootDir.trim())throw new TypeError('rootDir is required');
   if(typeof enterCollectorBarrier!=='function')throw new TypeError('enterCollectorBarrier must be a function');
   const absoluteRoot=path.resolve(rootDir);
@@ -104,6 +104,7 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   return async function jugestWebHandler(req,res){
     const url=new URL(req.url||'/','http://127.0.0.1');
     if(url.pathname==='/api/sync'){
+      if(!syncCutoverEnabled){send(res,503,JSON.stringify({ok:false,code:'sync_migration_required',message:'以前の同期データを保護するため、保存先の切替確認が完了するまで同期を停止しているよ'}),{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});return}
       if(!syncHandler){send(res,503,JSON.stringify({ok:false,code:'sync_storage_unavailable'}),{'content-type':'application/json; charset=utf-8'});return}
       return await syncHandler(req,res);
     }

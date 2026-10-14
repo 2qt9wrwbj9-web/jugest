@@ -18,9 +18,27 @@ async function fixture(t,wrap=s=>s){
   const call=async body=>{const response=await runtime.default(new Request('http://localhost/api/sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));return{status:response.status,body:await response.json()}};
   const {body:auth}=await call({action:'create'});return{store,auth,call,dir,dbPath};
 }
+test('unmigrated VPS blocks every sync action, without creating an empty competing namespace',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'jugest-vps-sync-guard-'));
+  t.after(()=>rm(dir,{recursive:true,force:true}));
+  await writeFile(join(dir,'index.html'),'<title>test</title>');
+  const dbPath=join(dir,'relay.sqlite');
+  const server=createWebServer({rootDir:dir,relayDbPath:dbPath});
+  server.listen(0,'127.0.0.1');await once(server,'listening');
+  t.after(()=>new Promise(r=>server.close(r)));
+  const endpoint=`http://127.0.0.1:${server.address().port}/api/sync`;
+  for(const action of ['create','pull','push']){
+    const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action})});
+    assert.equal(response.status,503);
+    assert.equal((await response.json()).code,'sync_migration_required');
+  }
+  const store=createRelayStore('juggler-device-sync-v1',{dbPath});
+  assert.deepEqual((await store.list()).blobs,[],'no empty or misleading shared state created');
+});
+
 test('VPS exposes the same encrypted sync protocol on its SQLite save path',async t=>{
   const dir=await mkdtemp(join(tmpdir(),'jugest-vps-sync-'));t.after(()=>rm(dir,{recursive:true,force:true}));await writeFile(join(dir,'index.html'),'<title>test</title>');
-  const server=createWebServer({rootDir:dir,relayDbPath:join(dir,'relay.sqlite')});server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(r=>server.close(r)));
+  const server=createWebServer({rootDir:dir,relayDbPath:join(dir,'relay.sqlite'),syncCutoverEnabled:true});server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(r=>server.close(r)));
   const response=await fetch(`http://127.0.0.1:${server.address().port}/api/sync`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'create'})});
   assert.equal(response.status,200);assert.equal((await response.json()).ok,true);
 });
