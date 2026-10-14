@@ -8,7 +8,7 @@ const result={scope:'legacy-sync-prefix',readOnly:true,permission:'unknown',
 if(process.env.VERCEL_ENV!=='preview'){
  console.log('[legacy-sync-inventory]',JSON.stringify({...result,skipped:'not_preview'}));
 }else{
- const tokenPresent=Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+ const tokenPresent=Boolean(process.env.BLOB_READ_WRITE_TOKEN||(process.env.VERCEL_OIDC_TOKEN&&process.env.BLOB_STORE_ID));
  if(!tokenPresent){
   console.log('[legacy-sync-inventory]',JSON.stringify({...result,skipped:'no_blob_token_in_build_context'}));
  }else{
