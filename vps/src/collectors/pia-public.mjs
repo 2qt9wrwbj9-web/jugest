@@ -22,7 +22,7 @@ const MACHINE_ALIASES=JUGGLER_KEYS.map(key=>[key,SOURCE_LABELS[key],[NAME_REGIST
 const machineToken=NAME_REGISTRY.token;
 const ALIAS_TOKENS=MACHINE_ALIASES.map(([key,label,aliases])=>[key,label,aliases.map(machineToken)]);
 
-function finite(value){const n=Number(value);return Number.isFinite(n)?n:null}
+function finite(value){if(value==null||String(value).trim()===''||typeof value==='boolean')return null;const n=Number(value);return Number.isFinite(n)?n:null}
 function validDate(value){
   const text=String(value??'').trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(text))return null;
@@ -50,14 +50,14 @@ export function normalizePiaJugglerRow(row){
   if(!identity)return null;
   const out=finite(row?.out),specialOut=finite(row?.special_out),bb=finite(row?.special_1),rb=finite(row?.special_2d),diff=finite(row?.difference);
   const tableNo=String(row?.machine_no??'').trim();
-  if(!tableNo||out===null||specialOut===null||bb===null||rb===null||diff===null)return null;
+  if(!tableNo||out===null||specialOut===null||bb===null||rb===null)return null;
   const games=Math.round((out-specialOut)/3);
-  if(games<0||bb<0||rb<0)return null;
+  if(games<0||bb<0||rb<0||!Number.isInteger(bb)||!Number.isInteger(rb)||bb+rb>games)return null;
   return {
     machine:identity.key,category:'juggler',sourceMachineName:identity.label,
     sourceRawMachineName:String(row?.name??''),sourceMachineCode:String(row?.sis_machine_code??''),
     sourceStoreMachineId:String(row?.store_machine_id??''),tableNo,games,bb,rb,diff,
-    gamesSource:'observed',diffSource:'observed'
+    gamesSource:'observed',diffSource:diff===null?'missing':'observed'
   };
 }
 
@@ -170,7 +170,11 @@ export function derivePiaBusinessDay(previousSnapshot,currentSnapshot,currentDat
   }
   machines.sort((a,b)=>Number(a.tableNo)-Number(b.tableNo)||a.tableNo.localeCompare(b.tableNo));
   const oneAddCoverage=comparable?oneAdd/comparable:0,normalizedCoverage=comparable?normalizedComparable/comparable:0;
-  const ready=comparable>=minComparable&&oneAddCoverage>=0.95&&normalizedCoverage>=0.90&&(multiAdd/comparable)<=0.05;
+  // Every previously known table needs one unambiguous day. New tables are
+  // allowed only when their first observed row has been validated/normalized.
+  // Do not let the old 95% readiness threshold advance a partial baseline.
+  const ready=comparable>=minComparable&&oneAdd===comparable&&normalizedComparable===comparable&&
+    [...previous.keys()].every(key=>current.has(key))&&machines.length===current.size;
   const businessDate=previousDate(currentDate);
   const warnings=[];
   if(zeroAdd)warnings.push(`同一履歴で差分不能${zeroAdd}台`);
@@ -182,7 +186,7 @@ export function derivePiaBusinessDay(previousSnapshot,currentSnapshot,currentDat
     diagnostics:{comparable,oneAdd,multiAdd,zeroAdd,newMachines,unsupported,oneAddCoverage,normalizedCoverage},
     day:{
       date:businessDate,source:'pia-public',sourceUrl:PIA_ENDPOINT,parserBuild:PIA_PARSER_BUILD,
-      machines,quality:{score:Math.round(normalizedCoverage*100),grade:normalizedCoverage>=0.98?'A':normalizedCoverage>=0.95?'B':'C',warnings,totalMachines:machines.length,parserBuild:PIA_PARSER_BUILD}
+      machines,quality:{score:Math.round(normalizedCoverage*100),grade:normalizedCoverage>=0.98?'A':normalizedCoverage>=0.95?'B':'C',warnings,totalMachines:machines.length,expectedMachineKeys:[...current.keys()].sort(),publicationStatus:'final',parserBuild:PIA_PARSER_BUILD}
     }
   };
 }
@@ -208,6 +212,7 @@ export async function collectPiaPublicOnce(db,{rawRoot,fetchImpl=fetch,nowIso=ne
   if(!db?.prepare)throw new TypeError('db is required');
   if(typeof rawRoot!=='string'||!rawRoot.trim())throw new TypeError('rawRoot is required');
   const prior=readState(db);
+  writeState(db,{collector_id:PIA_COLLECTOR_ID,last_attempt_at:nowIso,last_result:'fetching',updated_at:nowIso});
   let snapshot;
   try{snapshot=await fetchPiaPublicSnapshot({fetchImpl,minMachineCount,previousSnapshot:prior?.last_snapshot_json?JSON.parse(prior.last_snapshot_json):null})}
   catch(error){
@@ -241,8 +246,17 @@ export async function collectPiaPublicOnce(db,{rawRoot,fetchImpl=fetch,nowIso=ne
     parserBuild:PIA_PARSER_BUILD,revision:1,day:derived.day,rawText:snapshot.rawText,nowIso,
     sourceMetadata:{visibility:'public',publicStoreId:35,endpoint:PIA_ENDPOINT,snapshotDate:snapshot.snapshotDate,historyWindowDays:30}
   });
+  if(!ingest.accepted||!ingest.integrity.eligibleForEvaluation){
+    writeState(db,{collector_id:PIA_COLLECTOR_ID,last_attempt_at:nowIso,last_result:'not_ready',last_error:`検品待ち: ${ingest.integrity.issues.join(' / ')}`,updated_at:nowIso});
+    return {status:'not_ready',snapshotDate:snapshot.snapshotDate,integrity:ingest.integrity};
+  }
   writeState(db,{collector_id:PIA_COLLECTOR_ID,last_snapshot_date:snapshot.snapshotDate,last_snapshot_hash:snapshot.snapshotHash,last_snapshot_json:snapshot.rawText,last_result:'ingested',last_ingested_date:derived.businessDate,last_attempt_at:nowIso,last_success_at:nowIso,last_error:null,updated_at:nowIso});
   return {status:'ingested',snapshotDate:snapshot.snapshotDate,businessDate:derived.businessDate,machineCount:derived.machines.length,diagnostics:derived.diagnostics,ingest};
+}
+
+export function recordPiaCollectorFailure(db,{nowIso,error}){
+  const prior=readState(db);
+  writeState(db,{collector_id:PIA_COLLECTOR_ID,last_attempt_at:nowIso,last_result:prior?.last_result==='fetch_error'&&prior.last_attempt_at===nowIso?'fetch_error':'collection_error',last_error:String(error?.message??error).slice(0,1000),updated_at:nowIso});
 }
 
 export const __test={machineToken,machineIdentity,addedRows,groupRows,previousDate,dayDistance,readState,writeState};

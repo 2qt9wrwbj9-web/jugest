@@ -21,9 +21,12 @@ export function readWebConfig(env=process.env){
   const canonicalDbPath=path.resolve(String(env.JUGEST_DB_PATH||DEFAULT_CANONICAL_DB));
   const rawRoot=path.resolve(String(env.JUGEST_RAW_ROOT||DEFAULT_RAW_ROOT));
   const piaCollectorEnabled=!['0','false','no','off'].includes(String(env.JUGEST_PIA_COLLECTOR_ENABLED??'1').trim().toLowerCase());
+  // Never enable a new empty sync store simply because relay storage exists.
+  // Set only after an independently verified migration and explicit cutover approval.
+  const syncCutoverEnabled=String(env.JUGEST_SYNC_CUTOVER_APPROVED??'').trim()==='verified-migration-and-approval';
   if(!host)throw new TypeError('JUGEST_WEB_HOST must not be empty');
   if(!Number.isInteger(port)||port<1||port>65535)throw new TypeError('JUGEST_WEB_PORT must be an integer from 1 to 65535');
-  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled};
+  return {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled,syncCutoverEnabled};
 }
 
 export async function runWebServer({
@@ -36,7 +39,7 @@ export async function runWebServer({
 }={}){
   if(!config||typeof config!=='object')throw new TypeError('config is required');
   if(typeof startCoordinator!=='function'||typeof startPachinkoCollector!=='function')throw new TypeError('start functions must be functions');
-  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled=false}=config;
+  const {rootDir,host,port,relayDbPath,canonicalDbPath,rawRoot,piaCollectorEnabled=false,syncCutoverEnabled=false}=config;
   const pConfig=pachinkoConfig===undefined?readPachinkoConfig(process.env,{canonicalDbPath,relayDbPath,rootDir}):pachinkoConfig;
 
   let coordinatorRuntime=null,piaCollectorRuntime=null,pachinkoCollectorRuntime=null;
@@ -47,6 +50,7 @@ export async function runWebServer({
   const server=createWebServer({
     rootDir,
     relayDbPath,
+    syncCutoverEnabled,
     canonicalDbPath,
     rawRoot,
     pachinkoDbPath:pConfig?.dbPath??null,
@@ -94,6 +98,7 @@ export async function runWebServer({
     rawRoot:rawRoot?path.resolve(rawRoot):null,
     coordinatorMode:canonicalDbPath?'web-supervised':'disabled',
     piaCollectorMode:canonicalDbPath&&rawRoot&&piaCollectorEnabled?'enabled':'disabled',
+    syncMode:syncCutoverEnabled?'cutover-enabled':'migration-pending',
     pachinkoMode:pConfig?.dbPath?'read-only-api':'disabled',
     pachinkoCollectorMode:pConfig?.collectorEnabled?'enabled':'disabled'
   }));

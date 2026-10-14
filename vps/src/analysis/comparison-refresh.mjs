@@ -1,47 +1,39 @@
-import {hashCanonical} from '../canonical-json.mjs';
 import {scoreLiveComparisonDay} from '../research/live-comparison.mjs';
+import {loadEvaluationDay,saveEvaluationState,readEvaluationState,evaluationInputVersion} from '../research/evaluation-state.mjs';
+import {listLivePredictions} from '../research/live-comparison.mjs';
+import {describePredictionOutcome} from '../research/prediction-performance.mjs';
 
-function requiredText(value,name){const text=String(value??'').trim();if(!text)throw new TypeError(`${name} is required`);return text}
-function validDate(value,name){const text=requiredText(value,name);if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError(`${name} must be YYYY-MM-DD`);return text}
-function validIso(value){const text=requiredText(value,'nowIso');if(!Number.isFinite(Date.parse(text)))throw new TypeError('nowIso must be ISO date-time');return text}
-function safeJson(text){try{return JSON.parse(text)}catch{return null}}
-
-function loadCanonicalOutcome(db,{storeId,targetDate}){
-  const day=db.prepare(`SELECT normalized_payload_hash,source_hash,quality_status FROM store_days
-    WHERE store_id=? AND business_date=? LIMIT 1`).get(storeId,targetDate);
-  if(!day||day.quality_status!=='valid')return null;
-  const rawRows=db.prepare(`SELECT machine_key,payload_json FROM machine_day_data
-    WHERE store_id=? AND business_date=? ORDER BY machine_key`).all(storeId,targetDate);
-  const outcomeRows=[];
-  for(const row of rawRows){
-    const payload=safeJson(row.payload_json);if(!payload)continue;
-    const machineKey=String(payload.tableNo??payload.table_no??row.machine_key??'').trim();
-    const rawDiff=payload.diff;
-    if(!machineKey||rawDiff===null||rawDiff===undefined||rawDiff==='')continue;
-    const outcomeScore=Number(rawDiff);
-    if(!Number.isFinite(outcomeScore))continue;
-    outcomeRows.push(Object.freeze({machineKey,outcomeScore}));
-  }
-  if(!outcomeRows.length)return null;
-  const input=Object.freeze({storeId,targetDate,normalizedPayloadHash:String(day.normalized_payload_hash??''),sourceHash:String(day.source_hash??''),outcomeRows:Object.freeze(outcomeRows)});
-  return Object.freeze({outcomeRows:Object.freeze(outcomeRows),outcomeInputHash:hashCanonical(input)});
-}
+function loadCanonicalOutcome(db,args){const outcome=loadEvaluationDay(db,args);return outcome.state==='ready'?outcome:null}
 
 export function scoreAvailableComparisonDays(db,{storeId,throughDate,nowIso=new Date().toISOString()}={}){
-  if(!db?.prepare)throw new TypeError('db is required');
-  const id=requiredText(storeId,'storeId'),through=validDate(throughDate,'throughDate'),at=validIso(nowIso);
-  const targets=db.prepare(`SELECT DISTINCT target_date FROM store_prediction_snapshots
-    WHERE store_id=? AND target_date<=? ORDER BY target_date ASC`).all(id,through).map(row=>row.target_date);
-  let scored=0,excluded=0;
-  const rows=[];
-  for(const targetDate of targets){
-    const outcome=loadCanonicalOutcome(db,{storeId:id,targetDate});
-    if(!outcome){excluded+=1;rows.push(Object.freeze({targetDate,status:'excluded',reason:'outcome_unavailable'}));continue}
-    const comparison=scoreLiveComparisonDay(db,{storeId:id,targetDate,outcomeRows:outcome.outcomeRows,outcomeInputHash:outcome.outcomeInputHash,nowIso:at});
-    if(!comparison||comparison.excludedReason){excluded+=1;rows.push(Object.freeze({targetDate,status:'excluded',reason:comparison?.excludedReason??'comparison_unavailable',outcomeInputHash:outcome.outcomeInputHash}));continue}
-    scored+=1;rows.push(Object.freeze({targetDate,status:'scored',winner:comparison.winner,outcomeInputHash:outcome.outcomeInputHash}));
+  if(!db?.prepare||!storeId||!/^\d{4}-\d{2}-\d{2}$/.test(throughDate)||!Number.isFinite(Date.parse(nowIso)))throw new TypeError('db, storeId, throughDate and nowIso are required');
+  const targets=db.prepare(`SELECT p.target_date,MAX(p.id) max_id,d.normalized_payload_hash
+    FROM store_prediction_snapshots p LEFT JOIN store_days d ON d.store_id=p.store_id AND d.business_date=p.target_date
+    WHERE p.store_id=? AND p.target_date<=? GROUP BY p.target_date ORDER BY p.target_date`).all(storeId,throughDate);
+  let scored=0,excluded=0;const rows=[];
+  for(const target of targets){
+    const targetDate=target.target_date,previous=readEvaluationState(db,{storeId,targetDate});
+    const inputVersion=evaluationInputVersion(db,{storeId,targetDate});
+    if(previous&&['complete','corrected','historical'].includes(previous.state)&&previous.details.inputVersion===inputVersion&&previous.details.lastPredictionId===target.max_id){
+      const paired=previous.state==='complete'&&!previous.details.comparisonReason;
+      if(paired)scored++;else excluded++;
+      rows.push({targetDate,status:paired?'scored':'excluded',reason:previous.reason||previous.details.comparisonReason,cached:true});continue;
+    }
+    const outcome=loadEvaluationDay(db,{storeId,targetDate,nowIso});
+    if(outcome.state!=='ready'){
+      saveEvaluationState(db,{storeId,targetDate,state:outcome.state,reason:outcome.reason,normalizedHash:outcome.day?.normalized_payload_hash??null,details:{integrity:outcome.check??null,lastPredictionId:target.max_id},nowIso});
+      excluded++;rows.push({targetDate,status:'excluded',reason:outcome.reason});continue;
+    }
+    const comparison=scoreLiveComparisonDay(db,{storeId,targetDate,outcomeRows:outcome.outcomeRows,outcomeInputHash:outcome.outcomeInputHash,nowIso,operational:true});
+    const reason=comparison.excludedReason,hasScore=Object.keys(comparison.scores).length>0;
+    const state=reason==='outcome_hash_conflict'?'corrected':reason==='historical_prediction'?'historical':hasScore?'complete':'data_insufficient';
+    const performance={};
+    if(state==='complete')for(const p of listLivePredictions(db,{storeId,targetDate}))if(comparison.scores[p.engine]?.predictionId===p.id)performance[p.engine]=describePredictionOutcome(p.rankings,outcome.machines);
+    saveEvaluationState(db,{storeId,targetDate,state,reason:hasScore?null:reason,normalizedHash:outcome.day.normalized_payload_hash,outcomeHash:outcome.outcomeInputHash,
+      details:{lastPredictionId:target.max_id,inputVersion:outcome.inputVersion,comparisonReason:reason,winner:comparison.winner,performance},nowIso});
+    if(reason){excluded++;rows.push({targetDate,status:'excluded',reason})}
+    else{scored++;rows.push({targetDate,status:'scored',winner:comparison.winner,outcomeInputHash:outcome.outcomeInputHash})}
   }
-  return Object.freeze({storeId:id,throughDate:through,scored,excluded,rows:Object.freeze(rows)});
+  return Object.freeze({storeId,throughDate,scored,excluded,rows:Object.freeze(rows)});
 }
-
 export const __test={loadCanonicalOutcome};

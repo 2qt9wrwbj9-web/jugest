@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {execFileSync} from 'node:child_process';
 import {boot,memoryStorage,plain} from './helpers/runtime.mjs';
+import {historicalSource} from './helpers/historical-source.mjs';
 
 const UI_KEY='jugest:v510:ui';
 const sample={machine:'my',tableNo:'102',games:5000,bb:20,rb:20,diff:-500};
@@ -242,7 +243,7 @@ test('standalone reverse warnings use target positions, preserve named escaping 
 test('warning identity metadata leaves every saved group calculation and legacy report field exactly unchanged',async()=>{
  const {ctx,bridge}=await ready({loadApp:false});
  const saved={};
- vm.runInNewContext(execFileSync('git',['show','a563a04e4771420ef8689593e90cf6aa97e36c3d:group-judge.js']).toString(),saved);
+ vm.runInNewContext((await historicalSource('a563a04e4771420ef8689593e90cf6aa97e36c3d','group-judge.js')).toString(),saved);
  const cases=[
   [{...sample,tableNo:'',diff:50000},{...sample,tableNo:'2',diff:''}],
   [{...sample,diff:0},{...sample,tableNo:'103',diff:-500}],

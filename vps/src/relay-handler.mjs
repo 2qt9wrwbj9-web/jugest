@@ -68,7 +68,8 @@ function installCanonicalPushHook(runtime,onCollectorSaved){
     if(!entry?.key)throw new Error('Collector canonical hook could not resolve saved day record');
     const saved=await store.get(entry.key,{type:'json'});
     if(!saved?.day||!Array.isArray(saved.day.machines))throw new Error('Collector canonical hook found an invalid saved day record');
-    await onCollectorSaved({channelId:auth.channelId,sourceStoreId:job.sourceStoreId,shop:String(saved.shop||job.shop||result.shop||''),date:String(saved.day.date||job.date),parserBuild:String(saved.parserBuild||saved.day.parserBuild||saved.day.quality?.parserBuild||'v504-header-driven-1'),day:saved.day,rawText:String(body?.text??body?.html??''),jobToken,revision:Number.isFinite(+saved.revision)?+saved.revision:+result.revision||0});
+    const day={...saved.day,quality:{...saved.day.quality,...result.quality}};
+    await onCollectorSaved({channelId:auth.channelId,sourceStoreId:job.sourceStoreId,shop:String(saved.shop||job.shop||result.shop||''),date:String(saved.day.date||job.date),parserBuild:String(saved.parserBuild||saved.day.parserBuild||saved.day.quality?.parserBuild||'v504-header-driven-1'),day,rawText:String(body?.text??body?.html??''),jobToken,revision:Number.isFinite(+saved.revision)?+saved.revision:+result.revision||0});
     return response;
   };
   api.iosCollectorPushV2=wrapped;
@@ -84,7 +85,9 @@ function createCanonicalSavedHook({canonicalDbPath,rawRoot}){
     const db=openDatabase(canonicalDbPath);
     try{
       migrate(db);
-      return await measureIngest(()=>ingestCollectorDay(db,{rawRoot,channelId:payload.channelId,sourceStoreId:payload.sourceStoreId,shop:payload.shop,date:payload.date,parserBuild:payload.parserBuild,day:payload.day,rawText:payload.rawText,revision:payload.revision,nowIso:new Date().toISOString()}),{storeId:payload.sourceStoreId,date:payload.date});
+      const result=await measureIngest(()=>ingestCollectorDay(db,{rawRoot,channelId:payload.channelId,sourceStoreId:payload.sourceStoreId,shop:payload.shop,date:payload.date,parserBuild:payload.parserBuild,day:payload.day,rawText:payload.rawText,revision:payload.revision,nowIso:new Date().toISOString()}),{storeId:payload.sourceStoreId,date:payload.date});
+      if(!result.accepted||!result.integrity.eligibleForAnalysis)throw Object.assign(new Error('取得データは保存したけど検品が完了していないよ。欠損・公開状態を確認して再取得してね'),{status:503,code:'canonical_day_incomplete'});
+      return result;
     }finally{db.close()}
   };
 }

@@ -3,6 +3,8 @@ import {buildLivePredictionRows} from './backtest.mjs';
 import {persistLivePrediction} from './live-comparison.mjs';
 import {scoreSample} from './model-search.mjs';
 import {enrichStoreReadRankings} from './store-read-explain.mjs';
+import {operationalTargetDate,isProspectivePrediction,predictionHistoryHash,createRunClock} from './prediction-policy.mjs';
+import {withSavepoint} from '../sqlite-savepoint.mjs';
 
 export const STORE_READ_SNAPSHOT_TYPE='store-read-active';
 export const STORE_READ_VERSION='store-read-v1';
@@ -34,14 +36,16 @@ export function enrichStoredStoreReadPayload({payload,activeModel,days}={}){
   if(!activeModel?.model||String(activeModel.fingerprint||'')!==String(payload.modelFingerprint||''))return payload;
   const storeId=required(payload.storeId??activeModel.storeId,'storeId'),targetDate=validDate(payload.targetDate,'targetDate'),rankings=Array.isArray(payload.rankings)?payload.rankings:[];
   if(!rankings.length)return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:Object.freeze([])});
-  const featureRows=buildLivePredictionRows({storeId,days,targetDate});
+  const featureRows=buildLivePredictionRows({storeId,days:days.filter(day=>String(day.date)<=String(payload.asOfDate??activeModel.sourceFrontierDate)),targetDate});
   const enriched=enrichStoreReadRankings({rankings,featureRows,model:activeModel.model});
   return Object.freeze({...payload,explanationVersion:'pre-audit-v1',rankings:enriched});
 }
 
-export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null}={}){
+export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,targetDate:requestedTarget=null}={}){
   const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate');
-  const targetDate=nextDate(frontier),featureRows=buildLivePredictionRows({storeId:id,days,targetDate});
+  const targetDate=validDate(requestedTarget??nextDate(frontier),'targetDate');
+  if(targetDate<=frontier)throw new TypeError('targetDate must be after frontierDate');
+  const featureRows=buildLivePredictionRows({storeId:id,days:days.filter(day=>String(day.date)<=frontier),targetDate});
   const coreRankings=featureRows.map(row=>({machineKey:row.machineKey,tableNo:row.tableNo,machineName:row.machineName,score:scoreSample(row,model)}))
     .sort((a,b)=>b.score-a.score||String(a.machineKey).localeCompare(String(b.machineKey))).map((row,index)=>Object.freeze({...row,rank:index+1}));
   const rankings=enrichStoreReadRankings({rankings:coreRankings,featureRows,model});
@@ -53,21 +57,33 @@ export function buildStoreReadPayload({storeId,modelFingerprint,model,featureVer
 
 export function persistStoreReadSnapshot(db,{storeId,modelFingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,nowIso=new Date().toISOString()}={}){
   if(!db?.prepare)throw new TypeError('db is required');
-  const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate'),at=required(nowIso,'nowIso');
-  const payload=buildStoreReadPayload({storeId:id,modelFingerprint:fingerprint,model,featureVersion:version,frontierDate:frontier,days,holdoutScore});
+  const id=required(storeId,'storeId'),fingerprint=required(modelFingerprint,'modelFingerprint'),version=required(featureVersion,'featureVersion'),frontier=validDate(frontierDate,'frontierDate');
+  const clock=createRunClock(required(nowIso,'nowIso'));let at=clock(),target=operationalTargetDate({frontierDate:frontier,nowIso:at}),payload;
+  const history=days.filter(day=>String(day.date)<=frontier);
+  if(history.some(day=>day.observedAt&&Date.parse(day.observedAt)>Date.parse(at)))throw new Error('prediction history contains data observed after generation');
+  for(let attempt=0;attempt<3;attempt++){
+    payload=buildStoreReadPayload({storeId:id,modelFingerprint:fingerprint,model,featureVersion:version,frontierDate:frontier,days:history,holdoutScore,targetDate:target});
+    at=clock();const future=operationalTargetDate({frontierDate:frontier,nowIso:at});if(future===target)break;
+    target=future;if(attempt===2)throw new Error('prospective prediction deadline changed repeatedly');
+  }
+  if(!isProspectivePrediction({targetDate:target,sourceFrontierDate:frontier,createdAt:at}))throw new Error('prospective prediction deadline passed');
   const targetDate=payload.targetDate,payloadJson=canonicalJson(payload),payloadHash=hashCanonical(payload);
+  return withSavepoint(db,'store_read_save',()=>{
+  if(payload.rankings.length){
+    const saved=persistLivePrediction(db,{
+      storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
+      sourceFrontierDate:frontier,inputHash:predictionHistoryHash({storeId:id,frontierDate:frontier,version,days:history}),rankings:payload.rankings,createdAt:at,prospective:true,clock
+    });
+    if(saved.conflict)throw Object.assign(new Error('prediction_snapshot_conflict: 保存済みの予測を保持したよ'),{code:'prediction_snapshot_conflict'});
+  }
   db.prepare(`INSERT INTO client_snapshots(store_id,snapshot_type,version,business_date,payload_json,payload_hash,updated_at)
     VALUES(?,?,?,?,?,?,?)
     ON CONFLICT(store_id,snapshot_type,version) DO UPDATE SET
       business_date=excluded.business_date,payload_json=excluded.payload_json,payload_hash=excluded.payload_hash,updated_at=excluded.updated_at`)
     .run(id,STORE_READ_SNAPSHOT_TYPE,STORE_READ_VERSION,targetDate,payloadJson,payloadHash,at);
-  if(payload.rankings.length){
-    persistLivePrediction(db,{
-      storeId:id,targetDate,engine:'pre_research',engineVersion:STORE_READ_VERSION,modelFingerprint:fingerprint,featureVersion:version,
-      sourceFrontierDate:frontier,inputHash:hashCanonical({storeId:id,frontierDate:frontier,featureVersion:version,days}),rankings:payload.rankings,createdAt:at
-    });
-  }
-  return Object.freeze({payload,payloadHash,targetDate});
+  if(!isProspectivePrediction({targetDate,sourceFrontierDate:frontier,createdAt:clock()}))throw Object.assign(new Error('prospective prediction deadline passed before display publication'),{code:'prediction_deadline_passed'});
+  return Object.freeze({payload,payloadHash,targetDate,conflict:false});
+  });
 }
 
 export function activateStoreModel(db,{storeId,fingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,nowIso=new Date().toISOString()}={}){
@@ -87,6 +103,7 @@ export function activateStoreModel(db,{storeId,fingerprint,model,featureVersion,
 export function refreshActiveStoreReadSnapshot(db,{storeId,days,frontierDate,nowIso=new Date().toISOString()}={}){
   const active=getActiveStoreModel(db,{storeId});
   if(!active)return null;
+  if(active.sourceFrontierDate>frontierDate)throw new Error('future_model_training_frontier');
   return persistStoreReadSnapshot(db,{storeId:active.storeId,modelFingerprint:active.fingerprint,model:active.model,featureVersion:active.featureVersion,frontierDate,days,holdoutScore:active.holdoutScore,nowIso});
 }
 

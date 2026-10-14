@@ -21,7 +21,8 @@ test('readWebConfig accepts explicit VPS web, relay, canonical DB, and raw setti
     relayDbPath:path.resolve('/srv/jugest/relay.sqlite'),
     canonicalDbPath:path.resolve('/srv/jugest/jugest.sqlite'),
     rawRoot:path.resolve('/srv/jugest/raw'),
-    piaCollectorEnabled:true
+    piaCollectorEnabled:true,
+    syncCutoverEnabled:false
   });
 });
 
@@ -31,6 +32,9 @@ test('readWebConfig defaults Relay and canonical storage to persistent VPS state
   assert.equal(config.canonicalDbPath,path.resolve('/var/lib/jugest/jugest.sqlite'));
   assert.equal(config.rawRoot,path.resolve('/var/lib/jugest/raw'));
   assert.equal(config.piaCollectorEnabled,true);
+  assert.equal(config.syncCutoverEnabled,false);
+  assert.equal(readWebConfig({JUGEST_SYNC_CUTOVER_APPROVED:'true'}).syncCutoverEnabled,false);
+  assert.equal(readWebConfig({JUGEST_SYNC_CUTOVER_APPROVED:'verified-migration-and-approval'}).syncCutoverEnabled,true);
   assert.equal(readWebConfig({JUGEST_WEB_PORT:'3000',JUGEST_PIA_COLLECTOR_ENABLED:'0'}).piaCollectorEnabled,false);
 });
 

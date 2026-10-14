@@ -1,0 +1,299 @@
+{
+  "basis": "a461a08005d8533107879813db29a57027c139b5",
+  "testedLocalCodeCommit": "112841b0f8bf40a56f2d461198e1e3107483139e",
+  "scope": "Final code plus following report/evidence-only files; consult git diff basis..current HEAD for any later changes",
+  "files": [
+    {
+      "status": "M",
+      "path": "api/_sync-web.js"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/REPORT.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/RESTART.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/evidence/changed-files.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/evidence/test-results.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/prediction-audit.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/progress.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/review-forecast.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/review-operations.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/review-reliability.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/reviewed-sync.patch"
+    },
+    {
+      "status": "A",
+      "path": "docs/development/2026-10-09-data-prediction/sync-audit.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/superpowers/plans/2026-10-09-data-prediction.md"
+    },
+    {
+      "status": "A",
+      "path": "docs/superpowers/specs/2026-10-09-data-prediction-design.md"
+    },
+    {
+      "status": "M",
+      "path": "sync-core.js"
+    },
+    {
+      "status": "M",
+      "path": "tests/collector-preservation.mjs"
+    },
+    {
+      "status": "M",
+      "path": "tests/commands.json"
+    },
+    {
+      "status": "A",
+      "path": "tests/helpers/reliability-preservation.mjs"
+    },
+    {
+      "status": "A",
+      "path": "tests/operations-mobile.mjs"
+    },
+    {
+      "status": "A",
+      "path": "tests/operations-ui.mjs"
+    },
+    {
+      "status": "A",
+      "path": "tests/sync-client-safety.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps-browser-analytics.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps-ui-enhancements.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps-ui-operations.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/scripts/measure-prediction-loop.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/scripts/pachinko.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/access/handler.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/analysis/comparison-refresh.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/analysis/daily-analysis.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/analysis/prediction-evaluation.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/analysis/prediction-refresh-state.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/analysis/store-data.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/analytics-handler.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/collectors/pia-public.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/collectors/pia-scheduler.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/coordinator.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/ingest/canonical-ingest.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/ingest/day-integrity.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/ingest/device-backfill.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/jobs/prediction-evaluate.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/jobs/shadow-predict.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/operations.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/relay-handler.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/research/evaluation-state.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/research/live-comparison.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/research/pre-v2/formal-auto-start.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/research/pre-v2/formal-daily-loop.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/research/pre-v2/formal-start.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/research/prediction-performance.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/research/prediction-policy.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/research/store-read-output.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/schema.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/sqlite-savepoint.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/src/sync-handler.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/ui-source-patch.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/src/web-server.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/canonical-ingest.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/comparison-refresh.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/daily-analysis-worker.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/daily-comparison-refresh.test.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/tests/data-integrity.test.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/tests/operations-api.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/pia-public-collector.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/pre-v2-formal-auto-start.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/pre-v2-formal-daily-loop.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/pre-v2-initial-active.test.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/tests/prediction-job.test.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/tests/prediction-operations.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/research-holdout.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/research-workers.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/shadow-predict.test.mjs"
+    },
+    {
+      "status": "M",
+      "path": "vps/tests/store-read-live.test.mjs"
+    },
+    {
+      "status": "A",
+      "path": "vps/tests/sync-durability.test.mjs"
+    }
+  ]
+}

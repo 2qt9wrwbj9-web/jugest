@@ -1,6 +1,7 @@
 function requireDb(db){if(!db?.prepare)throw new TypeError('db is required')}
 function requireStoreId(value){const text=String(value??'').trim();if(!text)throw new TypeError('storeId is required');return text}
 function safeJson(text,fallback={}){try{return JSON.parse(text)}catch{return fallback}}
+import {readDayIntegrity} from '../ingest/day-integrity.mjs';
 
 export function loadStoreDays(db,storeId,{limit=180}={}){
   requireDb(db);
@@ -18,6 +19,9 @@ export function loadStoreDays(db,storeId,{limit=180}={}){
     sourceHash:row.source_hash??'',
     normalizedHash:row.normalized_payload_hash??'',
     qualityStatus:row.quality_status,
+    integrity:readDayIntegrity(db,{storeId:id,date:row.business_date}),
+    observedAt:row.created_at,
+    updatedAt:row.updated_at,
     machines:machineStmt.all(id,row.business_date).map(machine=>safeJson(machine.payload_json,null)).filter(Boolean)
   }));
   return {

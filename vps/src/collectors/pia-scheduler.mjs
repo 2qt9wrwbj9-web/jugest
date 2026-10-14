@@ -1,6 +1,6 @@
 import {openDatabase} from '../db.mjs';
 import {migrate} from '../schema.mjs';
-import {collectPiaPublicOnce,PIA_COLLECTOR_ID} from './pia-public.mjs';
+import {collectPiaPublicOnce,PIA_COLLECTOR_ID,PIA_SOURCE_STORE_ID,recordPiaCollectorFailure} from './pia-public.mjs';
 import {markCollectorActivity} from '../collector-activity.mjs';
 
 const JST_OFFSET_MS=9*60*60*1000;
@@ -27,6 +27,13 @@ export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=ne
     migrate(db);
     const decision=shouldAttemptPiaCollection(db,{now,targetHour,targetMinute,cooldownMs});
     if(!decision.attempt)return decision;
+    // The claim is one SQLite statement, before any async boundary. It also
+    // survives restart so multiple processes cannot duplicate source access.
+    const at=now.toISOString(),cutoff=new Date(now.getTime()-cooldownMs).toISOString();
+    const claim=db.prepare(`INSERT INTO source_collector_state(collector_id,source_store_id,last_attempt_at,last_result,updated_at)
+      VALUES(?,?,?,'fetching',?) ON CONFLICT(collector_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,last_result='fetching',updated_at=excluded.updated_at
+      WHERE source_collector_state.last_attempt_at IS NULL OR source_collector_state.last_attempt_at<=?`).run(PIA_COLLECTOR_ID,PIA_SOURCE_STORE_ID,at,at,cutoff);
+    if(Number(claim.changes)!==1)return {...decision,attempt:false,reason:'claimed_elsewhere'};
     markCollectorActivity({dbPath,nowMs:now.getTime()});
     await enterCollectorBarrier();
     try{
@@ -35,6 +42,7 @@ export async function runPiaCollectorTick({dbPath,rawRoot,fetchImpl=fetch,now=ne
       return {...decision,result};
     }finally{markCollectorActivity({dbPath,ttlMs:2_000})}
   }catch(error){
+    recordPiaCollectorFailure(db,{nowIso:now.toISOString(),error});
     logger(JSON.stringify({level:'error',event:'pia_public_collector_failed',message:String(error?.message??error)}));
     throw error;
   }finally{db.close()}

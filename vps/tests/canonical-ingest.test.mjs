@@ -125,6 +125,7 @@ test('corrected day replaces complete machine set but stays coalesced behind act
     const corrected=sampleDay({machines:[
       {machine:'my',category:'juggler',sourceMachineName:'マイジャグラーV',tableNo:'101',games:5300,bb:22,rb:20,diff:1200}
     ]});
+    corrected.quality={...corrected.quality,expectedMachineKeys:['101']}; // Source-confirmed removal, distinct from a partial resend.
     const second=await ingestCollectorDay(f.db,{...baseInput,rawRoot:f.rawRoot,day:corrected,rawText:'<!doctype html><html><body>CORRECTED RAW</body></html>',revision:14,nowIso:'2026-09-11T01:02:00.000Z'});
     assert.equal(second.changed,true);
     assert.notEqual(second.normalizedHash,first.normalizedHash);

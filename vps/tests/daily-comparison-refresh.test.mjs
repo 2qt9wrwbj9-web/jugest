@@ -11,7 +11,7 @@ import {executeDailyAnalysis} from '../src/analysis/daily-analysis.mjs';
 import {persistLivePrediction} from '../src/research/live-comparison.mjs';
 
 const VERSION='vps-runtime-v1';
-const NOW='2026-09-04T09:00:00.000Z';
+const NOW='2026-09-05T09:00:00.000Z';
 
 function fixture(){
   const dir=mkdtempSync(join(tmpdir(),'jugest-daily-comparison-'));
@@ -43,7 +43,7 @@ function fixture(){
 test('daily analysis scores live PRE and current-shadow predictions when target day becomes canonical',async()=>{
   const f=fixture();
   try{
-    const out=await executeDailyAnalysis({db:f.db,job:f.job,rootDir:'/unused',nowIso:'2026-09-04T09:05:00.000Z',analysisRunner:async()=>({shop:'比較店',from:'2026-09-01',latest:'2026-09-04',days:4,rowCount:12,machines:[],positive:[],negative:[],patterns:[],machinePatterns:[]})});
+    const out=await executeDailyAnalysis({db:f.db,job:f.job,rootDir:'/unused',nowIso:'2026-09-05T09:05:00.000Z',analysisRunner:async()=>({shop:'比較店',from:'2026-09-01',latest:'2026-09-04',days:4,rowCount:12,machines:[],positive:[],negative:[],patterns:[],machinePatterns:[]})});
     assert.equal(out.status,'analyzed');
     assert.equal(out.comparisonScored,1);
     assert.equal(out.comparisonExcluded,0);

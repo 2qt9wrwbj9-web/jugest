@@ -36,6 +36,7 @@ export function maybeStartFinalizedFormalTrial(db,{
   days,
   frontierDate,
   nowIso=new Date().toISOString(),
+  operational=false,
 }={}){
   requireDb(db);migratePreV2TrialStore(db);
   const store=requireText(storeId,'storeId');
@@ -57,7 +58,7 @@ export function maybeStartFinalizedFormalTrial(db,{
 
   const started=startFormalLiveTrial(db,{
     storeId:store,lineageId:lineage,challengerFingerprint:candidate.fingerprint,
-    featureVersion:version,days,frontierDate:frontier,nowIso:at,
+    featureVersion:version,days,frontierDate:frontier,nowIso:at,operational,
   });
   return Object.freeze({
     reason:started.reason,
