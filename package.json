@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node build.mjs && node tests/run-regressions.mjs",
     "build": "node build.mjs",
-    "vercel:build": "npm test"
+    "vercel:build": "node scripts/oneoff-legacy-blob-inventory.mjs && npm test"
   },
   "dependencies": {
     "@vercel/blob": "2.8.0"
