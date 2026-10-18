@@ -1,0 +1,18 @@
+✔ principal declarations reserve the full store before exclusions and deduplicate equal counts (1.175508ms)
+✔ service keeps held groups, exact store/day and fixed scope under detail; caches only same hashes (9.862908ms)
+✔ missing exact day is returned as unavailable; invalid counts never reach the calculator (1.952808ms)
+✔ real worker returns all bands and preserves a real zero without touching a DB (110.17846ms)
+✔ read-only principals reuse current saved results but cannot start missing calculations (7.971112ms)
+✔ concurrent admission is bounded before raw reads and cancellation prevents calculation (0.481905ms)
+✔ result cache failure is separate from a successful computation (2.114822ms)
+✔ existing difference allocation is a separate approximate reference with no e-value declaration (105.820113ms)
+✔ a failed group is held explicitly while other complete groups remain available (75.305234ms)
+✔ owner retries transient calculation failures while saved readers retain the partial report (6.341681ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 420.051957

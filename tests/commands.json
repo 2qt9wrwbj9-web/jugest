@@ -81,5 +81,10 @@
   "node tests/group-judge-regression.mjs",
   "node tests/group-judge-simulation.mjs",
   "node --test tests/group-my-juggler-vi.mjs",
-  "node tests/group-current-production-regression.mjs"
+  "node tests/group-current-production-regression.mjs",
+  "node --check store-day-allocation.js",
+  "node --check store-day-allocation-view.js",
+  "node --test tests/store-day-allocation.mjs",
+  "node --test tests/store-day-allocation-client.mjs",
+  "node --test tests/store-day-allocation-ui.mjs"
 ]

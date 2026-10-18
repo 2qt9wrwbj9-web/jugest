@@ -87,7 +87,7 @@ export function createWebHandler({rootDir,relayDbPath=null,canonicalDbPath=null,
   if(access.config)assertPiaSharingOwnership();
   const relayHandler=typeof relayDbPath==='string'&&relayDbPath.trim()?createVpsRelayHandler({dbPath:relayDbPath,canonicalDbPath,rawRoot,enterCollectorBarrier}):null;
   const analyticsHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
-    ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath,authenticatePia:access.authenticate})
+    ?createAnalyticsHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath,rawRoot,authenticatePia:access.authenticate,authenticatePiaReadOnly:access.authenticateReadOnly})
     :null;
   const mcpHandler=typeof relayDbPath==='string'&&relayDbPath.trim()&&typeof canonicalDbPath==='string'&&canonicalDbPath.trim()
     ?createMcpHandler({rootDir:absoluteRoot,relayDbPath,canonicalDbPath})

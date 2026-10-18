@@ -1,0 +1,2133 @@
+{
+  "exportSha256": "6831ec85b1765d852d18eddf06433fc6c80e969ec51c1470bf325681a4974090",
+  "productionBase": "1f8c29fc458f34e11e546fb57944d0fc31db98a5",
+  "store": {
+    "id": "pia:35",
+    "name": "PIA大船1"
+  },
+  "date": "2026-10-16",
+  "readOnlyCanonicalUnchanged": true,
+  "elapsedMs": 390.41921900000006,
+  "cachedElapsedMs": 123.92626199999995,
+  "snapshot": {
+    "inputHash": "552b8f9b1da6ea074a7de4ad21fb6425763be80e06c97fe38beddda697c3497c",
+    "rosterHash": "d27c0530ff846bf6a0db3b324888bba1c9f19374ec5d45396d3dababf5f7ea44",
+    "provenanceHash": "4fe3446e611367c0cf26f12293e056771bf4f3553511c2542d7ec04ce0d1030e",
+    "rawHash": "c0a210697ce1529a44e8e5b72eeef3eeaea22816ca5470173f75a82d83055eb0",
+    "sourceHash": "c0a210697ce1529a44e8e5b72eeef3eeaea22816ca5470173f75a82d83055eb0",
+    "normalizedHash": "ad3a92b03f3dd0d756ec3f9b856932b5fc49afb55db63f77b27ec912a84d91e6",
+    "parserVersion": "pia-rankingtop-v1",
+    "updatedAt": "2026-10-16T15:30:00.017Z",
+    "date": "2026-10-16",
+    "verificationScope": "native-adjacent-membership-observations-partial",
+    "modelHash": "6d50466d514b365f29a47557352e54403e99cb633ba70df05b92f5123920e115",
+    "scopeHash": "3d326e89a8bd45a7f8fc8340656f17b5b2bd2848a0f02f7b361f9ca786e22a9d"
+  },
+  "roster": {
+    "status": "verified",
+    "nInstalled": 107,
+    "nObserved": 106,
+    "nSupported": 106,
+    "nUnsupported": 1,
+    "reasons": [],
+    "hash": "d27c0530ff846bf6a0db3b324888bba1c9f19374ec5d45396d3dababf5f7ea44",
+    "complete": true
+  },
+  "quality": {
+    "status": "partial",
+    "reasons": [
+      "pia_day_ambiguous",
+      "missing_games",
+      "missing_bb",
+      "missing_rb"
+    ],
+    "warnings": [],
+    "rawKind": "source-native",
+    "canonicalRowsN": 106,
+    "observedN": 106,
+    "duplicates": {
+      "identical": 0,
+      "conflicting": 0
+    }
+  },
+  "familySize": 27,
+  "strongEnabled": false,
+  "groups": [
+    {
+      "machine": "my6",
+      "machineName": "マイジャグラーVI",
+      "nInstalled": 58,
+      "nObserved": 58,
+      "eligible": true,
+      "reasons": [],
+      "zeroGamesN": 1,
+      "lowGamesN": 0,
+      "diffN": 58,
+      "bands": [
+        {
+          "id": "456",
+          "expected": 18.518524586184988,
+          "median": 19,
+          "interval": {
+            "lo": 11,
+            "hi": 26
+          },
+          "sensitivityRange": {
+            "lo": 6,
+            "hi": 30
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 58,
+              "priorProbability": 0.01694915254237289,
+              "posteriorProbability": 1.3549476951987524e-12,
+              "logPriorProbability": -4.077537443905719,
+              "logPriorComplement": -0.017094433359299735,
+              "logPosteriorProbability": -27.32725826367127,
+              "logPosteriorComplement": -1.3571366253017914e-12,
+              "logObservedMass": -71.0111518094247,
+              "logObservedComplement": -43.68389354575479,
+              "logLikelihood": -66.93361436551899,
+              "logBF": -23.266815253123497,
+              "logEValue": -66.93361436551898,
+              "logDetectionLikelihood": -66.93361436551898,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 6.5610775952385865
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -21.89330037476158
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": -17.324880385106752
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -21.89330037476158
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 29,
+              "priorProbability": 0.5084745762711864,
+              "posteriorProbability": 0.015632531945258966,
+              "logPriorProbability": -0.676340062243564,
+              "logPriorComplement": -0.7102416139192453,
+              "logPosteriorProbability": -4.158401155009223,
+              "logPosteriorComplement": -0.015756008497355367,
+              "logObservedMass": -47.84229470076265,
+              "logObservedComplement": -43.69964955425078,
+              "logLikelihood": -47.16595463851909,
+              "logBF": -4.1765466981875505,
+              "logEValue": -47.16595463851908,
+              "logDetectionLikelihood": -47.16595463851908,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 26.32873732223849
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -2.125640647761678
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": 2.44277934189315
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -2.125640647761678
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 20,
+              "priorProbability": 0.6610169491525425,
+              "posteriorProbability": 0.4191196637340857,
+              "logPriorProbability": -0.4139757977760728,
+              "logPriorComplement": -1.0818051703517284,
+              "logPosteriorProbability": -0.8695988061966631,
+              "logPosteriorComplement": -0.5432105050198075,
+              "logObservedMass": -44.5534923519501,
+              "logObservedComplement": -44.22710405077324,
+              "logLikelihood": -44.13951655417402,
+              "logBF": -0.9942176737525088,
+              "logEValue": -43.79557106701925,
+              "logDetectionLikelihood": -44.13951655417402,
+              "logNullMaximum": -0.3439454871547696,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 29.355175406583555
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": 0.9007974365833888
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": 5.469217426238217
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.9007974365833888
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "56",
+          "expected": 13.857454482549125,
+          "median": 13,
+          "interval": {
+            "lo": 7,
+            "hi": 23
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 27
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 58,
+              "priorProbability": 0.008474576271445733,
+              "posteriorProbability": 2.982654777433074e-23,
+              "logPriorProbability": -4.770684624435068,
+              "logPriorComplement": -0.00851068966817006,
+              "logPosteriorProbability": -51.866643370019936,
+              "logPosteriorComplement": 0,
+              "logObservedMass": -95.55053691577338,
+              "logObservedComplement": -43.68389354575344,
+              "logLikelihood": -90.77985229133832,
+              "logBF": -47.104469435253044,
+              "logEValue": -91.18531739831553,
+              "logDetectionLikelihood": -91.18531739831553,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": -17.285160330580737
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -45.739538300580904
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": -41.171118310926076
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -45.739538300580904
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 29,
+              "priorProbability": 0.3199345088666287,
+              "posteriorProbability": 0.0030819225647288396,
+              "logPriorProbability": -1.139638963925823,
+              "logPriorComplement": -0.38556617495929024,
+              "logPosteriorProbability": -5.782201667406717,
+              "logPosteriorComplement": -0.003086681468303709,
+              "logObservedMass": -49.466095213160145,
+              "logObservedComplement": -43.68698022722173,
+              "logLikelihood": -48.32645624923432,
+              "logBF": -5.025042196971874,
+              "logEValue": -51.876262465272944,
+              "logDetectionLikelihood": -51.876262465272944,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 25.16823571152326
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -3.2861422584769073
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": 1.2822777311779205
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -3.2861422584769073
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 20,
+              "priorProbability": 0.453389831056368,
+              "posteriorProbability": 0.1443610287530059,
+              "logPriorProbability": -0.7910029693552662,
+              "logPriorComplement": -0.6040194016662853,
+              "logPosteriorProbability": -1.9354379729306004,
+              "logPosteriorComplement": -0.15590675436916257,
+              "logObservedMass": -45.61933151868403,
+              "logObservedComplement": -43.83980030012259,
+              "logLikelihood": -44.82832854932876,
+              "logBF": -1.5925476508724543,
+              "logEValue": -46.99294258664913,
+              "logDetectionLikelihood": -46.99294258664913,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 28.66636341142882
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": 0.21198544142865217
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": 4.78040543108348
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.21198544142865217
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "expected": 4.878534798525367,
+          "median": 5,
+          "interval": {
+            "lo": 0,
+            "hi": 12
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 13
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 58,
+              "priorProbability": 0.004237288135593219,
+              "posteriorProbability": 2.0325100356147164e-59,
+              "logPriorProbability": -5.4638318050256105,
+              "logPriorComplement": -0.004246290881451209,
+              "logPosteriorProbability": -135.14324898664924,
+              "logPosteriorComplement": 0,
+              "logObservedMass": -178.82714253240266,
+              "logObservedComplement": -43.68389354575342,
+              "logLikelihood": -173.36331072737704,
+              "logBF": -129.6836634725051,
+              "logEValue": -173.36331072737704,
+              "logDetectionLikelihood": -173.36331072737704,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": -99.86861876661946
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -128.32299673661964
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": -123.7545767469648
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -128.32299673661964
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 29,
+              "priorProbability": 0.12720870297401507,
+              "posteriorProbability": 2.161655386049259e-11,
+              "logPriorProbability": -2.061926210809593,
+              "logPriorComplement": -0.1360588158397718,
+              "logPosteriorProbability": -24.557561712329274,
+              "logPosteriorComplement": -2.1614710021822248e-11,
+              "logObservedMass": -68.2414552580827,
+              "logObservedComplement": -43.683893545775035,
+              "logLikelihood": -66.1795290472731,
+              "logBF": -22.631694317337846,
+              "logEValue": -75.09166848476832,
+              "logDetectionLikelihood": -75.09166848476832,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 7.315162913484471
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -21.139215056515695
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": -16.570795066860867
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -21.139215056515695
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 20,
+              "priorProbability": 0.18151200586790017,
+              "posteriorProbability": 0.00010055185220172825,
+              "logPriorProbability": -1.7064334794324083,
+              "logPriorComplement": -0.20029655041279606,
+              "logPosteriorProbability": -9.204837021211858,
+              "logPosteriorComplement": -0.00010055690788135507,
+              "logObservedMass": -52.88873056696527,
+              "logObservedComplement": -43.683994102661295,
+              "logLikelihood": -51.182297087532866,
+              "logBF": -7.698599535284366,
+              "logEValue": -58.70270887527017,
+              "logDetectionLikelihood": -58.70270887527017,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -73.49469196075758,
+                  "logBF": 22.31239487322471
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -45.04031399075741,
+                  "logBF": -6.141983096775455
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -49.60873398041224,
+                  "logBF": -1.573563107120627
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -6.141983096775455
+              },
+              "id": "third"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "machine": "im",
+      "machineName": "ネオアイムジャグラーEX",
+      "nInstalled": 24,
+      "nObserved": 24,
+      "eligible": true,
+      "reasons": [],
+      "zeroGamesN": 0,
+      "lowGamesN": 2,
+      "diffN": 24,
+      "bands": [
+        {
+          "id": "456",
+          "expected": 13.05141097053164,
+          "median": 13,
+          "interval": {
+            "lo": 7,
+            "hi": 21
+          },
+          "sensitivityRange": {
+            "lo": 2,
+            "hi": 23
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.04000000000000001,
+              "posteriorProbability": 0.01362275988240584,
+              "logPriorProbability": -3.2188758248682006,
+              "logPriorComplement": -0.04082199452025496,
+              "logPosteriorProbability": -4.296013364250502,
+              "logPosteriorComplement": -0.013716401082719543,
+              "logObservedMass": -19.987371022698714,
+              "logObservedComplement": -15.705074059530931,
+              "logLikelihood": -16.768495197830514,
+              "logBF": -1.104243132819839,
+              "logEValue": -16.768495197830514,
+              "logDetectionLikelihood": -16.768495197830514,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 15.26962040594302
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": -0.8116302057594424
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 4.993906714859605
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -0.8116302057594424
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.52,
+              "posteriorProbability": 0.6023143542965647,
+              "logPriorProbability": -0.6539264674066639,
+              "logPriorComplement": -0.7339691750802004,
+              "logPosteriorProbability": -0.5069757867466436,
+              "logPosteriorComplement": -0.9220934206976281,
+              "logObservedMass": -16.19833344519486,
+              "logObservedComplement": -16.613451079145843,
+              "logLikelihood": -15.544406977788194,
+              "logBF": 0.33507492627744817,
+              "logEValue": -15.544406977788194,
+              "logDetectionLikelihood": -15.544406977788194,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 16.49370862598534
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": 0.412458014282878
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 6.217994934901926
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.412458014282878
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.68,
+              "posteriorProbability": 0.9170893996700809,
+              "logPriorProbability": -0.38566248081198456,
+              "logPriorComplement": -1.1394342831883648,
+              "logPosteriorProbability": -0.08655032001628093,
+              "logPosteriorComplement": -2.4899923561382344,
+              "logObservedMass": -15.777907978464496,
+              "logObservedComplement": -18.18135001458645,
+              "logLikelihood": -15.392245497652512,
+              "logBF": 1.6496702337455726,
+              "logEValue": -15.125626780734564,
+              "logDetectionLikelihood": -15.39224549765251,
+              "logNullMaximum": -0.2666187169179466,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 16.645870106121023
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": 0.5646194944185599
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 6.3701564150376075
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.5646194944185599
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "56",
+          "expected": 8.731705630086863,
+          "median": 9,
+          "interval": {
+            "lo": 0,
+            "hi": 15
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 16
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.020000594031920633,
+              "posteriorProbability": 0.000007511295124341416,
+              "logPriorProbability": -3.911993304273198,
+              "logPriorComplement": -0.02020331347272434,
+              "logPosteriorProbability": -11.799102653748815,
+              "logPosteriorComplement": -0.000007511323333986297,
+              "logObservedMass": -27.49046031219703,
+              "logObservedComplement": -15.691365169771549,
+              "logLikelihood": -23.57846700792383,
+              "logBF": -7.907305151625005,
+              "logEValue": -23.5765257280458,
+              "logDetectionLikelihood": -23.5765257280458,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 8.459648595849703
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": -7.621602015852758
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": -1.8160650952337107
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -7.621602015852758
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.3303621800895349,
+              "posteriorProbability": 0.2395231491195103,
+              "logPriorProbability": -1.107565710928525,
+              "logPriorComplement": -0.40101828005411544,
+              "logPosteriorProbability": -1.429105210770702,
+              "logPosteriorComplement": -0.2738096070879692,
+              "logObservedMass": -17.120462869218915,
+              "logObservedComplement": -15.965167265536182,
+              "logLikelihood": -16.01289715829039,
+              "logBF": -0.44874817280832247,
+              "logEValue": -16.196486946711786,
+              "logDetectionLikelihood": -16.196486946711786,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 16.025218445483144
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": -0.0560321662193175
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 5.74950475439973
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -0.0560321662193175
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.4700015970007797,
+              "posteriorProbability": 0.692984898212067,
+              "logPriorProbability": -0.7550191864098061,
+              "logPriorComplement": -0.6348812856495278,
+              "logPosteriorProbability": -0.36674707193146006,
+              "logPosteriorComplement": -1.180858341113165,
+              "logObservedMass": -16.05810473037967,
+              "logObservedComplement": -16.872215999561377,
+              "logLikelihood": -15.303085543969866,
+              "logBF": 0.9342491699419835,
+              "logEValue": -15.338358558566725,
+              "logDetectionLikelihood": -15.338358558566725,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 16.73503005980367
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": 0.653779448101206
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 6.459316368720254
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.653779448101206
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "expected": 4.191666466388153,
+          "median": 4,
+          "interval": {
+            "lo": 0,
+            "hi": 13
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 14
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.010000000000035408,
+              "posteriorProbability": 0.000002986287971639261,
+              "logPriorProbability": -4.605170185984551,
+              "logPriorComplement": -0.010050335853537177,
+              "logPosteriorProbability": -12.721479422894806,
+              "logPosteriorComplement": -0.0000029862924311174766,
+              "logObservedMass": -28.412837081343024,
+              "logObservedComplement": -15.69136064474065,
+              "logLikelihood": -23.807666895358473,
+              "logBF": -8.12635658647136,
+              "logEValue": -23.807666895358476,
+              "logDetectionLikelihood": -23.807666895358476,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 8.23044870841506
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": -7.850801903287401
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": -2.0452649826683533
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -7.850801903287401
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.13196977053130357,
+              "posteriorProbability": 0.07993652291060423,
+              "logPriorProbability": -2.0251823937493065,
+              "logPriorComplement": -0.14152873835137886,
+              "logPosteriorProbability": -2.5265224228845753,
+              "logPosteriorComplement": -0.08331261448292437,
+              "logObservedMass": -18.21788008133279,
+              "logObservedComplement": -15.77467027293114,
+              "logLikelihood": -16.192697687583482,
+              "logBF": -0.5595561530037223,
+              "logEValue": -17.090811914217404,
+              "logDetectionLikelihood": -17.090811914217404,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 15.845417916190051
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": -0.2358326955124106
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 5.569704225106637
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -0.2358326955124106
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.2030677816850728,
+              "posteriorProbability": 0.20794414316095905,
+              "logPriorProbability": -1.5942154557460575,
+              "logPriorComplement": -0.2269856498374901,
+              "logPosteriorProbability": -1.5704857778402008,
+              "logPosteriorComplement": -0.2331233633426546,
+              "logObservedMass": -17.261843436288416,
+              "logObservedComplement": -15.92448102179087,
+              "logLikelihood": -15.667627980542358,
+              "logBF": 0.029867391411022126,
+              "logEValue": -15.991057491571699,
+              "logDetectionLikelihood": -15.991057491571699,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -32.038115603773534,
+                  "logBF": 16.370487623231178
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -15.956864992071072,
+                  "logBF": 0.28923701152871395
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -21.76240191269012,
+                  "logBF": 6.094773932147762
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": 0.28923701152871395
+              },
+              "id": "third"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "machine": "go",
+      "machineName": "ゴーゴージャグラー3",
+      "nInstalled": 24,
+      "nObserved": 24,
+      "eligible": true,
+      "reasons": [],
+      "zeroGamesN": 0,
+      "lowGamesN": 0,
+      "diffN": 24,
+      "bands": [
+        {
+          "id": "456",
+          "expected": 12.782705664187061,
+          "median": 13,
+          "interval": {
+            "lo": 3,
+            "hi": 22
+          },
+          "sensitivityRange": {
+            "lo": 1,
+            "hi": 23
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.04000000000000001,
+              "posteriorProbability": 0.014407212713249344,
+              "logPriorProbability": -3.2188758248682006,
+              "logPriorComplement": -0.04082199452025496,
+              "logPosteriorProbability": -4.240026314935594,
+              "logPosteriorComplement": -0.014512004323458783,
+              "logObservedMass": -15.251009920991551,
+              "logObservedComplement": -11.025495610379416,
+              "logLikelihood": -12.03213409612335,
+              "logBF": -1.0474604802641903,
+              "logEValue": -12.03213409612335,
+              "logDetectionLikelihood": -12.03213409612335,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 3.925692580549752
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -2.1820938527216587
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": 0.9970104490709737
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -2.1820938527216587
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.52,
+              "posteriorProbability": 0.5905780792653647,
+              "logPriorProbability": -0.6539264674066639,
+              "logPriorComplement": -0.7339691750802004,
+              "logPosteriorProbability": -0.5266534264035219,
+              "logPosteriorComplement": -0.8930090636254917,
+              "logObservedMass": -11.537637032459479,
+              "logObservedComplement": -11.903992669681449,
+              "logLikelihood": -10.883710565052814,
+              "logBF": 0.28631292954843346,
+              "logEValue": -10.790185761862807,
+              "logDetectionLikelihood": -10.883710565052814,
+              "logNullMaximum": -0.09352480319000733,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 5.074116111620288
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -1.0336703216511225
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": 2.14543398014151
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -1.0336703216511225
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.68,
+              "posteriorProbability": 0.8084118395396356,
+              "logPriorProbability": -0.38566248081198456,
+              "logPriorComplement": -1.1394342831883648,
+              "logPosteriorProbability": -0.21268364791464833,
+              "logPosteriorComplement": -1.6524072083590067,
+              "logObservedMass": -11.223667253970603,
+              "logObservedComplement": -12.663390814414962,
+              "logLikelihood": -10.83800477315862,
+              "logBF": 0.6859517580679775,
+              "logEValue": -10.091027473742319,
+              "logDetectionLikelihood": -10.83800477315862,
+              "logNullMaximum": -0.7469772994163009,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 5.119821903514483
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -0.987964529756928
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": 2.1911397720357044
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -0.987964529756928
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "56",
+          "expected": 1.448464474222645,
+          "median": 0,
+          "interval": {
+            "lo": 0,
+            "hi": 9
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 10
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.020000594031920633,
+              "posteriorProbability": 0.000010686729554508743,
+              "logPriorProbability": -3.911993304273198,
+              "logPriorComplement": -0.02020331347272434,
+              "logPosteriorProbability": -11.446507814766912,
+              "logPosteriorComplement": -0.00001068678665738787,
+              "logObservedMass": -22.457491420822866,
+              "logObservedComplement": -11.01099429284261,
+              "logLikelihood": -18.545498116549666,
+              "logBF": -7.554707137179779,
+              "logEValue": -18.934852159325303,
+              "logDetectionLikelihood": -18.934852159325303,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": -2.587671439876564
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -8.695457873147975
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": -5.516353571355342
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -8.695457873147975
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.3303621800895349,
+              "posteriorProbability": 0.024716241104665092,
+              "logPriorProbability": -1.107565710928525,
+              "logPriorComplement": -0.40101828005411544,
+              "logPosteriorProbability": -3.700294716827541,
+              "logPosteriorComplement": -0.02502681556224573,
+              "logObservedMass": -14.711278322883496,
+              "logObservedComplement": -11.036010421618201,
+              "logLikelihood": -13.603712611954972,
+              "logBF": -2.9687204703908865,
+              "logEValue": -14.01234645310856,
+              "logDetectionLikelihood": -14.01234645310856,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 2.3541140647181305
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -3.7536723685532802
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": -0.5745680667606479
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -3.7536723685532802
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.4700015970007797,
+              "posteriorProbability": 0.07975767536060353,
+              "logPriorProbability": -0.7550191864098061,
+              "logPriorComplement": -0.6348812856495278,
+              "logPosteriorProbability": -2.5287622991820324,
+              "logPosteriorComplement": -0.08311824727460859,
+              "logObservedMass": -13.539745905237988,
+              "logObservedComplement": -11.094101853330564,
+              "logLikelihood": -12.784726718828182,
+              "logBF": -2.3255061511471453,
+              "logEValue": -12.942055525618278,
+              "logDetectionLikelihood": -12.942055525618278,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 3.1730999578449204
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -2.9346864754264903
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": 0.24441782636614207
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -2.9346864754264903
+              },
+              "id": "third"
+            }
+          ]
+        },
+        {
+          "id": "6",
+          "expected": 0.280164662544428,
+          "median": 0,
+          "interval": {
+            "lo": 0,
+            "hi": 2
+          },
+          "sensitivityRange": {
+            "lo": 0,
+            "hi": 5
+          },
+          "events": [
+            {
+              "kind": "atLeast",
+              "count": 24,
+              "priorProbability": 0.010000000000035408,
+              "posteriorProbability": 7.358073429952312e-10,
+              "logPriorProbability": -4.605170185984551,
+              "logPriorComplement": -0.010050335853537177,
+              "logPosteriorProbability": -21.030052793700126,
+              "logPosteriorComplement": -7.358078590868899e-10,
+              "logObservedMass": -32.04103639975608,
+              "logObservedComplement": -11.010983606791763,
+              "logLikelihood": -27.43586621377153,
+              "logBF": -16.434932942833303,
+              "logEValue": -27.43586621377153,
+              "logDetectionLikelihood": -27.43586621377153,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": -11.478039537098427
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -17.58582597036984
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": -14.406721668577205
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -17.58582597036984
+              },
+              "id": "all"
+            },
+            {
+              "kind": "atLeast",
+              "count": 12,
+              "priorProbability": 0.13196977053130357,
+              "posteriorProbability": 0.00024876031941247075,
+              "logPriorProbability": -2.0251823937493065,
+              "logPriorComplement": -0.14152873835137886,
+              "logPosteriorProbability": -8.299020697710795,
+              "logPosteriorComplement": -0.00024879126539367746,
+              "logObservedMass": -19.31000430376675,
+              "logObservedComplement": -11.011232397321349,
+              "logLikelihood": -17.284821910017442,
+              "logBF": -6.415118251047472,
+              "logEValue": -18.389547461590677,
+              "logDetectionLikelihood": -18.389547461590677,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": -1.3269952333443396
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -7.43478166661575
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": -4.255677364823118
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -7.43478166661575
+              },
+              "id": "half"
+            },
+            {
+              "kind": "atLeast",
+              "count": 8,
+              "priorProbability": 0.2030677816850728,
+              "posteriorProbability": 0.0028174545982397187,
+              "logPriorProbability": -1.5942154557460575,
+              "logPriorComplement": -0.2269856498374901,
+              "logPosteriorProbability": -5.87192142638081,
+              "logPosteriorComplement": -0.002821431094266913,
+              "logObservedMass": -16.882905032436767,
+              "logObservedComplement": -11.013805037150224,
+              "logLikelihood": -15.28868957669071,
+              "logBF": -4.501870189377975,
+              "logEValue": -15.984403055754306,
+              "logDetectionLikelihood": -15.984403055754306,
+              "logNullMaximum": 0,
+              "logThreshold": 6.2915691395583195,
+              "eRegistered": true,
+              "modelPass": false,
+              "strongEnabled": false,
+              "baselines": [
+                {
+                  "id": "low-centered",
+                  "label": "低設定中心",
+                  "weights": [
+                    0.7,
+                    0.2,
+                    0.1,
+                    0,
+                    0,
+                    0
+                  ],
+                  "logLikelihood": -15.957826676673102,
+                  "logBF": 0.6691370999823931
+                },
+                {
+                  "id": "middle-centered",
+                  "label": "中間中心",
+                  "weights": [
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.15,
+                    0.04,
+                    0.01
+                  ],
+                  "logLikelihood": -9.850040243401692,
+                  "logBF": -5.438649333289018
+                },
+                {
+                  "id": "some-high",
+                  "label": "一部高設定",
+                  "weights": [
+                    0.5,
+                    0.25,
+                    0.15,
+                    0.06,
+                    0.03,
+                    0.01
+                  ],
+                  "logLikelihood": -13.029144545194324,
+                  "logBF": -2.259545031496385
+                }
+              ],
+              "bestBaseline": {
+                "id": "middle-centered",
+                "logBF": -5.438649333289018
+              },
+              "id": "third"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "unsupportedN": 1,
+  "sourceReasons": [
+    "pia_day_ambiguous",
+    "missing_games",
+    "missing_bb",
+    "missing_rb"
+  ],
+  "limitations": [
+    "正解設定が不明な実店舗データでは誤検出率・的中率を直接確定できない",
+    "全台の0G・欠損・営業日・台帳を原本から立証できる範囲だけを計算",
+    "強判定表示は無効"
+  ]
+}

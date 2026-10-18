@@ -31,9 +31,11 @@ export function createVpsAnalyticsClient({
   if(typeof fetchFn!=='function')throw new TypeError('fetchFn is required');
   const base=String(baseUrl||DEFAULT_BASE_URL).replace(/\/+$/,'');
 
-  async function request(path,{method='GET',body=null}={}){
+  async function request(path,{method='GET',body=null,signal,preferReceiver=false}={}){
+    signal?.throwIfAborted();
     const receiver=readRelayReceiver(storage);
-    const cookieRead=piaOnly&&method==='GET'&&/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2})?$)/.test(path);
+    const cookieRead=piaOnly&&method==='GET'&&(path==='/allocation/stores'||/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2}(?:\/allocation(?:\?[^#]*)?)?)?$)/.test(path));
+    const useCookie=cookieRead&&(!preferReceiver||!receiver);
     if(!receiver&&!cookieRead)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
     let response;
     try{
@@ -42,25 +44,28 @@ export function createVpsAnalyticsClient({
         headers:{
           accept:'application/json',
           ...(body!=null?{'content-type':'application/json'}:{}),
-          ...(receiver&&!cookieRead?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
+          ...(receiver&&!useCookie?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
         },
         ...(body!=null?{body}:{}),
         cache:'no-store',
         credentials:'same-origin'
       };
+      if(signal)options.signal=signal;
       response=await fetchFn(`${base}${path}`,options);
       // A valid unrelated Receiver must not mask a PIA sharing grant.
       // Only these three reads prefer the cookie, then fall back to the
       // independently authenticated owner when no usable access cookie exists.
       if(cookieRead&&receiver&&[401,403].includes(response.status)){
         await response.body?.cancel?.();
-        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json','x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}});
+        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json',...(!useCookie?{}:{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`})}});
       }
     }catch(error){
+      if(error?.name==='AbortError'||signal?.aborted)throw error;
       throw makeError(`VPS解析APIへ接続できませんでした: ${String(error?.message||error)}`,'vps_network_error');
     }
     let payload=null;
     try{payload=await response.json()}catch{/* handled below */}
+    signal?.throwIfAborted();
     if(!response.ok||payload?.ok===false){
       const code=String(payload?.code||`http_${response.status}`);
       throw makeError(`VPS解析APIエラー (${code})`,code,response.status);
@@ -69,17 +74,40 @@ export function createVpsAnalyticsClient({
     return payload;
   }
 
-  async function resolveStore(shop){
+  async function resolveStore(shop,{signal,strict=false,allocation=false}={}){
     const name=String(shop||'').trim();
     if(!name)throw makeError('店舗が選択されていません。','vps_store_required');
-    const payload=await request('/stores');
-    const stores=Array.isArray(payload.stores)?payload.stores:[];
+    let payload=await request(allocation?'/allocation/stores':'/stores',{signal,preferReceiver:allocation});
+    let stores=Array.isArray(payload.stores)?payload.stores:[],cookieOnly=false;
+    if(allocation&&piaOnly&&readRelayReceiver(storage)&&!stores.some(store=>String(store?.name||'')===name)){
+      payload=await request('/allocation/stores',{signal});stores=Array.isArray(payload.stores)?payload.stores:[];cookieOnly=true;
+    }
     const exact=stores.find(store=>String(store?.name||'')===name);
+    if(strict&&stores.filter(store=>String(store?.name||'')===name).length>1)throw makeError('同じ名前の店舗が複数あります。店舗IDで指定してください。','vps_store_ambiguous');
     if(!exact)throw makeError(`VPSに「${name}」の店舗データがありません。`,'vps_store_not_found');
-    return exact;
+    return cookieOnly?{...exact,allocationCookieOnly:true}:exact;
+  }
+
+  function allocationDate(date){
+    const day=String(date||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day)throw makeError('営業日を確認してください。','bad_date');
+    return day;
+  }
+  async function allocationById(storeId,date,{machine,band='456',kind='atLeast',count,detail=false,signal,preferReceiver=true}={}){
+    const day=allocationDate(date),id=String(storeId||'').trim();
+    if(!id)throw makeError('店舗が選択されていません。','vps_store_required');
+    const params=new URLSearchParams();
+    if(machine){params.set('machine',machine);params.set('band',band);params.set('kind',kind);if(count!==null&&count!==undefined)params.set('count',String(count));if(detail)params.set('detail','1')}
+    return request(`/stores/${encodeURIComponent(id)}/days/${day}/allocation${params.size?'?'+params.toString():''}`,{signal,preferReceiver});
   }
 
   return Object.freeze({
+    async getAllocation(shop,date,options={}){
+      allocationDate(date);
+      const store=await resolveStore(shop,{signal:options.signal,strict:true,allocation:true});
+      return allocationById(store.id,date,{...options,preferReceiver:!store.allocationCookieOnly});
+    },
+    getAllocationById:allocationById,
     async listStores(){
       const payload=await request('/stores');
       return Array.isArray(payload.stores)?payload.stores:[];

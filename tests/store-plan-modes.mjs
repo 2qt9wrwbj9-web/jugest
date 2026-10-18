@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
+import {withoutAllocationTab} from './helpers/allocation-preservation.mjs';
 import {boot} from './helpers/runtime.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -85,7 +86,7 @@ test('switching back to new hands its result to the PRE prediction runner',async
 
 test('the legacy prediction retains its original display and core entry',async()=>{
   const {app,bridge}=await boot();app.state.activeStore='PIA大船1';app.state.planDate='2026-09-29';app.state.planMode='legacy';app.state.planResult=result('末尾2');
-  const html=app.renderTodayPlanScreen().replace(/<div class="plan-mode-switch".*?<\/div>/,'').replace('<p class="plan-mode-label">予測方式：旧版</p>','');
+  const html=withoutAllocationTab(app.renderTodayPlanScreen()).replace(/<div class="plan-mode-switch".*?<\/div>/,'').replace('<p class="plan-mode-label">予測方式：旧版</p>','');
   assert.equal(createHash('sha256').update(html).digest('hex'),'387f208097dcf47b5456bcb9a41a65d3e1a7c2b4042bd07ac693b3dda15fbb93');
   const seen=[];app.bridge=()=>({...bridge,
     getLegacyTodayPlan:(...args)=>{seen.push(['legacy',...args]);return result('旧版')},

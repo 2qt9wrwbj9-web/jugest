@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {withoutAllocationAdditions} from './allocation-preservation.mjs';
 
 // Reverse only reviewed machine-name edits before enforcing original protected hashes.
 const APPROVED_NAME_EDITS=JSON.parse(readFileSync(new URL('./approved-machine-name-changes.json',import.meta.url),'utf8'));
@@ -102,6 +103,7 @@ function withoutMy6Additions(file,source){
  return source;
 }
 export function withoutJudgementAdditions(file,source){
+ source=withoutAllocationAdditions(file,source);
  // The approved name manifest covers the whole head. Remove our independently
  // reviewed script insertion first, so that exact-name checks still see it.
  if(file==='index.html')source=replace(source,'<script src="./group-judge.js"></script><script src="./group-judge-view.js"></script>');

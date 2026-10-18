@@ -11,10 +11,10 @@ test('store v2 injects a single module tag and remains idempotent',()=>{
  assert.equal(once.split('<script type="module" src="./vps-ui-store-v2.mjs"></script>').length-1,1);
  assert.ok(once.indexOf('vps-ui-audit-store.mjs')<once.indexOf('vps-ui-store-v2.mjs'));
 });
-test('store v2 provides 5 tabs without sacrificing the original navigation action keys',()=>{
+test('store v2 provides 6 tabs including allocation without sacrificing original navigation action keys',()=>{
  const html=v2.nav('verify');
- for(const part of ['概要','台','傾向','予測','検証','store-data','store-trend','store-plan','store-model','data-workspace="store"'])assert.ok(html.includes(part),part);
- assert.equal((html.match(/<button /g)||[]).length,5);
+ for(const part of ['概要','台','投入分析','傾向','予測','検証','store-data','store-allocation','store-trend','store-plan','store-model','data-workspace="store"'])assert.ok(html.includes(part),part);
+ assert.equal((html.match(/<button /g)||[]).length,6);
  assert.match(html,/class="active" data-action="store-model"/);
 });
 test('store v2 collector status distinguishes errors, disabled and unknown',()=>{
@@ -37,9 +37,9 @@ test('store v2 latest daily summary never treats missing observed diff as zero',
   assert.equal(judgeCalls,0);
  }finally{globalThis.JUGEST_CORE_BRIDGE=old}
 });
-test('store v2 CSS is scoped to slot store, with five tabs and a dense machine comparison table',()=>{
+test('store v2 CSS is scoped to slot store, with six tabs and a dense machine comparison table',()=>{
  const css=readFileSync(new URL('../../vps-ui-store-v2.css',import.meta.url),'utf8');
- for(const term of ['.sv2-workspace','.sv2-tabs','grid-template-columns:repeat(5,minmax(0,1fr))','.sv2-machine-table-scroll','.sv2-machine-table th:first-child','.sv2-plan-settings','@media(max-width:359px)'])assert.ok(css.includes(term),term);
+ for(const term of ['.sv2-workspace','.sv2-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))','.sv2-machine-table-scroll','.sv2-machine-table th:first-child','.sv2-plan-settings','@media(max-width:359px)'])assert.ok(css.includes(term),term);
  const js=readFileSync(new URL('../../vps-ui-store-v2.mjs',import.meta.url),'utf8');
  for(const term of ['pachinko-store-overview','pachinko-data-screen','app?._pachinkoStoreSelected','data-analysis-run','data-action="store-analysis"','data-action="store-replay"','data-action="store-model"']) {
   if(term==='data-analysis-run')continue; // Existing legacy screen's action is preserved, not duplicated.

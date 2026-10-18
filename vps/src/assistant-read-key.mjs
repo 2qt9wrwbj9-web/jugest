@@ -1,5 +1,7 @@
 import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
+import {DatabaseSync} from 'node:sqlite';
 import {createRelayStore} from './relay-store.mjs';
+import {OAUTH_ISSUER,OAUTH_RESOURCE,OAUTH_SCOPE} from './oauth-handler.mjs';
 
 const RELAY_STORE_NAME='juggler-relay-v1';
 const KEY_STORE_NAME='assistant-read-v1';
@@ -37,6 +39,34 @@ export async function authenticateAssistantRead(req,relayDbPath){
   const channel=await relayStore(relayDbPath).get(`channel/${record.channelId}`,{type:'json'});
   if(!channel||channel.revokedAt)return null;
   return {channelId:String(record.channelId),authType:'assistant-read'};
+}
+
+// The allocation GET must not initialize a relay schema or write to it. Read
+// the same credential records and revocation state in one read transaction.
+export function authenticateReadOnlyPrincipal(req,relayDbPath){
+  const token=bearerToken(req),channelId=headerValue(req,'x-jugest-channel-id').trim();
+  if(!token)return null;
+  let db;
+  try{
+    db=new DatabaseSync(relayDbPath,{readOnly:true});db.exec('PRAGMA query_only=ON; BEGIN;');
+    const get=(namespace,key)=>{const row=db.prepare('SELECT value FROM relay_kv WHERE namespace=? AND key=?').get(`jugest/${namespace}`,key);try{return JSON.parse(row?.value??'null')}catch{return null}};
+    if(validChannelId(channelId)){
+      const channel=get(RELAY_STORE_NAME,channelKey(channelId));
+      if(channel&&!channel.revokedAt&&secureMatch(token,channel.receiverHash))return {channelId,authType:'receiver'};
+    }
+    if(!token.startsWith(ASSISTANT_READ_PREFIX)){
+      const record=get('jugest-oauth-v1',`access/${digest(token)}`);
+      if(!record||record.type!=='access'||record.issuer!==OAUTH_ISSUER||record.resource!==OAUTH_RESOURCE||typeof record.expiresAt!=='number'||!Number.isFinite(record.expiresAt)||record.expiresAt<=Date.now()||!String(record.scope||'').trim().split(/\s+/).includes(OAUTH_SCOPE)||!validChannelId(record.channelId))return null;
+      const channel=get(RELAY_STORE_NAME,channelKey(record.channelId));
+      if(!channel||channel.revokedAt)return null;
+      return {channelId:record.channelId,clientId:record.clientId,scope:record.scope,authType:'oauth'};
+    }
+    const hash=digest(token),record=get(KEY_STORE_NAME,tokenKey(hash));
+    if(!record?.channelId||record.tokenHash!==hash)return null;
+    const current=get(KEY_STORE_NAME,channelKey(record.channelId)),channel=get(RELAY_STORE_NAME,channelKey(record.channelId));
+    if(current?.tokenHash!==hash||!channel||channel.revokedAt)return null;
+    return {channelId:String(record.channelId),authType:'assistant-read'};
+  }catch{return null}finally{if(db){try{db.exec('ROLLBACK')}catch{}db.close()}}
 }
 
 export async function assistantReadKeyStatus(relayDbPath,channelId){

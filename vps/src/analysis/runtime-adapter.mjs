@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
-import {webcrypto} from 'node:crypto';
+import {webcrypto,createHash} from 'node:crypto';
 
 function memoryStorage(seed={}){
   const map=new Map(Object.entries(seed));
@@ -86,6 +86,45 @@ export async function runExistingJugglerJudgementBatch({rootDir,machines}={}){
       grapeCountLo:Number(raw.grapeCountLo),grapeCountHi:Number(raw.grapeCountHi),reverseWarn:!!raw.reverseWarn
     });
   }));
+}
+
+// A separate, versioned read adapter. The legacy judge and its cache above are
+// deliberately unchanged: allocation needs the likelihood captured by the
+// original calculation, not a posterior converted back into a likelihood.
+const allocationRuntimeCache=new Map();
+const allocationRuntimeFiles=['index.html','machine-names.js','hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js'];
+export function allocationRuntimeFingerprint(rootDir){
+  if(!rootDir)throw new TypeError('rootDir is required');
+  const hash=createHash('sha256');
+  for(const file of allocationRuntimeFiles){hash.update(file+'\0');hash.update(fs.readFileSync(path.join(rootDir,file)));hash.update('\0')}
+  return hash.digest('hex');
+}
+export async function runExistingAllocationBatch({rootDir,machines=[]}={}){
+  const root=path.resolve(rootDir),sourceHash=allocationRuntimeFingerprint(root),key=root+'\0'+sourceHash;
+  let pending=allocationRuntimeCache.get(key);
+  if(!pending){
+    pending=bootRuntime(root);allocationRuntimeCache.set(key,pending);
+    pending.catch(()=>allocationRuntimeCache.delete(key));
+    while(allocationRuntimeCache.size>2)allocationRuntimeCache.delete(allocationRuntimeCache.keys().next().value);
+  }
+  const {ctx,bridge}=await pending;
+  const judge=mustFunction(ctx.V4_TEST?.externalJudge,'V4_TEST.externalJudge');
+  const tables={};
+  for(const machine of ['my','my6','im','go','fk','hp','gg','mr','um']){
+    // A metadata probe only. A genuine zero-game observation is never judged
+    // as a one-game observation, and no probe posterior enters allocation.
+    const probe=bridge.judgeObservedMachine({machine,games:1,bb:0,rb:0,diff:null});
+    if(!probe?.ok||!probe.engine?.table)throw new Error('allocation_table_unavailable');
+    tables[machine]=structuredClone(probe.engine.table);
+  }
+  const rows=machines.map(input=>{
+    if(input.games===0)return {bonusLogs:[0,0,0,0,0,0],logs:[0,0,0,0,0,0],individual:null,neutral:true};
+    const individual=bridge.judgeObservedMachine(input);let captured;
+    judge(input.machine,input.games,input.bb,input.rb,null,value=>{captured=value});
+    if(!individual?.ok||!Array.isArray(captured?.logs)||!Array.isArray(individual.diagnostics?.logs))throw new Error('allocation_likelihood_unavailable');
+    return {individual:structuredClone(individual),bonusLogs:Array.from(captured.logs),logs:Array.from(individual.diagnostics.logs),neutral:false};
+  });
+  return {rows,tables,sourceHash};
 }
 
 function validateImportArgs({rootDir,shop,sourceStoreId,days}){

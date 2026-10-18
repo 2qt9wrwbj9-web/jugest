@@ -41,7 +41,7 @@ async function jsonBody(req){
 export function canReadPiaRoute(parts,method){
   if(!['GET','HEAD'].includes(method)||parts[0]!=='api'||parts[1]!=='vps')return false;
   if(parts.length===3&&parts[2]==='stores')return true;
-  return parts[2]==='stores'&&((parts.length===5&&parts[4]==='days')||(parts.length===6&&parts[4]==='days'));
+  return parts[2]==='stores'&&((parts.length===5&&parts[4]==='days')||(parts.length===6&&parts[4]==='days')||(parts.length===7&&parts[4]==='days'&&parts[6]==='allocation'));
 }
 
 export function createAccessHandler({config}={}){
@@ -51,6 +51,12 @@ export function createAccessHandler({config}={}){
     if(!config||header(req,'sec-fetch-site')==='cross-site')return null;
     let store;
     try{store=createAccessStore({dbPath:config.dbPath,now});return store.authenticateAdmin(cookieToken(req,ACCESS_COOKIES.admin))??store.authenticateViewer(cookieToken(req,ACCESS_COOKIES.viewer))}
+    catch{return null}finally{store?.close()}
+  }
+  function authenticateReadOnly(req){
+    if(!config||header(req,'sec-fetch-site')==='cross-site')return null;
+    let store;
+    try{store=createAccessStore({dbPath:config.dbPath,now,readOnly:true});return store.authenticateAdmin(cookieToken(req,ACCESS_COOKIES.admin))??store.authenticateViewer(cookieToken(req,ACCESS_COOKIES.viewer))}
     catch{return null}finally{store?.close()}
   }
   async function handle(req,res){
@@ -155,5 +161,5 @@ export function createAccessHandler({config}={}){
       send(req,res,status,{ok:false,code});
     }finally{store?.close()}
   }
-  return {handle,authenticate,config};
+  return {handle,authenticate,authenticateReadOnly,config};
 }

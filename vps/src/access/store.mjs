@@ -1,6 +1,7 @@
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {existsSync,mkdirSync,openSync,closeSync,chmodSync} from 'node:fs';
 import {dirname} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {openDatabase} from '../db.mjs';
 import {migrateAccess} from './schema.mjs';
 
@@ -30,9 +31,10 @@ export function migrateAccessDatabase(dbPath){
   }finally{db.close()}
 }
 
-export function createAccessStore({dbPath,now=Date.now}={}){
+export function createAccessStore({dbPath,now=Date.now,readOnly=false}={}){
   if(!existsSync(dbPath))error('access_migration_required');
-  const db=openAccessDatabase(dbPath);
+  const db=readOnly?new DatabaseSync(dbPath,{readOnly:true}):openAccessDatabase(dbPath);
+  if(readOnly)db.exec('PRAGMA query_only=ON;');
   if(Number(db.prepare('PRAGMA user_version').get().user_version)!==2){db.close();error('access_migration_required')}
   const timestamp=()=>Number(now());
   const audit=(type,actor,target)=>db.prepare('INSERT INTO access_audit_events(event_type,actor,target,created_at) VALUES(?,?,?,?)').run(type,actor??null,target??null,timestamp());
@@ -86,7 +88,7 @@ export function createAccessStore({dbPath,now=Date.now}={}){
     const row=db.prepare(`SELECT s.*,c.name FROM admin_sessions s JOIN admin_credentials c ON c.id=s.credential_id
       WHERE s.session_hash=? AND s.revoked_at IS NULL AND s.expires_at>? AND c.revoked_at IS NULL`).get(digest(token),timestamp());
     if(!row)return null;
-    db.prepare('UPDATE admin_sessions SET last_used_at=? WHERE id=?').run(timestamp(),row.id);
+    if(!readOnly)db.prepare('UPDATE admin_sessions SET last_used_at=? WHERE id=?').run(timestamp(),row.id);
     return {kind:'admin',id:row.id,credentialId:row.credential_id,name:row.name,expiresAt:row.expires_at,authenticatedAt:row.authenticated_at};
   }
   function revokeAdminSession(id,actor){
@@ -145,7 +147,7 @@ export function createAccessStore({dbPath,now=Date.now}={}){
     const row=db.prepare(`SELECT s.*,i.label FROM pia_viewer_sessions s JOIN pia_access_invites i ON i.id=s.invite_id
       WHERE s.session_hash=? AND s.revoked_at IS NULL AND (s.expires_at IS NULL OR s.expires_at>?) AND i.revoked_at IS NULL`).get(digest(token),timestamp());
     if(!row)return null;
-    db.prepare('UPDATE pia_viewer_sessions SET last_used_at=? WHERE id=?').run(timestamp(),row.id);
+    if(!readOnly)db.prepare('UPDATE pia_viewer_sessions SET last_used_at=? WHERE id=?').run(timestamp(),row.id);
     return {kind:'pia-viewer',scope:'pia:view',id:row.id,label:row.label,expiresAt:row.expires_at};
   }
   function revokeViewerSession(id,actor){

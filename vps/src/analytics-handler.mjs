@@ -10,6 +10,7 @@ import {JUGGLER_MACHINE_KEYS,judgeJugglerExternal} from './judge/juggler-externa
 import {canAccessStoreMetadata,storeMetadata} from './store-access.mjs';
 import {authenticateReceiver,authenticateAssistantRead,assistantReadKeyStatus,rotateAssistantReadKey,revokeAssistantReadKey} from './assistant-read-key.mjs';
 import {canReadPiaRoute} from './access/handler.mjs';
+import {createAllocationHandler,isAllocationRoute} from './allocation/handler.mjs';
 
 const ANALYSIS_VERSION='vps-runtime-v1';
 const STORE_READ_VERSION='store-read-v1';
@@ -27,6 +28,7 @@ function assistantReadRouteAllowed(parts,method){
   if(parts[2]!=='stores'||parts.length<5)return false;
   if(parts.length===5&&['days','legacy-plan'].includes(parts[4]))return true;
   if(parts.length===6&&parts[4]==='days')return true;
+  if(isAllocationRoute(parts))return true;
   return parts.length===6&&parts[4]==='research'&&['store-read','comparison'].includes(parts[5]);
 }
 async function readJsonBody(req,{maxBytes=262144}={}){
@@ -61,14 +63,18 @@ function auditStoreRead(db,storeId,payload){
   }catch{return payload}
 }
 
-export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,resourceStatusBuilder=buildResourceStatus,authenticatePia=()=>null}={}){
+export function createAnalyticsHandler({rootDir,relayDbPath,canonicalDbPath,rawRoot=null,resourceStatusBuilder=buildResourceStatus,authenticatePia=()=>null,authenticatePiaReadOnly=()=>null}={}){
   if(typeof relayDbPath!=='string'||!relayDbPath.trim())throw new TypeError('relayDbPath is required');
   if(typeof canonicalDbPath!=='string'||!canonicalDbPath.trim())throw new TypeError('canonicalDbPath is required');
   if(typeof resourceStatusBuilder!=='function')throw new TypeError('resourceStatusBuilder must be a function');
+  const allocationHandler=createAllocationHandler({rootDir,relayDbPath,canonicalDbPath,rawRoot,authenticatePiaReadOnly});
   return async function analyticsHandler(req,res){
     const method=String(req.method||'GET').toUpperCase();
     const url=new URL(req.url||'/','http://127.0.0.1');const parts=parseApiPath(url.pathname);
     if(!parts||parts[0]!=='api'||parts[1]!=='vps'){sendJson(req,res,404,{ok:false,code:'not_found'});return}
+    // This read route is intentionally handled before the legacy canonical
+    // open/migrate path, and before authentication that updates session usage.
+    if(isAllocationRoute(parts))return await allocationHandler(req,res,{parts,url});
     const assistantKeyRoute=isAssistantKeyRoute(parts);
     if(assistantKeyRoute){
       if(!['GET','POST','DELETE'].includes(method)){sendJson(req,res,405,{ok:false,code:'method_not_allowed'},{allow:'GET, POST, DELETE'});return}
