@@ -23,4 +23,6 @@
 
 ## Saving checkpoint
 
-Product changes and evidence are ready for the authorized work-branch commit and push. Preserve this worktree. Do not deploy or update production refs. Final git/remote verification is recorded after saving; see the final commit history and verification.json.
+Implementation saved to GitHub work/store-day-allocation-20261017 at 297a6091992f70216178c442896139fa4f827196. All79 baseline changes and entire tree fa60169fe9a9f69ce1048bce53d569b2296d86cd exactly match tested local6ab3113. CLI push lacked credentials; authenticated GitHub Git data API saved the same blobs/tree with server commit metadata. The local work branch was aligned to that identical tree; original local checkpoint6ab3113 is retained on backup/store-day-allocation-local-6ab3113. No force-push occurred.
+
+Only the documentation receipt is being added after that implementation commit. Both production deploy/vps and VPS current were rechecked read-only after saving and remain1f8c29f. Do not deploy or update production refs. Preserve this worktree. Strong detection, Safari and real-world calibration remain the explicit limitations in the implementation report.

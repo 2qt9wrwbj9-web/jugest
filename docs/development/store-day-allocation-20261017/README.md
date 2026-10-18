@@ -1,6 +1,6 @@
 # 単日投入分析 実装成果物
 
-最終確認日：2026-10-18。ブランチ：`work/store-day-allocation-20261017`。基準：`deploy/vps@1f8c29f`。**本番未反映。強判定無効。**
+最終確認日：2026-10-18。[保存済み開発ブランチ](https://github.com/2qt9wrwbj9-web/jugest/tree/work/store-day-allocation-20261017)。実装コミット：`297a609`。基準：`deploy/vps@1f8c29f`。**本番未反映。強判定無効。**
 
 - [実装報告・結果・残存リスク](implementation-report.md)
 - [API・権限・反映前確認・ロールバック](operations.md)

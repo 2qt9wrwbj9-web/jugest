@@ -157,7 +157,7 @@
     "ui-browser-validation.json": "df843c32e590bd18482ff2287fe82bc79e89df28894fbbe89781ddee42d871d0",
     "math-review.md": "690793ac284490756117b7fdba36af380ccf651f392cb11f14fc585d58c2f34a",
     "integration-review.md": "e6fc35a4ca6452869c86da4d38fcdc87b35d11015753a2d817d29b518f759813",
-    "production-baseline.json": "73c98b48a8df72cefb5ece8f21a38c3b34e9f3204dc3284a33c3070d368381b4"
+    "production-baseline.json": "1d1ea39dbc7033f77eb4f82c8ad6b25edcbf09bbb2a77c0bba21e4c32efc08f9"
   },
   "logHashes": {
     "root-suite.log": "c6330b609f00f91db34707ed9fa07d2e60d15efa70d4d12fa5664078b1c88b6f",
@@ -257,5 +257,19 @@
     "Process memory cache; saved-read users wait for owner after eviction/restart",
     "No production load test or deployment; explicit permission required immediately before production actions"
   ],
-  "logNormalization": "Trailing whitespace removed from saved text transcripts; outcome and diagnostic text preserved."
+  "logNormalization": "Trailing whitespace removed from saved text transcripts; outcome and diagnostic text preserved.",
+  "gitDelivery": {
+    "method": "GitHub Git data API after CLI push authentication was unavailable",
+    "branch": "work/store-day-allocation-20261017",
+    "implementationCommit": "297a6091992f70216178c442896139fa4f827196",
+    "testedLocalCheckpoint": "6ab3113f63a177d766e90b6a275b2ba9cb1bee56",
+    "implementationTree": "fa60169fe9a9f69ce1048bce53d569b2296d86cd",
+    "remoteRefVerified": true,
+    "all79ChangedFilesAndEntireTreeMatched": true,
+    "localAlignedToRemote": true,
+    "originalLocalCheckpointPreservedInBackupBranch": true,
+    "documentationOnlyReceiptFollowsOnSameBranch": true,
+    "productionRefAndCurrentRecheckedUnchanged": true,
+    "verifiedAtUtc": "2026-10-18T07:15:16.741946+00:00"
+  }
 }
