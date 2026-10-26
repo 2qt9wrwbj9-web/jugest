@@ -1,1 +1,11 @@
-{"private":true,"type":"module","scripts":{"test":"node --test tests/storage.test.mjs"},"devDependencies":{"miniflare":"4.20260515.0"}}
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "generate:read": "node scripts/generate-store-read.mjs"
+  },
+  "devDependencies": {
+    "miniflare": "4.20260515.0"
+  }
+}

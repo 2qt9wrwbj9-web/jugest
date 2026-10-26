@@ -1,0 +1,1 @@
+ALTER TABLE `sites_relay_refs` ADD `value_sha256` text;
