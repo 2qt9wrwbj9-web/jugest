@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"test":"node --test tests/storage.test.mjs"},"devDependencies":{"miniflare":"4.20260515.0"}}
