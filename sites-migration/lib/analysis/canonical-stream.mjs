@@ -42,15 +42,43 @@ export async function digestStoredCanonical(bucket,key,{range,onStage=()=>{}}={}
  await consume(object.body);return{hash:whole.digest('hex'),size,etag:object.etag,...(portion?{rangeHash:portion.digest('hex'),rangeSize}:{})};
 }
 export async function putCanonical(bucket,key,value,{onStage=()=>{},jsonCompatible=false,verify=true}={}){
- const digest=canonicalDigest(value,{jsonCompatible}),metadata={sha256:digest.hash};
- if(digest.size<1024*1024){const body=new Uint8Array(digest.size);let offset=0;for(const chunk of canonicalBytes(value,{jsonCompatible})){body.set(chunk,offset);offset+=chunk.length}await bucket.put(key,body,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:metadata});onStage('result:upload-part')}
- else{
-  const partSize=256*1024,parts=[];let buffer=new Uint8Array(partSize),offset=0,index=0;
-  async function flush(){if(!offset)return;const bytes=buffer.subarray(0,offset),partKey=key+'.parts/'+(++index),hash=createHash('sha256').update(bytes).digest('hex');await bucket.put(partKey,bytes,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{sha256:hash}});parts.push({key:partKey,size:offset,hash});buffer=new Uint8Array(partSize);offset=0;onStage('result:upload-part')}
-  for(const bytes of canonicalBytes(value,{jsonCompatible})){let pos=0;while(pos<bytes.length){const n=Math.min(partSize-offset,bytes.length-pos);buffer.set(bytes.subarray(pos,pos+n),offset);pos+=n;offset+=n;if(offset===partSize)await flush()}}await flush();
-  await bucket.put(key,JSON.stringify({format:'jugest-json-chunks-v1',hash:digest.hash,size:digest.size,parts}),{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{...metadata,format:'jugest-json-chunks-v1'}});
- }
+ const whole=createHash('sha256'),partSize=256*1024,parts=[];let buffer=new Uint8Array(partSize),offset=0,size=0,index=0;
+ async function flush(){if(!offset)return;const bytes=buffer.subarray(0,offset),partKey=key+'.parts/'+(++index),hash=createHash('sha256').update(bytes).digest('hex');await bucket.put(partKey,bytes,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{sha256:hash}});parts.push({key:partKey,size:offset,hash});buffer=new Uint8Array(partSize);offset=0;onStage('result:upload-part')}
+ for(const bytes of canonicalBytes(value,{jsonCompatible})){whole.update(bytes);size+=bytes.length;let pos=0;while(pos<bytes.length){const n=Math.min(partSize-offset,bytes.length-pos);buffer.set(bytes.subarray(pos,pos+n),offset);pos+=n;offset+=n;if(offset===partSize)await flush()}}
+ const digest={hash:whole.digest('hex'),size},metadata={sha256:digest.hash};
+ if(!parts.length){await bucket.put(key,buffer.subarray(0,offset),{onlyIf:{etagDoesNotMatch:'*'},customMetadata:metadata});onStage('result:upload-part')}
+ else{await flush();await bucket.put(key,JSON.stringify({format:'jugest-json-chunks-v1',...digest,parts}),{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{...metadata,format:'jugest-json-chunks-v1'}})}
  if(verify){const object=await openCanonicalObject(bucket,key);if(!object||(await digestObject(object)).hash!==digest.hash)throw Error('result_upload_verification_failed')}return digest;
+}
+// Reuse immutable payload parts. No second traversal of the large JS model.
+// The caller persists the verified payload identity before attempting this step.
+export async function composeCanonicalEnvelope(bucket,key,envelope,{payloadKey,payloadHash,payloadSize,onStage=()=>{}}){
+ const object=await bucket.get(payloadKey);if(!object)throw Error('staged_payload_missing');
+ let layout;
+ if(object.customMetadata?.format==='jugest-json-chunks-v1'){
+  const manifest=await object.json();if(manifest.hash!==payloadHash||manifest.size!==payloadSize||!Array.isArray(manifest.parts))throw Error('staged_payload_manifest_mismatch');layout=manifest.parts;
+ }else{await object.body.cancel();layout=[{key:payloadKey,hash:payloadHash,size:payloadSize}]}
+ let prefix='{',suffix='',after=false,first=true;
+ for(const name of Object.keys(envelope).sort()){
+  const field=(first?'':',')+JSON.stringify(name)+':';first=false;
+  if(name==='payload'){prefix+=field;after=true;continue}
+  const encoded=[...canonicalBytes(envelope[name],{jsonCompatible:true})].map(b=>new TextDecoder().decode(b)).join('');
+  if(after)suffix+=field+encoded;else prefix+=field+encoded;
+ }
+ if(!after)throw Error('payload missing');suffix+='}';
+ const encoder=new TextEncoder(),head=encoder.encode(prefix),tail=encoder.encode(suffix),full=createHash('sha256'),payload=createHash('sha256');full.update(head);let size=0;const small=payloadSize<256*1024?[]:null;
+ for(const part of layout){const data=await bucket.get(part.key);if(!data)throw Error('result_chunk_missing');const reader=data.body.getReader(),hash=createHash('sha256');let n=0;
+  try{while(true){const next=await reader.read();if(next.done)break;const bytes=next.value;hash.update(bytes);payload.update(bytes);full.update(bytes);n+=bytes.length;size+=bytes.length;if(small)small.push(bytes)}}finally{reader.releaseLock()}
+  if(n!==part.size||hash.digest('hex')!==part.hash)throw Error('result_chunk_hash_mismatch');onStage('result:compose-part');
+ }
+ if(size!==payloadSize||payload.digest('hex')!==payloadHash)throw Error('staged_payload_hash_mismatch');full.update(tail);
+ const digest={hash:full.digest('hex'),size:head.length+payloadSize+tail.length},metadata={sha256:digest.hash};
+ if(small){const body=new Uint8Array(digest.size);body.set(head);let offset=head.length;for(const bytes of small){body.set(bytes,offset);offset+=bytes.length}body.set(tail,offset);await bucket.put(key,body,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:metadata})}
+ else{
+  const parts=[];for(const [name,bytes]of[['head',head],['tail',tail]]){const partKey=key+'.'+name,hash=createHash('sha256').update(bytes).digest('hex');await bucket.put(partKey,bytes,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{sha256:hash}});parts.push({key:partKey,size:bytes.length,hash})}
+  await bucket.put(key,JSON.stringify({format:'jugest-json-chunks-v1',...digest,parts:[parts[0],...layout,parts[1]]}),{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{...metadata,format:'jugest-json-chunks-v1'}});
+ }
+ return{...digest,range:{offset:head.length,length:payloadSize}};
 }
 export async function openCanonicalObject(bucket,key,{range,expectedEtag}={}){
  const object=await bucket.get(key,expectedEtag?{onlyIf:{etagMatches:expectedEtag}}:undefined),initialBody=object?.body;if(!initialBody)return null;

@@ -29,6 +29,27 @@
       "when": 1793095684483,
       "tag": "0003_mature_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793117514476,
+      "tag": "0004_fearless_spencer_smythe",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793117782117,
+      "tag": "0005_loud_shinko_yamashiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793118074378,
+      "tag": "0006_opposite_electro",
+      "breakpoints": true
     }
   ]
 }

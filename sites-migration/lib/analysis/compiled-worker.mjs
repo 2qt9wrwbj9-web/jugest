@@ -1,3 +1,4 @@
+export const WORKER_IMPLEMENTATION_HASH='c6f87dfa349d9d9ebecefb4dff9344533ecfc36bb7cdbcda7b3bac31843e037b';
 // Generated from fixed production files; no eval/vm/fs at runtime.
 const host=globalThis;
 function memoryStorage(seed={}){
@@ -3103,7 +3104,7 @@ window.addEventListener("beforeunload",autoSaveState);
 for(let i=0;i<12;i++)await new Promise(resolve=>host.setTimeout(resolve,0));
 return ctx;
 }
-async function importedStream({shop,sourceStoreId,days,onStage=()=>{}}){
+async function importedStream({shop,sourceStoreId,days,rawJsonDays=false,onStage=()=>{}}){
  const name=String(shop??'').trim(),id=String(sourceStoreId??name).trim();
  if(!name||!id)throw new TypeError('shop and sourceStoreId required');
  const ctx=await bootCompiled(onStage),bridge=ctx.JUGEST_CORE_BRIDGE;
@@ -3114,7 +3115,7 @@ async function importedStream({shop,sourceStoreId,days,onStage=()=>{}}){
   // Same original normalizer, one day at a time. Raw R2 day can be released
   // after normalization; no second complete raw array/string/clone is kept.
   const payload={format:'juggler-external-import-bulk',version:7,source:'ana-slo',sourceStoreId:id,shop:name,requestedDays:1,capturedAt,days:[day]};
-  const checked=await bridge.previewExternalJson(JSON.stringify(payload));
+  const checked=await bridge.previewExternalJson(rawJsonDays?JSON.stringify({...payload,days:[]}).slice(0,-3)+'['+day.rawJson+']}':JSON.stringify(payload));
   if(!checked?.preview)throw Error('JUGEST runtime rejected canonical store payload');
   for(const value of checked.preview.days){const key=value.shop+'|'+value.date;if(!seen.has(key)){seen.add(key);normalized.push(value)}}
   if(normalized.length>400)throw new RangeError('headless import requires 1..400 history days');
@@ -3125,17 +3126,17 @@ async function importedStream({shop,sourceStoreId,days,onStage=()=>{}}){
  await bridge.saveExternalJsonPreview({bulk:true,source:'ana-slo',shop:name,capturedAt,requestedDays:normalized.length,failedDays:[],days:normalized});
  onStage('input:normalized');return{ctx,bridge,name};
 }
-export async function runCompiledStoreModelStream({shop,sourceStoreId,days,targetDate,onStage=()=>{}}){
+export async function runCompiledStoreModelStream({shop,sourceStoreId,days,rawJsonDays=false,targetDate,onStage=()=>{}}){
  const target=String(targetDate??'').trim();
  if(!/^\d{4}-\d{2}-\d{2}$/.test(target)||!Number.isFinite(Date.parse(target+'T00:00:00Z')))throw new TypeError('targetDate must be YYYY-MM-DD');
  async function* beforeTarget(){for await(const day of days)if(day&&String(day.date||'')<target)yield day}
- const {ctx,name}=await importedStream({shop,sourceStoreId,days:beforeTarget(),onStage});
+ const {ctx,name}=await importedStream({shop,sourceStoreId,days:beforeTarget(),rawJsonDays,onStage});
  onStage('analysis:begin');const model=ctx.V5_TEST.analyzeStore(name,target);
  if(!model?.prediction?.rows)throw Error('JUGEST current store ranking returned no result');
  onStage('analysis:complete');return model;
 }
-export async function runCompiledStoreAnalysisStream({shop,sourceStoreId,days,options={period:'180',minG:'2000',maxDims:'1',minDays:'4'},onStage=()=>{}}){
- const {bridge,name}=await importedStream({shop,sourceStoreId,days,onStage});
+export async function runCompiledStoreAnalysisStream({shop,sourceStoreId,days,rawJsonDays=false,options={period:'180',minG:'2000',maxDims:'1',minDays:'4'},onStage=()=>{}}){
+ const {bridge,name}=await importedStream({shop,sourceStoreId,days,rawJsonDays,onStage});
  onStage('analysis:begin');const result=await bridge.runStoreAnalysis(name,options);
  if(!result||result.error)throw Error(result?.error||'JUGEST store analysis returned no result');
  onStage('analysis:complete');return result;

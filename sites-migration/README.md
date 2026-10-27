@@ -59,3 +59,11 @@ Sites側の元画面接続に加え、D1内での一貫した入力コピー、�
 内部scheduled/queueアダプター、試行履歴APIを追加。ローカルQueueの再配信で3段階が完了し、重複受領なし。Sites専用のDEV waitUntil接続では画面を閉じた後も完了した。恒久的な外部基盤、ホストQueue/Cron/Workflows/Sites自動化は作成しない。ホストの実行権限は引き続き無効。DEV waitUntilは30秒枠で停止し得るため永続スケジューラーの代用ではない。
 
 異常系: D1固定transaction失敗、入力/R2途中停止、候補破損、確定直前中断、確定transaction失敗、実行権期限・後着・新しいheadの保持を検証。実OOMによるホスト停止からの自動復旧は未検証。詳細な全ログと試行失敗も非公開配布ZIPへ収録。
+
+## 保存版9：計算後checkpoint・逐次転送・FEATURE_BUILD
+
+保存版8の実装を維持し、日別JSONをWorkerのFixedLengthStreamでR2へ転送、raw JSONを元normalizerへ渡す方式を追加。canonical payloadは一度の走査で保存/照合し、入力hashと実装hashで拘束したD1 checkpointから再開する。大容量envelopeは既存payload部品を共有。部品の自動削除は無効。Node fallbackはday全体を保持するためWorkerのメモリ証明には使わない。単一台のD1行2MB問題は未解決。
+
+元のFEATURE_BUILDの計算コードをそのまま利用し、元と同じ直近180日→対象日以前の順序で特徴量を作成、元形式のstore_feature_snapshotsを結果確定と同一batchで保存。PRE全体/後続研究cycle/モデル探索/実ホスト運用は未移植。永続outboxは送信失敗やproducer停止を回収する内部関数で、外部管理APIやホストQueueを有効化しない。
+
+4規模の全モデル/8中間値一致、実V8 OOM後のローカル再起動/期限回復、payload再利用を非公開証拠ZIPに記録。ローカル成功をSites総128MB適合やホスト自動復旧の証明にしない。

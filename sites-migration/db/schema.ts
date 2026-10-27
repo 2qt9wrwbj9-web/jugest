@@ -52,3 +52,12 @@ export const sitesAnalysisJobRuns=sqliteTable('sites_analysis_job_runs',{
 export const sitesAnalysisExecutionLock=sqliteTable('sites_analysis_execution_lock',{
  name:text('name').primaryKey(),jobId:integer('job_id').notNull(),owner:text('owner').notNull(),leaseUntil:integer('lease_until').notNull()
 });
+export const sitesAnalysisPayloads=sqliteTable('sites_analysis_payloads',{
+ jobId:integer('job_id').primaryKey(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),objectKey:text('object_key').notNull(),payloadHash:text('payload_hash').notNull(),payloadBytes:integer('payload_bytes').notNull(),createdAt:text('created_at').notNull()
+});
+export const sitesAnalysisDispatch=sqliteTable('sites_analysis_dispatch',{
+ jobId:integer('job_id').primaryKey(),attempts:integer('attempts').notNull().default(0),nextDispatchAt:integer('next_dispatch_at').notNull().default(0),lastSentAt:integer('last_sent_at'),lastError:text('last_error')
+});
+export const storeFeatureSnapshots=sqliteTable('store_feature_snapshots',{
+ storeId:text('store_id').notNull().references(()=>stores.id,{onDelete:'cascade'}),featureVersion:text('feature_version').notNull(),asOfDate:text('as_of_date').notNull(),dimensionKey:text('dimension_key').notNull(),dimensionValue:text('dimension_value').notNull(),windowDays:integer('window_days').notNull(),dayCount:integer('day_count').notNull(),machineCount:integer('machine_count').notNull(),rowCount:integer('row_count').notNull(),metricsJson:text('metrics_json').notNull(),inputHash:text('input_hash').notNull(),updatedAt:text('updated_at').notNull()
+},t=>[primaryKey({columns:[t.storeId,t.featureVersion,t.asOfDate,t.dimensionKey,t.dimensionValue,t.windowDays]}),index('store_feature_snapshots_store_asof_idx').on(t.storeId,t.featureVersion,t.asOfDate)]);

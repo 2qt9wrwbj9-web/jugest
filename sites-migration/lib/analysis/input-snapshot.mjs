@@ -1,3 +1,4 @@
+import{createHash}from'node:crypto';
 import{sha256Text}from'../storage/recovery.mjs';
 const parse=(text,fallback)=>{try{return JSON.parse(text)}catch{return fallback}};
 // Canonical rows are copied inside one D1 transaction. The JS boundary only
@@ -29,36 +30,59 @@ export async function freezeStoreHistory({db,bucket,storeId,limit=180,throughDat
  onStage('capture:fixed');
  while(true){
   const row=await db.prepare('SELECT business_date,day_json FROM sites_analysis_capture_days WHERE capture_id=? AND business_date>? ORDER BY business_date LIMIT 1').bind(cid,after).first();if(!row)break;
-  let text=row.day_json;
+  let objectKey=root+'/'+row.business_date+'.json',hash;
   if(capture.format_version===2){
-   // Bound each D1 response by UTF-8 payload bytes; a single source row remains
-   // subject to D1's existing 2MB limit. Keyset order matches the v1 aggregate.
-   const pieces=[text.slice(0,-3)+'['];let key=null,first=true;
-   while(true){const page=await db.prepare(`SELECT machine_key,payload_json FROM (
-    SELECT machine_key,payload_json,SUM(length(CAST(payload_json AS BLOB))) OVER(ORDER BY machine_key) bytes,ROW_NUMBER() OVER(ORDER BY machine_key) rn
-    FROM sites_analysis_capture_machines WHERE capture_id=? AND business_date=? AND (? IS NULL OR machine_key>?)
-   ) WHERE bytes<=262144 OR rn=1 ORDER BY machine_key`).bind(cid,row.business_date,key,key).all();
-    if(!page.results.length)break;
-    for(const m of page.results){if(!first)pieces.push(',');pieces.push(m.payload_json);first=false;key=m.machine_key}onStage('capture:machine-page');
+   const stats=await db.prepare('SELECT COUNT(*) n,COALESCE(SUM(length(CAST(payload_json AS BLOB))),0) bytes FROM sites_analysis_capture_machines WHERE capture_id=? AND business_date=?').bind(cid,row.business_date).first();
+   const prefix=row.day_json.slice(0,-3)+'[',suffix=']}',encoder=new TextEncoder();
+   const length=encoder.encode(prefix).length+stats.bytes+Math.max(0,stats.n-1)+2;
+   async function* chunks(){
+    yield encoder.encode(prefix);let key=null,received=0,first=true;
+    while(received<stats.n){const page=await db.prepare(`SELECT machine_key,payload_json FROM (
+     SELECT machine_key,payload_json,SUM(length(CAST(payload_json AS BLOB))) OVER(ORDER BY machine_key) bytes,ROW_NUMBER() OVER(ORDER BY machine_key) rn
+     FROM sites_analysis_capture_machines WHERE capture_id=? AND business_date=? AND (? IS NULL OR machine_key>?)
+    ) WHERE bytes<=262144 OR rn=1 ORDER BY machine_key`).bind(cid,row.business_date,key,key).all();
+     if(!page.results.length)throw Error('analysis_capture_rows_missing');
+     for(const m of page.results){if(!first)yield encoder.encode(',');yield encoder.encode(m.payload_json);first=false;key=m.machine_key;received++}onStage('capture:machine-page');
+    }
+    yield encoder.encode(suffix);
    }
-   pieces.push(']}');text=pieces.join('');
+   // A fresh immutable key avoids holding a conditional PUT stream open when a
+   // concurrent retry has already published the same content. The input hash
+   // deliberately excludes physical R2 keys, exactly as in v8.
+   objectKey=root+'/'+row.business_date+'-'+crypto.randomUUID()+'.json';
+   const digest=createHash('sha256');let transferred=0;
+   if(typeof globalThis.FixedLengthStream==='function'){
+    const stream=new globalThis.FixedLengthStream(length),writer=stream.writable.getWriter();
+    const upload=bucket.put(objectKey,stream.readable);
+    const produce=(async()=>{try{for await(const bytes of chunks()){digest.update(bytes);transferred+=bytes.length;await writer.write(bytes)}await writer.close()}catch(error){await writer.abort(error).catch(()=>{});throw error}})();
+    // Observe both promises immediately so a rejected upload cannot strand a writer.
+    try{await Promise.all([upload,produce])}catch(error){await writer.abort(error).catch(()=>{});throw error}
+    onStage('capture:streamed');
+   }else{
+    // Node-only test adapter. Native Worker tests exercise FixedLengthStream;
+    // this fallback is never used as evidence for Worker memory compliance.
+    const parts=[];for await(const bytes of chunks()){digest.update(bytes);transferred+=bytes.length;parts.push(bytes)}
+    await bucket.put(objectKey,await new Blob(parts).arrayBuffer());onStage('capture:node-fallback');
+   }
+   if(transferred!==length)throw Error('analysis_capture_size_mismatch');hash=digest.digest('hex');
+  }else{
+   const text=row.day_json;hash=await sha256Text(text);
+   const put=await bucket.put(objectKey,text,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{sha256:hash}});
+   if(!put){const existing=await bucket.get(objectKey);if(!existing||await sha256Text(await existing.text())!==hash)throw Error('analysis_capture_object_conflict')}
   }
   onStage('capture:read-day');
-  const hash=await sha256Text(text),objectKey=root+'/'+row.business_date+'.json';
-  const put=await bucket.put(objectKey,text,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:{sha256:hash}});
-  if(!put){const existing=await bucket.get(objectKey);if(!existing||await sha256Text(await existing.text())!==hash)throw Error('analysis_capture_object_conflict')}
   onStage('capture:upload-day');days.push({date:row.business_date,hash,objectKey});after=row.business_date;onStage('capture:day');
  }
  const inputHash=await sha256Text(JSON.stringify({store,days:days.map(({date,hash})=>({date,hash}))}));
  const manifest={format:'jugest-fixed-input-v1',store,limit:n,days,inputHash},manifestKey=root+'/manifest.json',text=JSON.stringify(manifest);
  const put=await bucket.put(manifestKey,text,{onlyIf:{etagDoesNotMatch:'*'}});
- if(!put){const old=await bucket.get(manifestKey);if(!old||await old.text()!==text)throw Error('analysis_capture_manifest_conflict')}
+ if(!put){const old=await bucket.get(manifestKey);if(!old)throw Error('analysis_capture_manifest_conflict');const prior=await old.json();if(prior.inputHash!==inputHash||prior.limit!==n||prior.store?.id!==id)throw Error('analysis_capture_manifest_conflict')}
  onStage('capture:complete');return{manifestKey,inputHash,days:days.length};
 }
-export async function openFrozenStoreHistory({bucket,manifestKey}){
+export async function openFrozenStoreHistory({bucket,manifestKey,rawJson=false}){
  const object=await bucket.get(manifestKey);if(!object)throw Error('analysis_input_manifest_missing');const manifest=await object.json();
  if(manifest.format!=='jugest-fixed-input-v1'||!Array.isArray(manifest.days))throw Error('analysis_input_manifest_invalid');
  const hash=await sha256Text(JSON.stringify({store:manifest.store,days:manifest.days.map(({date,hash})=>({date,hash}))}));if(hash!==manifest.inputHash)throw Error('analysis_input_manifest_hash_mismatch');
- async function* days(){for(const day of manifest.days){const object=await bucket.get(day.objectKey);if(!object)throw Error('analysis_input_missing');const text=await object.text();if(await sha256Text(text)!==day.hash)throw Error('analysis_input_hash_mismatch');const value=JSON.parse(text);if(value.date!==day.date)throw Error('analysis_input_date_mismatch');yield value}}
+ async function* days(){for(const day of manifest.days){const object=await bucket.get(day.objectKey);if(!object)throw Error('analysis_input_missing');const text=await object.text();if(await sha256Text(text)!==day.hash)throw Error('analysis_input_hash_mismatch');if(rawJson){if(!text.startsWith('{\"date\":'+JSON.stringify(day.date)+',')){if(JSON.parse(text).date!==day.date)throw Error('analysis_input_date_mismatch')}yield{date:day.date,rawJson:text}}else{const value=JSON.parse(text);if(value.date!==day.date)throw Error('analysis_input_date_mismatch');yield value}}}
  return{store:manifest.store,inputHash:hash,from:manifest.days[0]?.date,to:manifest.days.at(-1)?.date,days:days()};
 }
