@@ -1,6 +1,6 @@
 import {originalDailyInputHash} from './original-input-hash.mjs';
 import {originalRetryAt} from './generated-job-policy.mjs';
-import {canonicalDigest,putCanonical,payloadRange,digestObject,openCanonicalObject} from './canonical-stream.mjs';
+import {canonicalDigest,putCanonical,payloadRange,digestObject,digestStoredCanonical,openCanonicalObject} from './canonical-stream.mjs';
 import {freezeStoreHistory,openFrozenStoreHistory} from './input-snapshot.mjs';
 import {runFrozenWorkerModel,runFrozenWorkerAnalysis} from './run-frozen-worker.mjs';
 import {sha256Text} from '../storage/recovery.mjs';
@@ -46,7 +46,7 @@ async function release(db,job){await db.prepare("DELETE FROM sites_analysis_exec
 function owned(job,now){return [job.id,job.lease_owner,job.attempts,now]}
 const GUARD="id=? AND lease_owner=? AND attempts=? AND state='running' AND lease_until>?";
 export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=120000,runner=null,onStage=()=>{}}){
- const job=await claim(db,jobId,now(),leaseMs);if(!job)return getAnalysisJob(db,jobId);
+ onStage('job:claim-begin');const job=await claim(db,jobId,now(),leaseMs);onStage('job:claimed');if(!job)return getAnalysisJob(db,jobId);
  const started=now(),timings={};const stage=(name,value)=>{const v=timings[name]??{count:0};v.count++;v.elapsedMs=now()-started;timings[name]=v;onStage(name,value)};
  try{
   if(!job.manifest_key){
@@ -79,23 +79,24 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
   // Separate invocation: the large model is no longer strongly reachable.
   // Hash the full result and the original payload before any success is visible.
   stage('verify:begin');
-  const candidate=await openCanonicalObject(bucket,job.result_key);
-  if(!candidate)throw fail('result_missing');
-  const checked=await digestObject(candidate,{range:{offset:job.payload_offset,length:job.payload_size}});
+  const checked=await digestStoredCanonical(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size},onStage:stage});
+  if(!checked)throw fail('result_missing');
   if(checked.hash!==job.result_sha256)throw fail('result_hash_mismatch');
   if(checked.rangeHash!==job.output_hash||checked.rangeSize!==job.payload_size)throw fail('result_payload_hash_mismatch');
   const nativeInput=await openFrozenStoreHistory({bucket,manifestKey:job.manifest_key});if(nativeInput.inputHash!==job.input_hash)throw fail('job_input_hash_mismatch');
   const receiptInputHash=job.kind==='store-analysis'?await originalDailyInputHash({storeId:job.store_id,days:nativeInput.days}):job.input_hash,receiptVersion=job.kind==='store-analysis'?'vps-runtime-v1':ENGINE_VERSION;
   const key=job.result_key,outputHash=job.output_hash,resultHash=job.result_sha256,range={offset:job.payload_offset,length:job.payload_size};
-  stage('result:verified');const at=iso(now());
+  stage('result:verified');const at=iso(now());stage('result:commit-begin');
   await db.batch([
    db.prepare(`UPDATE sites_analysis_jobs SET state='succeeded',result_key=?,output_hash=?,result_sha256=?,payload_offset=?,payload_size=?,lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(key,outputHash,resultHash,range.offset,range.length,at,...owned(job,now())),
    db.prepare("UPDATE sites_analysis_heads SET completed_job_id=? WHERE store_id=? AND kind=? AND latest_job_id=? AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=?)").bind(job.id,job.store_id,job.kind,job.id,job.id,key),
    db.prepare("INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) SELECT store_id,target_date,?,?,?,output_hash,? FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=? AND NOT EXISTS(SELECT 1 FROM analysis_receipts WHERE store_id=? AND target_date=? AND component=? AND version=? AND input_hash=? AND output_hash=?)").bind(job.kind==='store-analysis'?'store-analysis-default':'current-model',receiptVersion,receiptInputHash,at,job.id,key,job.store_id,job.target_date,job.kind==='store-analysis'?'store-analysis-default':'current-model',receiptVersion,receiptInputHash,outputHash),
    db.prepare("UPDATE sites_analysis_job_runs SET state='succeeded',input_hash=?,output_hash=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=? AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=?)").bind(job.input_hash,outputHash,JSON.stringify(timings),at,job.id,job.attempts,job.lease_owner,job.id,key)
   ]);
+  stage('result:committed');
  }catch(error){
-  const code=error.code||(['analysis_input_hash_mismatch','analysis_input_missing','analysis_input_manifest_hash_mismatch','no_canonical_days'].includes(error.message)?error.message:'analysis_attempt_failed');
+  stage('job:failed',{name:error.name,code:error.code||null,message:String(error.message).slice(0,200)});
+  const code=error.code||(['analysis_input_hash_mismatch','analysis_input_missing','analysis_input_manifest_hash_mismatch','no_canonical_days','result_missing','result_hash_mismatch','result_payload_hash_mismatch','result_chunk_missing','result_chunk_hash_mismatch','result_manifest_invalid'].includes(error.message)?error.message:'analysis_attempt_failed');
   await db.batch([
    db.prepare(`UPDATE sites_analysis_jobs SET state=CASE WHEN failure_count+1>=max_attempts THEN 'failed' ELSE 'retry_wait' END,failure_count=failure_count+1,lease_owner=NULL,lease_until=NULL,available_at=?,last_error_class=?,updated_at=? WHERE ${GUARD}`).bind(Date.parse(originalRetryAt({id:job.id,failureCount:job.failure_count,attempts:job.attempts},iso(now()))),code,iso(now()),...owned(job,now())),
    db.prepare("UPDATE sites_analysis_job_runs SET state='failed',error_class=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=? AND ended_at IS NULL").bind(code,JSON.stringify(timings),iso(now()),job.id,job.attempts,job.lease_owner)
@@ -118,11 +119,11 @@ export async function readLatestAnalysisResult({db,bucket,storeId,kind='store-an
 
 // Response paths verify immutable bytes in chunks, then stream a matching ETag.
 // They do not materialize the complete large model on the server a second time.
-export async function verifiedResultBody({db,bucket,jobId,payloadOnly=false}){
+export async function verifiedResultBody({db,bucket,jobId,payloadOnly=false,onStage=()=>{}}){
  const job=await getAnalysisJob(db,jobId);if(job?.state!=='succeeded'||!job.result_key)return null;
  const range=payloadOnly?{offset:job.payload_offset,length:job.payload_size}:undefined;
- const first=await openCanonicalObject(bucket,job.result_key,{range});if(!first)throw fail('result_missing');
- if((await digestObject(first)).hash!==(payloadOnly?job.output_hash:job.result_sha256))throw fail('result_hash_mismatch');
+ const first=await digestStoredCanonical(bucket,job.result_key,{range,onStage});if(!first)throw fail('result_missing');
+ if(first.hash!==job.result_sha256||(payloadOnly&&first.rangeHash!==job.output_hash))throw fail('result_hash_mismatch');
  const next=await openCanonicalObject(bucket,job.result_key,{range,expectedEtag:first.etag});if(!next?.body)throw fail('result_reference_changed');
  return{job,body:next.body};
 }

@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
 import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import {createSitesRelayStore} from '../lib/storage/relay-store.mjs';
-import {Miniflare} from 'miniflare';
+const require=createRequire(import.meta.url);
+const {Miniflare}=await import('miniflare');
 async function fixture(){
  assert.ok(existsSync(new URL('../lib/storage/recovery.mjs',import.meta.url)),'verified storage recovery missing');
  const recovery=await import('../lib/storage/recovery.mjs');

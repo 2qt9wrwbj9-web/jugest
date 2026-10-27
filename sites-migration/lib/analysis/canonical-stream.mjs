@@ -17,6 +17,30 @@ export async function digestObject(object,{range}={}){
  try{while(true){const {value,done}=await reader.read();if(done)break;await whole.update(value);if(portion){const from=Math.max(0,range.offset-size),to=Math.min(value.length,range.offset+range.length-size);if(to>from){await portion.update(value.subarray(from,to));rangeSize+=to-from}}size+=value.byteLength}}finally{reader.releaseLock()}
  return{hash:await whole.end(),size,...(portion?{rangeHash:await portion.end(),rangeSize}:{})};
 }
+// Verification does not need to buffer or expose a complete R2 part. Hash each
+// incoming native body chunk once; retain only the digest state and counters.
+// Kept separate from the response reader which must validate before exposing a part.
+export async function digestStoredCanonical(bucket,key,{range,onStage=()=>{}}={}){
+ const object=await bucket.get(key);if(!object)return null;
+ const whole=createHash('sha256'),portion=range?createHash('sha256'):null;let size=0,rangeSize=0;
+ async function consume(body,part){
+  const hash=part?createHash('sha256'):null,reader=body.getReader();let bytes=0;
+  try{while(true){const item=await reader.read();if(item.done)break;const value=item.value;
+   whole.update(value);hash?.update(value);
+   if(portion){const from=Math.max(0,range.offset-size),to=Math.min(value.length,range.offset+range.length-size);if(to>from){portion.update(value.subarray(from,to));rangeSize+=to-from}}
+   size+=value.byteLength;bytes+=value.byteLength;
+  }}finally{reader.releaseLock()}
+  if(part&&(bytes!==part.size||hash.digest('hex')!==part.hash))throw Error('result_chunk_hash_mismatch');
+  onStage('verify:part');
+ }
+ if(object.customMetadata?.format==='jugest-json-chunks-v1'){
+  const manifest=await object.json();if(manifest.format!=='jugest-json-chunks-v1'||!Array.isArray(manifest.parts)||manifest.parts.reduce((n,p)=>n+p.size,0)!==manifest.size)throw Error('result_manifest_invalid');
+  for(const part of manifest.parts){const data=await bucket.get(part.key);if(!data)throw Error('result_chunk_missing');await consume(data.body,part)}
+  const hash=whole.digest('hex');if(size!==manifest.size||hash!==manifest.hash)throw Error('result_hash_mismatch');
+  return{hash,size,etag:object.etag,...(portion?{rangeHash:portion.digest('hex'),rangeSize}:{})};
+ }
+ await consume(object.body);return{hash:whole.digest('hex'),size,etag:object.etag,...(portion?{rangeHash:portion.digest('hex'),rangeSize}:{})};
+}
 export async function putCanonical(bucket,key,value,{onStage=()=>{},jsonCompatible=false,verify=true}={}){
  const digest=canonicalDigest(value,{jsonCompatible}),metadata={sha256:digest.hash};
  if(digest.size<1024*1024){const body=new Uint8Array(digest.size);let offset=0;for(const chunk of canonicalBytes(value,{jsonCompatible})){body.set(chunk,offset);offset+=chunk.length}await bucket.put(key,body,{onlyIf:{etagDoesNotMatch:'*'},customMetadata:metadata});onStage('result:upload-part')}

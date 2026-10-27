@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
 import {existsSync,readFileSync,readdirSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {openDatabase} from '../../vps/src/db.mjs';
-import {migrate} from '../../vps/src/schema.mjs';
-import {createRelayStore} from '../../vps/src/relay-store.mjs';
-import {createAnalyticsHandler} from '../../vps/src/analytics-handler.mjs';
-import {Miniflare} from 'miniflare';
+import {openDatabase} from '../upstream/vps/src/db.mjs';
+import {migrate} from '../upstream/vps/src/schema.mjs';
+import {createRelayStore} from '../upstream/vps/src/relay-store.mjs';
+import {createAnalyticsHandler} from '../upstream/vps/src/analytics-handler.mjs';
+const require=createRequire(import.meta.url);
+const {Miniflare}=await import('miniflare');
 const channel='test_channel_12345',other='other_channel_12345';
 // Test-only credentials. Never loaded by the product or copied to any deployment DB.
 const token='synthetic-test-receiver-token',assistant='jugest_read_synthetic-test-only';
@@ -40,7 +42,7 @@ async function fixture(){
   const record={channelId:channel,tokenHash:digest(assistant),createdAt:1};
   await factory('assistant-read-v1').setJSON(`token/${digest(assistant)}`,record);await factory('assistant-read-v1').setJSON(`channel/${channel}`,record);
  }
- const reference=createAnalyticsHandler({rootDir:fileURLToPath(new URL('../../',import.meta.url)),relayDbPath,canonicalDbPath});
+ const reference=createAnalyticsHandler({rootDir:fileURLToPath(new URL('../upstream/',import.meta.url)),relayDbPath,canonicalDbPath});
  async function compare(url,headers=receiver,method='GET'){
   const req={url,method,headers},capture={status:0,headers:{},text:'',writeHead(status,headers){this.status=status;this.headers=headers},end(value){this.text=value?.toString()||''}};
   await reference(req,capture);
@@ -59,7 +61,7 @@ test('assistant read scope and channel revocation match the original authorizati
 test('incremental history reader preserves every original field and never trims the requested history',async()=>{const f=await fixture();try{
  assert.ok(existsSync(new URL('../lib/store-history.mjs',import.meta.url)),'incremental history reader missing');
  const {openStoreHistory}=await import('../lib/store-history.mjs');
- const {loadStoreDays}=await import('../../vps/src/analysis/store-data.mjs');
+ const {loadStoreDays}=await import('../upstream/vps/src/analysis/store-data.mjs');
  for(const limit of [1,180,3660]){const expected=loadStoreDays(f.sqlite,'s1',{limit});const actual=await openStoreHistory(f.db,'s1',{limit}),days=[];for await(const day of actual.days)days.push(day);assert.deepEqual({store:actual.store,days},expected)}
  const stream=await openStoreHistory(f.db,'s1',{limit:180}),iterator=stream.days[Symbol.asyncIterator]();
  assert.equal((await iterator.next()).value.date,'2026-01-01');

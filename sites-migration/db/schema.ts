@@ -31,8 +31,12 @@ export const relayRefs=sqliteTable('sites_relay_refs',{
 
 // Sites runtime records are separate from the original VPS queue and snapshots.
 export const sitesAnalysisCaptures=sqliteTable('sites_analysis_captures',{
- id:text('id').primaryKey(),storeId:text('store_id').notNull(),storeJson:text('store_json').notNull(),complete:integer('complete').notNull().default(0),createdAt:text('created_at').notNull()
+ id:text('id').primaryKey(),storeId:text('store_id').notNull(),storeJson:text('store_json').notNull(),complete:integer('complete').notNull().default(0),createdAt:text('created_at').notNull(),formatVersion:integer('format_version').notNull().default(1)
 });
+// V2 captures keep individual canonical machine rows, never a whole day in a D1 row.
+export const sitesAnalysisCaptureMachines=sqliteTable('sites_analysis_capture_machines',{
+ captureId:text('capture_id').notNull(),businessDate:text('business_date').notNull(),machineKey:text('machine_key').notNull(),payloadJson:text('payload_json').notNull()
+},t=>[primaryKey({columns:[t.captureId,t.businessDate,t.machineKey]})]);
 export const sitesAnalysisCaptureDays=sqliteTable('sites_analysis_capture_days',{
  captureId:text('capture_id').notNull(),businessDate:text('business_date').notNull(),dayJson:text('day_json').notNull()
 },t=>[primaryKey({columns:[t.captureId,t.businessDate]})]);
