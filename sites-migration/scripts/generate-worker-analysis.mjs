@@ -15,7 +15,7 @@ for(const name of stageNames){
  if(!inline.includes(anchor))throw Error('missing stage '+name);
  inline=inline.replace(anchor,'function '+name+'(...args){__analysisStage("before:'+name+'");const value='+name+'Original(...args);__analysisStage("'+name+'",value);return value}function '+name+'Original(');
 }
-const implementation=createHash('sha256').update(inline+dependencies+adapter+readFileSync(new URL(import.meta.url),'utf8')).digest('hex');
+const implementation=createHash('sha256').update(inline+dependencies+adapter+readFileSync(new URL(import.meta.url),'utf8')+readFileSync(new URL('../lib/analysis/feature-build.mjs',import.meta.url),'utf8')+readFileSync(new URL('vps/src/research/feature-builder.mjs',root),'utf8')+readFileSync(new URL('vps/src/canonical-json.mjs',root),'utf8')).digest('hex');
 const output=`export const WORKER_IMPLEMENTATION_HASH='${implementation}';\n// Generated from fixed production files; no eval/vm/fs at runtime.\nconst host=globalThis;\n${helpers}\nasync function bootCompiled(onStage=()=>{}){\n${context}\nctx.window=ctx;ctx.globalThis=ctx;ctx.__analysisStage=onStage;\n(function(${[...args,'__analysisStage'].join(',')}){\n${dependencies}\n;\n${inline}\n;\n})(${[...values,'ctx.__analysisStage'].join(',')});\nfor(let i=0;i<12;i++)await new Promise(resolve=>host.setTimeout(resolve,0));\nreturn ctx;\n}\nasync function importedStream({shop,sourceStoreId,days,rawJsonDays=false,onStage=()=>{}}){
  const name=String(shop??'').trim(),id=String(sourceStoreId??name).trim();
  if(!name||!id)throw new TypeError('shop and sourceStoreId required');
