@@ -1,8 +1,8 @@
 import{openFrozenStoreHistory}from'./input-snapshot.mjs';
-import{runCompiledStoreModelStream,runCompiledStoreAnalysisStream}from'./compiled-worker.mjs';
-export async function runFrozenWorkerModel({bucket,manifestKey,targetDate,onStage}){
+import{runCompiledStoreModelStream,runCompiledStoreAnalysisStream,runCompiledStoreModelResumeStream}from'./compiled-worker.mjs';
+export async function runFrozenWorkerModel({bucket,manifestKey,targetDate,prefixState=null,onStage}){
  const input=await openFrozenStoreHistory({bucket,manifestKey,rawJson:true});
- const model=await runCompiledStoreModelStream({shop:input.store.name,sourceStoreId:input.store.id,days:input.days,rawJsonDays:true,targetDate,onStage});
+ const model=await (prefixState?runCompiledStoreModelResumeStream:runCompiledStoreModelStream)({prefixState,shop:input.store.name,sourceStoreId:input.store.id,days:input.days,rawJsonDays:true,targetDate,onStage});
  return{model,inputHash:input.inputHash};
 }
 export async function runFrozenWorkerAnalysis({bucket,manifestKey,onStage}){

@@ -1,5 +1,5 @@
 import {sql} from 'drizzle-orm';
-import {sqliteTable,text,integer,real,primaryKey,foreignKey,index,check} from 'drizzle-orm/sqlite-core';
+import {sqliteTable,text,integer,real,primaryKey,foreignKey,index,uniqueIndex,check} from 'drizzle-orm/sqlite-core';
 
 // Subset of the frozen canonical schema needed by the read APIs. No seed data.
 export const stores=sqliteTable('stores',{
@@ -61,3 +61,23 @@ export const sitesAnalysisDispatch=sqliteTable('sites_analysis_dispatch',{
 export const storeFeatureSnapshots=sqliteTable('store_feature_snapshots',{
  storeId:text('store_id').notNull().references(()=>stores.id,{onDelete:'cascade'}),featureVersion:text('feature_version').notNull(),asOfDate:text('as_of_date').notNull(),dimensionKey:text('dimension_key').notNull(),dimensionValue:text('dimension_value').notNull(),windowDays:integer('window_days').notNull(),dayCount:integer('day_count').notNull(),machineCount:integer('machine_count').notNull(),rowCount:integer('row_count').notNull(),metricsJson:text('metrics_json').notNull(),inputHash:text('input_hash').notNull(),updatedAt:text('updated_at').notNull()
 },t=>[primaryKey({columns:[t.storeId,t.featureVersion,t.asOfDate,t.dimensionKey,t.dimensionValue,t.windowDays]}),index('store_feature_snapshots_store_asof_idx').on(t.storeId,t.featureVersion,t.asOfDate)]);
+
+export const sitesAnalysisStages=sqliteTable('sites_analysis_stages',{
+ jobId:integer('job_id').notNull(),stage:text('stage').notNull(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),objectKey:text('object_key').notNull(),bodyHash:text('body_hash').notNull(),bodyBytes:integer('body_bytes').notNull(),createdAt:text('created_at').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.stage]})]);
+
+export const researchModelRegistry=sqliteTable('research_model_registry',{
+ storeId:text('store_id').notNull().references(()=>stores.id,{onDelete:'cascade'}),fingerprint:text('fingerprint').notNull(),modelJson:text('model_json').notNull(),parentFingerprint:text('parent_fingerprint'),generation:integer('generation').notNull().default(0),status:text('status').notNull().default('candidate'),validationScore:real('validation_score'),holdoutScore:real('holdout_score'),scoreJson:text('score_json').notNull().default('{}'),createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull()
+},t=>[primaryKey({columns:[t.storeId,t.fingerprint]}),index('research_model_registry_store_status_idx').on(t.storeId,t.status,t.validationScore)]);
+export const backtestRuns=sqliteTable('backtest_runs',{
+ id:integer('id').primaryKey({autoIncrement:true}),storeId:text('store_id').notNull().references(()=>stores.id,{onDelete:'cascade'}),modelFingerprint:text('model_fingerprint').notNull(),modelJson:text('model_json').notNull(),featureVersion:text('feature_version').notNull(),splitKind:text('split_kind').notNull(),fromDate:text('from_date'),toDate:text('to_date'),predictionCount:integer('prediction_count').notNull().default(0),scoreJson:text('score_json').notNull().default('{}'),inputHash:text('input_hash').notNull(),createdAt:text('created_at').notNull()
+},t=>[index('backtest_runs_store_model_idx').on(t.storeId,t.modelFingerprint,t.createdAt),uniqueIndex('sites_backtest_run_identity').on(t.storeId,t.modelFingerprint,t.featureVersion,t.splitKind,t.inputHash)]);
+export const backtestPredictions=sqliteTable('backtest_predictions',{
+ runId:integer('run_id').notNull().references(()=>backtestRuns.id,{onDelete:'cascade'}),targetDate:text('target_date').notNull(),machineKey:text('machine_key').notNull(),rank:integer('rank').notNull(),score:real('score').notNull(),outcomeScore:real('outcome_score'),detailsJson:text('details_json').notNull().default('{}')
+},t=>[primaryKey({columns:[t.runId,t.targetDate,t.machineKey]}),index('backtest_predictions_run_date_idx').on(t.runId,t.targetDate,t.rank)]);
+export const sitesBacktestPublications=sqliteTable('sites_backtest_publications',{
+ runId:integer('run_id').primaryKey(),jobId:integer('job_id').notNull()
+});
+export const sitesResearchJobInputs=sqliteTable('sites_research_job_inputs',{
+ jobId:integer('job_id').primaryKey(),inputHash:text('input_hash').notNull(),modelJson:text('model_json').notNull(),modelFingerprint:text('model_fingerprint').notNull(),featureVersion:text('feature_version').notNull(),frontierDate:text('frontier_date').notNull(),createdAt:text('created_at').notNull()
+});

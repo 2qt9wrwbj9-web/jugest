@@ -1,4 +1,4 @@
-import{readFileSync,writeFileSync}from'node:fs';import{createHash}from'node:crypto';
+import{readFileSync,writeFileSync,readdirSync}from'node:fs';import{createHash}from'node:crypto';
 const root=new URL('../upstream/',import.meta.url),html=readFileSync(new URL('index.html',root),'utf8');
 let inline=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 for(const[a,b]of[["map(r=>({...r,es:+r.expectedSetting,p4:Number.isFinite(+r.p4)?+r.p4:NaN,p5:+r.p5}))","map(r=>({date:r.date,machine:r.machine,tableNo:r.tableNo,games:r.games,bb:r.bb,rb:r.rb,diff:r.diff,es:+r.expectedSetting,p4:Number.isFinite(+r.p4)?+r.p4:NaN,p5:+r.p5}))"],["let rows=current.map((r,_bruteIndex)=>{","const featureStrings=new Map;let rows=current.map((r,_bruteIndex)=>{"],["BRUTE_DIM_DEFS.map(x=>features[x.key]??null)",'BRUTE_DIM_DEFS.map(x=>{const value=features[x.key]??null;if(typeof value!=="string")return value;if(featureStrings.has(value))return featureStrings.get(value);featureStrings.set(value,value);return value})']]){if(!inline.includes(a))throw Error('missing fixed source anchor');inline=inline.replace(a,b)}
@@ -15,7 +15,14 @@ for(const name of stageNames){
  if(!inline.includes(anchor))throw Error('missing stage '+name);
  inline=inline.replace(anchor,'function '+name+'(...args){__analysisStage("before:'+name+'");const value='+name+'Original(...args);__analysisStage("'+name+'",value);return value}function '+name+'Original(');
 }
-const implementation=createHash('sha256').update(inline+dependencies+adapter+readFileSync(new URL(import.meta.url),'utf8')+readFileSync(new URL('../lib/analysis/feature-build.mjs',import.meta.url),'utf8')+readFileSync(new URL('vps/src/research/feature-builder.mjs',root),'utf8')+readFileSync(new URL('vps/src/canonical-json.mjs',root),'utf8')).digest('hex');
+// Split only the exact original v5 prefix; all arithmetic and suffix are reused.
+const start=inline.indexOf('function v5AnalyzeStore('),begin=inline.indexOf('let history=v5PrepareHistory(',start),end=inline.indexOf(',pred=v4PredictStore(shop,targetDate,sourceDays);',begin);
+if(start<0||begin<0||end<0)throw Error('missing v5 split anchors');
+const prefix=inline.slice(begin,end);
+inline=inline.slice(0,begin)+`let prepared=__prepared??v5StagePrepare(shop,targetDate,sourceDays);if(!prepared)return null;let {signals,typePcts,comb,gate,bootstrap,blend}=prepared,history={length:prepared.historyDays},bt={supports:prepared.supports},pred=v4PredictStore(shop,targetDate,sourceDays);`+inline.slice(end+',pred=v4PredictStore(shop,targetDate,sourceDays);'.length);
+inline=inline.replace('function v5AnalyzeStore(shop,targetDate=localDateString(),sourceDays=externalDays){','function v5AnalyzeStore(shop,targetDate=localDateString(),sourceDays=externalDays,__prepared=null){');
+inline=inline.replace('window.V5_TEST=',`\nfunction v5StagePrepare(shop,targetDate,sourceDays){ensureExternalJudgedSync(sourceDays,shop);${prefix};return{version:'v5-prefix-v1',historyDays:history.length,signals,typePcts,comb,gate,bootstrap,blend,supports:bt.supports}}\nwindow.JUGEST_V5_STAGE={prepare:(shop,date)=>v5StagePrepare(shop,date,externalDays),finish:(shop,date,state)=>v5AnalyzeStore(shop,date,externalDays,state)};window.V5_TEST=`);
+const implementation=createHash('sha256').update(inline+dependencies+adapter+readFileSync(new URL(import.meta.url),'utf8')+readFileSync(new URL('../lib/analysis/feature-build.mjs',import.meta.url),'utf8')+readFileSync(new URL('vps/src/research/feature-builder.mjs',root),'utf8')+readFileSync(new URL('vps/src/canonical-json.mjs',root),'utf8')).update(readFileSync(new URL('../lib/analysis/model-prefix.mjs',import.meta.url),'utf8')+readFileSync(new URL('../lib/analysis/graph-codec.mjs',import.meta.url),'utf8')).update(['../lib/analysis/research-backtest.mjs','../lib/analysis/generated-backtest-kernel.mjs','../upstream/vps/src/research/backtest.mjs','../upstream/vps/src/research/model-search.mjs','../upstream/vps/src/research/axis-discovery.mjs'].map(p=>readFileSync(new URL(p,import.meta.url),'utf8')).join('')).update(readdirSync(new URL('../lib/analysis/',import.meta.url)).filter(f=>f.endsWith('.mjs')&&f!=='compiled-worker.mjs').sort().map(f=>f+readFileSync(new URL('../lib/analysis/'+f,import.meta.url),'utf8')).join('')).digest('hex');
 const output=`export const WORKER_IMPLEMENTATION_HASH='${implementation}';\n// Generated from fixed production files; no eval/vm/fs at runtime.\nconst host=globalThis;\n${helpers}\nasync function bootCompiled(onStage=()=>{}){\n${context}\nctx.window=ctx;ctx.globalThis=ctx;ctx.__analysisStage=onStage;\n(function(${[...args,'__analysisStage'].join(',')}){\n${dependencies}\n;\n${inline}\n;\n})(${[...values,'ctx.__analysisStage'].join(',')});\nfor(let i=0;i<12;i++)await new Promise(resolve=>host.setTimeout(resolve,0));\nreturn ctx;\n}\nasync function importedStream({shop,sourceStoreId,days,rawJsonDays=false,onStage=()=>{}}){
  const name=String(shop??'').trim(),id=String(sourceStoreId??name).trim();
  if(!name||!id)throw new TypeError('shop and sourceStoreId required');
@@ -52,6 +59,18 @@ export async function runCompiledStoreAnalysisStream({shop,sourceStoreId,days,ra
  onStage('analysis:begin');const result=await bridge.runStoreAnalysis(name,options);
  if(!result||result.error)throw Error(result?.error||'JUGEST store analysis returned no result');
  onStage('analysis:complete');return result;
+}
+export async function runCompiledStoreModelPrefixStream({shop,sourceStoreId,days,rawJsonDays=false,targetDate,onStage=()=>{}}){
+ async function* beforeTarget(){for await(const day of days)if(day&&String(day.date||'')<targetDate)yield day}
+ const {ctx,name}=await importedStream({shop,sourceStoreId,days:beforeTarget(),rawJsonDays,onStage});
+ onStage('model-prefix:begin');const state=ctx.JUGEST_V5_STAGE.prepare(name,targetDate);onStage('model-prefix:complete');return state;
+}
+export async function runCompiledStoreModelResumeStream({shop,sourceStoreId,days,rawJsonDays=false,targetDate,prefixState,onStage=()=>{}}){
+ if(prefixState?.version!=='v5-prefix-v1')throw Error('model_stage_invalid');
+ async function* beforeTarget(){for await(const day of days)if(day&&String(day.date||'')<targetDate)yield day}
+ const {ctx,name}=await importedStream({shop,sourceStoreId,days:beforeTarget(),rawJsonDays,onStage});
+ onStage('analysis:begin');const model=ctx.JUGEST_V5_STAGE.finish(name,targetDate,prefixState);
+ if(!model?.prediction?.rows)throw Error('JUGEST current store ranking returned no result');onStage('analysis:complete');return model;
 }
 export async function runCompiledStoreModel(args){
  if(!Array.isArray(args.days))throw new TypeError('days are required');

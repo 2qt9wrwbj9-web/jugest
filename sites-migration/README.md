@@ -67,3 +67,11 @@ Sites側の元画面接続に加え、D1内での一貫した入力コピー、�
 元のFEATURE_BUILDの計算コードをそのまま利用し、元と同じ直近180日→対象日以前の順序で特徴量を作成、元形式のstore_feature_snapshotsを結果確定と同一batchで保存。PRE全体/後続研究cycle/モデル探索/実ホスト運用は未移植。永続outboxは送信失敗やproducer停止を回収する内部関数で、外部管理APIやホストQueueを有効化しない。
 
 4規模の全モデル/8中間値一致、実V8 OOM後のローカル再起動/期限回復、payload再利用を非公開証拠ZIPに記録。ローカル成功をSites総128MB適合やホスト自動復旧の証明にしない。
+
+## 保存版11：現行予測の前半分割・研究モデルの過去検証
+
+元v5AnalyzeStoreのv4PredictStore呼出し前の信号/評価値を入力固定の呼出しで計算し、入力/実装hash付きR2/D1へ保存。後半は別Worker呼出しで元v4/最終組立を実行する。元3advance APIは維持。版付きgraph codecでMap/Set/非有限値/-0/undefined/holes/参照共有/順序を保持。4規模の8中間値/全モデル完全一致、host128MBは未証明。追加読出し/転送等は非公開証拠原本へ記録。
+
+元FEATURE_BUILDの次に位置するBACKTESTを独立移植。先に同じ固定入力でFEATURE_BUILDが完了していることを要求し、元初回baselineまたは既存研究championを開始時に固定。元の最新180日→frontier filter→walk-forward dataset→chronological split→train/validation評価と順位/保存を再利用。元SQLite BACKTEST childの実行結果/全保存値と比較する。holdoutは評価せず、MODEL_SEARCH/研究cycleの自動連鎖/昇格/採用/active-model更新は未移植。原本rankSplit/persistSplitの生成元は凍結jobs/backtest.mjs。D1へ同じ形式のbacktest_runs/predictionsと安全確定を接続し、別入力の履歴を削除しない。
+
+public componentsは公開実行APIや正式認証を有効にしない。元本番コード/branch/DB/ドメインへ変更なし。`npm test --prefix sites-migration`、source generatorは`npm run generate:analysis --prefix sites-migration`。全原本と再現試験は非公開の保存版11 ZIP。
