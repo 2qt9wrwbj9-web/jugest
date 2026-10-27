@@ -1,6 +1,7 @@
 import {createStoreReadHandler} from './generated-store-read.mjs';
 import {authenticateReceiver,authenticateAssistantRead} from './generated-store-auth.mjs';
 import {storeMetadata,canAccessStoreMetadata} from './generated-store-policy.mjs';
+import {judgeMachinesPublic} from './generated-judge.mjs';
 import {createSitesRelayStore} from './storage/relay-store.mjs';
 
 // Only normalize the database API; SQL, ordering, parsing and output mappings
@@ -17,6 +18,17 @@ export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',p
  const headers={'cache-control':'no-store','x-content-type-options':'nosniff'};
  if(!db||!bucket)return Response.json({ok:false,code:'sites_storage_unavailable'},{status:503,headers});
  const stores=name=>createSitesRelayStore(name,{db,bucket});
+ if(new URL(request.url).pathname==='/api/vps/judge/machines'){
+  const reply=(value,status=200,extra={})=>Response.json(value,{status,headers:{...headers,...extra}});
+  if(request.method!=='POST')return reply({ok:false,code:'method_not_allowed'},405,{allow:'POST'});
+  const req={headers:Object.fromEntries(request.headers)},auth=await authenticateReceiver(req,stores)||await authenticateAssistantRead(req,stores);
+  if(!auth)return reply({ok:false,code:'unauthorized'},401);
+  if(auth.authType==='assistant-read')return reply({ok:false,code:'assistant_read_scope_denied'},403);
+  let body;try{const reader=request.body?.getReader(),chunks=[];let size=0;if(reader)while(true){const part=await reader.read();if(part.done)break;size+=part.value.byteLength;if(size>262144){await reader.cancel();return reply({ok:false,code:'body_too_large'},413)}chunks.push(part.value)}const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}body=size?JSON.parse(new TextDecoder().decode(bytes)):null}catch{return reply({ok:false,code:'bad_json'},400)}
+  if(!Array.isArray(body?.machines))return reply({ok:false,code:'bad_machines'},400);
+  if(body.machines.length>200)return reply({ok:false,code:'batch_too_large',maxMachines:200},413);
+  return reply(await judgeMachinesPublic(body.machines));
+ }
  let response;
  const sendJson=(req,_res,status,payload,extra={})=>{const body=JSON.stringify(payload);response=new Response(req.method==='HEAD'?null:body,{status,headers:{'content-type':'application/json; charset=utf-8',...headers,...extra}})};
  const handler=createStoreReadHandler({db:readDatabase(db),

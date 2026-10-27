@@ -1,0 +1,214 @@
+// Generated fixed mathematical bodies; feature strings may be interned. Node-only audit harness.
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import {fileURLToPath} from 'node:url';
+import {webcrypto} from 'node:crypto';
+
+function memoryStorage(seed={}){
+  const map=new Map(Object.entries(seed));
+  return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key),clear:()=>map.clear()};
+}
+
+function makeElement(){
+  return {style:{},dataset:{},children:[],innerHTML:'',value:'',checked:false,listeners:new Map(),append(...items){this.children.push(...items)},appendChild(item){this.children.push(item);return item},addEventListener(type,fn){this.listeners.set(type,fn)},removeEventListener(type){this.listeners.delete(type)},querySelector(){return null},querySelectorAll(){return []},closest(){return null},setAttribute(){},removeAttribute(){},getAttribute(){return null},hasAttribute(){return false},getBoundingClientRect(){return {width:390,height:844,top:0,left:0,right:390,bottom:844}},focus(){},blur(){},remove(){}};
+}
+
+function plain(value){return JSON.parse(JSON.stringify(value))}
+function mustFunction(value,name){if(typeof value!=="function")throw new Error(`JUGEST runtime missing ${name}`);return value}
+function validTargetDate(value){const text=String(value??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError('targetDate must be YYYY-MM-DD');return text}
+
+async function bootRuntime(rootDir,{compact=false,onStage=()=>{}}={}){
+  const root=path.resolve(rootDir);
+  const listeners=new Map(),intervals=new Map(),classes=new Map();
+  let intervalId=0;
+  const localStorage=memoryStorage();
+  const location={protocol:'data:',href:'data:text/html,jugest-vps-runtime',origin:'null',search:'',reload(){}};
+  const document={hidden:false,visibilityState:'visible',createElement:()=>makeElement(),getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],body:makeElement(),documentElement:makeElement(),addEventListener(type,fn){listeners.set(`document:${type}`,fn)},removeEventListener(type){listeners.delete(`document:${type}`)}};
+  const ctx={
+    __captureStage:onStage,console,URL,URLSearchParams,Blob,Response,Request,Headers,AbortController,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,DataView,crypto:webcrypto,structuredClone,atob,btoa,
+    CompressionStream:globalThis.CompressionStream,DecompressionStream:globalThis.DecompressionStream,ReadableStream:globalThis.ReadableStream,TransformStream:globalThis.TransformStream,
+    localStorage,location,document,navigator:{onLine:false,storage:{estimate:async()=>({usage:0,quota:0})}},performance:globalThis.performance,
+    setTimeout:(fn,ms=0,...args)=>globalThis.setTimeout(fn,ms,...args),clearTimeout:id=>globalThis.clearTimeout(id),
+    setInterval(fn,ms=0){intervals.set(++intervalId,{fn,ms});return intervalId},clearInterval(id){intervals.delete(id)},
+    requestAnimationFrame:fn=>globalThis.setTimeout(()=>fn(Date.now()),0),cancelAnimationFrame:id=>globalThis.clearTimeout(id),queueMicrotask,
+    addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(fn)},removeEventListener(type,fn){listeners.get(type)?.delete(fn)},
+    history:{pushState(){},replaceState(){}},alert(){},confirm:()=>true,prompt:()=>null,fetch:async()=>{throw new Error('Unexpected network access from VPS analysis runtime')},
+    HTMLElement:class {constructor(){this.isConnected=true}attachShadow(){this.shadowRoot=makeElement();return this.shadowRoot}},customElements:{get:key=>classes.get(key),define:(key,value)=>classes.set(key,value)}
+  };
+  ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
+
+  for(const name of ['machine-names.js','hanahana-judge.js','missing-inference.js','judgement-model.js','core-v510.js']){
+    const requested=path.join(root,name);
+    // Historical/test runtime roots can predate the display-only registry.
+    // Prefer the snapshot copy; only this new non-mathematical file has a source fallback.
+    const source=name==='machine-names.js'&&!fs.existsSync(requested)
+      ?fileURLToPath(new URL('../../upstream/machine-names.js',import.meta.url)):requested;
+    vm.runInContext(fs.readFileSync(source,'utf8'),ctx,{filename:name});
+  }
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)){
+    let source=match[1];
+    if(compact){
+     // Project only the fields this temporary work row reads. Original input
+     // and all canonical fields remain intact in sourceDays; output identical.
+     source=source.replace('map(r=>({...r,es:+r.expectedSetting,p4:Number.isFinite(+r.p4)?+r.p4:NaN,p5:+r.p5}))', 'map(r=>({date:r.date,machine:r.machine,tableNo:r.tableNo,games:r.games,bb:r.bb,rb:r.rb,diff:r.diff,es:+r.expectedSetting,p4:Number.isFinite(+r.p4)?+r.p4:NaN,p5:+r.p5}))');
+     source=source.replace('let rows=current.map((r,_bruteIndex)=>{','const featureStrings=new Map;let rows=current.map((r,_bruteIndex)=>{');
+     source=source.replace('BRUTE_DIM_DEFS.map(x=>features[x.key]??null)', 'BRUTE_DIM_DEFS.map(x=>{const value=features[x.key]??null;if(typeof value!=="string")return value;if(featureStrings.has(value))return featureStrings.get(value);featureStrings.set(value,value);return value})');
+    }
+    for(const name of ['brutePrepare','v4ModelTraining','v4SettingDistributionModel','v4CalendarLongMemory','bruteSingleGenerate','v5PrepareHistory','v5Backtest','v4PredictStore'])source=source.replace('function '+name+'(', 'function '+name+'(...args){const result='+name+'Original(...args);__captureStage('+JSON.stringify(name)+',result);return result}function '+name+'Original(');
+    if(source.trim())vm.runInContext(source,ctx,{filename:'index-inline.js'});
+  }
+  for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));
+  const bridge=ctx.JUGEST_CORE_BRIDGE;
+  if(!bridge||typeof bridge!=='object')throw new Error('JUGEST core bridge did not boot');
+  return {ctx,bridge};
+}
+
+const judgementRuntimeCache=new Map();
+async function existingJugglerJudge(rootDir){
+  if(!rootDir)throw new TypeError('rootDir is required');
+  const root=path.resolve(rootDir);
+  let pending=judgementRuntimeCache.get(root);
+  if(!pending){
+    pending=bootRuntime(root).then(({ctx})=>mustFunction(ctx.V4_TEST?.externalJudge,'V4_TEST.externalJudge'));
+    judgementRuntimeCache.set(root,pending);
+    pending.catch(()=>judgementRuntimeCache.delete(root));
+  }
+  return await pending;
+}
+
+export async function runExistingJugglerJudgementBatch({rootDir,machines}={}){
+  if(!Array.isArray(machines))throw new TypeError('machines must be an array');
+  const judge=await existingJugglerJudge(rootDir);
+  return Object.freeze(machines.map(input=>{
+    const machine=String(input?.machine??'').trim();
+    const games=Number(input?.games)||0,bb=Math.max(0,Number(input?.bb)||0),rb=Math.max(0,Number(input?.rb)||0);
+    const hasDiff=input?.diff!==null&&input?.diff!==undefined&&input?.diff!==''&&Number.isFinite(Number(input.diff));
+    const raw=judge(machine,games,bb,rb,hasDiff?Number(input.diff):null);
+    if(!raw)return null;
+    const q=Array.isArray(raw.q)?Array.from(raw.q,Number):null;
+    if(!q||!q.length||q.some(value=>!Number.isFinite(value)))return null;
+    return Object.freeze({
+      q:Object.freeze(q),method:String(raw.method||''),
+      estimatedGrape:Number(raw.estimatedGrape),estimatedGrapeCount:Number(raw.estimatedGrapeCount),
+      grapeCountLo:Number(raw.grapeCountLo),grapeCountHi:Number(raw.grapeCountHi),reverseWarn:!!raw.reverseWarn
+    });
+  }));
+}
+
+function validateImportArgs({rootDir,shop,sourceStoreId,days}){
+  const name=String(shop??'').trim();
+  const storeId=String(sourceStoreId??name).trim();
+  if(!rootDir)throw new TypeError('rootDir is required');
+  if(!name)throw new TypeError('shop is required');
+  if(!storeId)throw new TypeError('sourceStoreId is required');
+  if(!Array.isArray(days)||!days.length)throw new TypeError('days are required');
+  if(days.length>400)throw new RangeError('headless import supports at most 400 days');
+  return {name,storeId};
+}
+
+async function bootImportedRuntime({rootDir,shop,sourceStoreId,days,compact=false,onStage=()=>{}}){
+  const {name,storeId}=validateImportArgs({rootDir,shop,sourceStoreId,days});
+  const {ctx,bridge}=await bootRuntime(rootDir,{compact,onStage});
+  const previewExternalJson=mustFunction(bridge.previewExternalJson,'previewExternalJson');
+  const saveExternalJsonPreview=mustFunction(bridge.saveExternalJsonPreview,'saveExternalJsonPreview');
+  const payload={
+    format:'juggler-external-import-bulk',version:7,source:'ana-slo',sourceStoreId:storeId,shop:name,
+    requestedDays:days.length,capturedAt:new Date().toISOString(),days:plain(days)
+  };
+  const checked=await previewExternalJson(JSON.stringify(payload));
+  if(!checked?.preview)throw new Error('JUGEST runtime rejected canonical store payload');
+  await saveExternalJsonPreview(checked.preview);
+  return {ctx,bridge,name,storeId};
+}
+
+export async function runExistingStoreAnalysis({rootDir,shop,sourceStoreId,days,options={}}={}){
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});
+  const runStoreAnalysis=mustFunction(bridge.runStoreAnalysis,'runStoreAnalysis');
+  const result=await runStoreAnalysis(name,options);
+  if(!result||result.error)throw new Error(result?.error||'JUGEST store analysis returned no result');
+  return plain(result);
+}
+
+export async function runExistingStorePlan({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days))throw new TypeError('days are required');
+  const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!history.length)throw new TypeError('history before targetDate is required');
+  const sourceFrontierDate=String(history.at(-1)?.date||'');
+  const {ctx,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
+  const analyzeStore=mustFunction(ctx.V5_TEST?.analyzeStore,'V5_TEST.analyzeStore');
+  const result=await analyzeStore(name,target);
+  if(!result?.prediction||!Array.isArray(result.prediction.rows))throw new Error('JUGEST current store ranking returned no result');
+  const rankings=Array.from(result.prediction.rows,(row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)return null;
+    const rank=index+1,aimScore=Number(row?.aimScore);
+    return Object.freeze({machineKey:tableNo,tableNo,machineName:String(row?.machineName||row?.machine||'unknown'),rank,score:Number.isFinite(aimScore)?aimScore:-rank});
+  }).filter(Boolean);
+  return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
+}
+
+export async function runExistingLegacyStorePlan({rootDir,shop,sourceStoreId,days,targetDate,options={}}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days))throw new TypeError('days are required');
+  const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!history.length)return Object.freeze({shop:String(shop||''),date:target,available:false,reason:'insufficient-history',trainingDays:0,minimumDays:7,candidates:[],source:'vps-canonical'});
+  const sourceFrontierDate=String(history.at(-1)?.date||'');
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history});
+  const getLegacyTodayPlan=mustFunction(bridge.getLegacyTodayPlan,'bridge.getLegacyTodayPlan');
+  const result=plain(await getLegacyTodayPlan(name,target,options||{}));
+  if(!result||typeof result!=='object')throw new Error('JUGEST legacy store plan returned no result');
+  return Object.freeze({...result,source:'vps-canonical',sourceFrontierDate});
+}
+
+export async function runExistingStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days)||!days.some(day=>String(day?.date||'')===target))throw new TypeError('targetDate must exist in days');
+  const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});
+  const getStoreDay=mustFunction(bridge.getStoreDay,'getStoreDay');
+  const result=plain(await getStoreDay(name,target));
+  if(!result||result.date!==target||!Array.isArray(result.rows))throw new Error('JUGEST protected day judgement returned no exact target day');
+  const rows=result.rows.map((row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)throw new Error(`JUGEST protected day judgement row ${index} is missing tableNo`);
+    const q=Array.isArray(row?.q)?row.q.map(Number):null;
+    if(!q||!q.length||q.some(value=>!Number.isFinite(value)))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing posterior q`);
+    const expectedSetting=Number(row?.expectedSetting);
+    if(!Number.isFinite(expectedSetting))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing expectedSetting`);
+    return Object.freeze({...row,tableNo,q:Object.freeze(q),expectedSetting});
+  });
+  return Object.freeze({shop:name,date:target,rows:Object.freeze(rows)});
+}
+
+export const __test={validTargetDate,bootImportedRuntime,bootRuntime};export async function runCompactStorePlan({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days))throw new TypeError('days are required');
+  const history=days.filter(day=>day&&String(day.date||'')<target).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!history.length)throw new TypeError('history before targetDate is required');
+  const sourceFrontierDate=String(history.at(-1)?.date||'');
+  const {ctx,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history,compact:true});
+  const analyzeStore=mustFunction(ctx.V5_TEST?.analyzeStore,'V5_TEST.analyzeStore');
+  const result=await analyzeStore(name,target);
+  if(!result?.prediction||!Array.isArray(result.prediction.rows))throw new Error('JUGEST current store ranking returned no result');
+  const rankings=Array.from(result.prediction.rows,(row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)return null;
+    const rank=index+1,aimScore=Number(row?.aimScore);
+    return Object.freeze({machineKey:tableNo,tableNo,machineName:String(row?.machineName||row?.machine||'unknown'),rank,score:Number.isFinite(aimScore)?aimScore:-rank});
+  }).filter(Boolean);
+  return Object.freeze({shop:name,targetDate:target,sourceFrontierDate,available:rankings.length>0,rankings:Object.freeze(rankings)});
+}
+
+
+// Node-only parity harness. Not imported by any Worker route.
+export async function runAnalysisAudit({rootDir,shop,sourceStoreId,days,targetDate,compact=false,captureStages=true}){
+ const {createHash}=await import('node:crypto');
+ function encode(v){if(typeof v==='number'){if(Number.isNaN(v))return {number:'NaN'};if(!Number.isFinite(v))return {number:String(v)};if(Object.is(v,-0))return {number:'-0'};return v}if(typeof v==='function')return undefined;if(!v||typeof v!=='object')return v;if(Array.isArray(v))return v.map(encode);const type=Object.prototype.toString.call(v);if(type==='[object Map]')return {map:[...v].map(([k,x])=>[encode(k),encode(x)])};if(type==='[object Set]')return {set:[...v].map(encode)};return Object.fromEntries(Object.keys(v).sort().filter(k=>typeof v[k]!=='function').map(k=>[k,encode(v[k])]))}
+ const stages={};const onStage=(name,value)=>{if(captureStages)stages[name]=createHash('sha256').update(JSON.stringify(encode(value))).digest('hex')};
+ const history=days.filter(day=>String(day?.date||'')<targetDate).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ const {ctx,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days:history,compact,onStage});
+ const model=ctx.V5_TEST.analyzeStore(name,targetDate);if(!model?.prediction)throw Error('model unavailable');
+ return {model:plain(model),stages};
+}

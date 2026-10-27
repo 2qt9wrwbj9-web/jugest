@@ -1,0 +1,152 @@
+// Original client with explicit cookie transport and analysis receipt read. Server authorization remains mandatory.
+const RELAY_STORAGE_KEY='jugglerRelayReceiver:v1';
+const DEFAULT_BASE_URL='/api/vps';
+
+function makeError(message,code,status=0){
+  const error=new Error(message);
+  error.code=code;
+  if(status)error.status=status;
+  return error;
+}
+
+export function readRelayReceiver(storage=globalThis.localStorage){
+  try{
+    const raw=storage?.getItem?.(RELAY_STORAGE_KEY);
+    if(!raw)return null;
+    const value=JSON.parse(raw);
+    const channelId=String(value?.channelId||'').trim();
+    const receiverToken=String(value?.receiverToken||'').trim();
+    if(!value?.linked||!channelId||!receiverToken)return null;
+    return {channelId,receiverToken};
+  }catch{
+    return null;
+  }
+}
+
+export function createVpsAnalyticsClient({
+  fetchFn=globalThis.fetch?.bind(globalThis),
+  storage=globalThis.localStorage,
+  baseUrl=DEFAULT_BASE_URL,
+  piaOnly=false,
+  cookieAuth=false
+}={}){
+  if(typeof fetchFn!=='function')throw new TypeError('fetchFn is required');
+  const base=String(baseUrl||DEFAULT_BASE_URL).replace(/\/+$/,'');
+
+  async function request(path,{method='GET',body=null}={}){
+    const receiver=readRelayReceiver(storage);
+    const cookieRead=piaOnly&&method==='GET'&&/^\/stores(?:$|\/[^/]+\/days(?:\?[^#]*|\/\d{4}-\d{2}-\d{2})?$)/.test(path);
+    if(!receiver&&!cookieRead&&!cookieAuth)throw makeError('VPS解析を利用するにはiPhone Collector連携が必要です。','vps_credentials_unavailable');
+    let response;
+    try{
+      const options={
+        method,
+        headers:{
+          accept:'application/json',
+          ...(body!=null?{'content-type':'application/json'}:{}),
+          ...(receiver&&!cookieRead?{'x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}:{})
+        },
+        ...(body!=null?{body}:{}),
+        cache:'no-store',
+        credentials:'same-origin'
+      };
+      response=await fetchFn(`${base}${path}`,options);
+      // A valid unrelated Receiver must not mask a PIA sharing grant.
+      // Only these three reads prefer the cookie, then fall back to the
+      // independently authenticated owner when no usable access cookie exists.
+      if(cookieRead&&receiver&&[401,403].includes(response.status)){
+        await response.body?.cancel?.();
+        response=await fetchFn(`${base}${path}`,{...options,headers:{accept:'application/json','x-jugest-channel-id':receiver.channelId,authorization:`Bearer ${receiver.receiverToken}`}});
+      }
+    }catch(error){
+      throw makeError(`VPS解析APIへ接続できませんでした: ${String(error?.message||error)}`,'vps_network_error');
+    }
+    let payload=null;
+    try{payload=await response.json()}catch{/* handled below */}
+    if(!response.ok||payload?.ok===false){
+      const code=String(payload?.code||`http_${response.status}`);
+      throw makeError(`VPS解析APIエラー (${code})`,code,response.status);
+    }
+    if(!payload||payload.ok!==true)throw makeError('VPS解析APIから正しい応答を取得できませんでした。','vps_invalid_response',response.status);
+    return payload;
+  }
+
+  async function resolveStore(shop){
+    const name=String(shop||'').trim();
+    if(!name)throw makeError('店舗が選択されていません。','vps_store_required');
+    const payload=await request('/stores');
+    const stores=Array.isArray(payload.stores)?payload.stores:[];
+    const exact=stores.find(store=>String(store?.name||'')===name);
+    if(!exact)throw makeError(`VPSに「${name}」の店舗データがありません。`,'vps_store_not_found');
+    return exact;
+  }
+
+  return Object.freeze({
+    async listStores(){
+      const payload=await request('/stores');
+      return Array.isArray(payload.stores)?payload.stores:[];
+    },
+    async judgeMachines(machines){
+      if(!Array.isArray(machines))throw makeError('machines must be an array','bad_machines');
+      return request('/judge/machines',{method:'POST',body:JSON.stringify({machines})});
+    },
+    async getStoreDaysById(storeId,{limit=120}={}){
+      const id=String(storeId||'').trim();
+      if(!id)throw makeError('storeId is required','vps_store_required');
+      const bounded=Math.min(366,Math.max(1,Math.trunc(Number(limit)||120)));
+      return request(`/stores/${encodeURIComponent(id)}/days?limit=${bounded}`);
+    },
+    async getStoreDayById(storeId,date){
+      const id=String(storeId||'').trim(),day=String(date||'').trim();
+      if(!id)throw makeError('storeId is required','vps_store_required');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw makeError('date must be YYYY-MM-DD','bad_date');
+      return request(`/stores/${encodeURIComponent(id)}/days/${encodeURIComponent(day)}`);
+    },
+    async getDefaultAnalysis(shop){
+      const store=await resolveStore(shop);
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/analysis/default`);
+      return {
+        store:payload.store||store,
+        analysis:payload.analysis??null,
+        businessDate:payload.businessDate??null,
+        payloadHash:payload.payloadHash??null,
+        updatedAt:payload.updatedAt??null
+      };
+    },
+    async getAnalysisHistory(shop){const store=await resolveStore(shop);return request(`/stores/${encodeURIComponent(store.id)}/analysis/history`);},
+    async getStatus(shop){
+      const store=await resolveStore(shop);
+      return request(`/stores/${encodeURIComponent(store.id)}/status`);
+    },
+    async getStoreRead(shop){
+      const store=await resolveStore(shop);
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/research/store-read`);
+      return {
+        store:payload.store||store,
+        storeRead:payload.storeRead??null,
+        businessDate:payload.businessDate??null,
+        payloadHash:payload.payloadHash??null,
+        updatedAt:payload.updatedAt??null
+      };
+    },
+    async getLegacyPlan(shop,date,{lottery=0,queue=0}={}){
+      const store=await resolveStore(shop),target=String(date||'').trim();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(target))throw makeError('date must be YYYY-MM-DD','bad_date');
+      const params=new URLSearchParams({date:target,lottery:String(Math.max(0,Math.trunc(Number(lottery)||0))),queue:String(Math.max(0,Math.trunc(Number(queue)||0)))});
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/legacy-plan?${params.toString()}`);
+      return {store:payload.store||store,plan:payload.plan??null};
+    },
+    async getResearchComparison(shop,{limit=90}={}){
+      const store=await resolveStore(shop);
+      const bounded=Math.min(366,Math.max(1,Math.trunc(Number(limit)||90)));
+      const payload=await request(`/stores/${encodeURIComponent(store.id)}/research/comparison?limit=${bounded}`);
+      return {
+        store:payload.store||store,
+        limit:Number(payload.limit)||bounded,
+        comparison:payload.comparison??null
+      };
+    }
+  });
+}
+
+export const __test={RELAY_STORAGE_KEY,DEFAULT_BASE_URL};

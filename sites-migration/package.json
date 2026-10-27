@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "generate:read": "node scripts/generate-store-read.mjs"
+    "generate:read": "node scripts/generate-store-read.mjs",
+    "generate:analysis": "node scripts/generate-analysis-runtime.mjs && node scripts/generate-worker-analysis.mjs"
   },
   "devDependencies": {
     "miniflare": "4.20260515.0"
