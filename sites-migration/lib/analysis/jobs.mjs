@@ -1,0 +1,129 @@
+import {originalDailyInputHash} from './original-input-hash.mjs';
+import {originalRetryAt} from './generated-job-policy.mjs';
+import {canonicalDigest,putCanonical,payloadRange,digestObject,openCanonicalObject} from './canonical-stream.mjs';
+import {freezeStoreHistory,openFrozenStoreHistory} from './input-snapshot.mjs';
+import {runFrozenWorkerModel,runFrozenWorkerAnalysis} from './run-frozen-worker.mjs';
+import {sha256Text} from '../storage/recovery.mjs';
+import {canonicalJson} from '../../upstream/vps/src/canonical-json.mjs';
+export const ENGINE_VERSION='sites-original-1f8c29f-v7';
+const OPTIONS={period:'180',minG:'2000',maxDims:'1',minDays:'4'};
+const iso=n=>new Date(n).toISOString();
+const fail=code=>Object.assign(Error(code),{code});
+export async function getAnalysisJob(db,id){return db.prepare('SELECT * FROM sites_analysis_jobs WHERE id=?').bind(id).first()}
+export function publicAnalysisJob(j){if(!j)return null;return{id:j.id,storeId:j.store_id,kind:j.kind,targetDate:j.target_date,historyLimit:j.history_limit,state:j.state,phase:j.result_key?'verify':j.manifest_key?'analysis':'capture',attempts:j.attempts,failureCount:j.failure_count,maxAttempts:j.max_attempts,inputHash:j.input_hash,outputHash:j.output_hash,error:j.last_error_class,availableAt:j.available_at,createdAt:j.created_at,updatedAt:j.updated_at}}
+export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analysis',targetDate,historyLimit=180,requestKey,now=Date.now}){
+ if(!['store-analysis','current-model'].includes(kind))throw fail('bad_analysis_kind');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)||!Number.isFinite(Date.parse(targetDate+'T00:00:00Z'))||new Date(targetDate+'T00:00:00Z').toISOString().slice(0,10)!==targetDate)throw fail('bad_target_date');
+ if(!Number.isInteger(historyLimit)||historyLimit<1||historyLimit>400)throw fail('bad_history_limit');
+ if(typeof requestKey!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(requestKey))throw fail('bad_request_key');
+ const key=await sha256Text(JSON.stringify([storeId,channelId,kind,requestKey])),at=iso(now());
+ await db.batch([
+  db.prepare('INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(storeId,channelId,kind,targetDate,historyLimit,key,at,at),
+  db.prepare('INSERT INTO sites_analysis_heads(store_id,kind,latest_job_id) SELECT store_id,kind,id FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(store_id,kind) DO UPDATE SET latest_job_id=excluded.latest_job_id WHERE excluded.latest_job_id>sites_analysis_heads.latest_job_id').bind(key)
+ ]);
+ const job=await db.prepare('SELECT * FROM sites_analysis_jobs WHERE idempotency_key=?').bind(key).first();
+ if(job.target_date!==targetDate||job.history_limit!==historyLimit)throw fail('idempotency_conflict');return job;
+}
+async function recover(db,now){
+ const at=iso(now);
+ await db.batch([
+  db.prepare("UPDATE sites_analysis_job_runs SET state='retry_wait',ended_at=?,error_class='stale_recovery' WHERE ended_at IS NULL AND EXISTS(SELECT 1 FROM sites_analysis_jobs j WHERE j.id=job_id AND j.attempts=attempt AND j.state IN ('leased','running') AND j.lease_until<=?)").bind(at,now),
+  db.prepare("UPDATE sites_analysis_jobs SET state=CASE WHEN failure_count+1>=max_attempts THEN 'failed' ELSE 'retry_wait' END,failure_count=failure_count+1,lease_owner=NULL,lease_until=NULL,available_at=?,last_error_class='stale_recovery',updated_at=? WHERE state IN ('leased','running') AND lease_until<=?").bind(now,at,now)
+ ]);
+}
+async function claim(db,id,now,leaseMs){
+ await recover(db,now);const owner=crypto.randomUUID(),until=now+leaseMs,at=iso(now);
+ await db.batch([
+  // One durable slot prevents parallel large analyses across requests/isolate instances.
+  db.prepare("INSERT INTO sites_analysis_execution_lock(name,job_id,owner,lease_until) SELECT 'analysis',id,?,? FROM sites_analysis_jobs WHERE id=? AND state IN ('queued','retry_wait') AND available_at<=? ON CONFLICT(name) DO UPDATE SET job_id=excluded.job_id,owner=excluded.owner,lease_until=excluded.lease_until WHERE sites_analysis_execution_lock.lease_until<=?").bind(owner,until,id,now,now),
+  db.prepare("UPDATE sites_analysis_jobs SET state='leased',lease_owner=?,lease_until=?,attempts=attempts+1,updated_at=? WHERE id=? AND state IN ('queued','retry_wait') AND available_at<=? AND EXISTS(SELECT 1 FROM sites_analysis_execution_lock WHERE name='analysis' AND job_id=? AND owner=?)").bind(owner,until,at,id,now,id,owner),
+  db.prepare("INSERT INTO sites_analysis_job_runs(job_id,attempt,owner,state,started_at) SELECT id,attempts,?,'running',? FROM sites_analysis_jobs WHERE id=? AND state='leased' AND lease_owner=?").bind(owner,at,id,owner),
+  db.prepare("UPDATE sites_analysis_jobs SET state='running' WHERE id=? AND state='leased' AND lease_owner=?").bind(id,owner)
+ ]);
+ const job=await getAnalysisJob(db,id);return job?.lease_owner===owner?job:null;
+}
+async function release(db,job){await db.prepare("DELETE FROM sites_analysis_execution_lock WHERE name='analysis' AND job_id=? AND owner=?").bind(job.id,job.lease_owner).run()}
+function owned(job,now){return [job.id,job.lease_owner,job.attempts,now]}
+const GUARD="id=? AND lease_owner=? AND attempts=? AND state='running' AND lease_until>?";
+export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=120000,runner=null,onStage=()=>{}}){
+ const job=await claim(db,jobId,now(),leaseMs);if(!job)return getAnalysisJob(db,jobId);
+ const started=now(),timings={};const stage=(name,value)=>{const v=timings[name]??{count:0};v.count++;v.elapsedMs=now()-started;timings[name]=v;onStage(name,value)};
+ try{
+  if(!job.manifest_key){
+   const snapshot=await freezeStoreHistory({db,bucket,storeId:job.store_id,limit:job.history_limit,throughDate:job.kind==='current-model'?new Date(Date.parse(job.target_date+'T00:00:00Z')-86400000).toISOString().slice(0,10):job.target_date,captureId:'job-'+job.id,onStage:stage});
+   if(!snapshot.days)throw fail('no_canonical_days');
+   await db.batch([
+    db.prepare(`UPDATE sites_analysis_jobs SET manifest_key=?,input_hash=?,state='queued',lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(snapshot.manifestKey,snapshot.inputHash,iso(now()),...owned(job,now())),
+    db.prepare("UPDATE sites_analysis_job_runs SET state='input_fixed',input_hash=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=?").bind(snapshot.inputHash,JSON.stringify(timings),iso(now()),job.id,job.attempts,job.lease_owner)
+   ]);
+   return getAnalysisJob(db,job.id);
+  }
+  if(!job.result_key){
+  const input=await openFrozenStoreHistory({bucket,manifestKey:job.manifest_key});
+  if(input.inputHash!==job.input_hash)throw fail('job_input_hash_mismatch');
+  const computed=runner?await runner({job,bucket,manifestKey:job.manifest_key,onStage:stage}):job.kind==='current-model'?await runFrozenWorkerModel({bucket,manifestKey:job.manifest_key,targetDate:job.target_date,onStage:stage}):await runFrozenWorkerAnalysis({bucket,manifestKey:job.manifest_key,onStage:stage});
+  const payload=job.kind==='current-model'?computed.model:computed.analysis;
+  if(!payload||typeof payload!=='object')throw fail('analysis_output_invalid');
+  if(computed.inputHash&&computed.inputHash!==job.input_hash)throw fail('job_input_hash_mismatch');
+  const payloadDigest=canonicalDigest(payload,{jsonCompatible:true}),outputHash=payloadDigest.hash;
+  const descriptor={engine:ENGINE_VERSION,kind:job.kind,targetDate:job.target_date,historyLimit:job.history_limit,options:job.kind==='store-analysis'?OPTIONS:null,inputHash:job.input_hash};
+  const envelope={format:'jugest-analysis-result-v1',jobId:job.id,storeId:job.store_id,kind:job.kind,targetDate:job.target_date,businessDate:job.kind==='store-analysis'?input.to:job.target_date,inputHash:job.input_hash,outputHash,descriptor,descriptorHash:await sha256Text(canonicalJson(descriptor)),payload};
+  stage('result:serialize');const key='analysis-results/'+job.id+'/'+crypto.randomUUID()+'.json';
+  const range=payloadRange(envelope,payloadDigest.size),{hash:resultHash}=await putCanonical(bucket,key,envelope,{onStage:stage,jsonCompatible:true,verify:false});
+   await db.batch([
+    db.prepare(`UPDATE sites_analysis_jobs SET result_key=?,output_hash=?,result_sha256=?,payload_offset=?,payload_size=?,state='queued',lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(key,outputHash,resultHash,range.offset,range.length,iso(now()),...owned(job,now())),
+    db.prepare("UPDATE sites_analysis_job_runs SET state='result_staged',input_hash=?,output_hash=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=?").bind(job.input_hash,outputHash,JSON.stringify(timings),iso(now()),job.id,job.attempts,job.lease_owner)
+   ]);
+   return getAnalysisJob(db,job.id);
+  }
+  // Separate invocation: the large model is no longer strongly reachable.
+  // Hash the full result and the original payload before any success is visible.
+  stage('verify:begin');
+  const candidate=await openCanonicalObject(bucket,job.result_key);
+  if(!candidate)throw fail('result_missing');
+  const checked=await digestObject(candidate,{range:{offset:job.payload_offset,length:job.payload_size}});
+  if(checked.hash!==job.result_sha256)throw fail('result_hash_mismatch');
+  if(checked.rangeHash!==job.output_hash||checked.rangeSize!==job.payload_size)throw fail('result_payload_hash_mismatch');
+  const nativeInput=await openFrozenStoreHistory({bucket,manifestKey:job.manifest_key});if(nativeInput.inputHash!==job.input_hash)throw fail('job_input_hash_mismatch');
+  const receiptInputHash=job.kind==='store-analysis'?await originalDailyInputHash({storeId:job.store_id,days:nativeInput.days}):job.input_hash,receiptVersion=job.kind==='store-analysis'?'vps-runtime-v1':ENGINE_VERSION;
+  const key=job.result_key,outputHash=job.output_hash,resultHash=job.result_sha256,range={offset:job.payload_offset,length:job.payload_size};
+  stage('result:verified');const at=iso(now());
+  await db.batch([
+   db.prepare(`UPDATE sites_analysis_jobs SET state='succeeded',result_key=?,output_hash=?,result_sha256=?,payload_offset=?,payload_size=?,lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(key,outputHash,resultHash,range.offset,range.length,at,...owned(job,now())),
+   db.prepare("UPDATE sites_analysis_heads SET completed_job_id=? WHERE store_id=? AND kind=? AND latest_job_id=? AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=?)").bind(job.id,job.store_id,job.kind,job.id,job.id,key),
+   db.prepare("INSERT INTO analysis_receipts(store_id,target_date,component,version,input_hash,output_hash,created_at) SELECT store_id,target_date,?,?,?,output_hash,? FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=? AND NOT EXISTS(SELECT 1 FROM analysis_receipts WHERE store_id=? AND target_date=? AND component=? AND version=? AND input_hash=? AND output_hash=?)").bind(job.kind==='store-analysis'?'store-analysis-default':'current-model',receiptVersion,receiptInputHash,at,job.id,key,job.store_id,job.target_date,job.kind==='store-analysis'?'store-analysis-default':'current-model',receiptVersion,receiptInputHash,outputHash),
+   db.prepare("UPDATE sites_analysis_job_runs SET state='succeeded',input_hash=?,output_hash=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=? AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=?)").bind(job.input_hash,outputHash,JSON.stringify(timings),at,job.id,job.attempts,job.lease_owner,job.id,key)
+  ]);
+ }catch(error){
+  const code=error.code||(['analysis_input_hash_mismatch','analysis_input_missing','analysis_input_manifest_hash_mismatch','no_canonical_days'].includes(error.message)?error.message:'analysis_attempt_failed');
+  await db.batch([
+   db.prepare(`UPDATE sites_analysis_jobs SET state=CASE WHEN failure_count+1>=max_attempts THEN 'failed' ELSE 'retry_wait' END,failure_count=failure_count+1,lease_owner=NULL,lease_until=NULL,available_at=?,last_error_class=?,updated_at=? WHERE ${GUARD}`).bind(Date.parse(originalRetryAt({id:job.id,failureCount:job.failure_count,attempts:job.attempts},iso(now()))),code,iso(now()),...owned(job,now())),
+   db.prepare("UPDATE sites_analysis_job_runs SET state='failed',error_class=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=? AND ended_at IS NULL").bind(code,JSON.stringify(timings),iso(now()),job.id,job.attempts,job.lease_owner)
+  ]);
+ }finally{await release(db,job)}
+ return getAnalysisJob(db,job.id);
+}
+export async function readAnalysisJobResult({db,bucket,jobId}){
+ const job=await getAnalysisJob(db,jobId);if(job?.state!=='succeeded'||!job.result_key)return null;
+ const object=await openCanonicalObject(bucket,job.result_key);if(!object)throw fail('result_missing');
+ const text=await object.text();if(await sha256Text(text)!==job.result_sha256)throw fail('result_hash_mismatch');
+ const result=JSON.parse(text);
+ if(result.format!=='jugest-analysis-result-v1'||result.jobId!==job.id||result.storeId!==job.store_id||result.kind!==job.kind||result.targetDate!==job.target_date||result.inputHash!==job.input_hash||result.outputHash!==job.output_hash||await sha256Text(canonicalJson(result.payload))!==job.output_hash||await sha256Text(canonicalJson(result.descriptor))!==result.descriptorHash||result.descriptor.inputHash!==job.input_hash||result.descriptor.targetDate!==job.target_date||result.descriptor.kind!==job.kind)throw fail('result_integrity_mismatch');
+ return result;
+}
+export async function readLatestAnalysisResult({db,bucket,storeId,kind='store-analysis'}){
+ const head=await db.prepare('SELECT completed_job_id FROM sites_analysis_heads WHERE store_id=? AND kind=?').bind(storeId,kind).first();
+ return head?.completed_job_id?readAnalysisJobResult({db,bucket,jobId:head.completed_job_id}):null;
+}
+
+// Response paths verify immutable bytes in chunks, then stream a matching ETag.
+// They do not materialize the complete large model on the server a second time.
+export async function verifiedResultBody({db,bucket,jobId,payloadOnly=false}){
+ const job=await getAnalysisJob(db,jobId);if(job?.state!=='succeeded'||!job.result_key)return null;
+ const range=payloadOnly?{offset:job.payload_offset,length:job.payload_size}:undefined;
+ const first=await openCanonicalObject(bucket,job.result_key,{range});if(!first)throw fail('result_missing');
+ if((await digestObject(first)).hash!==(payloadOnly?job.output_hash:job.result_sha256))throw fail('result_hash_mismatch');
+ const next=await openCanonicalObject(bucket,job.result_key,{range,expectedEtag:first.etag});if(!next?.body)throw fail('result_reference_changed');
+ return{job,body:next.body};
+}
+export function jsonWrappedStream(body,prefix,suffix){const encoder=new TextEncoder();const reader=body.getReader();let begun=false;return new ReadableStream({async pull(controller){if(!begun){begun=true;controller.enqueue(encoder.encode(prefix));return}const next=await reader.read();if(!next.done){controller.enqueue(next.value);return}controller.enqueue(encoder.encode(suffix));controller.close();reader.releaseLock()},cancel(reason){return reader.cancel(reason)}})}

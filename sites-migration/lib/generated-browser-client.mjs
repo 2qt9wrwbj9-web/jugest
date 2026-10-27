@@ -82,6 +82,12 @@ export function createVpsAnalyticsClient({
   }
 
   return Object.freeze({
+
+    async listAnalysisJobsById(id){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs`)},
+    async startAnalysisJobById(id,input){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs`,{method:'POST',body:JSON.stringify(input)})},
+    async advanceAnalysisJobById(id,jobId){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs/${jobId}/advance`,{method:'POST',body:'{}'})},
+    async getAnalysisJobById(id,jobId){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs/${jobId}`)},
+    async getAnalysisJobResultById(id,jobId){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs/${jobId}/result`)},
     async listStores(){
       const payload=await request('/stores');
       return Array.isArray(payload.stores)?payload.stores:[];

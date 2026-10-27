@@ -1,8 +1,12 @@
-import{openFrozenStoreHistory}from'./input-snapshot.mjs';import{runCompiledStoreModel}from'./compiled-worker.mjs';
-// Worker-native connection proof. Input is immutable R2 days. The unchanged
-// importer still needs an array, so whole-analysis streaming remains unported.
-export async function runFrozenWorkerModel({bucket,manifestKey,targetDate}){
- const input=await openFrozenStoreHistory({bucket,manifestKey}),days=[];for await(const day of input.days)days.push(day);
- const model=await runCompiledStoreModel({shop:input.store.name,sourceStoreId:input.store.id,days,targetDate});
+import{openFrozenStoreHistory}from'./input-snapshot.mjs';
+import{runCompiledStoreModelStream,runCompiledStoreAnalysisStream}from'./compiled-worker.mjs';
+export async function runFrozenWorkerModel({bucket,manifestKey,targetDate,onStage}){
+ const input=await openFrozenStoreHistory({bucket,manifestKey});
+ const model=await runCompiledStoreModelStream({shop:input.store.name,sourceStoreId:input.store.id,days:input.days,targetDate,onStage});
  return{model,inputHash:input.inputHash};
+}
+export async function runFrozenWorkerAnalysis({bucket,manifestKey,onStage}){
+ const input=await openFrozenStoreHistory({bucket,manifestKey});
+ const analysis=await runCompiledStoreAnalysisStream({shop:input.store.name,sourceStoreId:input.store.id,days:input.days,onStage});
+ return{analysis,inputHash:input.inputHash};
 }

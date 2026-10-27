@@ -1,0 +1,3 @@
+import {createHash} from 'node:crypto';
+export function encodeStage(v){if(typeof v==='number'){if(Number.isNaN(v))return {number:'NaN'};if(!Number.isFinite(v))return {number:String(v)};if(Object.is(v,-0))return {number:'-0'};return v}if(typeof v==='function')return undefined;if(!v||typeof v!=='object')return v;if(Array.isArray(v))return v.map(encodeStage);const type=Object.prototype.toString.call(v);if(type==='[object Map]')return {map:[...v].map(([k,x])=>[encodeStage(k),encodeStage(x)])};if(type==='[object Set]')return {set:[...v].map(encodeStage)};return Object.fromEntries(Object.keys(v).sort().filter(k=>typeof v[k]!=='function').map(k=>[k,encodeStage(v[k])]))}
+export const hashStage=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');

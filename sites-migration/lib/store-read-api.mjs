@@ -1,3 +1,4 @@
+import {handleAnalysisJobs} from './analysis/job-api.mjs';
 import {createStoreReadHandler} from './generated-store-read.mjs';
 import {authenticateReceiver,authenticateAssistantRead} from './generated-store-auth.mjs';
 import {storeMetadata,canAccessStoreMetadata} from './generated-store-policy.mjs';
@@ -14,9 +15,10 @@ export function readDatabase(binding){
   async all(...values){return (await session.prepare(sql).bind(...values).all()).results}
  }}};
 }
-export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',piaOwnerChannelIds=''}={}){
+export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',piaOwnerChannelIds='',executionEnabled=false}={}){
  const headers={'cache-control':'no-store','x-content-type-options':'nosniff'};
  if(!db||!bucket)return Response.json({ok:false,code:'sites_storage_unavailable'},{status:503,headers});
+ const jobsResponse=await handleAnalysisJobs(request,{db,bucket,piaAccessMode,piaOwnerChannelIds,executionEnabled});if(jobsResponse)return jobsResponse;
  const stores=name=>createSitesRelayStore(name,{db,bucket});
  if(new URL(request.url).pathname==='/api/vps/judge/machines'){
   const reply=(value,status=200,extra={})=>Response.json(value,{status,headers:{...headers,...extra}});

@@ -1,0 +1,2 @@
+import test from'node:test';import assert from'node:assert/strict';import{Coordinator}from'../upstream/vps/src/coordinator.mjs';import{originalRetryAt}from'../lib/analysis/generated-job-policy.mjs';
+test('job retry delay exactly matches original exponential backoff and deterministic spread',()=>{for(let id=1;id<=20;id++)for(let failureCount=0;failureCount<10;failureCount++){const job={id,failureCount,attempts:failureCount+1},at='2026-10-27T00:00:00.000Z';assert.equal(originalRetryAt(job,at),Coordinator.prototype._retryAt.call({},job,at))}});
