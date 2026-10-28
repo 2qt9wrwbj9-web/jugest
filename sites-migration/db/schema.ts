@@ -94,3 +94,9 @@ export const sitesBacktestStageRows=sqliteTable('sites_backtest_stage_rows',{
 export const sitesBacktestStageParts=sqliteTable('sites_backtest_stage_parts',{
  jobId:integer('job_id').notNull(),part:integer('part').notNull(),outputHash:text('output_hash').notNull(),rowsHash:text('rows_hash').notNull(),rowCount:integer('row_count').notNull()
 },t=>[primaryKey({columns:[t.jobId,t.part]})]);
+export const researchLoops=sqliteTable('research_loops',{
+ storeId:text('store_id').primaryKey().references(()=>stores.id,{onDelete:'cascade'}),featureVersion:text('feature_version').notNull(),currentFingerprint:text('current_fingerprint'),bestFingerprint:text('best_fingerprint'),generation:integer('generation').notNull().default(0),noImproveCount:integer('no_improve_count').notNull().default(0),repeatedFingerprint:text('repeated_fingerprint'),state:text('state').notNull(),lastError:text('last_error'),frontierDate:text('frontier_date'),searchRound:integer('search_round').notNull().default(0),holdoutFinalizedAt:text('holdout_finalized_at'),holdoutWinnerFingerprint:text('holdout_winner_fingerprint'),updatedAt:text('updated_at').notNull()
+},t=>[check('research_loops_state',sql`${t.state} IN ('idle','running','converged','failed')`)]);
+export const sitesResearchContext=sqliteTable('sites_research_context',{
+ jobId:integer('job_id').primaryKey(),parentJobId:integer('parent_job_id'),featureJobId:integer('feature_job_id').notNull(),inputHash:text('input_hash').notNull(),modelFingerprint:text('model_fingerprint').notNull(),frontierDate:text('frontier_date').notNull(),generation:integer('generation').notNull(),round:integer('round').notNull(),logicalKey:text('logical_key').notNull(),implementationHash:text('implementation_hash'),childJobId:integer('child_job_id'),state:text('state').notNull(),createdAt:text('created_at').notNull()
+});

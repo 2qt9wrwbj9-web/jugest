@@ -1,0 +1,78 @@
+[
+  {
+    "stageCount": 8,
+    "stages": {
+      "v5PrepareHistory": "ae791f81c5858dd1f98f8942ac24e963e8eac197189c712a0c91a3af35716921",
+      "v5Backtest": "d0ef155347e91aedc78c037239253ff7d1170071e56ececdb4a38b03244bbb28",
+      "brutePrepare": "e1418fdd970d4a4f03c70159261c4995770e025b8bea1c97148333a3ab22aeed",
+      "v4ModelTraining": "c9a100b085120b74b7abf5dcebfbc10083e112ef7aefa777bfd60dcac11ab635",
+      "v4SettingDistributionModel": "be4c6f573ec3617481fe549ab0da834b2adeb75af4f68868adb3e4e26884fe8b",
+      "v4CalendarLongMemory": "a0b50702b1c069a07c4c09b1c36b0c6978274b306cf9935da9c501a85cbe6ee1",
+      "bruteSingleGenerate": "3d04bc7cfd0eae3a5e65881e0413677b4507836c94d9df9a65f743ff8f79bc10",
+      "v4PredictStore": "6510f998370d0c5d62f44aaeaa8e267296630c7bb865316ded6b09055aabe8d9"
+    },
+    "fullModelHash": "669508853a624d5852bcb56afec9539bd5e274308116aba71f2b86c36e584338",
+    "count": 90,
+    "machines": 106,
+    "targetDate": "2026-04-01",
+    "eligibleDays": 90,
+    "workerMemoryMeasurement": false
+  },
+  {
+    "stageCount": 8,
+    "stages": {
+      "v5PrepareHistory": "19fbb7c27922d73a627b93eccc4125bae7d2e58fd27420522c582f609749aa1d",
+      "v5Backtest": "0adfb5c61d3775f7fdd94fcd0cd36b4cb7da17eaf4a59e939922e9038a3795d5",
+      "brutePrepare": "321161a3d71ca500cc2da4e4c1db4ab562644c65c1d36ffb21c40f497d742fcf",
+      "v4ModelTraining": "e2bcf586d40496e9d7d9dad55e456e36bcc93e00a40dab65945e83d547435401",
+      "v4SettingDistributionModel": "1c3fde7198e3d8cfc50571c97cd95f99981f68da2deab56122aa6beebf71b7fd",
+      "v4CalendarLongMemory": "0939df477635a17d51173b2072167530bbdf9832c5e28e4ba5f099dcc6922121",
+      "bruteSingleGenerate": "996e809830f0cf4b1e98f33f7415a93eeae13033ff7656fef7276698ed207c07",
+      "v4PredictStore": "f8114b402dffd841db9e662e562e3542b9dd8012fd922209576dc35553a34f4c"
+    },
+    "fullModelHash": "e383f1fb9c3dba7e646cf2d88608352a9585f585e255e1936065ff840fb67cb0",
+    "count": 180,
+    "machines": 106,
+    "targetDate": "2026-06-30",
+    "eligibleDays": 180,
+    "workerMemoryMeasurement": false
+  },
+  {
+    "stageCount": 8,
+    "stages": {
+      "v5PrepareHistory": "bc768e6bbc6c8ceec5d27d19046a1bf4a538bbaff3bfeea3526acbfd91af49cc",
+      "v5Backtest": "78c93cf3708fb48ca59e321027206004ad3597d28d077cddeaa3d239d388fce3",
+      "brutePrepare": "654e8eb00a2fe7b9e1c092d76e7a8a2a2594097f3ffa5dbdde5850d05e087ef5",
+      "v4ModelTraining": "29436312638f52332beecbe212203f4ff393dd5380bc01cacaf86febc1a3abff",
+      "v4SettingDistributionModel": "9f9a261bb724f74e57fd16dd490709557f7559b77d7d02ac4fac1711d170233b",
+      "v4CalendarLongMemory": "35ef848d00871edc01451588bba35133768f6b1b452c4994a81161af2072b917",
+      "bruteSingleGenerate": "718eb85243da5a89e998f49087125052865e48f94aade1c3558933279ad876b7",
+      "v4PredictStore": "2f0b10399b4056c3b3991f23d7f0592a936e9cde3654dedc95553c6fb5efe0fe"
+    },
+    "fullModelHash": "710cc72a1cd90834ad18436bfacce16c7eca45ec1a88524ce161d193ffa54181",
+    "count": 240,
+    "machines": 106,
+    "targetDate": "2026-08-29",
+    "eligibleDays": 240,
+    "workerMemoryMeasurement": false
+  },
+  {
+    "stageCount": 8,
+    "stages": {
+      "v5PrepareHistory": "578fc7a77ae6e8ea8e4d3f64acbbbb45f1b7e3ca3a74cb46ab319a3a9bdf8c06",
+      "v5Backtest": "f1c4d15e51f738e3d16d6fa3f49d4d1d540d807238842d337df8d4ad0c48ea1c",
+      "brutePrepare": "49c89d52ca396faff92c232ce2d2341a7e4066ca4465e51efe5d1ceda4448837",
+      "v4ModelTraining": "1dfb193e47246478808461dc299a3958333b680461d78eba911a6eaabad20ba0",
+      "v4SettingDistributionModel": "7e7bb0dc3cc9df988a2bb4e35977347addc1519ee3eeae20b3e1eeaaae036962",
+      "v4CalendarLongMemory": "37663806f0b706fc83aeb0a5823ad09d7ffbfb905a938bd4ac51e450c5ffe260",
+      "bruteSingleGenerate": "05e0b01106fecb57685f6d64e086c93fe7f7f6aa518115d150702472f339d2a8",
+      "v4PredictStore": "2974a1e0fe22e32b25a7fa63466fd0cf4c61ab69f544a93fd417055ee65597ee"
+    },
+    "fullModelHash": "66e3ee613e2db132c56486cb55aaadcb3f20e73eda3d2375f801b42ce4a42fec",
+    "count": 180,
+    "machines": 160,
+    "targetDate": "2026-06-30",
+    "eligibleDays": 180,
+    "workerMemoryMeasurement": false
+  }
+]

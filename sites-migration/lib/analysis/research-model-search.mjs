@@ -1,3 +1,4 @@
+import{WORKER_IMPLEMENTATION_HASH}from'./compiled-worker.mjs';
 import{originalModelSearchCalculation}from'./generated-model-search-kernel.mjs';
 import{buildWalkForwardDataset,splitChronologicalSamples}from'./generated-research-dataset.mjs';
 import{fingerprintModel}from'../../upstream/vps/src/research/model-search.mjs';
@@ -22,7 +23,9 @@ export async function runFrozenModelSearch({db,bucket,job,manifestKey,onStage=()
  const fixed=await requireResearchBacktest({db,job,snapshot:{inputHash:job.input_hash}}),champion=JSON.parse(fixed.model_json);
  if(fingerprintModel(champion)!==fixed.model_fingerprint)throw failure('research_model_hash_mismatch');
  const input=await openFrozenStoreHistory({bucket,manifestKey}),days=[];for await(const d of input.days)days.push(d);
- return{analysis:calculateModelSearch({storeId:job.store_id,days,champion,frontierDate:fixed.frontier_date,onStage}),inputHash:input.inputHash};
+ const context=await db.prepare('SELECT round,implementation_hash FROM sites_research_context WHERE job_id=?').bind(job.id).first();
+ if(context&&context.implementation_hash!==WORKER_IMPLEMENTATION_HASH)throw failure('research_context_implementation_mismatch');
+ return{analysis:calculateModelSearch({storeId:job.store_id,days,champion,frontierDate:fixed.frontier_date,round:context?.round??0,onStage}),inputHash:input.inputHash};
 }
 export async function modelSearchWrites({db,job,feature,key,at}){
  const fixed=await db.prepare('SELECT * FROM sites_research_job_inputs WHERE job_id=?').bind(job.id).first();

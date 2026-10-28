@@ -1,0 +1,327 @@
+{
+  "final": [
+    {
+      "command": "node --test --test-concurrency=1 tests/port-*.test.mjs",
+      "log": "logs/port-final.log",
+      "exit": 0,
+      "counts": {
+        "tests": 84,
+        "pass": 84,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": null,
+      "scope": "Sites all regression"
+    },
+    {
+      "command": "node --test --test-concurrency=1 sites-migration/tests/*.test.mjs",
+      "log": "logs/github-final.log",
+      "exit": 0,
+      "counts": {
+        "tests": 76,
+        "pass": 76,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": null,
+      "scope": "public development package all tests"
+    },
+    {
+      "command": "npm test (original repo root)",
+      "log": "logs/upstream-root.log",
+      "exit": 0,
+      "counts": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": [
+        "83",
+        "83"
+      ],
+      "scope": "original frontend full 83 commands"
+    },
+    {
+      "command": "npm test (original repo vps)",
+      "log": "logs/upstream-vps.log",
+      "exit": 1,
+      "counts": {
+        "tests": 570,
+        "pass": 569,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": null,
+      "scope": "569 pass / 1 pre-existing safe DB symlink guard failure, unchanged original source"
+    },
+    {
+      "command": "node --test tests/port-research-backtest.test.mjs tests/port-model-search.test.mjs tests/port-backtest-staging.test.mjs (targeted)",
+      "log": "logs/transition-core.log",
+      "exit": 0,
+      "counts": {
+        "tests": 7,
+        "pass": 7,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": null,
+      "scope": "7 targeted original research and staging tests"
+    },
+    {
+      "command": "node --test tests/port-research-transition.test.mjs",
+      "log": "logs/transition-new-fixed.log",
+      "exit": 0,
+      "counts": {
+        "tests": 5,
+        "pass": 5,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "commandsPassed": null,
+      "scope": "5 automatic successor tests, also included in full suites"
+    },
+    {
+      "command": "node evidence/v13/native-research-chain.mjs",
+      "log": "logs/native-chain.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "native actual Queue, no browser, one chain"
+    },
+    {
+      "command": "node evidence/v13/oom-recovery.mjs",
+      "log": "logs/oom-driver.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "4 genuine local V8 OOM recoveries"
+    },
+    {
+      "command": "node evidence/v13/oom-recovery.mjs machine-only",
+      "log": "logs/oom-machine-driver.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "1 genuine V8 OOM after machine unit, saved unit reused"
+    },
+    {
+      "command": "python evidence/v13/validate-ledger.py",
+      "log": "logs/ledger-check.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "55 features / 12 gates / 155 source files"
+    },
+    {
+      "command": "node <Sites-plugin>/scripts/build-site.mjs",
+      "log": "logs/build-final.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "production build; dev markers excluded by build-boundary.json"
+    },
+    {
+      "command": "node /tmp/v13-identity.mjs (source in FEASIBILITY.md and upstream/access/config.mjs)",
+      "log": "logs/identity-feasibility.log",
+      "exit": 0,
+      "counts": {},
+      "commandsPassed": null,
+      "scope": "3 synthetic config cases, expected reject of old RP ID on new origin"
+    }
+  ],
+  "loadAndParityCommands": [
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "90",
+        "106",
+        "1",
+        "96",
+        "v12"
+      ],
+      "log": "full-90-106-v12.log",
+      "exit": 0,
+      "wallSeconds": 22.967502504999857
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "90",
+        "106",
+        "1",
+        "96",
+        "optimized"
+      ],
+      "log": "full-90-106-optimized.log",
+      "exit": 0,
+      "wallSeconds": 30.153875291000077
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/large-stage-comparison.mjs",
+        "1",
+        "90",
+        "106"
+      ],
+      "log": "parity-final-90-106.log",
+      "exit": 0
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "180",
+        "106",
+        "1",
+        "96",
+        "v12"
+      ],
+      "log": "full-180-106-v12.log",
+      "exit": 0,
+      "wallSeconds": 55.375525901999936
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "180",
+        "106",
+        "1",
+        "96",
+        "optimized"
+      ],
+      "log": "full-180-106-optimized.log",
+      "exit": 0,
+      "wallSeconds": 64.18743354399999
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/large-stage-comparison.mjs",
+        "1",
+        "180",
+        "106"
+      ],
+      "log": "parity-final-180-106.log",
+      "exit": 0
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "240",
+        "106",
+        "1",
+        "96",
+        "v12"
+      ],
+      "log": "full-240-106-v12.log",
+      "exit": 0,
+      "wallSeconds": 47.47827843699997
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "240",
+        "106",
+        "1",
+        "96",
+        "optimized"
+      ],
+      "log": "full-240-106-optimized.log",
+      "exit": 0,
+      "wallSeconds": 52.005719948000205
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/large-stage-comparison.mjs",
+        "1",
+        "240",
+        "106"
+      ],
+      "log": "parity-final-240-106.log",
+      "exit": 0
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "180",
+        "160",
+        "1",
+        "96",
+        "v12"
+      ],
+      "log": "full-180-160-v12.log",
+      "exit": 0,
+      "wallSeconds": 67.28678505200014
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/full-job-probe.mjs",
+        "180",
+        "160",
+        "1",
+        "96",
+        "optimized"
+      ],
+      "log": "full-180-160-optimized.log",
+      "exit": 0,
+      "wallSeconds": 71.00821168699986
+    },
+    {
+      "command": [
+        "node",
+        "evidence/v13/large-stage-comparison.mjs",
+        "1",
+        "180",
+        "160"
+      ],
+      "log": "parity-final-180-160.log",
+      "exit": 0
+    }
+  ],
+  "initialFailuresRetained": [
+    {
+      "command": "initial targeted research/staging tests",
+      "log": "logs/initial-transition.log",
+      "failure": "fault injector expected exactly16 final SQL statements; new successor adds SQL. Corrected injection boundary; unchanged original expected rows/values."
+    },
+    {
+      "command": "initial new transition tests",
+      "log": "logs/transition-new.log",
+      "failure": "new test read snake_case fields from original public Queue API. Corrected to actual idempotencyKey/payload; original logical values unchanged."
+    }
+  ],
+  "notRun": [
+    "actual Sites host total128MB enforcement/strict peak/concurrent request load",
+    "host Queue/Cron/Workflows binding + automatic OOM redelivery",
+    "formal auth/passkeys and original-device migration",
+    "unported PRE/promotion/collector/sync/pachinko/MCP/OAuth integrations",
+    "production DB snapshot/migration/DR"
+  ],
+  "manualDiagnostics": [
+    "An initial identity probe used a non-existing relative output directory in the original clone and did not execute. Corrected probe ran from Site source. No production data accessed.",
+    "Browser initial stale labels timed out twice; fresh patched DOM selection succeeded; BROWSER_CHECK.md."
+  ],
+  "countsNotSummed": "Targeted tests overlap full suites; OOM, 4-scale native jobs and source parity are separate experiments. Do not sum all as unique test count."
+}

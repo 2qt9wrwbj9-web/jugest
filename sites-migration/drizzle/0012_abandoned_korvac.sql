@@ -1,0 +1,1 @@
+ALTER TABLE `sites_research_context` ADD `implementation_hash` text;

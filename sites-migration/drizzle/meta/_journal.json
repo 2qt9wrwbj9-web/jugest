@@ -78,6 +78,20 @@
       "when": 1793173540499,
       "tag": "0010_lean_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793182696819,
+      "tag": "0011_grey_betty_brant",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793182848004,
+      "tag": "0012_abandoned_korvac",
+      "breakpoints": true
     }
   ]
 }

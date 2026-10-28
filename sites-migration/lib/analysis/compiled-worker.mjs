@@ -1,4 +1,4 @@
-export const WORKER_IMPLEMENTATION_HASH='0b52f0000042986502c9ef5501342eaf28a0315c2d64fe48970fdc0dff90b6b7';
+export const WORKER_IMPLEMENTATION_HASH='6d9f66f48a0558a1c1c94833f8cf83626b8fe18e035eb8df696b1b4b6962e8ef';
 // Generated from fixed production files; no eval/vm/fs at runtime.
 const host=globalThis;
 function memoryStorage(seed={}){
@@ -1627,12 +1627,12 @@ function bruteSingleGenerate(...args){__analysisStage("before:bruteSingleGenerat
      targetStore=null,targetMachineByMachine=null;if(targetRows?.length){targetStore=new Set;targetMachineByMachine=new Map;for(let r of targetRows){let conds=bruteSingleConditions(r,ctx);targetConditions.set(`${r.machine}|${r.tableNo}|${r.date}`,conds);let ms=targetMachineByMachine.get(r.machine);if(!ms)targetMachineByMachine.set(r.machine,ms=new Set);for(let m of conds){targetStore.add(m.id);ms.add(m.id)}}}
  let storeGroups=new Map;
  for(let r of histRows)bruteSingleConditions(r,ctx,m=>{if(targetStore&&!targetStore.has(m.id))return;let g=bruteSingleGroupAdd(storeGroups,m.id,m,r);if(m.family!=="machineIdentity"&&(!targetMachineByMachine||targetMachineByMachine.get(r.machine)?.has(m.id)))bruteSingleMachineGroupAdd(g,m,r)});
- let scopes=bruteSingleScopes(histRows),split=bruteFoldSets(bruteScopeMeta(scopes.storeDays).dates),store=[],machine=[];
+ __analysisStage('single:groups-built');let scopes=bruteSingleScopes(histRows),split=bruteFoldSets(bruteScopeMeta(scopes.storeDays).dates),store=[],machine=[];
  for(let [id,g] of storeGroups){let e=bruteEvaluate(g,scopes.storeDays,minDays,1,null,split);if(e)store.push({...e,id,meta:g.meta,scope:"store",machine:"",_group:g});for(let mg of g.machineGroups.values()){let sc=scopes.machineScopes.get(mg.machine);if(!sc)continue;let me=bruteEvaluate(mg,sc,minDays,1,null,bruteFoldSets(bruteScopeMeta(sc).dates));if(me)machine.push({...me,id:g.meta.id,meta:g.meta,scope:"machine",machine:mg.machine,comparisonType:"same-machine-day",_group:mg})}}
- bruteBhAssign(store,x=>x.pVal??1,(x,q)=>x.q=q);bruteBhAssign(machine,x=>x.pVal??1,(x,q)=>x.q=q);
+ __analysisStage('single:evaluated');bruteBhAssign(store,x=>x.pVal??1,(x,q)=>x.q=q);bruteBhAssign(machine,x=>x.pVal??1,(x,q)=>x.q=q);
  let machineRowCounts=new Map;for(let r of histRows)machineRowCounts.set(r.machine,(machineRowCounts.get(r.machine)||0)+1);
  for(let c of store)bruteSingleFinalize(c,prep,scopes.storeDays,histRows.length);for(let c of machine)bruteSingleFinalize(c,prep,scopes.machineScopes.get(c.machine),machineRowCounts.get(c.machine)||0);
- let all=store.concat(machine).sort((a,b)=>b.rankScore-a.rankScore||b.confidence-a.confidence||Math.abs(b.effect)-Math.abs(a.effect)),
+ __analysisStage('single:finalized');let all=store.concat(machine).sort((a,b)=>b.rankScore-a.rankScore||b.confidence-a.confidence||Math.abs(b.effect)-Math.abs(a.effect)),
      storeMap=new Map(store.map(c=>[c.id,c])),machineMap=new Map(machine.map(c=>[`${c.machine}\u001e${c.id}`,c])),usable=all.filter(c=>Math.abs(c.practicalEffect)>=.004&&c.confidence>=18),
      topConf=usable.slice(0,20).map(c=>c.confidence/100),confidence=topConf.length?bruteClamp(bruteMean(topConf)*(.55+.45*Math.min(1,usable.length/12)),0,1):0;
  return{version:1,ctx,targetConditions,store,machine,all,storeMap,machineMap,conditionCount:new Set(all.map(c=>c.id)).size,confidence,usableCount:usable.length}
@@ -2178,7 +2178,7 @@ function v4HybridApplyWeights(rawRows,weights){weights=v4HybridNormWeights(weigh
 
 function v4PredictStore(...args){__analysisStage("before:v4PredictStore");const value=v4PredictStoreOriginal(...args);__analysisStage("v4PredictStore",value);return value}function v4PredictStoreOriginal(shop,targetDate,sourceDays=externalDays,{noCache=false,skipHybridOptimize=false,forceHybridOptimize=false}={}){
  if(!shop||!targetDate)return null;ensureExternalJudgedSync(sourceDays,shop);let sig=(sourceDays===externalDays)?`${shop}|${targetDate}|${externalDays.length}|${externalDays.at(-1)?.date||''}`:'';if(sig&&!noCache&&v4PredictionCache.has(sig))return v4PredictionCache.get(sig);
- let tp=v4TargetPrep(shop,targetDate,sourceDays);if(!tp||tp.targetRows.length<2)return null;let training=v4ModelTraining(tp.prep,targetDate);if(!training)return null;
+ let tp=v4TargetPrep(shop,targetDate,sourceDays);if(!tp||tp.targetRows.length<2)return null;let training=v4ModelTraining(tp.prep,targetDate);if(!training)return null;for(const value of Object.values(training.models||{}))delete value.validationFit;for(const value of Object.values(training.rankingModels||{}))delete value.validationFit;delete training.discovery;delete training.confirm;delete training.val;delete training.ensemblePoints;__analysisStage('v4:training-released');
  let distModel=v4SettingDistributionModel(shop,targetDate,sourceDays),calendarMemory=v4CalendarLongMemory(shop,targetDate,sourceDays,tp.targetRows),singleEvidence=bruteSingleGenerate(tp.prep,3,tp.targetRows),
      recentRows=training.hist.filter(r=>r.date>=v4DateShift(targetDate,-28)),observedRecentP4=v4Mean((recentRows.length?recentRows:training.hist).map(r=>+r.p4)),observedLongP4=v4Mean(training.hist.map(r=>+r.p4)),storePriorP4=Number.isFinite(distModel?.storeP4)?distModel.storeP4:observedRecentP4;
  let shortEligible=V4_MODEL_KEYS.filter(k=>v4ModelEligibleScore(training.scores[k])),shortWeights=Object.fromEntries(V4_MODEL_KEYS.map(k=>[k,shortEligible.includes(k)?Math.max(0,training.scores[k].score-50):0])),calendarWeight=calendarMemory?.eligible?Math.max(0,calendarMemory.score-50):0,
