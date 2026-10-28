@@ -81,3 +81,16 @@ export const sitesBacktestPublications=sqliteTable('sites_backtest_publications'
 export const sitesResearchJobInputs=sqliteTable('sites_research_job_inputs',{
  jobId:integer('job_id').primaryKey(),inputHash:text('input_hash').notNull(),modelJson:text('model_json').notNull(),modelFingerprint:text('model_fingerprint').notNull(),featureVersion:text('feature_version').notNull(),frontierDate:text('frontier_date').notNull(),createdAt:text('created_at').notNull()
 });
+
+export const sitesAnalysisPartitions=sqliteTable('sites_analysis_partitions',{
+ jobId:integer('job_id').primaryKey(),batchSize:integer('batch_size').notNull()
+});
+export const sitesResearchSearches=sqliteTable('sites_research_searches',{
+ jobId:integer('job_id').primaryKey(),storeId:text('store_id').notNull(),inputHash:text('input_hash').notNull(),championFingerprint:text('champion_fingerprint').notNull(),candidateFingerprint:text('candidate_fingerprint'),round:integer('round').notNull(),calculationHash:text('calculation_hash').notNull(),status:text('status').notNull(),payloadKey:text('payload_key').notNull(),createdAt:text('created_at').notNull()
+});
+export const sitesBacktestStageRows=sqliteTable('sites_backtest_stage_rows',{
+ jobId:integer('job_id').notNull(),ordinal:integer('ordinal').notNull(),splitKind:text('split_kind').notNull(),targetDate:text('target_date').notNull(),machineKey:text('machine_key').notNull(),rank:integer('rank').notNull(),score:real('score').notNull(),outcomeScore:real('outcome_score'),detailsJson:text('details_json').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.ordinal]})]);
+export const sitesBacktestStageParts=sqliteTable('sites_backtest_stage_parts',{
+ jobId:integer('job_id').notNull(),part:integer('part').notNull(),outputHash:text('output_hash').notNull(),rowsHash:text('rows_hash').notNull(),rowCount:integer('row_count').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.part]})]);

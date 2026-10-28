@@ -41,7 +41,7 @@ export async function handleAnalysisJobs(request,{db,bucket,piaAccessMode='owner
    if(parts.length===6){
     const reader=request.body?.getReader();let size=0,chunks=[];if(reader)while(true){const p=await reader.read();if(p.done)break;size+=p.value.byteLength;if(size>4096){await reader.cancel();return reply({ok:false,code:'body_too_large'},413)}chunks.push(p.value)}
     const bytes=new Uint8Array(size);let off=0;for(const b of chunks){bytes.set(b,off);off+=b.length}let body;try{body=JSON.parse(new TextDecoder().decode(bytes))}catch{return reply({ok:false,code:'bad_json'},400)}
-    const job=await enqueueAnalysisJob({db,storeId,channelId:auth.channelId,kind:body.kind,targetDate:body.targetDate,historyLimit:body.historyLimit??180,requestKey:body.requestKey});
+    const job=await enqueueAnalysisJob({db,storeId,channelId:auth.channelId,kind:body.kind,targetDate:body.targetDate,historyLimit:body.historyLimit??180,machineBatchSize:body.machineBatchSize??null,requestKey:body.requestKey});
     const background=scheduleDevelopmentAnalysis(()=>continueDevelopmentJob({db,bucket,jobId:job.id}));
     return reply({ok:true,job:publicAnalysisJob(job),background},202);
    }

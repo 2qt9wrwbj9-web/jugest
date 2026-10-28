@@ -1,0 +1,4 @@
+import{readFileSync,writeFileSync}from'node:fs';
+const s=readFileSync(new URL('../upstream/vps/src/jobs/model-search.mjs',import.meta.url),'utf8'),a=s.indexOf('function adaptiveMinSupport('),b=s.indexOf('\n',a),c=s.indexOf('    const minSupport=adaptiveMinSupport('),d=s.indexOf('\n    const best=search.best;',c);
+if([a,b,c,d].some(x=>x<0))throw Error('missing fixed MODEL_SEARCH anchors');
+writeFileSync(new URL('../lib/analysis/generated-model-search-kernel.mjs',import.meta.url),"// Exact pure calculation block extracted from fixed MODEL_SEARCH worker.\nimport{discoverAxes}from'../../upstream/vps/src/research/axis-discovery.mjs';\nimport{searchModels}from'../../upstream/vps/src/research/model-search.mjs';\n"+s.slice(a,b)+"\nexport function originalModelSearchCalculation({split,champion,round}){\n"+s.slice(c,d)+"\nreturn{minSupport,axes,search};}\n");

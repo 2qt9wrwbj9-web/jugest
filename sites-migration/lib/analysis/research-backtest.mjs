@@ -1,4 +1,5 @@
-import{buildWalkForwardDataset,splitChronologicalSamples}from'../../upstream/vps/src/research/backtest.mjs';
+import{stageBacktestRows}from'./backtest-staging.mjs';
+import{buildWalkForwardDataset,splitChronologicalSamples}from'./generated-research-dataset.mjs';
 import{baselineModel,evaluateModel,fingerprintModel}from'../../upstream/vps/src/research/model-search.mjs';
 import{canonicalJson,hashCanonical}from'../../upstream/vps/src/canonical-json.mjs';
 import{rankSplit}from'./generated-backtest-kernel.mjs';
@@ -36,9 +37,10 @@ export async function runFrozenResearchBacktest({db,bucket,job,manifestKey,onSta
  const splits=[['train',split.train,trainScore,split.trainDates],['validation',split.validation,validationScore,split.validationDates]].map(([splitKind,rows,score,dates])=>({splitKind,fromDate:dates[0],toDate:dates.at(-1),score,inputHash:hashCanonical({dataset:dataset.inputHash,split:splitKind,dates}),rows:rankSplit(rows,model).map(r=>({targetDate:r.targetDate,machineKey:r.machineKey,rank:r.rank,score:r.predictionScore,outcomeScore:r.outcomeScore,details:{strong:Boolean(r.strong),outcomeProxyVersion:r.outcomeProxyVersion}}))}));
  return{analysis:{...base,status:'backtested',trainScore,validationScore,splits,sourceResultHash:hashCanonical({storeId:job.store_id,modelFingerprint:fixed.model_fingerprint,datasetHash:dataset.inputHash,trainScore,validationScore})},inputHash:input.inputHash};
 }
-export async function researchBacktestWrites({db,job,feature,key,at}){
+export async function researchBacktestWrites({db,job,feature,key,at,now=Date.now,onStage=()=>{}}){
  const fixed=await db.prepare('SELECT * FROM sites_research_job_inputs WHERE job_id=?').bind(job.id).first();
  if(!fixed||feature.storeId!==job.store_id||feature.modelFingerprint!==fixed.model_fingerprint||fingerprintModel(feature.model)!==fixed.model_fingerprint||feature.frontierDate!==fixed.frontier_date||feature.featureVersion!==fixed.feature_version||feature.holdoutSealed!==true||!['backtested','insufficient_data'].includes(feature.status))throw failure('research_result_invalid');
+ const staged=await stageBacktestRows({db,job,feature,now,onStage});
  const statements=[],owned="EXISTS(SELECT 1 FROM sites_analysis_jobs j WHERE j.id=? AND j.state='succeeded' AND j.result_key=? AND j.attempts=?)",own=[job.id,key,job.attempts];
  for(const part of feature.splits){
   if(!['train','validation'].includes(part.splitKind)||!Array.isArray(part.rows))throw failure('research_result_invalid');
@@ -48,7 +50,9 @@ export async function researchBacktestWrites({db,job,feature,key,at}){
   const publish=`${owned} AND EXISTS(SELECT 1 FROM sites_backtest_publications p WHERE p.run_id=(SELECT id FROM backtest_runs WHERE ${where}) AND p.job_id=?)`,bind=[...own,...identity,job.id];
   statements.push(db.prepare(`UPDATE backtest_runs SET model_json=?,from_date=?,to_date=?,prediction_count=?,score_json=?,created_at=? WHERE ${where} AND ${publish}`).bind(canonicalJson(feature.model),part.fromDate,part.toDate,part.rows.length,canonicalJson(part.score),at,...identity,...bind));
   statements.push(db.prepare(`DELETE FROM backtest_predictions WHERE run_id=(SELECT id FROM backtest_runs WHERE ${where}) AND ${publish}`).bind(...identity,...bind));
-  for(const row of part.rows)statements.push(db.prepare(`INSERT INTO backtest_predictions(run_id,target_date,machine_key,rank,score,outcome_score,details_json) SELECT (SELECT id FROM backtest_runs WHERE ${where}),?,?,?,?,?,? WHERE ${publish}`).bind(...identity,row.targetDate,row.machineKey,row.rank,row.score,row.outcomeScore,canonicalJson(row.details),...bind));
+  if(staged)statements.push(db.prepare(`INSERT INTO backtest_predictions(run_id,target_date,machine_key,rank,score,outcome_score,details_json) SELECT (SELECT id FROM backtest_runs WHERE ${where}),target_date,machine_key,rank,score,outcome_score,details_json FROM sites_backtest_stage_rows WHERE job_id=? AND split_kind=? AND ${publish} ORDER BY ordinal`).bind(...identity,job.id,part.splitKind,...bind));
+  else for(const row of part.rows)statements.push(db.prepare(`INSERT INTO backtest_predictions(run_id,target_date,machine_key,rank,score,outcome_score,details_json) SELECT (SELECT id FROM backtest_runs WHERE ${where}),?,?,?,?,?,? WHERE ${publish}`).bind(...identity,row.targetDate,row.machineKey,row.rank,row.score,row.outcomeScore,canonicalJson(row.details),...bind));
  }
+ if(staged)statements.push(db.prepare(`DELETE FROM sites_backtest_stage_rows WHERE job_id=? AND ${owned}`).bind(job.id,...own),db.prepare(`DELETE FROM sites_backtest_stage_parts WHERE job_id=? AND ${owned}`).bind(job.id,...own));
  return statements;
 }

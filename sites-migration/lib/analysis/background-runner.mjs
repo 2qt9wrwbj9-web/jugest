@@ -23,7 +23,7 @@ export async function consumeAnalysisQueue(batch,{db,bucket,enabled=false,now=Da
 // deliberately not presented as a durable timer or an unlimited waitUntil task.
 export async function continueDevelopmentJob({db,bucket,jobId,...options}){
  let job;
- for(let step=0;step<3;step++){
+ for(let step=0;step<180;step++){
   job=await advanceAnalysisJob({db,bucket,jobId,...options});
   if(!job||terminal.has(job.state)||job.state!=='queued')break;
  }
