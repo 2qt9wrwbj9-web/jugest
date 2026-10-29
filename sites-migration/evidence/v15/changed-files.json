@@ -1,0 +1,862 @@
+[
+  {
+    "status": "変更",
+    "path": "MIGRATION_ACCEPTANCE_CRITERIA.md",
+    "purpose": "55機能/障害/12gate/今回実績と未完条件を更新"
+  },
+  {
+    "status": "変更",
+    "path": "MIGRATION_BLOCKERS.md",
+    "purpose": "55機能/障害/12gate/今回実績と未完条件を更新"
+  },
+  {
+    "status": "変更",
+    "path": "MIGRATION_MASTER_PLAN.md",
+    "purpose": "55機能/障害/12gate/今回実績と未完条件を更新"
+  },
+  {
+    "status": "変更",
+    "path": "MIGRATION_STATUS.md",
+    "purpose": "55機能/障害/12gate/今回実績と未完条件を更新"
+  },
+  {
+    "status": "変更",
+    "path": "client/analysis-job-panel.mjs",
+    "purpose": "元パネルへ正式holdout状態・全モデルscore・champion・履歴を表示"
+  },
+  {
+    "status": "変更",
+    "path": "db/schema.ts",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "変更",
+    "path": "drizzle/meta/_journal.json",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "変更",
+    "path": "lib/access/d1-sessions.mjs",
+    "purpose": "元専用ACCESS session単独失効/audit/rate並列上限互換"
+  },
+  {
+    "status": "変更",
+    "path": "lib/analysis/compiled-worker.mjs",
+    "purpose": "正式holdoutの元kernel再利用/段階評価/安全な公開/研究子job連携"
+  },
+  {
+    "status": "変更",
+    "path": "lib/analysis/jobs.mjs",
+    "purpose": "正式holdoutの元kernel再利用/段階評価/安全な公開/研究子job連携"
+  },
+  {
+    "status": "変更",
+    "path": "lib/analysis/research-cycle.mjs",
+    "purpose": "正式holdoutの元kernel再利用/段階評価/安全な公開/研究子job連携"
+  },
+  {
+    "status": "変更",
+    "path": "package.json",
+    "purpose": "holdout kernel generatorを既存prepare chainへ追加"
+  },
+  {
+    "status": "変更",
+    "path": "public/analysis-job-panel.mjs",
+    "purpose": "元パネルへ正式holdout状態・全モデルscore・champion・履歴を表示"
+  },
+  {
+    "status": "変更",
+    "path": "tests/port-access-sessions.test.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "変更",
+    "path": "tests/port-research-cycle.test.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "変更",
+    "path": "tests/port-worker-read.test.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "新規",
+    "path": "drizzle/0015_right_stephen_strange.sql",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "新規",
+    "path": "drizzle/0016_vengeful_spitfire.sql",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "新規",
+    "path": "drizzle/meta/0015_snapshot.json",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "新規",
+    "path": "drizzle/meta/0016_snapshot.json",
+    "purpose": "private holdout入力/モデル/行/partsと原子的確定fence schema"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/AUTH_SCOPE.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/BOUNDARY_CHECK.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/BROWSER_CHECK.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/DEPENDENCIES.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/HOLDOUT_COST_REPORT.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/HOST_VALIDATION_PLAN.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/IMPLEMENTATION_PLAN.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/MEMORY_REPORT.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/PRE_DEPENDENCIES.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/REPRODUCE.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/RESEARCH_COMPARISON.md",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/SECRET_SCAN.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/budget-holdout-load-180-160.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/command-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/comparison-commands.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/cycle-oom-recovery.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/cycle-oom-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/feature-changes.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/full-job-probe.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-budget-probe.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-comparison.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-comparison.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-180-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-180-160.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-240-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-90-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-commands-final.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load-commands.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-load.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-memory-comparison.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-oom-recovery.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/holdout-oom-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/inspector-client.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/large-stage-comparison.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/access-expanded.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/before-history-label-fix-github-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/before-history-label-fix-port-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/before-visual-fix-github-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/before-visual-fix-port-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/browser-closed-tab-prediction.txt",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/browser-day.txt",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/browser-holdout-final.txt",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/browser-parent-final.txt",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/build-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/build-initial.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/comparison-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/cycle-full-state.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/cycle-initial.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/cycle-integrated-fixed.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/cycle-integrated.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/cycle-oom-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/db-generate-fence.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/db-generate.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-180-106-optimized.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-180-106-v14.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-180-160-optimized.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-180-160-v14.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-240-106-optimized.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-240-106-v14.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-90-106-optimized.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/full-90-106-v14.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/generate-worker-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/generate-worker-projection.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/generate-worker.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/generator-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/github-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-budget-180-160.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-client-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-client.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-comparison.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-initial.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-load-180-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-load-180-160.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-load-240-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-load-90-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/holdout-oom-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/native-cycle-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/native-cycle.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/new-units-fixed.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/oom-driver-missing-modules.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/oom-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/oom-machine-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/parity-final-180-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/parity-final-180-160.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/parity-final-240-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/parity-final-90-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/port-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/pre-projection-holdout-oom-driver.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/pre-projection-real-holdout-oom.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0000_slim_justin_hammer.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0001_strong_rogue.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0002_analysis_jobs.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0003_mature_cammi.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0004_fearless_spencer_smythe.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0005_loud_shinko_yamashiro.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0006_opposite_electro.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0007_pink_sue_storm.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0008_wet_goblin_queen.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0009_unusual_xorn.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0010_lean_greymalkin.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0011_grey_betty_brant.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0012_abandoned_korvac.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0013_robust_loki.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0014_daffy_sunset_bain.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0015_right_stephen_strange.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-0016_vengeful_spitfire.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-db-before.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/preview-repair.json",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-cycle-oom.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-holdout-oom.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-oom-analysis-begin.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-oom-machine-batch-checkpoint.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-oom-machine-batch-unit-complete.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-oom-model-prefix-checkpoint.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/real-oom-payload-checkpoint.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/transport-interrupted-github-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/transport-interrupted-port-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/units-final.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/unprojected-holdout-load-180-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/unprojected-holdout-load-180-160.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/unprojected-holdout-load-240-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/unprojected-holdout-load-90-106.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/upstream-root.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/logs/upstream-vps.log",
+    "purpose": "検証全ログ/初期失敗/修正前と最終runを保存"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/memory-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/migration-matrix.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/model-comparison.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/native-research-chain.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/oom-machine-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/oom-recovery.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/oom-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/pre-projection-holdout-oom-results.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/preview-migration-commands.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/run-comparisons.py",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/source-coverage.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/source-inventory.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/summarize-memory.py",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/unprojected-holdout-load-180-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/unprojected-holdout-load-180-160.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/unprojected-holdout-load-240-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/unprojected-holdout-load-90-106.json",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/update-master.py",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/v8-limit.mjs",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/validate-ledger.py",
+    "purpose": "比較・負荷・OOM・管理台帳・追試と再開の原本"
+  },
+  {
+    "status": "新規",
+    "path": "lib/analysis/generated-holdout-kernel.mjs",
+    "purpose": "正式holdoutの元kernel再利用/段階評価/安全な公開/研究子job連携"
+  },
+  {
+    "status": "新規",
+    "path": "lib/analysis/research-holdout.mjs",
+    "purpose": "正式holdoutの元kernel再利用/段階評価/安全な公開/研究子job連携"
+  },
+  {
+    "status": "新規",
+    "path": "scripts/generate-holdout-kernel.mjs",
+    "purpose": "元rankRows/betterを機械抽出して計算変更を防ぐ"
+  },
+  {
+    "status": "新規",
+    "path": "tests/port-holdout-client.test.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "新規",
+    "path": "tests/port-holdout.test.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "新規",
+    "path": "tests/v15-holdout-fixture.mjs",
+    "purpose": "元SQLite全保存値/holdout障害/権限/UI/研究chain回帰"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/CHANGED_FILES.tsv",
+    "purpose": "全変更ファイルの区分と目的"
+  },
+  {
+    "status": "新規",
+    "path": "evidence/v15/changed-files.json",
+    "purpose": "全変更ファイルの区分と目的"
+  }
+]

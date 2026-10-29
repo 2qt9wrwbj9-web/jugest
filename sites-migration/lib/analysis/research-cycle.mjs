@@ -38,6 +38,7 @@ function stateWrites({db,job,plan,l}){
  out.push(db.prepare(`INSERT INTO research_loops(store_id,${loopFields.join(',')}) SELECT ?,${loopFields.map(()=>'?').join(',')} WHERE ${l.gate} ON CONFLICT(store_id) DO UPDATE SET ${loopFields.map(k=>k+'=excluded.'+k).join(',')}`).bind(job.store_id,...loopFields.map(k=>plan.loop[k]??null),...l.args));return out;
 }
 function childWrites({db,job,plan,c,root,l,at}){
+ if(plan.converged)return holdoutChildWrites({db,job,plan,c,root,l,at});
  if(!plan.next)return[];const n=plan.next,fp=fingerprintModel(n.model),identity=hashCanonical({channel:job.channel_id,logicalKey:n.logicalKey,inputHash:job.input_hash,researchCycle:root});const query=s=>db.prepare(s);const g=l.gate,a=l.args;
  return[
  query(`INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,manifest_key,input_hash,created_at,updated_at) SELECT store_id,channel_id,?,target_date,history_limit,?,manifest_key,input_hash,?,? FROM sites_analysis_jobs WHERE id=? AND ${g}`).bind(n.kind,identity,at,at,job.id,...a),
@@ -72,3 +73,17 @@ export async function featureCycleWrites({db,job,feature,key,at}){
  const plan={loop,registry:rows,action:'cycle_started',next:{kind:'research-backtest',model,logicalKey:`backtest:${job.store_id}:${feature.asOfDate}:${fp}:g${loop.generation}`}},l=latch({db,job,key,at,before,plan});
  const c={feature_job_id:job.id};return[l.statement,...stateWrites({db,job,plan,l}),db.prepare(`INSERT INTO sites_research_context(job_id,feature_job_id,input_hash,model_fingerprint,frontier_date,generation,round,logical_key,implementation_hash,state,created_at) SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE ${l.gate} ON CONFLICT(job_id) DO NOTHING`).bind(job.id,job.id,job.input_hash,fp,feature.asOfDate,loop.generation,loop.search_round,'feature-cycle:'+job.id,WORKER_IMPLEMENTATION_HASH,'cycle_started',at,...l.args),...childWrites({db,job,plan,c,root:mode.root_job_id,l,at}),...finishWrites({db,job,plan,l,at})];
 }
+
+function holdoutChildWrites({db,job,plan,c,root,l,at}){
+ const fixed={loop:plan.loop,registry:plan.registry.slice().sort((a,b)=>a.fingerprint.localeCompare(b.fingerprint))},identityHash=hashCanonical({inputHash:job.input_hash,implementationHash:WORKER_IMPLEMENTATION_HASH,...fixed}),logicalKey=`sealed-holdout:${job.store_id}:${plan.loop.frontier_date}:g${plan.loop.generation}`,identity=hashCanonical({logicalKey,identityHash,root}),g=l.gate,a=l.args;
+ return[
+ db.prepare(`INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,manifest_key,input_hash,created_at,updated_at) SELECT store_id,channel_id,'research-holdout',target_date,history_limit,?,manifest_key,input_hash,?,? FROM sites_analysis_jobs WHERE id=? AND ${g}`).bind(identity,at,at,job.id,...a),
+ db.prepare(`INSERT INTO sites_holdout_inputs(job_id,identity_hash,input_hash,implementation_hash,loop_json,registry_json,created_at) SELECT id,?,?,?,?,?,? FROM sites_analysis_jobs WHERE idempotency_key=? AND ${g} ON CONFLICT(job_id) DO NOTHING`).bind(identityHash,job.input_hash,WORKER_IMPLEMENTATION_HASH,canonicalJson(fixed.loop),canonicalJson(fixed.registry),at,identity,...a),
+ db.prepare(`INSERT INTO sites_research_context(job_id,parent_job_id,feature_job_id,input_hash,model_fingerprint,frontier_date,generation,round,logical_key,implementation_hash,state,created_at) SELECT id,?,?,?,?,?,?,?,?,?,'holdout_queued',? FROM sites_analysis_jobs WHERE idempotency_key=? AND ${g} ON CONFLICT(job_id) DO NOTHING`).bind(job.id,c.feature_job_id,job.input_hash,plan.loop.current_fingerprint,plan.loop.frontier_date,plan.loop.generation,plan.loop.search_round,logicalKey,WORKER_IMPLEMENTATION_HASH,at,identity,...a),
+ db.prepare(`INSERT OR IGNORE INTO sites_research_cycle_jobs(job_id,root_job_id,enabled) SELECT id,?,1 FROM sites_analysis_jobs WHERE idempotency_key=? AND ${g}`).bind(root,identity,...a),
+ db.prepare(`INSERT INTO sites_analysis_heads(store_id,kind,latest_job_id) SELECT store_id,kind,id FROM sites_analysis_jobs WHERE idempotency_key=? AND ${g} ON CONFLICT(store_id,kind) DO UPDATE SET latest_job_id=excluded.latest_job_id WHERE excluded.latest_job_id>sites_analysis_heads.latest_job_id`).bind(identity,...a),
+ db.prepare(`INSERT OR IGNORE INTO sites_analysis_dispatch(job_id) SELECT id FROM sites_analysis_jobs WHERE idempotency_key=? AND ${g}`).bind(identity,...a),
+ db.prepare(`UPDATE sites_research_context SET child_job_id=(SELECT id FROM sites_analysis_jobs WHERE idempotency_key=?) WHERE job_id=? AND ${g}`).bind(identity,job.id,...a)
+ ];
+}
+export{latch,stateWrites};

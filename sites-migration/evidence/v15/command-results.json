@@ -1,0 +1,84 @@
+{
+  "runs": [
+    {
+      "command": "node --test --test-concurrency=1 tests/port-*.test.mjs",
+      "log": "logs/port-final.log",
+      "passCount": 115,
+      "failCount": 0,
+      "note": "final complete suite after all code/UI fixes"
+    },
+    {
+      "command": "node --test --test-concurrency=1 sites-migration/tests/*.test.mjs",
+      "log": "logs/github-final.log",
+      "passCount": 107,
+      "failCount": 0,
+      "note": "final complete suite after all code/UI fixes"
+    },
+    {
+      "command": "npm test --prefix vps (original repository)",
+      "log": "logs/upstream-vps.log",
+      "passCount": 569,
+      "failCount": 1,
+      "note": "known symlink environment failure only"
+    },
+    {
+      "command": "npm test (original repository root)",
+      "log": "logs/upstream-root.log",
+      "passCount": 83,
+      "failCount": 0,
+      "note": "command count, not Node test case count"
+    },
+    {
+      "command": "node evidence/v15/holdout-comparison.mjs",
+      "log": "logs/holdout-comparison.log",
+      "passCount": 1,
+      "failCount": 0
+    },
+    {
+      "command": "node evidence/v15/native-research-chain.mjs",
+      "log": "logs/native-cycle-final.log",
+      "passCount": 1,
+      "failCount": 0
+    },
+    {
+      "command": "node evidence/v15/cycle-oom-recovery.mjs",
+      "log": "logs/cycle-oom-driver.log",
+      "passCount": 1,
+      "failCount": 0
+    },
+    {
+      "command": "node evidence/v15/holdout-oom-recovery.mjs",
+      "log": "logs/holdout-oom-driver.log",
+      "passCount": 1,
+      "failCount": 0
+    },
+    {
+      "command": "node <installed Sites plugin>/scripts/build-site.mjs",
+      "log": "logs/build-final.log",
+      "passCount": 1,
+      "failCount": 0
+    }
+  ],
+  "additional": {
+    "mathAndFullJob": "comparison-commands.json:12 successful child executions, 8 full jobs+4 original parity",
+    "holdoutLoad": "holdout-load-commands-final.json:4 successful scale cases; unprojected controls retained; budget extra180x160",
+    "realOOM": "4 regular+1 machine-unit+1 research adoption+1 sealed holdout =7 actual local V8 OOM recoveries. Raw fatal child logs retained, not ordinary throw tests. Host recovery unverified",
+    "ledger": "validate-ledger.py 55 stable IDs /12 gates /42 original tables + relay kv",
+    "browser": "BROWSER_CHECK.md and raw browser DOM; local only"
+  },
+  "initialFailures": {
+    "holdout-initial.log": "test counted existing daily receipt as holdout; component-specific query corrected, original math unchanged",
+    "cycle-initial.log": "pre-holdout expectation obsolete after implementing source actual days path; strengthened whole SQLite row/state comparison",
+    "cycle-integrated.log": "SQL quote typo in new test corrected; eight full state tests pass",
+    "access-expanded.log": "original not_found is message, lacks .code; test compares original message",
+    "oom-driver-missing-modules.log": "copied probe module closure lacked new dependency; bootstrap failed before injection, not OOM proof; corrected and all old OOM cases rerun",
+    "transport-interrupted-*.log": "execution transport disconnected before test completion; logs retained; final complete suites rerun from scratch",
+    "before-visual-fix-*.log": "successful115/107 before final UI fixes; superseded by final suites",
+    "browser": "preview ignored profile/stale lock repaired officially; async selector refreshed; no blocked session bypass"
+  },
+  "unexecuted": [
+    "actual Sites host total128MB/CPU/Queue/Cron/second ACCESS binding/OOM/transaction/fees",
+    "production data migration and real WebAuthn/active PRE end-to-end; no deployment permission"
+  ],
+  "meaning": "Do not add subtests/individual reruns to complete-suite totals. No new final original VPS failures."
+}

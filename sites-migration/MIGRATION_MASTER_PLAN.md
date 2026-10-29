@@ -1,18 +1,18 @@
-# JUGEST 完全移植マスター計画（authoritative / 保存版14）
+# JUGEST 完全移植マスター計画（authoritative / 保存版15）
 
-元fixed deploy/vps@1f8c29fc458f34e11e546fb57944d0fc31db98a5。再開Site13@00c5edcac2a2f1597db91800f08d176da9b746fe、GitHub work/sites-migration-20261027@d2f6513944a8d63d90e8ea33c8c8a06ed5eff34e。保存後の正確なSHA/receiptはZIP参照。公開許可ではない。
+固定本番deploy/vps@1f8c29fc458f34e11e546fb57944d0fc31db98a5。再開Site14 b464c7b19f96098cffb6af4ed9c325f25c2fdece / GitHub work/sites-migration-20261027@c513570b07433d43e6a58445c959732079450a10。保存receipt/ZIP CRC/SHAを照合して継続。保存後SHAはsafe receipt参照。公開許可ではない。
 
-55機能IDを全て維持。各行は「local実装」「元比較」「画面/API」「local無人」「実Sites」「最終gate」を分離する。対象subsetの合格と全機能完成を混同しない。host未検証のため全体完成の行・完成率は出さない。元155source/42SQL表+relay_kv/全fixed treeの索引はevidence/v13原本とv14コピー。同じsourceを再調査して進捗扱いにしない。動的UI/実配信/全APIのsemantic完全監査は未完（B-COVERAGE）。
+55機能IDと12gateを維持。局所実装、元比較、既存画面/API、障害復旧、local無人、実host、全体完成を分離。CYCLE-04は正式holdoutのlocal比較を完了し「実装済み・実ホスト未検証」へ。B-HOLDOUTの保存/復旧未実装という局所原因は解消したが、PRE/active model・host無人/総128MBは未完。根拠のない完成率は出さない。
 
-## 次の依存順と停止条件
+## 次の依存順
 
-1. CYCLE-04/B-HOLDOUT：研究収束まではlocal完成。元holdoutの全歴代champion・固定input・better/rankRows/score/予測行/hashを段階保存し、再開・原子的確定を検証する。active model/PREは別gate。
-2. AUTH-01/03/U-ACCESS-BINDING：専用DBでのsession互換単位を足場に、Sites第2D1の提供条件を確認。canonical DBへ認証表を混在させない。正式WebAuthn/招待発行/rate/全scopeへ進む。
-3. B-MEM/AN-02：4規模/繰返しでも単純な候補参照解放のピーク改善は不確定。高コストcheckpointは導入しない。元共通母集団・候補順・全BHの契約をpure kernelで固定してから分割を検証する。研究/他機能を停止させない。
-4. U-QUEUE/B-HOST：HOST_VALIDATION_PLAN.mdの提供interface/非公開実行を確認し、公開が必要なhost canaryの最終操作だけ別承認へ分ける。外部恒久基盤なし。
-5. 正式PRE/過去・店舗横断比較→Collector/自動収集→端末同期→pachinko/全MCP/OAuth→許可された実データ移行を、依存と権限の完成順に接続する。独立pure計算/変換の試験は先行可能。
+1. 正式PRE v2：PRE_DEPENDENCIES.mdの元call graphを基準にformal model/prediction/outcome/trial store、過去答え合わせ/逐次評価を移植。研究winner→active自動昇格は元の確認なしに追加しない。FEATURE_BUILDのactive初期化/store_read/live prediction副作用も残る。
+2. 正式認証：専用ACCESS D1 session/失効/challenge/rateの互換を足場に、正式binding供給、WebAuthn/Origin/RPID/登録/招待/発行/CSRF/復旧を移植。DB混在・DEV認証での代用は禁止。
+3. B-HOST/U-QUEUE/B-UNATTENDED：公式interface/非公開実行契約→必要な場合のみ公開を伴うcanaryの直前承認。一般Cloudflareの制限とSites割当を分離。local batch成功をhost transaction成功としない。
+4. B-MEM：現行予測のscope/候補順/全BHを維持したkernel境界を先に証明。効果のない参照解放反復は止める。holdoutは評価後の不要featureをcheckpointに重複保存せず、元の必要全列/数学を維持して削減した。
+5. Sync/Relay・Collector・日次収集→正式権限/監視→パチンコ→全MCP/OAuth→承認後の実データ独立移行。未移植行を削除しない。
 
-機械的再開：receipt→本書→BLOCKERS→ACCEPTANCE→STATUS→evidence/v14/REPRODUCE.md。機械可読行はmigration-matrix.json。UNKNOWNは不可能とも完成とも扱わない。
+機械的再開：保存receipt→4正本→evidence/v15/REPRODUCE.mdとDEPENDENCIES.md。管理表の機械可読原本はmigration-matrix.json。UNKNOWNを不可能または完成とみなさない。
 
 ## UI-01 本番パッチ適用フロントと主要画面
 
@@ -179,8 +179,8 @@
 - 元ファイル/関数/API: index.html:v5AnalyzeStore,v4PredictStore,bruteSingleGenerate
 - Sites対応: scripts/generate-worker-analysis.mjs;lib/analysis/compiled-worker.mjs
 - 状態: 技術的障害あり
-- 互換性と境界: 全候補評価後の索引/機種group参照を解放。全BH集合・演算/候補/同点順は不変。4規模元8値/全出力一致。ピーク改善とhost128MBは未証明
-- 証拠: evidence/v14/model-comparison.json; memory-results.json; MEMORY_REPORT.md
+- 互換性と境界: 現行予測の数学/全BHは変更なし。4規模の全model/8中間値/hashを維持。新しい候補分割は採用せず、総128MBは未証明。holdoutのcheckpoint投影によるメモリ削減は別工程
+- 証拠: evidence/v15/model-comparison.json; MEMORY_REPORT.md; 現行予測full-jobログ4規模とholdout-load比較を分離
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
@@ -188,7 +188,7 @@
 - 依存: ["AN-01"]
 - 障害: ["B-MEM"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 単純解放ではピーク低下不確定。元共通母集団/候補順を固定したpure候補kernel・全BHの契約試験から分割の可否を判定
+- 次作業: 共通scope/候補順/全BHの契約を維持できるpure候補kernelに限定して分割仮説を検証。効果未証明なら採用しない
 
 ## AN-03 v5前半checkpoint/台別特徴量分割
 
@@ -210,9 +210,9 @@
 
 - 元ファイル/関数/API: vps/src/jobs/feature-build.mjs;research/feature-builder.mjs
 - Sites対応: lib/analysis/feature-build.mjs
-- 状態: 実装済み・実ホスト未検証
-- 互換性と境界: 元特徴量の値/hash/行互換を維持。opt-inで成功確定と同じtransactionに研究loop/固定BT/outboxを追加
-- 証拠: 既存元SQLite比較回帰; cycle-sqlite-final.log; native-cycle.log; BROWSER_CHECK.md
+- 状態: 部分実装
+- 互換性と境界: 計算/特徴量保存は元と一致。opt-in研究→正式holdoutまで連鎖。ただし元FEATURE_BUILDのactive初期化とstore_read snapshot/live prediction refreshの副作用は未移植であり、本番job全体完成ではない
+- 証拠: 元feature-build.mjsのactive分岐を再確認; PRE_DEPENDENCIES.md; 元feature比較回帰と研究統合
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
@@ -220,7 +220,7 @@
 - 依存: ["API-01", "JOB-01"]
 - 障害: ["B-HOST"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+- 次作業: active初期化/store-read snapshot/live predictionの元transactionと権限を比較して移植。holdout勝者からの無条件切替は追加しない
 
 ## BT-01 研究BACKTEST/学習・検証予測行
 
@@ -275,64 +275,64 @@
 - 元ファイル/関数/API: vps/src/analysis/research-cycle.mjs:recordBacktestCompletion,scheduleModelSearch
 - Sites対応: lib/analysis/research-transition.mjs; jobs.mjs; background-runner.mjs; worker/index.ts
 - 状態: 実装済み・実ホスト未検証
-- 互換性と境界: 既存の未昇格BACKTEST→探索を維持。opt-in cycleはroot単位にidentityを固定し、同じsnapshot/modelから後続を自動受付
-- 証拠: tests/port-research-transition.test.mjs（既存）; port-research-cycle.test.mjs; evidence/v14/logs/native-cycle.log; BROWSER_CHECK.md
+- 互換性と境界: 既存の未昇格BACKTEST→探索を維持。opt-in cycleはroot単位にidentityを固定し、同じsnapshot/modelから後続を自動受付。保存版15では正式holdout確定後まで元SQLiteの全registry/loopと全BT run/予測行を比較。holdout子jobは同じ固定入力を使用
+- 証拠: evidence/v15/logs/cycle-full-state.log; tests/port-research-cycle.test.mjs; native-cycle.log; holdout-comparison.json; port-final.log
 - 画面/API: 元解析画面の過去検証から自動探索、nextJobIdと保存履歴で再取得
 - 開発環境: nativeローカルQueue・画面とも完走。配信失敗/重複/古世代/最終rollbackを検証
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "対象経路のlocal実装済み", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "開発用の対象画面/APIへ接続済み", "localUnattended": "対象local Queue/DEV driverを検証済み", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "正式holdout確定までの対象経路実装済み", "originalComparison": "全BT/holdout行、registry/loop、4規模holdout・現行予測の対象範囲が一致", "screenApi": "開発用既存パネル/認証付きAPIに接続", "localUnattended": "実local Queueで正式holdoutまで検証", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["BT-01", "SEARCH-01", "JOB-02"]
 - 障害: ["B-PIPELINE"]
 - 完成条件: 元logical identity/入力/モデル/round/holdout分離の一致、再試行/重複/権限/画面の試験を維持しhost無人実行を検証
-- 次作業: ホストQueue契約と再配信を検証。元logical keyはcontextに保持しインフラidentityはchannel/input/rootで分離
+- 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
 
 ## CYCLE-02 研究loop/frontier/generation/再試行履歴
 
 - 元ファイル/関数/API: vps/src/analysis/research-cycle.mjs:getResearchLoop,ensureResearchCycle
 - Sites対応: db/schema.ts:researchLoops/sitesResearchContext; drizzle/0011*,0012*; lib/analysis/research-transition.mjs
 - 状態: 部分実装
-- 互換性と境界: frontier/gen/round/noImprove/repeated/stateを元と比較。決定latchと原子的publication、入力・実装・世代・registry snapshotをfence。正式holdout後状態は未移植
-- 証拠: port-research-cycle.test.mjsの6分岐・全cycle元SQLite比較・rollback/race; cycle-oom-results.json
+- 互換性と境界: frontier/gen/round/noImprove/repeated/stateを元と比較。決定latchと原子的publication、入力・実装・世代・registry snapshotをfence。正式holdout後状態は未移植。保存版15では正式holdout確定後まで元SQLiteの全registry/loopと全BT run/予測行を比較。holdout子jobは同じ固定入力を使用
+- 証拠: evidence/v15/logs/cycle-full-state.log; tests/port-research-cycle.test.mjs; native-cycle.log; holdout-comparison.json; port-final.log
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "開発用の対象画面/APIへ接続済み", "localUnattended": "対象local Queue/DEV driverを検証済み", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "正式holdout確定までの対象経路実装済み", "originalComparison": "全BT/holdout行、registry/loop、4規模holdout・現行予測の対象範囲が一致", "screenApi": "開発用既存パネル/認証付きAPIに接続", "localUnattended": "実local Queueで正式holdoutまで検証", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["CYCLE-01"]
 - 障害: ["B-PIPELINE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 正式holdoutの固定model集合・予測行/score保存・復旧を移植
+- 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
 
 ## CYCLE-03 champion昇格・候補棄却/履歴
 
 - 元ファイル/関数/API: vps/src/analysis/research-cycle.mjs:recordModelSearchCompletion,upsertCandidate
 - Sites対応: lib/analysis/research-cycle.mjs; jobs.mjs; drizzle/0013*,0014*; client/analysis-job-panel.mjs
 - 状態: 実装済み・実ホスト未検証
-- 互換性と境界: 研究championの採用/棄却/歴史化を元recordModelSearchCompletionと比較。candidate/世代/score/createdAt更新規則を維持。active modelは変更しない
-- 証拠: evidence/v14/logs/cycle-sqlite-final.log; native-cycle.log; real-cycle-oom.log; browser-promoted.txt
+- 互換性と境界: 研究championの採用/棄却/歴史化を元recordModelSearchCompletionと比較。candidate/世代/score/createdAt更新規則を維持。active modelは変更しない。保存版15では正式holdout確定後まで元SQLiteの全registry/loopと全BT run/予測行を比較。holdout子jobは同じ固定入力を使用
+- 証拠: evidence/v15/logs/cycle-full-state.log; tests/port-research-cycle.test.mjs; native-cycle.log; holdout-comparison.json; port-final.log
 - 画面/API: 既存解析panelの研究cycle checkboxから開始、採否/履歴/個別結果を表示。開発用権限のみ
 - 開発環境: 6分岐と実データ合成cycle、故障・競合・実OOM復旧が合格
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "対象経路のlocal実装済み", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "開発用の対象画面/APIへ接続済み", "localUnattended": "対象local Queue/DEV driverを検証済み", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "正式holdout確定までの対象経路実装済み", "originalComparison": "全BT/holdout行、registry/loop、4規模holdout・現行予測の対象範囲が一致", "screenApi": "開発用既存パネル/認証付きAPIに接続", "localUnattended": "実local Queueで正式holdoutまで検証", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["CYCLE-02"]
 - 障害: ["B-PIPELINE"]
 - 完成条件: 対象採否/履歴/次logical job/権限/競合の比較を維持し、実hostで同じ決定・復旧を確認。正式採用と混同しない
-- 次作業: ホスト無人運用/監視を検証、正式holdoutとactive-model採用を別gateで実装
+- 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
 
 ## CYCLE-04 反復/無改善収束/holdout解禁
 
 - 元ファイル/関数/API: vps/src/research/model-search.mjs:shouldConverge;research/holdout.mjs:finalizeSealedHoldout
-- Sites対応: lib/analysis/research-cycle.mjs:planResearchDecision; evidence/v14/holdout-boundary.mjs（元のみ）
-- 状態: 部分実装
-- 互換性と境界: 元shouldConvergeをそのまま使用。repeat/no_improvement終了を比較。移植先はconverged_holdout_pendingで封印継続。元本番はdaysを渡してholdout確定まで進むため、そこは明確な未移植差分
-- 証拠: cycle-sqlite-final.log（days=null境界まで一致）; holdout-boundary.json（元正式評価のみ）; native-cycle.log
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/research-holdout.mjs; generated-holdout-kernel.mjs; research-cycle.mjs; jobs.mjs; drizzle/0015*,0016*; client/analysis-job-panel.mjs
+- 状態: 実装済み・実ホスト未検証
+- 互換性と境界: 元finalizeSealedHoldoutの解禁/frontier/モデル選択/全順位/スコア/better/fingerprint tieを保持。元rankRows/betterを機械抽出。historical/research_championだけ評価。全run/予測行/registry/loop/返値hashが一致。active model不変。研究cycle opt-inの新子jobとして段階実行し、最終D1 batchでのみ公開
+- 証拠: tests/port-holdout.test.mjs 17件; port-holdout-client.test.mjs; holdout-comparison.json（2model218行/hash9d52664d…）; holdout-load-*.json（4規模全行/全状態）; holdout-oom-results.json; native-cycle.log; browser-holdout-final.txt
+- 画面/API: 既存パネルの研究継続から自動実行。研究収束/holdout状態/確定スコア/勝者/履歴とhashを開発認証下で表示。未確定は取得不可
+- 開発環境: モデル単位R2 checkpoint、100行private D1 parts、lease/CAS/fence、世代/frontier/head競合、破損、DB rollback、lost response、重複、旧正常holdout保持、実V8 OOM後復旧を検証
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "開発用の対象画面/APIへ接続済み", "localUnattended": "対象local Queue/DEV driverを検証済み", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "正式holdout確定までの対象経路実装済み", "originalComparison": "全BT/holdout行、registry/loop、4規模holdout・現行予測の対象範囲が一致", "screenApi": "開発用既存パネル/認証付きAPIに接続", "localUnattended": "実local Queueで正式holdoutまで検証", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["CYCLE-03"]
-- 障害: ["B-PIPELINE", "B-HOLDOUT"]
-- 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 全歴代championの固定集合、元better/rankRows/holdout hashと予測行を分割保存して一致・再開・原子確定を検証
+- 障害: ["B-HOST", "B-UNATTENDED", "U-QUEUE", "R-D1", "R-COST"]
+- 完成条件: ローカルの正式holdout計算/保存/統合/障害/画面は比較完了。実Sitesホストでメモリ/CPU/query/transaction/再配信/監視と大規模歴代モデル集合を検証し全体gateを満たす
+- 次作業: PRE v2正式trialの保存/逐次評価・モデル固定へ進む。source FEATURE_BUILDのactive初期化とrefreshは別の残機能として確認し、holdout勝者を自動反映しない
 
 ## PRE-01 active model/store-read生成・説明
 
@@ -595,8 +595,8 @@
 - 元ファイル/関数/API: vps/src/access/handler.mjs;access/store.mjs;access/config.mjs
 - Sites対応: lib/access/d1-sessions.mjs（専用DBのsession/challenge部分のみ）
 - 状態: 部分実装
-- 互換性と境界: 元session認証/期限/失効/one-use challengeのD1互換を合成SQLite比較。v2 nullable expiryと専用DB境界を維持。WebAuthn ceremony/register/login routeは未移植
-- 証拠: tests/port-access-sessions.test.mjs; logs/access-schema-final.log; access-public-final.log
+- 互換性と境界: 元session認証/期限/失効/one-use challengeのD1互換を合成SQLite比較。v2 nullable expiryと専用DB境界を維持。WebAuthn ceremony/register/login routeは未移植。保存版15はviewer単独失効/audit、厳密expiry、consumeRateのreset/保持と並列上限も元専用SQLiteと比較
+- 証拠: tests/port-access-sessions.test.mjs（4件）; evidence/v15/AUTH_SCOPE.md; logs/access-expanded.log（初期失敗と修正）; port-final.log/github-final.log
 - 画面/API: 正式authへの接続なし。既存DEV authは別のまま
 - 開発環境: 独立ACCESS bindingの合成試験のみ。canonical DB・v1型schemaを拒否
 - 実Sites検証: false
@@ -604,7 +604,7 @@
 - 依存: ["DATA-03"]
 - 障害: ["B-AUTH", "U-ACCESS-BINDING", "U-RPID"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 第2D1供給契約を確認し、署名検証/再認証/発行/登録/招待の同等transactionを移植
+- 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
 
 ## AUTH-02 receiver/assistant-read/店舗閲覧scope
 
@@ -627,16 +627,16 @@
 - 元ファイル/関数/API: vps/src/access/handler.mjs;access/store.mjs
 - Sites対応: lib/access/d1-sessions.mjs（admin/credential/invite失効部分）
 - 状態: 部分実装
-- 互換性と境界: 元失効のSQL・auditを比較。招待/追加管理者発行、viewer単体失効、rate limit、正式管理画面は未移植
-- 証拠: port-access-sessions.test.mjs; 元access/store.mjsとのaudit/戻り値比較
+- 互換性と境界: 元失効のSQL・auditを比較。招待/追加管理者発行、正式管理画面は未移植。保存版15はviewer単独失効/audit、厳密expiry、consumeRateのreset/保持と並列上限も元専用SQLiteと比較
+- 証拠: tests/port-access-sessions.test.mjs（4件）; evidence/v15/AUTH_SCOPE.md; logs/access-expanded.log（初期失敗と修正）; port-final.log/github-final.log
 - 画面/API: 公開API/画面への接続なし
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
 - 段階別判定: {"localImplementation": "部分実装", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["AUTH-01"]
-- 障害: ["B-AUTH", "U-ACCESS-BINDING"]
+- 障害: ["B-AUTH", "U-ACCESS-BINDING", "U-RPID"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 専用DB提供・正式ceremonyと失効/招待/rateの全操作へ接続
+- 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
 
 ## PACHI-01 パチンコcollector/生snapshot/台履歴
 
@@ -787,16 +787,16 @@
 - 元ファイル/関数/API: vps/src/access/schema.mjs
 - Sites対応: lib/access/d1-sessions.mjs; tests/port-access-sessions.test.mjs
 - 状態: 部分実装
-- 互換性と境界: 空の元access v2 SQLite schema/合成rowを専用D1に複製してsession操作比較。本番認証DBの複製/秘密移行は未実施
-- 証拠: access-schema-final.log; source-inventory.jsonのaccess9表
+- 互換性と境界: 空の元access v2 SQLite schema/合成rowを専用D1に複製してsession操作比較。本番認証DBの複製/秘密移行は未実施。保存版15はviewer単独失効/audit、厳密expiry、consumeRateのreset/保持と並列上限も元専用SQLiteと比較
+- 証拠: tests/port-access-sessions.test.mjs（4件）; evidence/v15/AUTH_SCOPE.md; logs/access-expanded.log（初期失敗と修正）; port-final.log/github-final.log
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
 - 段階別判定: {"localImplementation": "部分実装", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["DATA-01"]
-- 障害: ["B-AUTH", "U-ACCESS-BINDING"]
+- 障害: ["B-AUTH", "U-ACCESS-BINDING", "U-RPID"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 秘密を保持しないschema migration/専用binding供給/復元/発行・失効全transactionの検証
+- 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
 
 ## DATA-04 pachinko SQLite全table/membership/history
 

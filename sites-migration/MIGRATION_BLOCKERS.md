@@ -50,3 +50,15 @@ BLOCKERは現時点で完成条件を阻む既知の問題、RISKは実装可能
 今回追加の2障害は、既存機能を削除する判断ではない。全55機能と元データの意味を維持する。source-only holdout試験を移植完成の証拠に転用しない。
 
 最終runのメモリ値はMIGRATION_STATUS.md保存版14節/evidence/v14/MEMORY_REPORT.mdを優先する。初期計測はpre-finalログに保持。全工程peak改善なし、host未証明。
+
+## 保存版15（2026-10-30 JST）
+
+- **B-HOLDOUT：localの計算/保存/再試行/履歴未実装という原因を解消。** 元2model218行、4負荷規模全行/registry/loop/hash一致、7job実Queue、実OOM・CAS/DB rollback/破損/旧正常保持を検証。CYCLE-04を実装済み・実host未検証へ。ホスト側のtransaction/再配信/総128MBはB-HOST/U-QUEUE/R-D1に残す。PRE全体を解消済みにしない。
+- **B-PIPELINE：部分改善。** 研究収束→正式holdout確定までlocal自動接続。研究championとactiveは分離。正式PREとFEATURE_BUILDのactive初期化/store-read snapshot/live prediction副作用は残る。FEAT-01を部分実装へ精密化（機能削除・計算退行ではない）。PRE_DEPENDENCIES.md。
+- **B-MEM：未解消。** 現行予測の新分割を採用せず4規模全model/8中間値一致。holdoutの計算後不要feature重複保持を除き180×160の観測heap87.37→59.08MiB、R2書込27,838,502→5,920,784byte。実Site総128MBや厳密peakは未証明。MEMORY_REPORT.mdの停止条件で無効な調査反復を止める。
+- **B-AUTH：部分改善。** 専用ACCESS session単独失効/auditとrateの並列上限を元SQLite比較。正式route/RPID/Origin/CSRF/招待/復旧・第2D1は未完。U-ACCESS-BINDINGはUNKNOWNのまま。
+- **R-D1/R-COST：残存。** 最大11,520行をprivate分割、最終INSERT SELECT公開をlocal成功。maxbind34、SQL2013byte、batch101文。公式のper invocation batch=1 queryの意味をbinding呼出とSQL文数から区別。host query30秒/CPU/transaction、全歴代registry規模、料金は未検証。自動GCは引き続き無効。
+- **B-HOST/B-UNATTENDED/U-QUEUE/U-OBSERVE：未解消。** native公開状態を変更せず、Sites公式scheduleは公開が前提と確認。Queue/Cron/Workflow/第2D1供給interface未確認。一般Workers機能をSites提供としない。HOST_VALIDATION_PLAN.mdにcanary対象・データ・停止方法を記録し公開前の許可は未取得/未実行。
+- **開発preview接続：復旧。** source復元後のignored execution profile/古いlockを公式helperで修復し元画面確認。transport切断で完了しなかった全回帰ログは保存し、最終全回帰を再起動。これをアプリtest成功として数えない。
+
+解消条件は各元台帳を維持する。UNKNOWNを不可能/解消済みに変えず、正式holdoutのlocal達成と全体完成を分離する。

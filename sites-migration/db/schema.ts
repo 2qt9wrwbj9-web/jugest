@@ -106,3 +106,20 @@ export const sitesResearchCycleJobs=sqliteTable('sites_research_cycle_jobs',{
 export const sitesResearchDecisions=sqliteTable('sites_research_decisions',{
  jobId:integer('job_id').primaryKey(),attempt:integer('attempt').notNull(),resultKey:text('result_key').notNull(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),decisionHash:text('decision_hash').notNull(),action:text('action').notNull(),reason:text('reason'),planJson:text('plan_json').notNull(),createdAt:text('created_at').notNull(),appliedAt:text('applied_at')
 });
+
+// Private sealed holdout generations; never queried by original result readers.
+export const sitesHoldoutInputs=sqliteTable('sites_holdout_inputs',{
+ jobId:integer('job_id').primaryKey(),identityHash:text('identity_hash').notNull(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),loopJson:text('loop_json').notNull(),registryJson:text('registry_json').notNull(),createdAt:text('created_at').notNull()
+});
+export const sitesHoldoutModels=sqliteTable('sites_holdout_models',{
+ jobId:integer('job_id').notNull(),modelIndex:integer('model_index').notNull(),fingerprint:text('fingerprint').notNull(),identityHash:text('identity_hash').notNull(),objectKey:text('object_key').notNull(),bodyHash:text('body_hash').notNull(),bodyBytes:integer('body_bytes').notNull(),rowCount:integer('row_count').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.modelIndex]})]);
+export const sitesHoldoutRows=sqliteTable('sites_holdout_rows',{
+ jobId:integer('job_id').notNull(),modelIndex:integer('model_index').notNull(),ordinal:integer('ordinal').notNull(),targetDate:text('target_date').notNull(),machineKey:text('machine_key').notNull(),rank:integer('rank').notNull(),score:real('score').notNull(),outcomeScore:real('outcome_score'),detailsJson:text('details_json').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.modelIndex,t.ordinal]})]);
+export const sitesHoldoutParts=sqliteTable('sites_holdout_parts',{
+ jobId:integer('job_id').notNull(),modelIndex:integer('model_index').notNull(),part:integer('part').notNull(),rowsHash:text('rows_hash').notNull(),rowCount:integer('row_count').notNull()
+},t=>[primaryKey({columns:[t.jobId,t.modelIndex,t.part]})]);
+export const sitesHoldoutCommits=sqliteTable('sites_holdout_commits',{
+ jobId:integer('job_id').primaryKey(),validated:integer('validated').notNull()
+},t=>[check('sites_holdout_commit_valid',sql`${t.validated}=1`)]);

@@ -1,3 +1,4 @@
+import{advanceHoldoutModels,runFrozenHoldout,holdoutPublicationWrites}from'./research-holdout.mjs';
 import{researchCycleWrites,featureCycleWrites}from'./research-cycle.mjs';
 import{freezeResearchContext,successorStatements,searchContextCompletion}from'./research-transition.mjs';
 import{advanceMachineBatches,readMachineRows}from'./machine-batches.mjs';
@@ -83,6 +84,12 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
    return getAnalysisJob(db,job.id);
   }
   if(!job.result_key){
+  if(job.kind==='research-holdout'&&!runner&&!await advanceHoldoutModels({db,bucket,job,now,onStage:stage})){
+   await db.batch([
+    db.prepare(`UPDATE sites_analysis_jobs SET state='queued',lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(iso(now()),...owned(job,now())),
+    db.prepare("UPDATE sites_analysis_job_runs SET state='holdout_model_staged',input_hash=?,timings_json=?,ended_at=? WHERE job_id=? AND attempt=? AND owner=?").bind(job.input_hash,JSON.stringify(timings),iso(now()),job.id,job.attempts,job.lease_owner)
+   ]);return getAnalysisJob(db,job.id);
+  }
   if(job.kind==='current-model'&&!runner&&!await advanceMachineBatches({db,bucket,job,now,onStage:stage})){
    await db.batch([
     db.prepare(`UPDATE sites_analysis_jobs SET state='queued',lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(iso(now()),...owned(job,now())),
@@ -100,7 +107,7 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
   }else{
    // Leave the heavy result/model scope before composing the final envelope.
    async function calculatePayload(){
-    const computed=runner?await runner({job,bucket,manifestKey:job.manifest_key,onStage:stage}):job.kind==='current-model'?await runFrozenWorkerModel({bucket,manifestKey:job.manifest_key,targetDate:job.target_date,machineRows:await readMachineRows({db,bucket,job,onStage:stage}),prefixState:await readModelPrefix({db,bucket,jobId:job.id,inputHash:job.input_hash,onStage:stage}),onStage:stage}):job.kind==='research-model-search'?await runFrozenModelSearch({db,bucket,job,manifestKey:job.manifest_key,onStage:stage}):job.kind==='research-backtest'?await runFrozenResearchBacktest({db,bucket,job,manifestKey:job.manifest_key,onStage:stage}):job.kind==='feature-build'?await runFrozenFeatureBuild({bucket,manifestKey:job.manifest_key,targetDate:job.target_date,onStage:stage}):await runFrozenWorkerAnalysis({bucket,manifestKey:job.manifest_key,onStage:stage});
+    const computed=runner?await runner({job,bucket,manifestKey:job.manifest_key,onStage:stage}):job.kind==='research-holdout'?await runFrozenHoldout({db,bucket,job,onStage:stage}):job.kind==='current-model'?await runFrozenWorkerModel({bucket,manifestKey:job.manifest_key,targetDate:job.target_date,machineRows:await readMachineRows({db,bucket,job,onStage:stage}),prefixState:await readModelPrefix({db,bucket,jobId:job.id,inputHash:job.input_hash,onStage:stage}),onStage:stage}):job.kind==='research-model-search'?await runFrozenModelSearch({db,bucket,job,manifestKey:job.manifest_key,onStage:stage}):job.kind==='research-backtest'?await runFrozenResearchBacktest({db,bucket,job,manifestKey:job.manifest_key,onStage:stage}):job.kind==='feature-build'?await runFrozenFeatureBuild({bucket,manifestKey:job.manifest_key,targetDate:job.target_date,onStage:stage}):await runFrozenWorkerAnalysis({bucket,manifestKey:job.manifest_key,onStage:stage});
     const payload=job.kind==='current-model'?computed.model:computed.analysis;
     if(!payload||typeof payload!=='object')throw fail('analysis_output_invalid');
     if(computed.inputHash&&computed.inputHash!==job.input_hash)throw fail('job_input_hash_mismatch');
@@ -139,6 +146,7 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
   const receiptInputHash=job.kind==='store-analysis'?await originalDailyInputHash({storeId:job.store_id,days:nativeInput.days}):job.input_hash,receiptVersion=job.kind==='store-analysis'?'vps-runtime-v1':ENGINE_VERSION;
   const key=job.result_key,outputHash=job.output_hash,resultHash=job.result_sha256,range={offset:job.payload_offset,length:job.payload_size};
   const featureWrites=[];
+  if(job.kind==='research-holdout'){const o=await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}});featureWrites.push(...await holdoutPublicationWrites({db,bucket,job,feature:JSON.parse(await o.text()),key,at:iso(now()),now,onStage:stage}));}
   if(job.kind==='research-model-search'){
    const object=await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}});
    featureWrites.push(...await modelSearchWrites({db,job,feature:JSON.parse(await object.text()),key,at:iso(now())}),searchContextCompletion({db,job,key}));

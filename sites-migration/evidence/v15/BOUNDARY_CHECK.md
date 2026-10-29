@@ -1,0 +1,9 @@
+# 保存版15の境界確認
+
+本番site/VPS/DB/サービス/domainは変更せず、元Gitの保護対象ファイルと固定1f8c29fの差分は0。専用開発branch/sites-migrationのみを変更。Site manifestのDB/BUCKET/MCP構成は維持。公開・デプロイ・外部恒久基盤追加は実施しない。旧evidence/v14追跡原本は差分0。
+
+DEV認証・同一origin・writer/channel権限・manual kind whitelistを維持。正式holdoutは研究収束の内部子job限定でmanual受付不可。研究championのみを更新し、既存active model不変を独立試験。ACCESS adapterは専用schemaを強制し店舗DB混在を拒否、正式routeには未接続。holdoutを学習/validationへ流用しない。
+
+public mirrorの実行コード/新規試験/元kernel generatorをbyte比較。生成holdout kernelを再生成してbyte不変。全回帰は最後のUI修正後に実行。buildは公式managed helperで成功。gitignored DEV runtime設定、localDB、credentialはsource/build/ZIPへ入れない。最終secret scanは候補ファイルを値非表示で検査し結果を別記する。
+
+Site128MB/外部memory/hostCPU/Queue/第2DBを確認済みとしない。ローカルInspectorと実OOMは独立環境であり、hostの自動復旧証明ではない。料金はIO計数のみで確定額未算定。native archiveとlocal gzipのbyte hashはencodingが異なることを明記する。

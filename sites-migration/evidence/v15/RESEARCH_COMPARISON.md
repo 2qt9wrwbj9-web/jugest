@@ -1,0 +1,17 @@
+# 正式holdout・研究状態の元SQLite比較
+
+正解：upstream固定1f8c29fc458f34e11e546fb57944d0fc31db98a5、research/holdout.mjsのfinalizeSealedHoldout/evaluateModel/rankRows/better/persistHoldoutRun。rankRows/betterをgeneratorで直接抽出。評価/特徴量/chronological splitも元kernel再利用。holdoutは探索・学習・validation・候補選択へ渡さない。
+
+元sourceConverged fixtureと同一50日12台、historical+research_championの2モデル、全holdout日付10日、218予測行。全backtest_runs/backtest_predictions/registry/loop/返値canonical hashを比較。結果hashは **9d52664d0a5b667a3f84c93227b8804dff5c7b3c61b3976eb6307eb574a24ce9** でv14元source観測と同じ。完全な双方の値はholdout-comparison.json。時刻は固定clock。単独fixtureのrun自動IDは分離環境の違いで正規化するが、full research chainでは同じ順序を構築しBT+holdoutのIDを含む全保存列を比較する。
+
+tests/port-research-cycle.test.mjsは元recordModelSearchCompletionへdaysを渡し、元と同じBT split保存後、正式holdout確定まで全registry/loop、全BT/holdout runと予測行、論理次jobを比較。新しい内部research-holdout子jobは元のinline呼出と実行単位が異なるためsource jobkey集合から別記する。研究採否のpure6分岐の数学期待値は変更しない。
+
+4負荷規模90×106、180×106、240×106、180×160で全行/全状態/hashも一致。最大11,520予測行。rawはholdout-load-*.json。全model+8中間値の現行予測比較はmodel-comparison.jsonで分離。
+
+原子的公開：private R2モデルcheckpointと100行D1 parts→全hash/count照合→同一D1 batchでINSERT SELECTによる全holdout run/行とregistry/loop/job成功/history/receiptを確定。CHECK fenceが実decision不成立またはfeature head競合時に全batchをrollback。未確定stageは通常API/履歴から見えない。入力/実装/loop/registry identity、generation/frontier、leaseと既存latchを固定。
+
+17正式holdout試験：評価前/途中/アップロード/一部stage/全評価/公開計画直後の停止、DB失敗/確定応答喪失、旧generation/frontier/commit-race、head-race、破損R2/private行、重複、lease期限、旧正常holdout保持、active model不変。failする途中計算から昇格しない。既存holdout finalizedの再実行は元alreadyFinalized返値を保持。
+
+実V8 OOMはholdout:stage-checkpointで実ヒープ枯渇しworkerd終了、永続D1/R2を開き直し期限切れleaseを回復、旧正常結果を保って確定1回。単なるthrow試験と区別。ホストOOM/Queue復旧は未検証。
+
+native-research-chain.mjsは実local Queue、ブラウザーなしでFEATURE_BUILD→BT→SEARCH採用→BT→SEARCH継続→SEARCH収束→holdoutの7job完走。SQLite状態比較の8回帰試験とnative Queue統合を別の証拠として保持。正式PRE/active更新は範囲外。

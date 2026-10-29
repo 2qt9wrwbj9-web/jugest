@@ -55,3 +55,22 @@
 |AC-12|元画面で研究cycle/採否/収束/過去個別結果、既存店舗機能を確認|全host/認証/定期運用/未移植機能の統合|
 
 全体gateはすべて未達または部分達成のまま。CYCLE-03等のlocal実装完了をゼロと扱わず、masterのchecksに明記する。一方でhost未検証を理由なく合格にしない。保存版14も公開許可ではない。
+
+## 保存版15の12gate判定（全体完成は未達）
+
+|gate|今回進んだ証拠|残る完成条件|
+|---|---|---|
+|AC-01|55ID維持、CYCLE-04 local完了、FEAT-01副作用未移植を部分実装へ明確化|全55機能と保存/運用の対応|
+|AC-02|正式holdout全行/全state/hash・4負荷規模・元8中間値一致|PRE/active/全数学の比較|
+|AC-03|最大11,520holdout予測行をlocal保存/照合/公開|許可された本番全規模/歴代モデル/host|
+|AC-04|全工程再計測、holdout保持量削減|実Sites総128MB/CPU/同時実行|
+|AC-05|実local Queue7job正式holdout完走|host無人・定期収集/研究/監視|
+|AC-06|holdout中断/破損/世代/DB失敗/実OOM復旧/旧正常保持|host強制終了/長期運用/全機能DR|
+|AC-07|独立ACCESS viewer失効/rate並列上限SQLite比較|正式発行/WebAuthn/CSRF/招待/全権限/第2binding|
+|AC-08|既存端末同期の新しい完成なし|全Sync/Relay/移行/再接続|
+|AC-09|既存判別/read subset回帰維持|全MCP/OAuth/外部API|
+|AC-10|新しいパチンコserver完成なし|全収集/保存/分析/ランキング|
+|AC-11|Git/原本/ログ/ZIP整合性と永続共有を別状態で確認|本番snapshot許可/独立複製/復旧/切戻し|
+|AC-12|元画面で研究収束/holdout確定と個別履歴、店舗/日付/予測を検証|正式認証/host/PRE/全機能統合|
+
+local正式holdout合格はAC-02/05/06/12の対象範囲を前進させるが、全体gateを完成にしない。公開/デプロイ許可ではない。receipt/検証ログを最終根拠とする。

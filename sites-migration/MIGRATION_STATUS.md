@@ -1000,3 +1000,42 @@ U-ACCESS-BINDING: 第二の独立したSites D1 binding/provisioning未確認。
 成果物状態: ソース/管理資料/ログを作成、ZIP収録/永続保存/ユーザー共有は別々に検証する。保存版13 ZIPはローカル存在とCRC/hash/Git復元を確認、開始時には永続保存を確認できなかった。v13/v14両ZIPの永続保存とアクセスは最終delivery receiptで判定し、未成功を共有済みにしない。ZIP中に本番DB/利用者/秘密値を収録しない。
 
 次回は保存版14のsafe receipt SHAからcheckoutし、4管理原本→evidence/v14/DEPENDENCIES.md→REPRODUCE.md。正式holdoutを最初の実装単位とする。公開・本番デプロイ・本番branch変更は禁止。
+
+## 保存版15 — 正式holdoutのlocal計算・原子的保存・復旧・画面を移植
+
+2026-10-30 JST。正本再開はSite14 b464c7b19f96098cffb6af4ed9c325f25c2fdece、GitHub work/sites-migration-20261027@c513570b07433d43e6a58445c959732079450a10。元本番1f8c29fc458f34e11e546fb57944d0fc31db98a5は変更なし。保存版15の正確なSHAとGitHub最終commitはZIPのSITES_SAVED_VERSION.json/GITHUB_COMMIT.jsonを参照する。自身のcommit SHAを事前に捏造してsourceへ書かない。非公開保存・ZIP作成・永続共有をreceiptで別判定する。
+
+① 今回完成した範囲（local）
+
+- converged_holdout_pending→内部research-holdoutを親成功と同時に受理。元finalizeSealedHoldoutの解禁/frontier、historical/research_championモデル選択、正確な全dataset・封印holdout日付・evaluateModel/rankRows/betterの評価/順位/同点を維持。
+- 1モデル/Worker実行、immutable入力/実装/registry/loop hash、R2 canonical checkpoint・100行private D1 staging・part hash照合。全run/予測行/registry/loop/winner/研究完了/job/receipt/historyを最終D1 batchのINSERT SELECT+CAS/fenceでのみ公開。途中stageは正式APIから見えない。過去正常結果を保持。研究championのみ更新しactive modelは不変。
+- 元SQLiteの2モデル218予測行、全run/予測/registry/loop/結果hash9d52664d0a5b667a3f84c93227b8804dff5c7b3c61b3976eb6307eb574a24ce9一致。full研究試験はBT全保存列と時系列モデル採否/次job/holdout後まで比較。独立IDの正規化と固定時計を比較記録に明記。
+- 実local Queueでfeature→BT→探索採用→BT→探索継続→探索収束→正式holdoutの7jobをブラウザーなしで完走。元画面から研究完了/確定スコア/勝者/履歴を取得。通常店舗分析と、タブを閉じた後の現行予測完了/全12台順位も確認。
+- 17holdout異常系を含む比較テスト：停止各段階/DB rollback/確定後応答喪失/重複/lease期限/世代frontier競合/featurehead競合/破損R2・stage/旧正常holdout保持/既存active不変。stage後に実V8 OOMで終了→永続D1/R2再接続→lease回復→1回だけ確定。元の6 OOMケースも維持し計7ケース。host自動復旧とは区別。
+- 解析外：独立ACCESS v2 DBのviewer単独失効/audit・consumeRateの保持/reset/並列上限を元SQLiteと比較。合成4試験。正式route/WebAuthn/第2bindingは未接続であり正式認証完成ではない。
+
+② 解消・部分改善した障害
+
+B-HOLDOUTのlocal未実装原因を解消しCYCLE-04を実装済み実host未検証へ。研究cycleのlocal計算/SQLite/保存/Queue/API/画面を正式holdoutまで接続。ACCESS失効/rateの部分改善。全55機能/12gateを維持、全体完成gateは未達。
+
+holdoutは全計算後の不要feature参照をcheckpointへ重複保持しない方式で改善：90×106 used43.21→26.10MiB、180×106 82.66→42.83、240×106 79.08→55.66、180×160 87.37→59.08。最後のR2書込27,838,502→5,920,784bytes。180×160追加run59.41MiB。最大11,520予測行。全4規模で全行/state/hash一致。数学/入力日数/台数/精度/順序は不変。
+
+③ 新たに明確化した制約
+
+現行予測の全体BH/scope分割は未採用。同じ4規模で保存版14control→15のused観測42.79→46.09、75.30→74.22、81.43→75.11、90.49→89.82MiB。4/4の全model/8中間値/最終hash一致。GC/Inspector/同時試験のばらつきを含み、安定peak改善や総128MB適合とは主張しない。rawのused/total/backing/embedderと親Node RSSを分離し、独立最大を足さない。実hostCPU/同時request/総memoryは未測定。
+
+D1は最大bind34/SQL2013byte/batch101文でprivate保存成功、最終全予測行コピーもlocal成功。batch内SQL数をinvocation query数と混同しない。実host query/transaction/CPU/料金と大きな歴代registry集合は残RISK。自動GCは無効のまま。
+
+元FEATURE_BUILDを再調査し、計算/特徴量保存以外のactive初期化/store_read snapshot/live prediction refreshが未移植と明確化。FEAT-01を部分実装へ精密化した。これは既存成功した計算の退行や機能削除ではない。正式holdout勝者→activeの無条件切替は追加しない。正式PRE依存はPRE_DEPENDENCIES.mdに記録。
+
+Sites公式scheduleはpublished Siteが前提。Queue/Cron/Workflow/第2ACCESS D1の正式供給interfaceはUNKNOWN。DB10GBの公式案内と実アカウント上限/料金は別。非公開保存だけで無人運用可能と推定しない。B-HOST/B-UNATTENDED/B-MEM/正式認証/PRE/同期/収集/パチンコ/全MCP/OAuth/実データ移行は残る。
+
+④ 完全移植までの次作業
+
+最優先はPRE_DEPENDENCIES.mdの元store-read/active初期化副作用とformal trial storeのSQLite比較→条件付きD1公開。holdout研究championとactiveは分離。独立ACCESS正式bindingとWebAuthn/Origin/RPID/招待/CSRF/回復、host契約/監視/Queue、Sync/Collector、パチンコ、全MCP/OAuthを55行の完成条件に従い進める。本番dataは許可された読取snapshot/容量/個人情報/復元検証後のみ独立移行。重大な数学/権限/データ意味/外部恒久基盤変更は相談する。
+
+最終コードの全回帰：Sites115成功0失敗、GitHub107成功0失敗。最後のUI/認証修正後に全件再実行。元フロント83/83コマンド成功、元VPS569成功/既知symlink環境依存1失敗、新規失敗0。全初期失敗・中断・修正前runは削除せずevidence/v15/logs、正確なコマンド/結果はcommand-results.json。transport切断で未完だったrunを完了数に入れない。公式production build成功。
+
+原本：4管理資料、evidence/v15/RESEARCH_COMPARISON.md、MEMORY_REPORT.md、AUTH_SCOPE.md、BROWSER_CHECK.md、HOST_VALIDATION_PLAN.md、全raw logs/json/コード。ZIPは全source/取得済みGit履歴/全ログ/追試手順を収録しCRC/個別SHA/Git復元を検証してから共有する。前版14ZIPの存在/32,844,628byte/CRC/SHAと永続Library metadataも確認。今回のZIP作成と永続保存・共有の最終状態は外部delivery receiptのみを根拠とする。
+
+次回は保存版15のSITES_SAVED_VERSION.json完全SHA→git status→4正本→evidence/v15/DEPENDENCIES.md→REPRODUCE.md。本番site/VPS/DB/main/deploy-vps/domainは不変。Sites公開/デプロイは未実施・未許可。

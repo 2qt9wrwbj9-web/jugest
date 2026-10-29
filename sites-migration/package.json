@@ -4,7 +4,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "generate:read": "node scripts/generate-store-read.mjs",
-    "generate:analysis": "node scripts/generate-analysis-runtime.mjs && node scripts/generate-backtest-kernel.mjs && node scripts/generate-model-search-kernel.mjs && node scripts/generate-research-dataset.mjs && node scripts/generate-worker-analysis.mjs && node scripts/generate-job-policy.mjs"
+    "generate:analysis": "node scripts/generate-analysis-runtime.mjs && node scripts/generate-backtest-kernel.mjs && node scripts/generate-model-search-kernel.mjs && node scripts/generate-research-dataset.mjs && node scripts/generate-holdout-kernel.mjs && node scripts/generate-worker-analysis.mjs && node scripts/generate-job-policy.mjs"
   },
   "devDependencies": {
     "miniflare": "4.20260515.0"
