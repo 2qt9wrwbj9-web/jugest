@@ -1,0 +1,1 @@
+ALTER TABLE `sites_research_cycle_jobs` ADD `enabled` integer DEFAULT 0 NOT NULL;

@@ -1,4 +1,4 @@
-# 完全移植の完成判定（保存版13 / authoritative）
+# 完全移植の完成判定（保存版14 / authoritative）
 
 全gateの証拠が揃うまで完全移植を名乗らない。非公開保存/テスト件数/画面assetの存在は完成判定ではない。元基準1f8c29fc458f34e11e546fb57944d0fc31db98a5。仕様・数学・データ意味・権限の重要変更は事前にユーザー判断を得る。現時点ですべて未達または部分達成で、根拠のない完成率を出さない。
 
@@ -36,3 +36,22 @@
 - AC-12：元UI上のfeature→backtest→自動探索・保存/履歴、台/日付切替、現行予測と再取得を検証。全未移植機能の統合・実ホスト試験は未完。
 
 今回合格したlocal単位はSTATUS/command-results.jsonの対象範囲でのみ有効。最終12gate全体の完成判定はまだ不合格（未達項目あり）。公開許可ではない。
+
+## 保存版14のgate差分
+
+|Gate|今回満たしたlocal範囲|依然必要な条件|
+|---|---|---|
+|AC-01|55ID維持、段階別判定と依存/次作業を更新|全動的画面/API/運用経路のsemantic網羅|
+|AC-02|6採否分岐、実合成cycleの全registry/loop/次logical jobを元SQLite比較。4規模現行予測8値/全model/hash一致|正式holdout後の元状態/全PRE/未移植数学|
+|AC-03|4規模全工程と180×160追加2回ずつを維持|実データ本番規模/長期/全機能の容量試験|
+|AC-04|heap/total/backing/embedderとI/Oを別記|host総128MB/CPU/並列/peak適合。現状未証明|
+|AC-05|opt-in feature→BT→search→研究champion採否→収束を実local Queueで完走|正式holdout/正式PRE/collector/host定期運用|
+|AC-06|研究publication rollback/世代競合、採否直前の実V8 OOMでregistry保持・一度だけ昇格。既存5OOMも維持|ホストOOM/全未移植機能/holdout保存復旧|
+|AC-07|専用access v2 D1のsession/失効/audit/one-useと隔離拒否を元比較|正式WebAuthn/招待/登録/発行/rate/全scope/host専用binding|
+|AC-08|今回新しい端末同期の完成なし|全端末引継ぎ/競合/再接続|
+|AC-09|既存judge/read subset回帰を維持|全MCP/OAuth/外部接続|
+|AC-10|今回新しいパチンコserver完成なし|全収集/保存/分析/API/画面|
+|AC-11|source ZIPの復元と前版/今版の保存・共有状態を分離|許可された本番全data snapshot/独立移行/DR|
+|AC-12|元画面で研究cycle/採否/収束/過去個別結果、既存店舗機能を確認|全host/認証/定期運用/未移植機能の統合|
+
+全体gateはすべて未達または部分達成のまま。CYCLE-03等のlocal実装完了をゼロと扱わず、masterのchecksに明記する。一方でhost未検証を理由なく合格にしない。保存版14も公開許可ではない。

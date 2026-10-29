@@ -100,3 +100,9 @@ export const researchLoops=sqliteTable('research_loops',{
 export const sitesResearchContext=sqliteTable('sites_research_context',{
  jobId:integer('job_id').primaryKey(),parentJobId:integer('parent_job_id'),featureJobId:integer('feature_job_id').notNull(),inputHash:text('input_hash').notNull(),modelFingerprint:text('model_fingerprint').notNull(),frontierDate:text('frontier_date').notNull(),generation:integer('generation').notNull(),round:integer('round').notNull(),logicalKey:text('logical_key').notNull(),implementationHash:text('implementation_hash'),childJobId:integer('child_job_id'),state:text('state').notNull(),createdAt:text('created_at').notNull()
 });
+export const sitesResearchCycleJobs=sqliteTable('sites_research_cycle_jobs',{
+ jobId:integer('job_id').primaryKey(),rootJobId:integer('root_job_id').notNull(),enabled:integer('enabled').notNull().default(0)
+});
+export const sitesResearchDecisions=sqliteTable('sites_research_decisions',{
+ jobId:integer('job_id').primaryKey(),attempt:integer('attempt').notNull(),resultKey:text('result_key').notNull(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),decisionHash:text('decision_hash').notNull(),action:text('action').notNull(),reason:text('reason'),planJson:text('plan_json').notNull(),createdAt:text('created_at').notNull(),appliedAt:text('applied_at')
+});

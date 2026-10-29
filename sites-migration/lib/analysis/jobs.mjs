@@ -1,3 +1,4 @@
+import{researchCycleWrites,featureCycleWrites}from'./research-cycle.mjs';
 import{freezeResearchContext,successorStatements,searchContextCompletion}from'./research-transition.mjs';
 import{advanceMachineBatches,readMachineRows}from'./machine-batches.mjs';
 import{requireResearchBacktest,runFrozenModelSearch,modelSearchWrites}from'./research-model-search.mjs';
@@ -16,18 +17,22 @@ export const ENGINE_VERSION='sites-original-1f8c29f-v7';
 const OPTIONS={period:'180',minG:'2000',maxDims:'1',minDays:'4'};
 const iso=n=>new Date(n).toISOString();
 const fail=code=>Object.assign(Error(code),{code});
-export async function getAnalysisJob(db,id){return db.prepare('SELECT j.*,c.child_job_id AS next_job_id FROM sites_analysis_jobs j LEFT JOIN sites_research_context c ON c.job_id=j.id WHERE j.id=?').bind(id).first()}
-export function publicAnalysisJob(j){if(!j)return null;return{id:j.id,storeId:j.store_id,kind:j.kind,nextJobId:j.next_job_id??null,targetDate:j.target_date,historyLimit:j.history_limit,state:j.state,phase:j.result_key?'verify':j.manifest_key?'analysis':'capture',attempts:j.attempts,failureCount:j.failure_count,maxAttempts:j.max_attempts,inputHash:j.input_hash,outputHash:j.output_hash,error:j.last_error_class,availableAt:j.available_at,createdAt:j.created_at,updatedAt:j.updated_at}}
-export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analysis',targetDate,historyLimit=180,requestKey,machineBatchSize=null,now=Date.now}){
+export async function getAnalysisJob(db,id){return db.prepare('SELECT j.*,c.child_job_id AS next_job_id,d.action AS research_action,d.reason AS convergence_reason,c.state AS research_state,m.enabled AS research_cycle FROM sites_analysis_jobs j LEFT JOIN sites_research_context c ON c.job_id=j.id LEFT JOIN sites_research_decisions d ON d.job_id=j.id AND d.applied_at IS NOT NULL LEFT JOIN sites_research_cycle_jobs m ON m.job_id=j.id WHERE j.id=?').bind(id).first()}
+export function publicAnalysisJob(j){if(!j)return null;return{id:j.id,storeId:j.store_id,kind:j.kind,nextJobId:j.next_job_id??null,researchCycle:!!j.research_cycle,researchState:j.research_state??null,researchAction:j.research_action??null,convergenceReason:j.convergence_reason??null,targetDate:j.target_date,historyLimit:j.history_limit,state:j.state,phase:j.result_key?'verify':j.manifest_key?'analysis':'capture',attempts:j.attempts,failureCount:j.failure_count,maxAttempts:j.max_attempts,inputHash:j.input_hash,outputHash:j.output_hash,error:j.last_error_class,availableAt:j.available_at,createdAt:j.created_at,updatedAt:j.updated_at}}
+export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analysis',targetDate,historyLimit=180,requestKey,machineBatchSize=null,researchCycle=false,now=Date.now}){
  if(!['store-analysis','current-model','feature-build','research-backtest','research-model-search'].includes(kind))throw fail('bad_analysis_kind');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)||!Number.isFinite(Date.parse(targetDate+'T00:00:00Z'))||new Date(targetDate+'T00:00:00Z').toISOString().slice(0,10)!==targetDate)throw fail('bad_target_date');
  if(['feature-build','research-backtest','research-model-search'].includes(kind)&&historyLimit!==180)throw fail('bad_feature_history_limit');
  if(!Number.isInteger(historyLimit)||historyLimit<1||historyLimit>400)throw fail('bad_history_limit');
  if(typeof requestKey!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(requestKey))throw fail('bad_request_key');
  if(machineBatchSize!==null&&(kind!=='current-model'||!Number.isInteger(machineBatchSize)||machineBatchSize<1||machineBatchSize>160))throw fail('bad_machine_batch_size');
+ if(typeof researchCycle!=='boolean'||(researchCycle&&!['feature-build','research-backtest'].includes(kind)))throw fail('bad_research_cycle');
  const key=await sha256Text(JSON.stringify([storeId,channelId,kind,requestKey])),at=iso(now());
+ const prior=await getAnalysisJobByKey();if(prior&&!!prior.research_cycle!==researchCycle)throw fail('idempotency_conflict');
+ async function getAnalysisJobByKey(){return db.prepare('SELECT j.*,m.enabled AS research_cycle FROM sites_analysis_jobs j LEFT JOIN sites_research_cycle_jobs m ON m.job_id=j.id WHERE j.idempotency_key=?').bind(key).first()}
  await db.batch([
   db.prepare('INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(storeId,channelId,kind,targetDate,historyLimit,key,at,at),
+  db.prepare('INSERT INTO sites_research_cycle_jobs(job_id,root_job_id,enabled) SELECT id,id,? FROM sites_analysis_jobs WHERE idempotency_key=? AND changes()=1 ON CONFLICT(job_id) DO NOTHING').bind(researchCycle?1:0,key),
   db.prepare('INSERT INTO sites_analysis_heads(store_id,kind,latest_job_id) SELECT store_id,kind,id FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(store_id,kind) DO UPDATE SET latest_job_id=excluded.latest_job_id WHERE excluded.latest_job_id>sites_analysis_heads.latest_job_id').bind(key),
   db.prepare("INSERT OR IGNORE INTO sites_analysis_dispatch(job_id) SELECT id FROM sites_analysis_jobs WHERE idempotency_key=? AND state NOT IN ('succeeded','failed','cancelled')").bind(key),
   ...(machineBatchSize===null?[]:[db.prepare('INSERT INTO sites_analysis_partitions(job_id,batch_size) SELECT id,? FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(job_id) DO NOTHING').bind(machineBatchSize,key)]),
@@ -36,6 +41,7 @@ export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analy
  const job=await db.prepare('SELECT * FROM sites_analysis_jobs WHERE idempotency_key=?').bind(key).first();
  const partition=await db.prepare('SELECT batch_size FROM sites_analysis_partitions WHERE job_id=?').bind(job.id).first();
  if((partition?.batch_size??null)!==machineBatchSize)throw fail('idempotency_conflict');
+ if(!!(await getAnalysisJobByKey()).research_cycle!==researchCycle)throw fail('idempotency_conflict');
  if(job.target_date!==targetDate||job.history_limit!==historyLimit)throw fail('idempotency_conflict');return job;
 }
 async function recover(db,now){
@@ -136,6 +142,7 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
   if(job.kind==='research-model-search'){
    const object=await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}});
    featureWrites.push(...await modelSearchWrites({db,job,feature:JSON.parse(await object.text()),key,at:iso(now())}),searchContextCompletion({db,job,key}));
+   featureWrites.push(...await researchCycleWrites({db,job,feature:JSON.parse(await (await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}})).text()),key,at:iso(now()),onStage:stage}));
   }
   if(job.kind==='research-backtest'){
    const object=await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}});
@@ -151,6 +158,7 @@ export async function advanceAnalysisJob({db,bucket,jobId,now=Date.now,leaseMs=1
     featureWrites.push(db.prepare(`INSERT INTO store_feature_snapshots(store_id,feature_version,as_of_date,dimension_key,dimension_value,window_days,day_count,machine_count,row_count,metrics_json,input_hash,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE ${gate} ON CONFLICT(store_id,feature_version,as_of_date,dimension_key,dimension_value,window_days) DO UPDATE SET day_count=excluded.day_count,machine_count=excluded.machine_count,row_count=excluded.row_count,metrics_json=excluded.metrics_json,input_hash=excluded.input_hash,updated_at=excluded.updated_at`).bind(row.storeId,row.featureVersion,row.asOfDate,row.dimensionKey,row.dimensionValue,row.windowDays,row.dayCount,row.machineCount,row.rowCount,canonicalJson(row.metrics),row.inputHash,iso(now()),job.store_id,job.id,job.attempts));
    }
   }
+  if(job.kind==='feature-build'){const object=await openCanonicalObject(bucket,job.result_key,{range:{offset:job.payload_offset,length:job.payload_size}});featureWrites.push(...await featureCycleWrites({db,job,feature:JSON.parse(await object.text()),key,at:iso(now())}));}
   stage('result:verified');const at=iso(now());stage('result:commit-begin');
   await db.batch([
    db.prepare(`UPDATE sites_analysis_jobs SET state='succeeded',result_key=?,output_hash=?,result_sha256=?,payload_offset=?,payload_size=?,lease_owner=NULL,lease_until=NULL,last_error_class=NULL,updated_at=? WHERE ${GUARD}`).bind(key,outputHash,resultHash,range.offset,range.length,at,...owned(job,now())),

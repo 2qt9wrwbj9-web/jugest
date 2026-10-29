@@ -1,0 +1,7 @@
+export async function attachHeapInspector(mf,{output=console.log}={}){
+ const base=await mf.getInspectorURL(),listing=new URL(base);listing.protocol='http:';listing.pathname='/json/list';const targets=await(await fetch(listing)).json(),target=targets.find(x=>x.title?.includes('jugest-profile'))||targets[0];if(!target)throw Error('inspector target missing');
+ const ws=new WebSocket(target.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true})});let id=0;const pending=new Map(),observations=[];
+ function rpc(method,params={}){return new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}))})}
+ ws.addEventListener('message',async ev=>{const m=JSON.parse(ev.data);if(m.id){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result)}return}if(m.method==='Debugger.paused'){try{const stage=(await rpc('Debugger.evaluateOnCallFrame',{callFrameId:m.params.callFrames[0].callFrameId,expression:'({stage:globalThis.__stage,phase:globalThis.__phase,elapsedMs:Date.now()-globalThis.__started})',returnByValue:true})).result.value,heap=await rpc('Runtime.getHeapUsage');observations.push({...stage,...heap});output(JSON.stringify({...stage,...heap}))}catch(e){output(JSON.stringify({measurementError:e.message}))}finally{await rpc('Debugger.resume')}}});
+ await rpc('Runtime.enable');await rpc('Debugger.enable');return{observations,close:()=>ws.close()};
+}

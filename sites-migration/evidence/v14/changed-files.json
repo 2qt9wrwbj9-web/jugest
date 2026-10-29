@@ -1,0 +1,712 @@
+[
+  {
+    "kind": "modified",
+    "path": "MIGRATION_ACCEPTANCE_CRITERIA.md",
+    "purpose": "55機能/障害/12完成ゲート/再開地点の正本更新"
+  },
+  {
+    "kind": "modified",
+    "path": "MIGRATION_BLOCKERS.md",
+    "purpose": "55機能/障害/12完成ゲート/再開地点の正本更新"
+  },
+  {
+    "kind": "modified",
+    "path": "MIGRATION_MASTER_PLAN.md",
+    "purpose": "55機能/障害/12完成ゲート/再開地点の正本更新"
+  },
+  {
+    "kind": "modified",
+    "path": "MIGRATION_STATUS.md",
+    "purpose": "55機能/障害/12完成ゲート/再開地点の正本更新"
+  },
+  {
+    "kind": "modified",
+    "path": "client/analysis-job-panel.mjs",
+    "purpose": "研究継続option・採否/収束状態・個別履歴再取得"
+  },
+  {
+    "kind": "modified",
+    "path": "db/schema.ts",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "modified",
+    "path": "drizzle/meta/_journal.json",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "modified",
+    "path": "lib/analysis/compiled-worker.mjs",
+    "purpose": "元single候補評価後の不要参照解放（数学不変）"
+  },
+  {
+    "kind": "modified",
+    "path": "lib/analysis/job-api.mjs",
+    "purpose": "研究採否の原子的確定・子ジョブ/outbox・既存API/UIへの接続"
+  },
+  {
+    "kind": "modified",
+    "path": "lib/analysis/jobs.mjs",
+    "purpose": "研究採否の原子的確定・子ジョブ/outbox・既存API/UIへの接続"
+  },
+  {
+    "kind": "modified",
+    "path": "lib/analysis/research-transition.mjs",
+    "purpose": "研究採否の原子的確定・子ジョブ/outbox・既存API/UIへの接続"
+  },
+  {
+    "kind": "modified",
+    "path": "public/analysis-job-panel.mjs",
+    "purpose": "研究継続option・採否/収束状態・個別履歴再取得"
+  },
+  {
+    "kind": "modified",
+    "path": "scripts/generate-worker-analysis.mjs",
+    "purpose": "元single候補評価後の不要参照解放（数学不変）"
+  },
+  {
+    "kind": "modified",
+    "path": "tests/port-worker-read.test.mjs",
+    "purpose": "SQLite状態比較・認証保存・統合読み込みの回帰検証"
+  },
+  {
+    "kind": "new",
+    "path": "drizzle/0013_robust_loki.sql",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "new",
+    "path": "drizzle/0014_daffy_sunset_bain.sql",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "new",
+    "path": "drizzle/meta/0013_snapshot.json",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "new",
+    "path": "drizzle/meta/0014_snapshot.json",
+    "purpose": "研究cycle opt-inと採否latchの永続schema"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/AUTH_SCOPE.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/BOUNDARY_CHECK.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/BROWSER_CHECK.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/DEPENDENCIES.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/HOST_VALIDATION_PLAN.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/IMPLEMENTATION_PLAN.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/MEMORY_REPORT.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/REPRODUCE.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/RESEARCH_COMPARISON.md",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/command-results.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/comparison-commands-pre-final.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/comparison-commands.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/cycle-oom-recovery.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/cycle-oom-results.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/debug-cycle.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/feature-changes.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/full-job-probe.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/holdout-boundary.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/holdout-boundary.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/inspector-client.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/large-stage-comparison.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/access-debug.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/access-initial.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/access-public-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/access-schema-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/access-tables.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-converged.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-day.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-prediction-queued.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-prediction-result.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-promoted.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/browser-store-result.txt",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/build-boundary.json",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/build-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/client-controller-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/client-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/client-public-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/comparison-driver-fixed.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/comparison-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/comparison-final-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-debug.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-fixed.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-initial.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-oom-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-sqlite-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/cycle-with-faults.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/db-generate-2.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/db-generate.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-180-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-180-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-180-160-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-180-160-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-240-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-240-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-90-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/full-90-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/generator-check.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/github-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/holdout-boundary.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/ledger-check.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/native-cycle.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/oom-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/oom-machine-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/parity-final-180-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/parity-final-180-160.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/parity-final-240-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/parity-final-90-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/port-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-180-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-180-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-180-160-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-180-160-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-240-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-240-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-90-106-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-full-90-106-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-parity-final-180-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-parity-final-180-160.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-parity-final-240-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/pre-final-parity-final-90-106.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/preview-migrate-13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/preview-migrate-14.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-cycle-oom.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-oom-analysis-begin.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-oom-machine-batch-checkpoint.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-oom-machine-batch-unit-complete.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-oom-model-prefix-checkpoint.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/real-oom-payload-checkpoint.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/repeat-2-180-160-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/repeat-2-180-160-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/repeat-3-180-160-optimized.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/repeat-3-180-160-v13.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/repeat-driver.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/units-final.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/upstream-root.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/logs/upstream-vps.log",
+    "purpose": "検証の全ログ・画面DOM・初期失敗の原本"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/memory-results.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/migration-matrix.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/model-comparison.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/native-research-chain.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/oom-machine-results.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/oom-recovery.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/oom-results.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/comparison-commands.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/full-180-106-v13.log",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/full-240-106-v13.log",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/full-90-106-v13.log",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/logs/full-180-106-optimized.log",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/preliminary/logs/full-90-106-optimized.log",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/repeat-commands.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/repeat-memory.py",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/run-comparisons.py",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/source-coverage.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/source-inventory.json",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/summarize-memory.py",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/update-master.py",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/v8-limit.mjs",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/validate-ledger.py",
+    "purpose": "保存版14の比較・再現・障害・引継ぎ証拠"
+  },
+  {
+    "kind": "new",
+    "path": "lib/access/d1-sessions.mjs",
+    "purpose": "独立D1で元access v2 session/失効/challenge互換（未接続）"
+  },
+  {
+    "kind": "new",
+    "path": "lib/analysis/research-cycle.mjs",
+    "purpose": "研究採否の原子的確定・子ジョブ/outbox・既存API/UIへの接続"
+  },
+  {
+    "kind": "new",
+    "path": "tests/port-access-sessions.test.mjs",
+    "purpose": "SQLite状態比較・認証保存・統合読み込みの回帰検証"
+  },
+  {
+    "kind": "new",
+    "path": "tests/port-research-cycle.test.mjs",
+    "purpose": "SQLite状態比較・認証保存・統合読み込みの回帰検証"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/CHANGED_FILES.tsv",
+    "purpose": "全変更ファイル一覧"
+  },
+  {
+    "kind": "new",
+    "path": "evidence/v14/changed-files.json",
+    "purpose": "全変更ファイル一覧"
+  }
+]

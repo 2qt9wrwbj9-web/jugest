@@ -1,0 +1,21 @@
+[
+  {
+    "injection": "machine-batch:unit-complete",
+    "machineBatchReused": true,
+    "machineBatchUnitsAfterRestart": 3,
+    "modelPrefixReused": true,
+    "actualV8Oom": true,
+    "localRuntimeRestarted": true,
+    "previousResultRetained": true,
+    "inputHash": "4c116a5b16dc2314e42b534dd8ddcf6a2b82add563b25f61c6e9f195bc9c85aa",
+    "outputHash": "46df403b617a6c98e410d07ed539fc8c3cd78af247f9579603b37fa9c9c7401e",
+    "payloadCheckpointReused": false,
+    "failureCount": 1,
+    "hostedOomRecoveryVerified": false,
+    "childExit": {
+      "code": 1,
+      "signal": null
+    },
+    "log": "real-oom-machine-batch-unit-complete.log"
+  }
+]

@@ -32,11 +32,14 @@ export async function successorStatements({db,job,feature,key,at}){
  ];
  if(feature.status!=='backtested'||!feature.splits.some(x=>x.splitKind==='validation'&&x.rows.length))throw failure('research_transition_not_backtested');
  // Original logical identity + immutable input and existing channel boundary.
- const identity=hashCanonical({channel:job.channel_id,logicalKey:c.logical_key,inputHash:c.input_hash});
+ const cycle=await db.prepare('SELECT root_job_id FROM sites_research_cycle_jobs WHERE job_id=? AND enabled=1').bind(job.id).first();
+ const searchLogicalKey=`model-search:${job.store_id}:${c.frontier_date}:${c.model_fingerprint}:g${c.generation}:r${c.round}`;
+ const identity=hashCanonical({channel:job.channel_id,logicalKey:searchLogicalKey,inputHash:c.input_hash,...(cycle?{researchCycle:cycle.root_job_id}:{})});
  return[
   db.prepare(`INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,manifest_key,input_hash,created_at,updated_at) SELECT store_id,channel_id,'research-model-search',target_date,history_limit,?,manifest_key,input_hash,?,? FROM sites_analysis_jobs WHERE id=? AND ${fresh}`).bind(identity,at,at,job.id,...guard),
+  ...(cycle?[db.prepare(`INSERT OR IGNORE INTO sites_research_cycle_jobs(job_id,root_job_id,enabled) SELECT id,?,1 FROM sites_analysis_jobs WHERE idempotency_key=? AND ${fresh}`).bind(cycle.root_job_id,identity,...guard)]:[]),
   db.prepare(`INSERT INTO sites_research_job_inputs(job_id,input_hash,model_json,model_fingerprint,feature_version,frontier_date,created_at) SELECT j.id,i.input_hash,i.model_json,i.model_fingerprint,i.feature_version,i.frontier_date,? FROM sites_analysis_jobs j JOIN sites_research_job_inputs i ON i.job_id=? WHERE j.idempotency_key=? AND ${fresh} ON CONFLICT(job_id) DO NOTHING`).bind(at,job.id,identity,...guard),
-  db.prepare(`INSERT INTO sites_research_context(job_id,parent_job_id,feature_job_id,input_hash,model_fingerprint,frontier_date,generation,round,logical_key,implementation_hash,state,created_at) SELECT j.id,c.job_id,c.feature_job_id,c.input_hash,c.model_fingerprint,c.frontier_date,c.generation,c.round,c.logical_key,c.implementation_hash,'search_queued',? FROM sites_analysis_jobs j JOIN sites_research_context c ON c.job_id=? WHERE j.idempotency_key=? AND ${fresh} ON CONFLICT(job_id) DO NOTHING`).bind(at,job.id,identity,...guard),
+  db.prepare(`INSERT INTO sites_research_context(job_id,parent_job_id,feature_job_id,input_hash,model_fingerprint,frontier_date,generation,round,logical_key,implementation_hash,state,created_at) SELECT j.id,c.job_id,c.feature_job_id,c.input_hash,c.model_fingerprint,c.frontier_date,c.generation,c.round,?,c.implementation_hash,'search_queued',? FROM sites_analysis_jobs j JOIN sites_research_context c ON c.job_id=? WHERE j.idempotency_key=? AND ${fresh} ON CONFLICT(job_id) DO NOTHING`).bind(searchLogicalKey,at,job.id,identity,...guard),
   db.prepare(`INSERT INTO sites_analysis_heads(store_id,kind,latest_job_id) SELECT store_id,kind,id FROM sites_analysis_jobs WHERE idempotency_key=? AND ${fresh} ON CONFLICT(store_id,kind) DO UPDATE SET latest_job_id=excluded.latest_job_id WHERE excluded.latest_job_id>sites_analysis_heads.latest_job_id`).bind(identity,...guard),
   db.prepare(`INSERT OR IGNORE INTO sites_analysis_dispatch(job_id) SELECT id FROM sites_analysis_jobs WHERE idempotency_key=? AND state NOT IN ('succeeded','failed','cancelled') AND ${fresh}`).bind(identity,...guard),
   db.prepare(`UPDATE sites_research_context SET child_job_id=(SELECT id FROM sites_analysis_jobs WHERE idempotency_key=?),state=CASE WHEN (SELECT state FROM sites_analysis_jobs WHERE idempotency_key=?)='succeeded' THEN 'search_complete_unpromoted' ELSE 'search_queued' END WHERE job_id=? AND ${fresh}`).bind(identity,identity,job.id,...guard),
@@ -44,5 +47,5 @@ export async function successorStatements({db,job,feature,key,at}){
  ];
 }
 export function searchContextCompletion({db,job,key}){
- return db.prepare("UPDATE sites_research_context SET state='search_complete_unpromoted' WHERE (job_id=? OR child_job_id=?) AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=? AND attempts=?)").bind(job.id,job.id,job.id,key,job.attempts);
+ return db.prepare("UPDATE sites_research_context SET state='search_complete_unpromoted' WHERE (job_id=? OR child_job_id=?) AND NOT EXISTS(SELECT 1 FROM sites_research_cycle_jobs m WHERE m.job_id=? AND m.enabled=1) AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=? AND attempts=?)").bind(job.id,job.id,job.id,job.id,key,job.attempts);
 }

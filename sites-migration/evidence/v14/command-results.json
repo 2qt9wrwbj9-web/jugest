@@ -1,0 +1,117 @@
+{
+  "runs": [
+    {
+      "command": "node --test --test-concurrency=1 tests/port-*.test.mjs",
+      "log": "logs/port-final.log",
+      "passCount": 94,
+      "failCount": 0,
+      "note": "site complete suite before final isolated auth schema/UI history fixes; affected units rerun below"
+    },
+    {
+      "command": "node --test --test-concurrency=1 sites-migration/tests/*.test.mjs",
+      "log": "logs/github-final.log",
+      "passCount": 86,
+      "failCount": 0,
+      "note": "public complete suite, same scope note"
+    },
+    {
+      "command": "npm test (original root)",
+      "log": "logs/upstream-root.log",
+      "passCount": 83,
+      "failCount": 0,
+      "note": "commands not node test cases"
+    },
+    {
+      "command": "npm test (original vps)",
+      "log": "logs/upstream-vps.log",
+      "passCount": 569,
+      "failCount": 1,
+      "note": "known environment symlink test only"
+    },
+    {
+      "command": "node --test tests/port-research-cycle.test.mjs",
+      "log": "logs/cycle-sqlite-final.log",
+      "passCount": 8,
+      "failCount": 0,
+      "note": "SQLite full state + faults"
+    },
+    {
+      "command": "node --test tests/port-access-sessions.test.mjs",
+      "log": "logs/access-schema-final.log",
+      "passCount": 2,
+      "failCount": 0,
+      "note": "final auth schema checks"
+    },
+    {
+      "command": "node --test tests/port-access-sessions.test.mjs (public)",
+      "log": "logs/access-public-final.log",
+      "passCount": 2,
+      "failCount": 0,
+      "note": "final mirror"
+    },
+    {
+      "command": "node --test tests/port-background-controller.test.mjs",
+      "log": "logs/client-controller-final.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "final history retrieval UI behavior"
+    },
+    {
+      "command": "node --test tests/port-background-controller.test.mjs (public)",
+      "log": "logs/client-public-final.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "final mirror"
+    },
+    {
+      "command": "node evidence/v14/native-research-chain.mjs",
+      "log": "logs/native-cycle.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "six child jobs; not six tests"
+    },
+    {
+      "command": "node evidence/v14/cycle-oom-recovery.mjs",
+      "log": "logs/cycle-oom-driver.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "real OOM research adoption recovery"
+    },
+    {
+      "command": "node evidence/v14/holdout-boundary.mjs",
+      "log": "logs/holdout-boundary.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "source-only formal holdout"
+    },
+    {
+      "command": "node <Sites-plugin>/scripts/build-site.mjs",
+      "log": "logs/build-final.log",
+      "passCount": 1,
+      "failCount": 0,
+      "note": "production build"
+    }
+  ],
+  "additional": [
+    "comparison-commands.json:12 executions all successful; 4 model/stage comparisons",
+    "repeat-commands.json:4 full jobs",
+    "oom-results.json:4 prior real OOM cases pass",
+    "oom-machine-results.json:1 prior real machine OOM case pass",
+    "ledger-check.log:55 rows/12 gates validated"
+  ],
+  "initialFailures": {
+    "cycle-initial.log": "next logicalKey collision fixed",
+    "cycle-fixed.log": "new test queried absent active table; now verifies no active table/write",
+    "access-initial.log": "internal D1 metadata table schema guard; fixed and Miniflare cleanup added",
+    "client-final.log": "wrong test filename, no tests executed, corrected logs client-controller-final/public",
+    "comparison-driver.log": "v13 output path in copied harness; restored and fixed"
+  },
+  "notRun": [
+    "actual Sites host total128MB enforcement/strict peak/concurrency/CPU and Queue/Cron/Workflow redelivery",
+    "port formal holdout/PREv2/active model integration",
+    "public formal authentication/passkeys/WebAuthn/domain migration",
+    "Collector/sync/pachinko/all MCP/OAuth/full API compatibility",
+    "production DB snapshot/migration and actual user device handover"
+  ],
+  "countsNotSummed": "targeted runs overlap full suites; OOM/Queue/parity/build separate experiments"
+}

@@ -1,0 +1,158 @@
+[
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "90",
+      "106",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "full-90-106-v13.log",
+    "exit": 0,
+    "wallSeconds": 10.449963160999914
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "90",
+      "106",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "full-90-106-optimized.log",
+    "exit": 0,
+    "wallSeconds": 10.160356296999907
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/large-stage-comparison.mjs",
+      "1",
+      "90",
+      "106"
+    ],
+    "log": "parity-final-90-106.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "106",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "full-180-106-v13.log",
+    "exit": 0,
+    "wallSeconds": 19.12940853499981
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "106",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "full-180-106-optimized.log",
+    "exit": 0,
+    "wallSeconds": 19.3355813149999
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/large-stage-comparison.mjs",
+      "1",
+      "180",
+      "106"
+    ],
+    "log": "parity-final-180-106.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "240",
+      "106",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "full-240-106-v13.log",
+    "exit": 0,
+    "wallSeconds": 21.54539514299995
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "240",
+      "106",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "full-240-106-optimized.log",
+    "exit": 0,
+    "wallSeconds": 22.600948734999974
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/large-stage-comparison.mjs",
+      "1",
+      "240",
+      "106"
+    ],
+    "log": "parity-final-240-106.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "full-180-160-v13.log",
+    "exit": 0,
+    "wallSeconds": 37.09111323000002
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "full-180-160-optimized.log",
+    "exit": 0,
+    "wallSeconds": 34.80412115000013
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/large-stage-comparison.mjs",
+      "1",
+      "180",
+      "160"
+    ],
+    "log": "parity-final-180-160.log",
+    "exit": 0
+  }
+]

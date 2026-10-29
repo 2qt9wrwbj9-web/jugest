@@ -1,0 +1,13 @@
+# 研究サイクル: 保存版14の比較範囲
+
+正解は固定本番1f8c29fc458f34e11e546fb57944d0fc31db98a5のvps/src/analysis/research-cycle.mjs recordModelSearchCompletion()。fingerprintModel/shouldConvergeを再利用し、SQLite SQLの履歴/世代/round/noImprove/repeat/next logicalKeyをD1で再現。
+
+新規researchCycle=trueはFEATURE_BUILDまたはBACKTESTにだけ指定可能。既定falseを維持し、以前の未昇格MODEL_SEARCHはそのまま。最初のfeature成功で同じ固定snapshotを共有し、feature→BT→search→採否→BT/search→収束へ進む。画面は既存パネルに研究モデル限定のopt-inを追加。実予測用active_store_modelsの書き込みは行わない。
+
+比較試験8件: promote/continue/repeat/converge/same-champion/no-candidateの6分岐で元SQLiteとloop、registry、next logicalKeyを完全一致。実合成50日×12台の計算と元ensure/record呼出しで同じ計算hashと全registry/loopを比較。最後の1件は確定batch rollback→retry、同時世代更新直前CAS。全8成功。native-research-chain.mjsではブラウザーなし実Queueの6ジョブで1昇格→改善なし→repeat収束、同入力、root1、gen1/noImprove2/round1を確認した。
+
+決定latch+research loop/registry変更+次job+outboxを親成功batchに含める。入力/実装hash、current feature head、frontier、gen/round/fingerprintと全registryのsnapshotをCAS。古い結果はcycle_superseded。子キーは元logicalKeyを保存しつつ入力/実装/channel/rootで名前空間化し、過去の未昇格jobと衝突させない。registry snapshotが1.5MBを超える場合は切り詰めず拒否（大履歴運用はRISK）。再配信はapplied_at latchと親状態で1回だけ適用。Queue送信前停止は既存outbox回復を使用。
+
+重要な比較境界: 元sourceにdays:nullを渡す採否/収束直後の状態まで一致した。元本番のdays配列を渡した呼出しは収束後にfinalizeSealedHoldoutを実行するため、そこまで全体一致したとは主張しない。holdout-boundary.mjsで元sourceの解禁前拒否→収束→2履歴champion/218予測行の正式holdoutを観測したが、移植先はconverged_holdout_pendingで停止。結果hashはholdout-boundary.json。正式holdoutの予測行保存・再開・一括確定・大容量D1検証はB-HOLDOUTとして未実装。PREv2全体、active-model昇格は未完成。
+
+cycle-oom-recovery.mjsはresearch-cycle:plannedで実V8 OOM強制終了し永続DB/R2再接続、旧champion不変→期限回復→1決定/1昇格を確認。普通のthrowではない。ホスト側OOMの自動再配信は未検証。既存5箇所の実OOM回帰も成功。ログはlogs/。実認証や本番データは使用しない。

@@ -1,4 +1,4 @@
-export const WORKER_IMPLEMENTATION_HASH='6d9f66f48a0558a1c1c94833f8cf83626b8fe18e035eb8df696b1b4b6962e8ef';
+export const WORKER_IMPLEMENTATION_HASH='f58af55deef924bf212b72cd9fc832b78273c051f706608f69e87b4dba217e01';
 // Generated from fixed production files; no eval/vm/fs at runtime.
 const host=globalThis;
 function memoryStorage(seed={}){
@@ -1628,7 +1628,7 @@ function bruteSingleGenerate(...args){__analysisStage("before:bruteSingleGenerat
  let storeGroups=new Map;
  for(let r of histRows)bruteSingleConditions(r,ctx,m=>{if(targetStore&&!targetStore.has(m.id))return;let g=bruteSingleGroupAdd(storeGroups,m.id,m,r);if(m.family!=="machineIdentity"&&(!targetMachineByMachine||targetMachineByMachine.get(r.machine)?.has(m.id)))bruteSingleMachineGroupAdd(g,m,r)});
  __analysisStage('single:groups-built');let scopes=bruteSingleScopes(histRows),split=bruteFoldSets(bruteScopeMeta(scopes.storeDays).dates),store=[],machine=[];
- for(let [id,g] of storeGroups){let e=bruteEvaluate(g,scopes.storeDays,minDays,1,null,split);if(e)store.push({...e,id,meta:g.meta,scope:"store",machine:"",_group:g});for(let mg of g.machineGroups.values()){let sc=scopes.machineScopes.get(mg.machine);if(!sc)continue;let me=bruteEvaluate(mg,sc,minDays,1,null,bruteFoldSets(bruteScopeMeta(sc).dates));if(me)machine.push({...me,id:g.meta.id,meta:g.meta,scope:"machine",machine:mg.machine,comparisonType:"same-machine-day",_group:mg})}}
+ for(let [id,g] of storeGroups){let e=bruteEvaluate(g,scopes.storeDays,minDays,1,null,split);if(e)store.push({...e,id,meta:g.meta,scope:"store",machine:"",_group:g});for(let mg of g.machineGroups.values()){let sc=scopes.machineScopes.get(mg.machine);if(!sc)continue;let me=bruteEvaluate(mg,sc,minDays,1,null,bruteFoldSets(bruteScopeMeta(sc).dates));if(me)machine.push({...me,id:g.meta.id,meta:g.meta,scope:"machine",machine:mg.machine,comparisonType:"same-machine-day",_group:mg})}delete g.machineGroups;}storeGroups.clear();__analysisStage("single:groups-released");
  __analysisStage('single:evaluated');bruteBhAssign(store,x=>x.pVal??1,(x,q)=>x.q=q);bruteBhAssign(machine,x=>x.pVal??1,(x,q)=>x.q=q);
  let machineRowCounts=new Map;for(let r of histRows)machineRowCounts.set(r.machine,(machineRowCounts.get(r.machine)||0)+1);
  for(let c of store)bruteSingleFinalize(c,prep,scopes.storeDays,histRows.length);for(let c of machine)bruteSingleFinalize(c,prep,scopes.machineScopes.get(c.machine),machineRowCounts.get(c.machine)||0);

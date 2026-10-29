@@ -1,0 +1,102 @@
+{
+  "sourceOnly": true,
+  "portedHoldoutVerified": false,
+  "before": {
+    "store_id": "synthetic-holdout",
+    "feature_version": "store-features-v1",
+    "current_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "best_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "generation": 1,
+    "no_improve_count": 2,
+    "repeated_fingerprint": "16c1df4b7b4cec8cc7665174f88603991d36bed60f9894b4c31f2f761f352782",
+    "state": "converged",
+    "last_error": null,
+    "frontier_date": "2026-02-19",
+    "search_round": 1,
+    "holdout_finalized_at": null,
+    "holdout_winner_fingerprint": null,
+    "updated_at": "2026-10-29T00:00:00.000Z"
+  },
+  "after": {
+    "store_id": "synthetic-holdout",
+    "feature_version": "store-features-v1",
+    "current_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "best_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "generation": 1,
+    "no_improve_count": 2,
+    "repeated_fingerprint": "16c1df4b7b4cec8cc7665174f88603991d36bed60f9894b4c31f2f761f352782",
+    "state": "converged",
+    "last_error": null,
+    "frontier_date": "2026-02-19",
+    "search_round": 1,
+    "holdout_finalized_at": "2026-10-29T00:00:00.000Z",
+    "holdout_winner_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "updated_at": "2026-10-29T00:00:00.000Z"
+  },
+  "result": {
+    "winnerFingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+    "modelsEvaluated": 2,
+    "holdoutDates": [
+      "2026-02-10",
+      "2026-02-11",
+      "2026-02-12",
+      "2026-02-13",
+      "2026-02-14",
+      "2026-02-15",
+      "2026-02-16",
+      "2026-02-17",
+      "2026-02-18",
+      "2026-02-19"
+    ],
+    "alreadyFinalized": false,
+    "activeFingerprint": null,
+    "snapshotTargetDate": null,
+    "scores": [
+      {
+        "fingerprint": "ecf9129fddccbf493931609e858d8f8d695c23b8687718a7110d6ddaf9b09e54",
+        "score": {
+          "dates": 10,
+          "top1Overlap": 0,
+          "top3Overlap": 0.2333333333333333,
+          "top5Overlap": 0.21999999999999997,
+          "top1Lift": 0,
+          "top3Lift": 0.8444444444444447,
+          "top5Lift": 0.4800000000000001,
+          "rankCorrelation": -0.613939393939394
+        }
+      },
+      {
+        "fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+        "score": {
+          "dates": 10,
+          "top1Overlap": 0.1,
+          "top3Overlap": 0.8,
+          "top5Overlap": 0.62,
+          "top1Lift": 1.1,
+          "top3Lift": 2.9111111111111114,
+          "top5Lift": 1.356,
+          "rankCorrelation": 0.246060606060606
+        }
+      }
+    ]
+  },
+  "holdoutRuns": [
+    {
+      "model_fingerprint": "1e51f0abadcdd02d716f551ffeb9dc22b0c84f43d4ca7170b1b9fa89329cb63b",
+      "split_kind": "holdout",
+      "prediction_count": 109,
+      "input_hash": "7cc2c1fc3c1db6fcd65a09cfea0503478b2fe8c2129ad2bd7c72f728df928665",
+      "score_json": "{\"dates\":10,\"rankCorrelation\":0.246060606060606,\"top1Lift\":1.1,\"top1Overlap\":0.1,\"top3Lift\":2.9111111111111114,\"top3Overlap\":0.8,\"top5Lift\":1.356,\"top5Overlap\":0.62}"
+    },
+    {
+      "model_fingerprint": "ecf9129fddccbf493931609e858d8f8d695c23b8687718a7110d6ddaf9b09e54",
+      "split_kind": "holdout",
+      "prediction_count": 109,
+      "input_hash": "5a5af8c153e065a22454357b03dd07a129017e7ace557586ffa976005b680717",
+      "score_json": "{\"dates\":10,\"rankCorrelation\":-0.613939393939394,\"top1Lift\":0,\"top1Overlap\":0,\"top3Lift\":0.8444444444444447,\"top3Overlap\":0.2333333333333333,\"top5Lift\":0.4800000000000001,\"top5Overlap\":0.21999999999999997}"
+    }
+  ],
+  "predictionCount": 218,
+  "sourceHoldoutResultHash": "9d52664d0a5b667a3f84c93227b8804dff5c7b3c61b3976eb6307eb574a24ce9",
+  "boundary": "Port v14 stops at before. Original production MODEL_SEARCH passes days and reaches after. This difference remains unported; formal PRE v2/active switch is separate."
+}

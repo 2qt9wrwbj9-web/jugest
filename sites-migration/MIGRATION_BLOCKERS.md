@@ -1,4 +1,4 @@
-# 技術的障害台帳（保存版13 / authoritative）
+# 技術的障害台帳（保存版14 / authoritative）
 
 BLOCKERは現時点で完成条件を阻む既知の問題、RISKは実装可能性と本番相当検証が残る問題、UNKNOWNは仕様/許可/実装の未確認。UNKNOWNを不可能と断定しない。解消は再現条件と試験の証拠が揃ってから記録する。
 
@@ -37,3 +37,16 @@ BLOCKERは現時点で完成条件を阻む既知の問題、RISKは実装可能
 - **新たな制約（R-COST/B-PIPELINE）：** 子探索を明示的に未昇格で停止するため、原research_loopsのrunningだけでは研究全体の完了を意味しない。sites_research_contextのsearch_complete_unpromotedで識別。旧保存版のcontextなしbacktestへは推定自動接続しない。新規captureを必要とする。SQL成功と配信の間はoutboxで回復し、send failureを計算失敗回数に算入しない。
 
 全BLOCKER/UNKNOWNの完成条件は継続。今回「Sites単独では不可能」と確定した機能はない。ホスト契約・データ容量・正式権限を未確認のまま解消扱いにしない。
+
+## 保存版14の最新判定（以前の記録より本節を優先）
+
+- **B-PIPELINE：局所障害を解消、全体は未解消。** opt-in研究cycleでFEATURE_BUILD→BACKTEST→MODEL_SEARCH→採用/棄却→次BT/search→repeat/no_improvement収束を接続。元6分岐と実合成cycleのregistry/loop/次logical job列がSQLiteと一致。途中DB失敗/古世代/重複/Queue/実OOMで正常stateを保持。旧単独探索は未昇格のまま維持。研究championの更新はactive model変更ではない。
+- **B-HOLDOUT・BLOCKER（追加）：** 対象CYCLE-04/AC-02/05/06。発生条件は研究収束後。元本番MODEL_SEARCHはdaysを渡しfinalizeSealedHoldoutへ進むが、v14はconverged_holdout_pendingで止まる。原因は全モデルholdoutの予測行/scoreを大容量で段階保存し、入力/モデル集合を固定して原子的に確定する移植が未実装なこと。元のみのholdout-boundary.jsonでは収束前拒否、歴代2モデル・218予測行と勝者確定、active model不変を実測。暫定対応はsealed維持・未完表示。恒久候補は元pure評価/rankRows/betterとmodel集合固定→モデル/行ごとの不変stage→一括最終確定。次検証は元全行/hash/全registry/loop/失敗復旧を比較すること。解消条件は4規模を含む安全な同値の正式holdout保存・再開・最終状態の一致。PRE v2は別に残る。
+- **B-MEM：未解消。** 評価後に不要なgroup索引/機種group参照だけを解放。4規模全モデル/8値/出力hash一致だが、全工程used観測最大はGC/採取時点で変動し、ピーク低下の一律効果を証明できない。180×160を各3回測定。新規の候補checkpoint/分割は効果・補正/統合peakを証明するまで不採用。総128MB/CPU/同時requestは未証明。
+- **B-AUTH：部分前進、未解消。** 専用access v2 schemaでadmin/viewer session、期限/失効/audit、一度限りchallengeのD1互換を実装・合成SQLite比較。canonical DBとv1型nullable契約を拒否。WebAuthn ceremony/発行/登録/招待発行/単独viewer失効/rate/全API/画面は未移植。公開authへ接続しない。
+- **U-ACCESS-BINDING・UNKNOWN（追加）：** 対象AUTH/DATA-03。独立ACCESS DBが必要だが現在のSites manifestは単一D1 binding名を持つ。第2D1の正式供給interfaceは未確認（不可能とは未確定）。影響は専用auth adapterをホストへ接続できないこと。暫定は合成専用D1試験のみ、既存DEV authを維持。候補はSitesの正式な追加binding提供、または承認後に別境界を設計する方法。次は対応tool/manifest/APIの契約確認。解消条件は独立DBと権限/失効/復旧を実hostで検証し、canonical dataと混在しないこと。
+- **U-QUEUE/B-UNATTENDED/B-HOST/U-OBSERVE：未解消。** 実local Queueが6jobを自動処理し昇格/収束。研究採否直前の実V8 OOMから再開し決定1回・旧正常結果保持を確認。ホストbinding/再配信/128MB/定期実行/監視は未確認。HOST_VALIDATION_PLAN.mdの次試験へ進む。公開・外部基盤は未実施。
+
+今回追加の2障害は、既存機能を削除する判断ではない。全55機能と元データの意味を維持する。source-only holdout試験を移植完成の証拠に転用しない。
+
+最終runのメモリ値はMIGRATION_STATUS.md保存版14節/evidence/v14/MEMORY_REPORT.mdを優先する。初期計測はpre-finalログに保持。全工程peak改善なし、host未証明。

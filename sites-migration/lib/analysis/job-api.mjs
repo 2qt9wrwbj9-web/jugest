@@ -41,13 +41,13 @@ export async function handleAnalysisJobs(request,{db,bucket,piaAccessMode='owner
    if(parts.length===6){
     const reader=request.body?.getReader();let size=0,chunks=[];if(reader)while(true){const p=await reader.read();if(p.done)break;size+=p.value.byteLength;if(size>4096){await reader.cancel();return reply({ok:false,code:'body_too_large'},413)}chunks.push(p.value)}
     const bytes=new Uint8Array(size);let off=0;for(const b of chunks){bytes.set(b,off);off+=b.length}let body;try{body=JSON.parse(new TextDecoder().decode(bytes))}catch{return reply({ok:false,code:'bad_json'},400)}
-    const job=await enqueueAnalysisJob({db,storeId,channelId:auth.channelId,kind:body.kind,targetDate:body.targetDate,historyLimit:body.historyLimit??180,machineBatchSize:body.machineBatchSize??null,requestKey:body.requestKey});
+    const job=await enqueueAnalysisJob({db,storeId,channelId:auth.channelId,kind:body.kind,targetDate:body.targetDate,historyLimit:body.historyLimit??180,machineBatchSize:body.machineBatchSize??null,researchCycle:body.researchCycle??false,requestKey:body.requestKey});
     const background=scheduleDevelopmentAnalysis(()=>continueDevelopmentJob({db,bucket,jobId:job.id}));
     return reply({ok:true,job:publicAnalysisJob(job),background},202);
    }
   }
   if(parts.length===6&&request.method==='GET'){
-   const {results}=await db.prepare('SELECT * FROM sites_analysis_jobs WHERE store_id=? AND channel_id=? ORDER BY id DESC LIMIT 100').bind(storeId,auth.channelId).all();return reply({ok:true,jobs:results.map(publicAnalysisJob),executionEnabled});
+   const {results}=await db.prepare('SELECT j.*,c.child_job_id AS next_job_id,c.state AS research_state,d.action AS research_action,d.reason AS convergence_reason,m.enabled AS research_cycle FROM sites_analysis_jobs j LEFT JOIN sites_research_context c ON c.job_id=j.id LEFT JOIN sites_research_decisions d ON d.job_id=j.id AND d.applied_at IS NOT NULL LEFT JOIN sites_research_cycle_jobs m ON m.job_id=j.id WHERE j.store_id=? AND j.channel_id=? ORDER BY j.id DESC LIMIT 100').bind(storeId,auth.channelId).all();return reply({ok:true,jobs:results.map(publicAnalysisJob),executionEnabled});
   }
   const id=Number(parts[6]);if(!Number.isSafeInteger(id)||id<1)return reply({ok:false,code:'bad_job_id'},400);
   const job=await getAnalysisJob(db,id);if(!job||job.store_id!==storeId||job.channel_id!==auth.channelId)return reply({ok:false,code:'job_not_found'},404);

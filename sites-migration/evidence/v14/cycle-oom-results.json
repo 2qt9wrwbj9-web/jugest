@@ -1,0 +1,13 @@
+{
+  "realLocalV8Oom": true,
+  "injection": "research-cycle:planned",
+  "registryUnchangedBeforeRestart": true,
+  "promotionAfterRecovery": true,
+  "decisionCount": 1,
+  "oldNormalResultRetained": true,
+  "hostOomVerified": false,
+  "exit": {
+    "code": 1,
+    "signal": null
+  }
+}

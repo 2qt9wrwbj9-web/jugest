@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "evidence/v14/logs/repeat-2-180-160-v13.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "evidence/v14/logs/repeat-2-180-160-optimized.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "v13"
+    ],
+    "log": "evidence/v14/logs/repeat-3-180-160-v13.log",
+    "exit": 0
+  },
+  {
+    "command": [
+      "node",
+      "evidence/v14/full-job-probe.mjs",
+      "180",
+      "160",
+      "1",
+      "96",
+      "optimized"
+    ],
+    "log": "evidence/v14/logs/repeat-3-180-160-optimized.log",
+    "exit": 0
+  }
+]

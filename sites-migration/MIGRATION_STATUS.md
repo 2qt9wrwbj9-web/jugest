@@ -960,3 +960,43 @@ native Miniflare/workerd、old-space96MiB/semi4、Inspector Runtime.getHeapUsage
 4. B-COVERAGE：全動的画面/API/DB/実行経路のsemantic照合を完了。正式PRE、過去/店舗横断比較、Collector/自動収集、同期、正式passkey/招待/管理、pachinko、全MCP/OAuth、本番read-only移行/復元を依存順に実装。
 
 全体の完成・検証済み機能行はまだゼロ（local単位の成功と区別）。未移植・UNKNOWNをなくすまで完全移植完了を名乗らない。今回の全変更一覧はCHANGED_FILES.tsv。全source・取得済みGit履歴・全ログ・4正本・再現手順・CRC/個別SHA/Git復元を一括ZIPに収録し、実保存後にのみ共有済みと報告する。
+
+
+## 保存版14 — 研究採否・収束まで接続、正式holdoutは未確定
+
+2026-10-29。再開receipt: Site13 00c5edcac2a2f1597db91800f08d176da9b746fe、GitHub d2f6513944a8d63d90e8ea33c8c8a06ed5eff34e。固定本番1f8c29fc458f34e11e546fb57944d0fc31db98a5。今回の最終SHA/保存版番号はパッケージのSITES_SAVED_VERSION.jsonとGITHUB_COMMIT.jsonを正本とする（commitに自身のSHAを埋め込まない）。新非公開保存はreceiptを取得した時だけ完了と扱う。
+
+① 今回完成した機能（ローカル範囲）
+
+- researchCycle opt-inでFEATURE_BUILD→BACKTEST→MODEL_SEARCH→研究champion採否/履歴→次BT/search→収束まで。元条件、fingerprint、世代、noImprove、round、重複候補、収束理由、次logicalKeyを維持。旧manual未昇格機能は既定で維持。active modelは変更しない。
+- D1の親成功確定と採否latch/registry/loop/子job/outboxを同一batchで条件付き更新。固定入力/実装/世代/round/全registry/headのCAS、重複・旧世代・rollback・Queue失敗から既存方式で回復。
+- 元SQLite採否6分岐＋実合成研究サイクル＋確定故障/世代競合8試験成功。native Queueで6ジョブ無人連鎖、実V8 OOM後の研究昇格1回だけ確定。画面#32〜#37で昇格/収束/履歴個別再取得。
+- 解析以外: 独立した元access v2 DBに対するD1 session/失効/audit/challenge一度限りの保存層と比較試験2件。正式WebAuthn/発行/APIへは未接続。認証緩和なし。
+
+② 解消/部分改善した障害
+
+B-PIPELINEは収束までlocal/SQLite/API/画面/Queueを接続。AUTH01/03・DATA03は保存層のみ部分前進。55機能は削除せず、CYCLE03をlocal実装host未検証、CYCLE04を部分へ更新。完成12ゲートは全て全体達成未了。メモリは不要参照の寿命を短縮したが、一貫した全工程peak改善の証明なし。
+
+③ 新たに明確になった障害
+
+B-HOLDOUT: 元本番days配列ありの収束後は正式holdoutを確定するが、移植版はconverged_holdout_pendingで止める。元source側だけの解禁/2champion/218予測行を検証。SQLite完全一致の主張はdays:nullの採否直後までに限定する。正式PREv2/holdout/active modelは未完。
+U-ACCESS-BINDING: 第二の独立したSites D1 binding/provisioning未確認。canonicalとの混在を拒否。registry CASは1.5MB安全拒否上限を持ち、巨大研究履歴での運用は追加検証。B-HOST/B-MEMORY/B-UNATTENDED/U-QUEUEは継続。
+
+④ 完全移植までの残り
+
+最優先は正式holdoutのimmutableモデル・予測行をD1/R2に保存/確定/再開し元SQLiteと全行比較。その後PRE正式試験/active採用、独立authbindingとWebAuthn/RP-ID、同期/Collector/スケジュール、パチンコ、MCP/OAuth、承認後の実データ移行。元55機能と全依存はMIGRATION_MASTER_PLAN.md、障害はMIGRATION_BLOCKERS.md、完成条件はMIGRATION_ACCEPTANCE_CRITERIA.mdで追跡。外部恒久基盤は導入していない。
+
+最終メモリ実測（workerd Inspector usedHeap観測、old-space96MiB/semi4、厳密peak/総128MBではない）:
+
+- 90日×106台: v13 44.31MiB → v14 48.72MiB。
+- 180日×106台: v13 77.74MiB → v14 84.14MiB。
+- 240日×106台: v13 80.47MiB → v14 83.00MiB。
+- 180日×160台: v13 88.21MiB → v14 90.92MiB。
+
+4規模すべて全モデル/8中間値/最終hash一致。180×160追加2回はv13 90.41/89.57、v14 89.51/89.01MiB。GCばらつきがありピーク低下を主張しない。R2 IO/bytes不変、通常jobにD1 SQL3文/API2呼出し増。モデル候補分割/新memory checkpointは効果未証明なので採用しない。総128MB/外部buffer全体/ホストCPU/concurrency/課金は未測定。MEMORY_REPORT.mdとraw memory-results.jsonを参照。
+
+テスト: Site94成功0失敗、public86成功0失敗（最後の認証schemaと履歴UIの小修正は該当unitをSite/Public各2+1再試験成功）。元フロント83コマンド成功、元VPS569成功/既知symlink1失敗、新規VPS失敗なし。数学4/4、通常実OOM5ケース＋採否実OOM1成功、native無人chain成功、build成功。全コマンド/過程の失敗もevidence/v14/command-results.json・logs/へ収録。
+
+成果物状態: ソース/管理資料/ログを作成、ZIP収録/永続保存/ユーザー共有は別々に検証する。保存版13 ZIPはローカル存在とCRC/hash/Git復元を確認、開始時には永続保存を確認できなかった。v13/v14両ZIPの永続保存とアクセスは最終delivery receiptで判定し、未成功を共有済みにしない。ZIP中に本番DB/利用者/秘密値を収録しない。
+
+次回は保存版14のsafe receipt SHAからcheckoutし、4管理原本→evidence/v14/DEPENDENCIES.md→REPRODUCE.md。正式holdoutを最初の実装単位とする。公開・本番デプロイ・本番branch変更は禁止。
