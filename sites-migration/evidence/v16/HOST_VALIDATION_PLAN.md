@@ -1,6 +1,6 @@
 # 保存版16 ホスト成立性・次の実証
 
-2026-10-30 UTC。native Site読み出しで保存版15、live=null、preview=null、automations=[]、access custom/元policy不変。今回もsaveだけ、公開・デプロイ・host DB適用・schedule追加は行わない。ソース元と本番環境は読み取りのみ/未接触。
+2026-10-31 JST再照合。native Site読み出しで保存版15、live=null、preview=null、automations=[]、access custom/元policy不変。今回もsaveだけ、公開・デプロイ・host DB適用・schedule追加は行わない。ソース元と本番環境は読み取りのみ/未接触。
 
 ## 確認した契約
 
@@ -26,3 +26,5 @@
 正式bindingとwriter認可が用意できた後、独立50日×12台合成店舗でfeature→研究→holdout→正式PRE開始/1日採点を対象にする。DEV sessionや本番tokenはホストへ持ち込まない。研究/active/2model/日次固定の整合、再配信、期限切れlease、CAS rollback、CPU/総128MB、2並列request、運用ログを測る。実際の課金単位と上限を先に確認し、許容費用・回数を提示する。費用の金額は現時点未確定。
 
 公開が必須なら最終deployの直前にユーザーへ許可を求める。停止は新規受付/dispatch/scheduleを止め、世代CAS・既存正常結果・private checkpointを保持する。独立DBの整合backupと保存版15/16のsourceから切り戻す。元本番へ戻し書きせず、外部VPSを無断導入しない。
+
+保存前のnative再確認でもlatest15/live=null/preview=null/automations=[]/access custom不変。保存後の版数/完全SHAとdeploymentなしは外部receiptで再照合する。

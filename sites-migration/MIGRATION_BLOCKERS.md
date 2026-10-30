@@ -72,7 +72,7 @@ BLOCKERは現時点で完成条件を阻む既知の問題、RISKは実装可能
 |B-AUTH / BLOCKER 部分改善|専用ACCESSのenrollment lookupとchallenge作成validationを追加比較。認証情報を使わず、公開route無効。|invite/発行/再認証/WebAuthn/RPID/Origin/CSRF/復旧・正式binding。|
 |R-PRE-LARGE / RISK 新規|active client snapshot/CAS期待行が1.5MB超なら安全に拒否。R2 private planはあるが元snapshot APIの大容量公開adapter未実装。正常旧値は保持。|全行を失わないR2 pointer adapter、API完全一致、競合/読者/破損の試験。単にD1へ巨大JSONを入れない。|
 |R-D1 / RISK 残存|180×160 feature確定のlocal batchは最大1301SQL、bind最大19。PRE含むmaxbind42、SQL最大4970byte。local成功をhost transaction/query30秒/CPUの保証にしない。|正式host割当・phaseごとのbinding call/SQL/行数/時間上限をcanaryで測る。|
-|B-MEM / BLOCKER 残存|現行予測数学を変更せず4規模8中間値/全model/hash一致。新active/PRE全工程の観測heap18.92〜23.19MiB。現行予測の安定削減は証明せず新最適化不採用。|総128MB/isolate・複数request・CPU・host OOM復旧を正式許可試験で検証。|
+|B-MEM / BLOCKER 残存|現行予測数学を変更せず4規模8中間値/全model/hash一致。新active/PRE全工程の観測heap19.34〜23.26MiB。現行予測の安定削減は証明せず新最適化不採用。|総128MB/isolate・複数request・CPU・host OOM復旧を正式許可試験で検証。|
 |B-HOST/B-UNATTENDED / BLOCKER 残存|保存のみ、公開なし。ローカルでタブclose後とQueueの進行は確認。ホストの同等運用は未証明。|HOST_VALIDATION_PLANの非公開binding供給を確認し、必要な公開canaryのみ別途直前許可。|
 |U-QUEUE/U-ACCESS-BINDING/U-OBSERVE/U-CAPACITY / UNKNOWN 残存|公式skillのDB/BUCKETとpublished Site scheduleは確認。Queue/Cron/Workflow/第2D1の提供interface・host計測/割当/実料金は確認できない。|一般Cloudflareの機能をSites利用可と推定しない。正式提供interface/アカウント割当を取得。|
 

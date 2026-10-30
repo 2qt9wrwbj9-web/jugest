@@ -1008,3 +1008,7 @@ API/guard全抽出と関数索引はsource-inventory.json。MCP9tool、access13a
 ## 保存版16の判定
 
 55機能IDを削除せず保持。FEAT-01/PRE-01/PRE-02をlocal実装・実host未検証へ、PRE-03/PRE-04を部分実装へ進めた。API-03とAUTH-03の範囲を拡張。正式PRE全体、active採用、正式認証/全MCP/Sync/Collector/パチンコ/実データ移行は未完。12完成ゲートは全体として未達。全hostVerified=falseを維持。
+
+## 保存版16・中断後の最終再確認（2026-10-31 JST）
+
+元55機能の構成を維持。local実装済み・実host未検証14、部分実装22、未実装14、仕様未確認4、技術的障害あり1（完成率ではない）。全hostVerified=false。FEATURE_BUILD全子プロセス/正式PRE開始・1日採点・次日予測の元保存値比較、実OOM9条件と画面の結果をevidence/v16の再生成原本へ接続。最終件数はcommand-results.json、数学4規模はmodel-comparison.json、全尺度のmemoryはMEMORY_REPORT.md。PRE長期terminal/active正式採用・日次自動受付・正式認証・全Sync/Collector/パチンコ/MCP/OAuth・実データ移行は残る。

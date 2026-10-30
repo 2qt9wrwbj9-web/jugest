@@ -18,7 +18,7 @@ Node24（最低22.13、node:sqlite必要）、lock依存を公式Sites install h
 - 正式holdout：`node evidence/v16/holdout-comparison.mjs`、`node evidence/v16/holdout-load.mjs 180 160`等4scale。
 - 実OOM：`node evidence/v16/oom-recovery.mjs`、同`machine-only`、`cycle-oom-recovery.mjs`、`holdout-oom-recovery.mjs`、`active-pre-oom-recovery.mjs feature-build`、同`formal-pre`。各命令はローカルworkerdを意図的に枯渇させる。
 - 管理正本：`python evidence/v16/validate-ledger.py`
-- 物理schema監査：`node evidence/v16/schema-comparison.mjs --audit`。引数なしは厳密schema差を示し失敗する。これは既知の物理互換未達であり、成功と読み替えない。generate-schema-comparison.mjsは履歴の作成手順でappend型のため**最終schemaへ再実行禁止**。
+- 物理schema監査：`node evidence/v16/schema-comparison.mjs --audit`。引数なしは厳密schema差を示し失敗する。これは既知の物理互換未達であり、成功と読み替えない。過去のgenerate-schema-comparison.mjsは作成時の準備scriptで、配布原本には含めず、最終schemaへ再実行しない。
 - メモリ集計：`python evidence/v16/build-memory-report.py`
 
 全コマンドとexit・件数はcommand-results.json、全生ログはlogs/。修正前失敗も収録。個別試験を全体成功へ代用しない。
@@ -33,3 +33,9 @@ Node24（最低22.13、node:sqlite必要）、lock依存を公式Sites install h
 6. Sync/Collector/パチンコ/MCP/OAuth/本番移行など残る55機能を正本の依存順で進める。
 
 成果物作成/ZIP収録/永続保存/再取得/ユーザー共有を区別する。保存版16のSHAは保存後の外部receiptを正本にする（source自身に自己SHAを埋め込まない）。
+
+## 証拠の来歴
+
+中断前のrawログ一部は失われ、今回全回帰/比較/実OOM/画面を再実行した。browser-before-interruption.jsonと過去本文は歴史、browser-final.json/command-results.json/最終logsが今回の根拠。不完全overlay・依存導入・CLI設定失敗は最終runと別に保持。公開mirrorはコード/管理正本のみ、private ZIPに全ソースと再生成した全ログを収録する。
+
+機密pattern監査を追試する場合は、`python evidence/v16/scan-delivery.py <復元した元repositoryの絶対path>`。正本55行/12gate整合はvalidate-ledger.py、物理schema差はstrict監査を使う。環境依存の絶対pathは指定して実行し、URL/TLS制限を回避しない。

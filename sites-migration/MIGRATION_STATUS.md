@@ -1,8 +1,14 @@
-> 保存版16向けの未保存開発状態。環境中断後にコードを回収し、最終全回帰・Sites非公開保存・証拠ZIP再作成を実施中。現時点の確実なSites保存版は15。
-
-# 現在の再開正本：保存版16（2026-10-30 UTC / 非公開開発）
+# 現在の再開正本：保存版16（2026-10-31 JST / 非公開開発）
 
 保存版15のSite 15ab06a6145755106e4611c3559bd543d92d5fa3、GitHub開発35b3fa305aca758ca092ed59924cf7c2612bbe59を、永続成果物ZIP/1581個別hash/CRCとremote1540source一致で復元して継続した。以前の保存版へ戻していない。新しい保存後の完全SHAは外部SITES_SAVED_VERSION.json、GitHubはevidence/v16/GITHUB_COMMIT.jsonを参照する（sourceへ自己SHAを埋め込まない）。本書後半は過去保存版の無省略記録で、現在判定はこの先頭と4管理正本のv16節を優先する。
+
+## 復元・最終検証の来歴（2026-10-31 JST）
+
+前回の実行環境中断で未保存v16のrawログ一部と旧checkoutが失われた。GitHub保全差分57ファイルを保存版15の正式source checkoutへ全件照合して回収し、0378d6b44babad926f29b2128e46b076bad138bcへ安全な開発ブランチ保全を行った。元の移植を作り直していない。最初のoverlay不完全状態のnative probe/全回帰は最終結果に数えない。修正後の全回帰・元子プロセス26件比較・native Queue8job・実V8 OOM9条件・4規模数学/active-PRE負荷・実画面試験を再生成した。失われた前回rawログを今回収録済みとは主張しない。前回の文章記録は歴史として残し、今回の完全ログとcommand-results.jsonを最終証拠にする。
+
+今回の画面試験原本はbrowser-final.json（8操作地点）、タブ閉鎖後のDB確認はbrowser-closed-jobs.json。店舗/営業日/12台、店舗分析と現行予測、研究7jobから正式holdout再取得、正式PRE開始→実績待ち→合成2/20到着→採点→2/21予測確定を確認。activeは初期fingerprintを保持した。スクリーンショットは別の表示用資料でZIP保存の対象外。
+
+GitHub通常fetchは現在の経路でTLS接続エラーのため、正式GitHub連携でtree/commit/refを作り、返却されたcommitを元のauthor/date/tree/message/parentsからバイト単位で再構成してSHAを検証しローカルにも保存した。token/TLS設定の回避はしていない。取得済みshallow履歴のみを配布し、全GitHub履歴とは呼ばない。最終SHAとsave16 receiptは外部配布原本を参照する。
 
 ## ① 今回localで完成した境界
 
@@ -19,7 +25,7 @@ FEATURE_BUILD副作用とPRE開始/日次保存の未実装という局所原因
 ## ③ 未解消・新しく判明した制約
 
 - B-HOST/B-UNATTENDED/B-MEM：実Sitesの総128MB/CPU/Queue再配信/無人運用は未実証。U-QUEUE/U-ACCESS-BINDING/U-OBSERVE/U-CAPACITYはUNKNOWNのまま。公開・deploy/schedule追加・外部恒久基盤導入は行わない。
-- 新active/PRE開始4規模の観測used heap18.92〜23.19MiB。現行予測/正式holdoutの別工程と混同しない。MEMORY_REPORT.mdに全工程のraw指標、I/O、wall、前版比較。安定しない現行予測最適化は採用せず、元全model/8中間値/最終hash一致を維持。
+- 新active/PRE開始4規模の観測used heap19.34〜23.26MiB。現行予測/正式holdoutの別工程と混同しない。MEMORY_REPORT.mdに全工程のraw指標、I/O、wall、前版比較。安定しない現行予測最適化は採用せず、元全model/8中間値/最終hash一致を維持。
 - R-PRE-LARGE：active snapshot/CAS期待行の大容量1.5MB超は安全に拒否。R2公開adapterは未実装。R-D1：local feature batch1301SQLのhost確定/CPU/query制限は未検証。
 - R-SCHEMA：PK nullability/DEFAULTの物理差。strict schema同値監査は未達のまま保存、元writerの全保存値一致とは別。詳細schema-comparison.json/FAULT_REPORT.md。
 - 正式PREの長期terminal採否/active採用後続・元daily-analysisの定期自動受付、全compare APIは未完。研究championとactiveの無条件同期はしていない。

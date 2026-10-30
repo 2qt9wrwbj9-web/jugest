@@ -81,3 +81,7 @@ public componentsは公開実行APIや正式認証を有効にしない。元本
 FEATURE_BUILDの初回active初期化・既存active据置・store-read/live予測保存を元子プロセス全体と比較。正式PREのモデル固定・trial開始・2予測・実績待機・元day judgementによる日次採点/次日予測を移植し、元SQLiteの全行/hashと比較。研究winnerをactiveへ無条件採用しない。公開route/正式認証/元scheduler/active正式採用後続/host総128MBは未完。
 
 専用ACCESSのenrollment lookup/challenge作成を部品比較のみ追加。第2D1の正式供給未確認、通常DBとの混在なし。D1物理schemaのPK nullability/DEFAULT差と大容量active1.5MB境界は管理正本のR-SCHEMA/R-PRE-LARGEとして残す。全証拠原本は非公開Sites source/ZIP。public packageでは元sourceへのrelative symlinkと直接pinned Miniflare resolverを維持する。
+
+## 保存版16の証拠原本
+
+2026-10-31 JST、中断後の57コード差分を保存版15から継続復元。公開mirrorには本番データ・認証情報・private raw証拠を含めない。最新4管理正本とevidence/v16の比較・メモリ・障害・画面手順を参照。全ソース・取得済みGit履歴・再生成した全ログ・全列比較・Sites receiptはユーザー向けJUGEST_Sites_v16_evidence.zipへ収録する。Sitesはsave-only、未公開。PRE長期terminal/正式active採用・host128MB/無人運用・正式認証等は未完成。
