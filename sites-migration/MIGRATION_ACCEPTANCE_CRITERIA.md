@@ -93,3 +93,8 @@ local正式holdout合格はAC-02/05/06/12の対象範囲を前進させるが、
 |AC-12|既存画面からactive、研究holdout、正式PRE開始/待機/採点/次日保存を区別|正式認証/host/全機能の統合|
 
 保存版16は非公開開発の進展であり、完全移植完了または公開許可ではない。
+
+
+## 保存版17：PRE長期比較・日次受付橋渡し
+
+保存版16の正式保存receiptを基準に継続。55機能/12gateは維持し、実host未検証を合格にしない。PRE元計算の複数日全保存値比較、active書込全経路調査、専用ACCESS credential lookupを追加。日次受付橋渡しは既定無効・部分実装で、元DAILY_ANALYSIS全副作用/新frontier競合CAS/定期起動は未完成。証拠と正確な最終試験件数はevidence/v17を参照。R-SCHEMA/R-PRE-LARGE/B-HOST/B-MEM/B-UNATTENDED/U-QUEUE/U-ACCESS-BINDINGは未解消。元にないactive自動採用は追加せず、正式trial判定とactive維持が元の挙動。次はdaily本体の分析状態/summary/後続要求/エラー境界と全CASの元SQLite比較を優先する。

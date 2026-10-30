@@ -141,6 +141,13 @@
       "when": 1793354277799,
       "tag": "0019_chubby_toro",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1793400000000,
+      "tag": "0020_daily_bridge",
+      "breakpoints": true
     }
   ]
 }

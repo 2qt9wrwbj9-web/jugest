@@ -1012,3 +1012,8 @@ API/guard全抽出と関数索引はsource-inventory.json。MCP9tool、access13a
 ## 保存版16・中断後の最終再確認（2026-10-31 JST）
 
 元55機能の構成を維持。local実装済み・実host未検証14、部分実装22、未実装14、仕様未確認4、技術的障害あり1（完成率ではない）。全hostVerified=false。FEATURE_BUILD全子プロセス/正式PRE開始・1日採点・次日予測の元保存値比較、実OOM9条件と画面の結果をevidence/v16の再生成原本へ接続。最終件数はcommand-results.json、数学4規模はmodel-comparison.json、全尺度のmemoryはMEMORY_REPORT.md。PRE長期terminal/active正式採用・日次自動受付・正式認証・全Sync/Collector/パチンコ/MCP/OAuth・実データ移行は残る。
+
+
+## 保存版17：PRE長期比較・日次受付橋渡し
+
+保存版16の正式保存receiptを基準に継続。55機能/12gateは維持し、実host未検証を合格にしない。PRE元計算の複数日全保存値比較、active書込全経路調査、専用ACCESS credential lookupを追加。日次受付橋渡しは既定無効・部分実装で、元DAILY_ANALYSIS全副作用/新frontier競合CAS/定期起動は未完成。証拠と正確な最終試験件数はevidence/v17を参照。R-SCHEMA/R-PRE-LARGE/B-HOST/B-MEM/B-UNATTENDED/U-QUEUE/U-ACCESS-BINDINGは未解消。元にないactive自動採用は追加せず、正式trial判定とactive維持が元の挙動。次はdaily本体の分析状態/summary/後続要求/エラー境界と全CASの元SQLite比較を優先する。

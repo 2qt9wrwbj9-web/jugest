@@ -1,0 +1,25 @@
+# 保存版17 開発境界
+
+固定元1f8c29fc458f34e11e546fb57944d0fc31db98a5。保存版16の正式な5440af1から継続。INTERRUPTION_HANDOFFは歴史であり最新状態ではない。
+
+## 正式PRE
+
+元trial/sequential/formal-evaluationを引き続き直接再利用。新規複数日試験は元SQLiteとD1で全trial/model/prediction/outcome/dayを比較し、promotion/degradation/pending、情報不足日、日別台集合変更、再配信、異なる実績拒否、active不変を確認する。100日を試験fixtureの観測期間にするだけで製品の終了上限にしない。安全優先とtrial2 alphaは元関数の試験。長期trialの終了後は元daily loopがno_running_trialとなり、同一ペア再開始はcandidate_already_trialedで抑止される。元にないactive採用は追加していない。
+
+## active全書込調査
+
+active-writes.json。固定runtime全mjsを走査し、activateStoreModel定義のINSERTとFEATURE_BUILDの初期化呼出のみ。正式PRE promotedは統計上の試験判定であり予測採用の切替ではない。管理APIの追加自動採用も実装しない。この固定元に存在しない自動切替を未移植機能として無条件に要求しない。
+
+## 日次受付：部分実装・既定無効
+
+daily-pipeline.mjsとsites_daily_runsを追加。店舗/営業日/channel受付、同日重複防止、成功親からFEATURE_BUILD/PREの確実な受付、各子の既存outbox、受付直後の停止から再利用、古frontierのsupersededを保持。既存Queue consumerへ内部dailyEnabledオプションで接続し、既定false。認証APIやスケジューラーは追加しない。
+
+元DAILY_ANALYSISと完全同等ではない。analysis_refresh_state世代・summary snapshot・shadow/比較/historical要求、collectorからの受付は未移植。同時に新frontierが到着する全CAS境界は未検証のため既定で有効化しない。安全性未証明を自動運用完成としない。次回は元daily本体のtransaction/各エラー捕捉境界まで移植してから有効化する。
+
+## 認証
+
+専用ACCESSのgetCredentialを追加。D1 BLOBからUint8Arrayへ元のバイト列を復元し、存在なし・失効済みも元同様返す。認証判定は呼出側の元手順の責務で、失効を無視したlogin routeを追加していない。専用DB隔離を維持。実credentialは使わない。
+
+## 残障害
+
+R-SCHEMA物理差、1.5MB大容量公開adapter、正式ACCESS binding/WebAuthn、全Sync/Collector/pachinko/MCP/OAuth、Sites総128MB/CPU/Queue/Cron/監視/費用は未解消。外部基盤/公開/デプロイなし。今回のPRE全異常停止位置・terminal実OOM・ブラウザー全フローは試験記録にある範囲だけを完成とする。

@@ -81,3 +81,8 @@ B-HOLDOUTのlocal達成は維持。Sync/Relay全体・収集・パチンコ・MC
 ### R-SCHEMA / RISK（v16）
 
 発生条件：元SQLiteへ省略列INSERTやnullable TEXT PRIMARY KEYを直接使用する場合。原因：Drizzle生成DDLがPKをnot-nullにし、live model_fingerprintのDEFAULT空文字を現schemaで保持していない。schema-comparison.json/strict logが証拠。active/store-read/PREの実writerは必須キーと全値を明示し、今回の元全保存値は一致。任意SQLや全SQLite schema互換の証明ではない。暫定対応は公開任意SQLなし、元writerの明示列を使用。次は必要な元呼出の省略列/default/null依存を棚卸し、既存データを壊さないschema adapterを比較する。解消条件は元有効入力/履歴の保持と、必要なSQL意味の完全一致。安全側制約を弱める変更を無断で採用しない。
+
+
+## 保存版17：PRE長期比較・日次受付橋渡し
+
+保存版16の正式保存receiptを基準に継続。55機能/12gateは維持し、実host未検証を合格にしない。PRE元計算の複数日全保存値比較、active書込全経路調査、専用ACCESS credential lookupを追加。日次受付橋渡しは既定無効・部分実装で、元DAILY_ANALYSIS全副作用/新frontier競合CAS/定期起動は未完成。証拠と正確な最終試験件数はevidence/v17を参照。R-SCHEMA/R-PRE-LARGE/B-HOST/B-MEM/B-UNATTENDED/U-QUEUE/U-ACCESS-BINDINGは未解消。元にないactive自動採用は追加せず、正式trial判定とactive維持が元の挙動。次はdaily本体の分析状態/summary/後続要求/エラー境界と全CASの元SQLite比較を優先する。

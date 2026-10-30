@@ -1,0 +1,21 @@
+{
+  "fixedOriginal": "1f8c29fc458f34e11e546fb57944d0fc31db98a5",
+  "hits": [
+    {
+      "file": "upstream/vps/src/jobs/feature-build.mjs",
+      "line": 60,
+      "code": "        const initialized=activateStoreModel(db,{"
+    },
+    {
+      "file": "upstream/vps/src/research/store-read-output.mjs",
+      "line": 73,
+      "code": "export function activateStoreModel(db,{storeId,fingerprint,model,featureVersion,frontierDate,days,holdoutScore=null,nowIso=new Date().toISOString()}={}){"
+    },
+    {
+      "file": "upstream/vps/src/research/store-read-output.mjs",
+      "line": 76,
+      "code": "  db.prepare(`INSERT INTO active_store_models(store_id,fingerprint,model_json,feature_version,source_frontier_date,holdout_score,activated_at,updated_at)"
+    }
+  ],
+  "conclusion": "Only FEATURE_BUILD absent-active initialization calls activateStoreModel. PRE promoted is an evidence decision; no active auto-adoption path found in fixed runtime. No new adoption rule added."
+}

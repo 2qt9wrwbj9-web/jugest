@@ -1,3 +1,9 @@
+
+
+## 保存版17：PRE長期比較・日次受付橋渡し
+
+保存版16の正式保存receiptを基準に継続。55機能/12gateは維持し、実host未検証を合格にしない。PRE元計算の複数日全保存値比較、active書込全経路調査、専用ACCESS credential lookupを追加。日次受付橋渡しは既定無効・部分実装で、元DAILY_ANALYSIS全副作用/新frontier競合CAS/定期起動は未完成。証拠と正確な最終試験件数はevidence/v17を参照。R-SCHEMA/R-PRE-LARGE/B-HOST/B-MEM/B-UNATTENDED/U-QUEUE/U-ACCESS-BINDINGは未解消。元にないactive自動採用は追加せず、正式trial判定とactive維持が元の挙動。次はdaily本体の分析状態/summary/後続要求/エラー境界と全CASの元SQLite比較を優先する。
+
 # 現在の再開正本：保存版16（2026-10-31 JST / 非公開開発）
 
 保存版15のSite 15ab06a6145755106e4611c3559bd543d92d5fa3、GitHub開発35b3fa305aca758ca092ed59924cf7c2612bbe59を、永続成果物ZIP/1581個別hash/CRCとremote1540source一致で復元して継続した。以前の保存版へ戻していない。新しい保存後の完全SHAは外部SITES_SAVED_VERSION.json、GitHubはevidence/v16/GITHUB_COMMIT.jsonを参照する（sourceへ自己SHAを埋め込まない）。本書後半は過去保存版の無省略記録で、現在判定はこの先頭と4管理正本のv16節を優先する。
