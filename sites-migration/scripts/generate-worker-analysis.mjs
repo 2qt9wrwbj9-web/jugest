@@ -101,4 +101,8 @@ export async function runCompiledStoreModel(args){
  return runCompiledStoreModelStream({...args,days:args.days.filter(Boolean).sort((a,b)=>String(a.date).localeCompare(String(b.date)))});
 }
 `;
-writeFileSync(new URL('../lib/analysis/compiled-worker.mjs',import.meta.url),output);console.log('Statically compiled original normalizer and engines with day stream input.');
+const dayHelpers=adapter.slice(adapter.indexOf('function plain('),adapter.indexOf('async function bootRuntime('));
+let dayKernel=adapter.slice(adapter.indexOf('export async function runExistingStoreDayJudgement('),adapter.indexOf('\nexport const __test='));
+if(!dayKernel.includes('const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});'))throw Error('fixed day judgement anchor missing');
+dayKernel=dayKernel.replace('runExistingStoreDayJudgement','runCompiledStoreDayJudgement').replace('const {bridge,name}=await bootImportedRuntime({rootDir,shop,sourceStoreId,days});','const {bridge,name}=await importedStream({shop,sourceStoreId,days});');
+writeFileSync(new URL('../lib/analysis/compiled-worker.mjs',import.meta.url),output+'\n'+dayHelpers+'\n'+dayKernel);console.log('Statically compiled original normalizer and engines with day stream input.');

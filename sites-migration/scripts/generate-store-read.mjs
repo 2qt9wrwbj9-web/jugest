@@ -1,5 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-const read=p=>readFileSync(new URL('../../vps/src/'+p,import.meta.url),'utf8');
+const read=p=>readFileSync(new URL('../upstream/vps/src/'+p,import.meta.url),'utf8');
 const source=read('analytics-handler.mjs');
 function section(s,a,b){const i=s.indexOf(a),j=s.indexOf(b,i+a.length);if(i<0||j<0)throw Error('missing source anchor '+a);return s.slice(i,j)}
 function replace(s,a,b){if(!s.includes(a))throw Error('missing transformation anchor '+a);return s.replace(a,b)}
@@ -19,7 +19,8 @@ handler=replace(handler,'    const db=openDatabase(canonicalDbPath);','');
 handler=replace(handler,'      migrate(db);','');
 handler=handler.slice(0,handler.indexOf("      if(parts.length===4&&parts[2]==='system'"))+handler.slice(handler.indexOf("      if(parts.length===3&&parts[2]==='stores')"));
 handler=handler.slice(0,handler.indexOf("      if(parts.length===5&&parts[4]==='legacy-plan')"))+handler.slice(handler.indexOf("      if(parts.length===6&&parts[4]==='days')"));
-handler=handler.slice(0,handler.indexOf("      if(parts.length===6&&parts[4]==='research'"))+handler.slice(handler.indexOf("      if(parts.length===5&&parts[4]==='status')"));
+const readBranch=section(handler,"      if(parts.length===6&&parts[4]==='research'&&parts[5]==='store-read')","      if(parts.length===6&&parts[4]==='research'&&parts[5]==='comparison')").replace('storeRead=auditStoreRead(', 'storeRead=await auditStoreRead(');
+handler=handler.slice(0,handler.indexOf("      if(parts.length===6&&parts[4]==='research'"))+readBranch+handler.slice(handler.indexOf("      if(parts.length===5&&parts[4]==='status')"));
 handler=replace(handler,"      sendJson(req,res,404,{ok:false,code:'not_found'});\n    }finally{db.close()}","      sendJson(req,res,503,{ok:false,code:'sites_port_not_implemented'});\n    }finally{}");
 handler=handler.replaceAll('=db.prepare(', '=await db.prepare(').replaceAll('const rows=db.prepare(', 'const rows=await db.prepare(');
 handler=replace(handler,'.all();','.all();');
@@ -33,7 +34,7 @@ handler=replace(handler,".all(storeId,date).map(row=>safeJson(row.payload_json,n
 handler=replace(handler,'access=authorizedStore(', 'access=await authorizedStore(');
 handler=replace(handler,'||authenticatePia(req);','||await authenticatePia(req);');
 handler=handler.replaceAll('(req,relayDbPath)','(req)');
-writeFileSync(new URL('../lib/generated-store-read.mjs',import.meta.url),`// Generated from frozen JUGEST source. Regenerate with scripts/generate-store-read.mjs.\nconst ANALYSIS_VERSION='vps-runtime-v1';\n${assistantScope}\n${piaScope}\nexport function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson}){\n${authorized}\n${handler}\n}\n`);
+writeFileSync(new URL('../lib/generated-store-read.mjs',import.meta.url),`// Generated from frozen JUGEST source. Regenerate with scripts/generate-store-read.mjs.\nconst ANALYSIS_VERSION='vps-runtime-v1',STORE_READ_VERSION='store-read-v1';\n${assistantScope}\n${piaScope}\nexport function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson,auditStoreRead=async(_db,_id,payload)=>payload}){\n${authorized}\n${handler}\n}\n`);
 // Reuse the original cryptographic checks, token records and revocation checks.
 let auth=read('assistant-read-key.mjs');
 auth=replace(auth,"import {createRelayStore} from './relay-store.mjs';",'');

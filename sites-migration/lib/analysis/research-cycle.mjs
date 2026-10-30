@@ -63,14 +63,18 @@ export async function researchCycleWrites({db,job,feature,key,at,onStage=()=>{}}
  if(!fresh)return[db.prepare("UPDATE sites_research_context SET state='cycle_superseded' WHERE job_id=? AND EXISTS(SELECT 1 FROM sites_analysis_jobs WHERE id=? AND state='succeeded' AND result_key=?)").bind(job.id,job.id,key)];
  const plan=planResearchDecision({loop,registry:before.registry,feature,at});onStage('research-cycle:planned', {action:plan.action});const l=latch({db,job,key,at,before,plan});return[l.statement,...stateWrites({db,job,plan,l}),...childWrites({db,job,plan,c,root:mode.root_job_id,l,at}),...finishWrites({db,job,plan,l,at})];
 }
-export async function featureCycleWrites({db,job,feature,key,at}){
- const mode=await db.prepare('SELECT root_job_id FROM sites_research_cycle_jobs WHERE job_id=? AND enabled=1').bind(job.id).first();if(!mode)return[];
- const before=await snapshot(db,job.store_id);if(before.loop?.frontier_date>feature.asOfDate)return[];
+export function planFeatureResearch({before,job,feature,at}){
  const champions=before.registry.filter(x=>x.status==='research_champion').sort((a,b)=>b.generation-a.generation||b.updated_at.localeCompare(a.updated_at)),model=champions[0]?JSON.parse(champions[0].model_json):baselineModel(),fp=fingerprintModel(model),rows=before.registry.map(x=>({...x}));
  if(!champions.length){let existing=rows.find(x=>x.fingerprint===fp);if(existing)Object.assign(existing,{status:'research_champion',updated_at:at});else rows.push({store_id:job.store_id,fingerprint:fp,model_json:canonicalJson(model),parent_fingerprint:null,generation:0,status:'research_champion',validation_score:null,holdout_score:null,score_json:'{}',created_at:at,updated_at:at})}
  let loop=before.loop?{...before.loop}:{store_id:job.store_id,feature_version:feature.featureVersion,current_fingerprint:fp,best_fingerprint:fp,generation:0,no_improve_count:0,repeated_fingerprint:null,state:'running',last_error:null,frontier_date:feature.asOfDate,search_round:0,holdout_finalized_at:null,holdout_winner_fingerprint:null,updated_at:at};
  if(before.loop&&before.loop.frontier_date!==feature.asOfDate)Object.assign(loop,{feature_version:feature.featureVersion,current_fingerprint:fp,best_fingerprint:fp,no_improve_count:0,repeated_fingerprint:null,frontier_date:feature.asOfDate,search_round:0,holdout_finalized_at:null,holdout_winner_fingerprint:null});Object.assign(loop,{state:'running',last_error:null,updated_at:at});
- const plan={loop,registry:rows,action:'cycle_started',next:{kind:'research-backtest',model,logicalKey:`backtest:${job.store_id}:${feature.asOfDate}:${fp}:g${loop.generation}`}},l=latch({db,job,key,at,before,plan});
+ const plan={loop,registry:rows,action:'cycle_started',next:{kind:'research-backtest',model,logicalKey:`backtest:${job.store_id}:${feature.asOfDate}:${fp}:g${loop.generation}`}};
+ return{plan,champion:model};
+}
+export async function featureCycleWrites({db,job,feature,key,at}){
+ const mode=await db.prepare('SELECT root_job_id FROM sites_research_cycle_jobs WHERE job_id=? AND enabled=1').bind(job.id).first();if(!mode)return[];
+ const before=await snapshot(db,job.store_id);if(before.loop?.frontier_date>feature.asOfDate)return[];
+ const {plan}=planFeatureResearch({before,job,feature,at}),loop=plan.loop,fp=fingerprintModel(plan.next.model),l=latch({db,job,key,at,before,plan});
  const c={feature_job_id:job.id};return[l.statement,...stateWrites({db,job,plan,l}),db.prepare(`INSERT INTO sites_research_context(job_id,feature_job_id,input_hash,model_fingerprint,frontier_date,generation,round,logical_key,implementation_hash,state,created_at) SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE ${l.gate} ON CONFLICT(job_id) DO NOTHING`).bind(job.id,job.id,job.input_hash,fp,feature.asOfDate,loop.generation,loop.search_round,'feature-cycle:'+job.id,WORKER_IMPLEMENTATION_HASH,'cycle_started',at,...l.args),...childWrites({db,job,plan,c,root:mode.root_job_id,l,at}),...finishWrites({db,job,plan,l,at})];
 }
 

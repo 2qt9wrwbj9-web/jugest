@@ -1,0 +1,15 @@
+# 保存版16 依存関係と正確な境界
+
+元FEATURE_BUILD: loadStoreDays(limit180 valid)→target以前を選択→build/persist features→completeFeatureRefresh→followupがあれば旧frontier公開を停止→ensureResearchCycle→既存active refresh / absentのみinitial research champion activate→store-read/live翌日保存。Sitesはこのbusiness順と既存値を再利用。結果検証時にfeature/refresh/active/store-read/research受付/job/receiptを同じD1 batchで公開し、計算途中はprivate R2だけ。
+
+既存の「研究を継続」opt-inと手動計算モードを維持したため、元physical queue/coalescing/常駐scheduler全体は同一と主張しない。複数受付はSites headでgenerationを扱い、古いasOf日の履歴は保持しながらactive公開を抑止する。原refreshのactive_job_idはSites jobへの論理対応。4規模の240raw入力でも元FEATURE_BUILDの直近180valid仕様に従う。現行予測240日を削減したわけではない。
+
+元research cycle: feature→backtest→search→採否/収束→sealed holdout。v15のこの部分を維持し、v16でactiveが初回から独立して存在するように復元した。holdout/研究championはactiveを上書きしない。
+
+元正式PREの入口は daily-analysis.mjs。advanceFormalLiveTrialDayを先に呼び、running trialがなければmaybeStartFinalizedFormalTrial。holdout-finalized/feature整合/active存在/別challenger/同lineage過去pair未試験を確認。trial開始→immutable model2本→未来targetのchampion/challenger予測2本。日次はtarget実績待機→元day judgement→immutable outcome→元NDCG/sequential evidence→trial CAS→次日の2予測。元の数式/閾値を再利用。formal-pre DEV jobはこの内部境界を呼び、定期daily-analysis受付自体は未接続。
+
+trial promotedの計算状態と、active_store_models更新は別。active採用への後続呼出・条件・履歴・失敗復旧・研究/試験の新世代競合を次に元ソースから追跡する。勝者だから自動採用する独自ルールを足さない。過去comparison/shadow/全PRE terminal経路も残る。
+
+ACCESSは独立DB。元enrollment lookup/challenge validationの部品だけ拡張。未確認の第2D1を通常DBへ混在させず、公開routeを有効にしていない。WebAuthn/RPID/Origin/CSRF/invite/enrollment/session発行・復旧は次の依存。
+
+新D1表の7対象はschema-comparison.jsonの列/型/PK比較とnull/default差の監査、全business writerの元全保存値比較を実施。PK nullabilityおよび省略INSERT時のDBデフォルト値の差は同JSONに記録し、互換と断定しない。元writerは全値を指定する。既存migrationは変更せず0017/18/19を追加。自動GC・実データ移行・公開・外部恒久基盤は実施しない。

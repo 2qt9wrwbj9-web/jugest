@@ -123,3 +123,112 @@ export const sitesHoldoutParts=sqliteTable('sites_holdout_parts',{
 export const sitesHoldoutCommits=sqliteTable('sites_holdout_commits',{
  jobId:integer('job_id').primaryKey(),validated:integer('validated').notNull()
 },t=>[check('sites_holdout_commit_valid',sql`${t.validated}=1`)]);
+
+// Exact source columns, keys and checks for active/store-read and formal PRE v2.
+export const activeStoreModels=sqliteTable("active_store_models",{
+ storeId:text("store_id").primaryKey(),
+ fingerprint:text("fingerprint").notNull(),
+ modelJson:text("model_json").notNull(),
+ featureVersion:text("feature_version").notNull(),
+ sourceFrontierDate:text("source_frontier_date").notNull(),
+ holdoutScore:real("holdout_score"),
+ activatedAt:text("activated_at").notNull(),
+ updatedAt:text("updated_at").notNull()
+},t=>[foreignKey({columns:[t.storeId],foreignColumns:[stores.id]}).onDelete('cascade')]);
+export const storePredictionSnapshots=sqliteTable("store_prediction_snapshots",{
+ id:integer("id").primaryKey({autoIncrement:true}),
+ storeId:text("store_id").notNull(),
+ targetDate:text("target_date").notNull(),
+ engine:text("engine").notNull(),
+ engineVersion:text("engine_version").notNull(),
+ modelFingerprint:text("model_fingerprint").notNull(),
+ featureVersion:text("feature_version"),
+ sourceFrontierDate:text("source_frontier_date").notNull(),
+ inputHash:text("input_hash").notNull(),
+ payloadJson:text("payload_json").notNull(),
+ payloadHash:text("payload_hash").notNull(),
+ createdAt:text("created_at").notNull()
+},t=>[foreignKey({columns:[t.storeId],foreignColumns:[stores.id]}).onDelete('cascade'),index("store_prediction_snapshots_store_target_idx").on(t.storeId,t.targetDate,t.engine),uniqueIndex("sites_store_prediction_snapshots_identity").on(t.storeId,t.targetDate,t.engine,t.engineVersion,t.modelFingerprint),check("sites_store_prediction_snapshots_check_0",sql`engine IN ('pre_research','current_shadow')`)]);
+export const preV2FormalTrials=sqliteTable("pre_v2_formal_trials",{
+ storeId:text("store_id").notNull(),
+ lineageId:text("lineage_id").notNull(),
+ trialNumber:integer("trial_number").notNull(),
+ trialVersion:text("trial_version").notNull(),
+ scorerVersion:text("scorer_version").notNull(),
+ sequentialVersion:text("sequential_version").notNull(),
+ promotionAlpha:real("promotion_alpha").notNull(),
+ safetyAlpha:real("safety_alpha").notNull(),
+ championFingerprint:text("champion_fingerprint").notNull(),
+ challengerFingerprint:text("challenger_fingerprint").notNull(),
+ machineSetHash:text("machine_set_hash").notNull(),
+ status:text("status").notNull(),
+ decision:text("decision").notNull(),
+ stateJson:text("state_json").notNull(),
+ stateHash:text("state_hash").notNull(),
+ startedAt:text("started_at").notNull(),
+ updatedAt:text("updated_at").notNull(),
+ decisionAt:text("decision_at"),
+ decisionTargetDate:text("decision_target_date")
+},t=>[primaryKey({columns:[t.storeId,t.lineageId,t.trialNumber]}),foreignKey({columns:[t.storeId],foreignColumns:[stores.id]}).onDelete('cascade'),index("pre_v2_formal_trials_store_status_idx").on(t.storeId,t.status,t.lineageId,t.trialNumber),check("sites_pre_v2_formal_trials_check_0",sql`trial_number>=1`),check("sites_pre_v2_formal_trials_check_1",sql`status IN ('running','promoted','blocked')`)]);
+export const preV2FormalPredictions=sqliteTable("pre_v2_formal_predictions",{
+ storeId:text("store_id").notNull(),
+ lineageId:text("lineage_id").notNull(),
+ trialNumber:integer("trial_number").notNull(),
+ targetDate:text("target_date").notNull(),
+ role:text("role").notNull(),
+ modelFingerprint:text("model_fingerprint").notNull(),
+ sourceFrontierDate:text("source_frontier_date").notNull(),
+ machineSetHash:text("machine_set_hash").notNull(),
+ rankingsJson:text("rankings_json").notNull(),
+ predictionHash:text("prediction_hash").notNull(),
+ createdAt:text("created_at").notNull()
+},t=>[primaryKey({columns:[t.storeId,t.lineageId,t.trialNumber,t.targetDate,t.role]}),foreignKey({columns:[t.storeId,t.lineageId,t.trialNumber],foreignColumns:[preV2FormalTrials.storeId,preV2FormalTrials.lineageId,preV2FormalTrials.trialNumber]}).onDelete('cascade'),index("pre_v2_formal_predictions_store_date_idx").on(t.storeId,t.targetDate,t.lineageId,t.trialNumber,t.role),check("sites_pre_v2_formal_predictions_check_0",sql`role IN ('champion','challenger')`)]);
+export const preV2FormalOutcomes=sqliteTable("pre_v2_formal_outcomes",{
+ storeId:text("store_id").notNull(),
+ lineageId:text("lineage_id").notNull(),
+ trialNumber:integer("trial_number").notNull(),
+ targetDate:text("target_date").notNull(),
+ judgedRowsJson:text("judged_rows_json").notNull(),
+ outcomeHash:text("outcome_hash").notNull(),
+ createdAt:text("created_at").notNull()
+},t=>[primaryKey({columns:[t.storeId,t.lineageId,t.trialNumber,t.targetDate]}),foreignKey({columns:[t.storeId,t.lineageId,t.trialNumber],foreignColumns:[preV2FormalTrials.storeId,preV2FormalTrials.lineageId,preV2FormalTrials.trialNumber]}).onDelete('cascade'),index("pre_v2_formal_outcomes_store_date_idx").on(t.storeId,t.targetDate,t.lineageId,t.trialNumber)]);
+export const preV2FormalTrialDays=sqliteTable("pre_v2_formal_trial_days",{
+ storeId:text("store_id").notNull(),
+ lineageId:text("lineage_id").notNull(),
+ trialNumber:integer("trial_number").notNull(),
+ targetDate:text("target_date").notNull(),
+ top10Delta:real("top10_delta").notNull(),
+ top5Delta:real("top5_delta").notNull(),
+ top10Informative:integer("top10_informative").notNull(),
+ top5Informative:integer("top5_informative").notNull(),
+ top10LogE:real("top10_log_e").notNull(),
+ top10MaxLogE:real("top10_max_log_e").notNull(),
+ top5DegradationLogE:real("top5_degradation_log_e").notNull(),
+ top5DegradationMaxLogE:real("top5_degradation_max_log_e").notNull(),
+ evidenceJson:text("evidence_json").notNull(),
+ evidenceHash:text("evidence_hash").notNull(),
+ stateHashAfter:text("state_hash_after").notNull(),
+ createdAt:text("created_at").notNull()
+},t=>[primaryKey({columns:[t.storeId,t.lineageId,t.trialNumber,t.targetDate]}),foreignKey({columns:[t.storeId,t.lineageId,t.trialNumber],foreignColumns:[preV2FormalTrials.storeId,preV2FormalTrials.lineageId,preV2FormalTrials.trialNumber]}).onDelete('cascade'),index("pre_v2_formal_trial_days_store_date_idx").on(t.storeId,t.targetDate,t.lineageId,t.trialNumber),check("sites_pre_v2_formal_trial_days_check_0",sql`top10_delta>=-1 AND top10_delta<=1`),check("sites_pre_v2_formal_trial_days_check_1",sql`top5_delta>=-1 AND top5_delta<=1`),check("sites_pre_v2_formal_trial_days_check_2",sql`top10_informative IN (0,1)`),check("sites_pre_v2_formal_trial_days_check_3",sql`top5_informative IN (0,1)`)]);
+export const preV2FormalModels=sqliteTable("pre_v2_formal_models",{
+ storeId:text("store_id").notNull(),
+ lineageId:text("lineage_id").notNull(),
+ trialNumber:integer("trial_number").notNull(),
+ role:text("role").notNull(),
+ modelFingerprint:text("model_fingerprint").notNull(),
+ featureVersion:text("feature_version").notNull(),
+ modelJson:text("model_json").notNull(),
+ modelHash:text("model_hash").notNull(),
+ createdAt:text("created_at").notNull()
+},t=>[primaryKey({columns:[t.storeId,t.lineageId,t.trialNumber,t.role]}),foreignKey({columns:[t.storeId,t.lineageId,t.trialNumber],foreignColumns:[preV2FormalTrials.storeId,preV2FormalTrials.lineageId,preV2FormalTrials.trialNumber]}).onDelete('cascade'),index("pre_v2_formal_models_store_trial_idx").on(t.storeId,t.lineageId,t.trialNumber,t.role),check("sites_pre_v2_formal_models_check_0",sql`role IN ('champion','challenger')`)]);
+
+export const sitesPreEpochs=sqliteTable('sites_pre_epochs',{storeId:text('store_id').primaryKey(),revision:integer('revision').notNull(),owner:text('owner').notNull()});
+export const sitesPreFences=sqliteTable('sites_pre_fences',{operationId:text('operation_id').primaryKey(),valid:integer('valid').notNull()},t=>[check('sites_pre_fence_valid',sql`valid=1`)]);
+export const sitesFeatureOutputs=sqliteTable('sites_feature_outputs',{jobId:integer('job_id').primaryKey(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),objectKey:text('object_key').notNull(),bodyHash:text('body_hash').notNull(),bodyBytes:integer('body_bytes').notNull()});
+export const sitesPrePlans=sqliteTable('sites_pre_plans',{jobId:integer('job_id').primaryKey(),inputHash:text('input_hash').notNull(),implementationHash:text('implementation_hash').notNull(),objectKey:text('object_key').notNull(),bodyHash:text('body_hash').notNull(),bodyBytes:integer('body_bytes').notNull()});
+
+// Runtime job identity is adapted to the Sites durable queue, while original refresh columns retain their meaning.
+export const featureRefreshState=sqliteTable('feature_refresh_state',{storeId:text('store_id').notNull().references(()=>stores.id,{onDelete:'cascade'}),featureVersion:text('feature_version').notNull(),generation:integer('generation').notNull().default(0),completedGeneration:integer('completed_generation').notNull().default(0),activeJobId:integer('active_job_id').references(()=>sitesAnalysisJobs.id,{onDelete:'set null'}),frontierDate:text('frontier_date'),requestedFrontierDate:text('requested_frontier_date'),completedFrontierDate:text('completed_frontier_date'),updatedAt:text('updated_at').notNull()},t=>[primaryKey({columns:[t.storeId,t.featureVersion]})]);
+export const sitesFeatureRequests=sqliteTable('sites_feature_requests',{jobId:integer('job_id').primaryKey()});
+
+export const sitesFeaturePublications=sqliteTable('sites_feature_publications',{storeId:text('store_id').notNull(),featureVersion:text('feature_version').notNull(),asOfDate:text('as_of_date').notNull(),jobId:integer('job_id').notNull()},t=>[primaryKey({columns:[t.storeId,t.featureVersion,t.asOfDate]})]);

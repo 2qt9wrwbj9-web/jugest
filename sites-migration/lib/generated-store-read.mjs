@@ -1,5 +1,5 @@
 // Generated from frozen JUGEST source. Regenerate with scripts/generate-store-read.mjs.
-const ANALYSIS_VERSION='vps-runtime-v1';
+const ANALYSIS_VERSION='vps-runtime-v1',STORE_READ_VERSION='store-read-v1';
 function assistantReadRouteAllowed(parts,method){
   if(!['GET','HEAD'].includes(method)||!parts||parts[0]!=='api'||parts[1]!=='vps')return false;
   if(parts.length===3&&parts[2]==='stores')return true;
@@ -13,7 +13,7 @@ export function canReadPiaRoute(parts,method){
   if(parts.length===3&&parts[2]==='stores')return true;
   return parts[2]==='stores'&&((parts.length===5&&parts[4]==='days')||(parts.length===6&&parts[4]==='days'));
 }
-export function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson}){
+export function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson,auditStoreRead=async(_db,_id,payload)=>payload}){
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
 async function authorizedStore(db,storeId,channelId,piaOnly=false){const row=await db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
@@ -56,6 +56,11 @@ function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathn
       }
       if(parts.length===6&&parts[4]==='analysis'&&parts[5]==='history'){
         const rows=await db.prepare(`SELECT target_date,component,version,input_hash,output_hash,created_at FROM analysis_receipts WHERE store_id=? ORDER BY id DESC LIMIT 100`).all(storeId);sendJson(req,res,200,{ok:true,store:access.store,history:rows.map(row=>({targetDate:row.target_date,component:row.component,version:row.version,inputHash:row.input_hash,outputHash:row.output_hash,createdAt:row.created_at}))});return;
+      }
+      if(parts.length===6&&parts[4]==='research'&&parts[5]==='store-read'){
+        const row=await db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-read-active' AND version=?`).get(storeId,STORE_READ_VERSION);
+        const stored=row?safeJson(row.payload_json,null):null,storeRead=await auditStoreRead(db,storeId,stored),auditEnriched=Boolean(storeRead&&storeRead!==stored);
+        sendJson(req,res,200,{ok:true,store:access.store,storeRead,businessDate:row?.business_date??null,payloadHash:row?.payload_hash??null,updatedAt:row?.updated_at??null,auditEnriched});return;
       }
       if(parts.length===5&&parts[4]==='status'){
         const row=await db.prepare(`SELECT business_date,payload_json,payload_hash,updated_at FROM client_snapshots WHERE store_id=? AND snapshot_type='store-latest-status' AND version=?`).get(storeId,ANALYSIS_VERSION);

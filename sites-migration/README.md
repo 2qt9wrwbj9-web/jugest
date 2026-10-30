@@ -75,3 +75,9 @@ Sites側の元画面接続に加え、D1内での一貫した入力コピー、�
 元FEATURE_BUILDの次に位置するBACKTESTを独立移植。先に同じ固定入力でFEATURE_BUILDが完了していることを要求し、元初回baselineまたは既存研究championを開始時に固定。元の最新180日→frontier filter→walk-forward dataset→chronological split→train/validation評価と順位/保存を再利用。元SQLite BACKTEST childの実行結果/全保存値と比較する。holdoutは評価せず、MODEL_SEARCH/研究cycleの自動連鎖/昇格/採用/active-model更新は未移植。原本rankSplit/persistSplitの生成元は凍結jobs/backtest.mjs。D1へ同じ形式のbacktest_runs/predictionsと安全確定を接続し、別入力の履歴を削除しない。
 
 public componentsは公開実行APIや正式認証を有効にしない。元本番コード/branch/DB/ドメインへ変更なし。`npm test --prefix sites-migration`、source generatorは`npm run generate:analysis --prefix sites-migration`。全原本と再現試験は非公開の保存版11 ZIP。
+
+## 保存版16：activeモデルと正式PREのローカル境界
+
+FEATURE_BUILDの初回active初期化・既存active据置・store-read/live予測保存を元子プロセス全体と比較。正式PREのモデル固定・trial開始・2予測・実績待機・元day judgementによる日次採点/次日予測を移植し、元SQLiteの全行/hashと比較。研究winnerをactiveへ無条件採用しない。公開route/正式認証/元scheduler/active正式採用後続/host総128MBは未完。
+
+専用ACCESSのenrollment lookup/challenge作成を部品比較のみ追加。第2D1の正式供給未確認、通常DBとの混在なし。D1物理schemaのPK nullability/DEFAULT差と大容量active1.5MB境界は管理正本のR-SCHEMA/R-PRE-LARGEとして残す。全証拠原本は非公開Sites source/ZIP。public packageでは元sourceへのrelative symlinkと直接pinned Miniflare resolverを維持する。

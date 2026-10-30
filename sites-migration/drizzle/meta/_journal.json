@@ -120,6 +120,27 @@
       "when": 1793308860454,
       "tag": "0016_vengeful_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1793353685335,
+      "tag": "0017_rapid_ronan",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1793354124457,
+      "tag": "0018_perpetual_agent_zero",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1793354277799,
+      "tag": "0019_chubby_toro",
+      "breakpoints": true
     }
   ]
 }

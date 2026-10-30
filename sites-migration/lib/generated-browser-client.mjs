@@ -83,6 +83,7 @@ export function createVpsAnalyticsClient({
 
   return Object.freeze({
 
+    async getActiveStoreReadById(id){return request(`/stores/${encodeURIComponent(id)}/research/store-read`)},
     async listAnalysisJobsById(id){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs`)},
     async startAnalysisJobById(id,input){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs`,{method:'POST',body:JSON.stringify(input)})},
     async advanceAnalysisJobById(id,jobId){return request(`/stores/${encodeURIComponent(id)}/analysis/jobs/${jobId}/advance`,{method:'POST',body:'{}'})},

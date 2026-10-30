@@ -1,3 +1,6 @@
+import{activateStoreModel}from'../upstream/vps/src/research/store-read-output.mjs';
+import{baselineModel}from'../upstream/vps/src/research/model-search.mjs';
+import{loadStoreDays}from'../upstream/vps/src/analysis/store-data.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -69,3 +72,10 @@ test('incremental history reader preserves every original field and never trims 
  await f.db.prepare('INSERT INTO machine_day_data VALUES(?,?,?,?)').bind('s1','2026-01-02','99','{"tableNo":"99"}').run();
  assert.equal((await iterator.next()).value.machines.at(-1).tableNo,'99');
 }finally{await f.dispose()}});
+
+test('active store-read API matches original snapshot, explanations, legacy audit and assistant scope',async()=>{const f=await fixture();try{
+ const model=baselineModel(),days=loadStoreDays(f.sqlite,'s1').days;activateStoreModel(f.sqlite,{storeId:'s1',fingerprint:model.fingerprint,model,featureVersion:'store-features-v1',frontierDate:'2026-01-02',days,nowIso:'2026-01-03T00:00:00.000Z'});
+ for(const table of ['active_store_models','store_prediction_snapshots'])for(const row of f.sqlite.prepare('SELECT * FROM '+table).all()){const keys=Object.keys(row);await f.db.prepare('INSERT INTO '+table+'('+keys.join(',')+') VALUES('+keys.map(()=>'?')+')').bind(...keys.map(k=>row[k])).run()}
+ const row=f.sqlite.prepare("SELECT * FROM client_snapshots WHERE snapshot_type='store-read-active'").get(),keys=Object.keys(row);await f.db.prepare('INSERT INTO client_snapshots('+keys.join(',')+') VALUES('+keys.map(()=>'?')+')').bind(...keys.map(k=>row[k])).run();const r=await f.compare('/api/vps/stores/s1/research/store-read');assert.equal(r.storeRead.modelFingerprint,model.fingerprint);assert.equal(r.auditEnriched,false);await f.compare('/api/vps/stores/s1/research/store-read',{authorization:'Bearer '+assistant});await f.compare('/api/vps/stores/s2/research/store-read');await f.compare('/api/vps/stores/s1/research/store-read',{});
+ const old=JSON.parse(row.payload_json);delete old.explanationVersion;for(const db of [f.sqlite])db.prepare("UPDATE client_snapshots SET payload_json=? WHERE snapshot_type='store-read-active'").run(JSON.stringify(old));await f.db.prepare("UPDATE client_snapshots SET payload_json=? WHERE snapshot_type='store-read-active'").bind(JSON.stringify(old)).run();const audited=await f.compare('/api/vps/stores/s1/research/store-read');assert.equal(audited.auditEnriched,true);assert.equal(audited.storeRead.explanationVersion,'pre-audit-v1');
+ }finally{await f.dispose()}});

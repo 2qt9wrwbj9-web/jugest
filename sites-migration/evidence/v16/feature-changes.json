@@ -1,0 +1,38 @@
+[
+  {
+    "id": "FEAT-01",
+    "before": "部分実装",
+    "after": "実装済み・実ホスト未検証",
+    "boundary": "元FEATURE_BUILD子プロセス全体と、特徴量・refresh・registry/loop・active・client/live全保存値を比較。既存activeは据置、初回のみ初期研究championで初期化。新frontier待機は旧のactive公開を抑止。物理queueと研究opt-in差はDEPENDENCIES.md参照。"
+  },
+  {
+    "id": "PRE-01",
+    "before": "未実装",
+    "after": "実装済み・実ホスト未検証",
+    "boundary": "元buildStoreReadPayload/説明/normalize/hash再利用。active・snapshot・live保存値とAPI/権限が一致。研究winnerへ自動同期しない。1.5MB超snapshotは安全に拒否し大容量adapterが残る。"
+  },
+  {
+    "id": "PRE-02",
+    "before": "未実装",
+    "after": "実装済み・実ホスト未検証",
+    "boundary": "正式trial開始、元の開始条件・再利用/拒否・固定モデル・champion/challengerの2予測を元SQLite全列比較。active切替は含めない。"
+  },
+  {
+    "id": "PRE-03",
+    "before": "未実装",
+    "after": "部分実装",
+    "boundary": "元target dayの全q/expectedSetting、outcome hash、NDCG、逐次状態/evidence、次日予測の保存を比較。実到着日のjob統合一致。全停止境界/全terminal trialの統合は未網羅。"
+  },
+  {
+    "id": "PRE-04",
+    "before": "未実装",
+    "after": "部分実装",
+    "boundary": "正式model/prediction/outcome/trial day不変保存、CAS・世代/lease・private checkpoint・Queue・実OOM復旧。DEV formal-pre経路で日次実行、元daily-analysisの定期呼出は未接続。"
+  },
+  {
+    "id": "AUTH-03",
+    "before": "部分実装",
+    "after": "部分実装",
+    "boundary": "専用ACCESSのみ。既存session/challenge/rate/失効にenrollment lookupのissuer/expiry/used/revokedとchallenge作成の元validationを追加比較。発行/登録/invite公開routeは未有効。"
+  }
+]

@@ -1,18 +1,18 @@
-# JUGEST 完全移植マスター計画（authoritative / 保存版15）
+# JUGEST 完全移植マスター計画（authoritative / 保存版16）
 
-固定本番deploy/vps@1f8c29fc458f34e11e546fb57944d0fc31db98a5。再開Site14 b464c7b19f96098cffb6af4ed9c325f25c2fdece / GitHub work/sites-migration-20261027@c513570b07433d43e6a58445c959732079450a10。保存receipt/ZIP CRC/SHAを照合して継続。保存後SHAはsafe receipt参照。公開許可ではない。
+固定本番deploy/vps@1f8c29fc458f34e11e546fb57944d0fc31db98a5。再開Site15 15ab06a6145755106e4611c3559bd543d92d5fa3 / GitHub work/sites-migration-20261027@35b3fa305aca758ca092ed59924cf7c2612bbe59。保存receipt/ZIP CRC/SHAを照合して継続。保存後SHAはsafe receipt参照。公開許可ではない。
 
 55機能IDと12gateを維持。局所実装、元比較、既存画面/API、障害復旧、local無人、実host、全体完成を分離。CYCLE-04は正式holdoutのlocal比較を完了し「実装済み・実ホスト未検証」へ。B-HOLDOUTの保存/復旧未実装という局所原因は解消したが、PRE/active model・host無人/総128MBは未完。根拠のない完成率は出さない。
 
 ## 次の依存順
 
-1. 正式PRE v2：PRE_DEPENDENCIES.mdの元call graphを基準にformal model/prediction/outcome/trial store、過去答え合わせ/逐次評価を移植。研究winner→active自動昇格は元の確認なしに追加しない。FEATURE_BUILDのactive初期化/store_read/live prediction副作用も残る。
+1. 正式PRE v2：v16でFEATURE_BUILD副作用・正式trial開始/モデル固定/2予測/実績待機/日次採点と次日予測のlocal比較・Queue接続まで実装。次はdaily-analysis/scheduler、長期terminal trial/active採用後続の元フローと安全性を比較。研究winner→active自動同期は追加しない。
 2. 正式認証：専用ACCESS D1 session/失効/challenge/rateの互換を足場に、正式binding供給、WebAuthn/Origin/RPID/登録/招待/発行/CSRF/復旧を移植。DB混在・DEV認証での代用は禁止。
 3. B-HOST/U-QUEUE/B-UNATTENDED：公式interface/非公開実行契約→必要な場合のみ公開を伴うcanaryの直前承認。一般Cloudflareの制限とSites割当を分離。local batch成功をhost transaction成功としない。
 4. B-MEM：現行予測のscope/候補順/全BHを維持したkernel境界を先に証明。効果のない参照解放反復は止める。holdoutは評価後の不要featureをcheckpointに重複保存せず、元の必要全列/数学を維持して削減した。
 5. Sync/Relay・Collector・日次収集→正式権限/監視→パチンコ→全MCP/OAuth→承認後の実データ独立移行。未移植行を削除しない。
 
-機械的再開：保存receipt→4正本→evidence/v15/REPRODUCE.mdとDEPENDENCIES.md。管理表の機械可読原本はmigration-matrix.json。UNKNOWNを不可能または完成とみなさない。
+機械的再開：保存receipt→4正本→evidence/v16/REPRODUCE.mdとDEPENDENCIES.md。管理表の機械可読原本はmigration-matrix.json。UNKNOWNを不可能または完成とみなさない。
 
 ## UI-01 本番パッチ適用フロントと主要画面
 
@@ -30,6 +30,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## UI-02 PWA/service worker/offline/cache/更新
 
 - 元ファイル/関数/API: site.webmanifest; index.html:manifest/icon/apple meta（固定treeにsw.js/service worker登録は見当たらず）
@@ -45,6 +46,7 @@
 - 障害: ["U-PWA"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## UI-03 設定・実戦・端末履歴・インポート/エクスポート
 
@@ -62,6 +64,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## UI-04 管理・PIA閲覧画面
 
 - 元ファイル/関数/API: access-ui.mjs;vps/src/access/pages.mjs
@@ -77,6 +80,7 @@
 - 障害: ["B-AUTH"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## MATH-01 ジャグラー単台判別/公衆judge
 
@@ -94,6 +98,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## MATH-02 ハナハナ/欠損推定/複数台・全台系
 
 - 元ファイル/関数/API: hanahana-judge.js;missing-inference.js;group-judge.js
@@ -109,6 +114,7 @@
 - 障害: ["B-COVERAGE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## API-01 店舗一覧/営業日/台データ
 
@@ -126,6 +132,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## API-02 保存分析/解析履歴/状態
 
 - 元ファイル/関数/API: vps/src/analytics-handler.mjs analysis/default,analysis/history,status
@@ -142,13 +149,14 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## API-03 legacy-plan/正式store-read/comparison/resource API
 
 - 元ファイル/関数/API: vps/src/analytics-handler.mjs legacy-plan,research/store-read,research/comparison,system/resources
-- Sites対応: lib/generated-store-read.mjs（read subset）
+- Sites対応: lib/generated-store-read.mjs;lib/store-read-api.mjs
 - 状態: 部分実装
-- 互換性と境界: 正式writer/監視/全レスポンス互換は未接続
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
+- 互換性と境界: 正式active store-readを元APIと一致比較し接続。legacy auditも元再利用。comparison/resource全体は未実装
+- 証拠: evidence/v16/logs/store-read-active.log・RESEARCH_COMPARISON.md
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
 - 実Sites検証: false
@@ -157,6 +165,7 @@
 - 障害: ["B-COVERAGE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## AN-01 店舗傾向/パターン・全体解析
 
@@ -174,6 +183,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## AN-02 現行予測/全モデル/ランキング
 
 - 元ファイル/関数/API: index.html:v5AnalyzeStore,v4PredictStore,bruteSingleGenerate
@@ -189,6 +199,7 @@
 - 障害: ["B-MEM"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 共通scope/候補順/全BHの契約を維持できるpure候補kernelに限定して分割仮説を検証。効果未証明なら採用しない
+
 
 ## AN-03 v5前半checkpoint/台別特徴量分割
 
@@ -206,21 +217,23 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## FEAT-01 FEATURE_BUILD/特徴量永続化
 
 - 元ファイル/関数/API: vps/src/jobs/feature-build.mjs;research/feature-builder.mjs
-- Sites対応: lib/analysis/feature-build.mjs
-- 状態: 部分実装
-- 互換性と境界: 計算/特徴量保存は元と一致。opt-in研究→正式holdoutまで連鎖。ただし元FEATURE_BUILDのactive初期化とstore_read snapshot/live prediction refreshの副作用は未移植であり、本番job全体完成ではない
-- 証拠: 元feature-build.mjsのactive分岐を再確認; PRE_DEPENDENCIES.md; 元feature比較回帰と研究統合
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/feature-build.mjs;active-store-read.mjs;pre-atomic.mjs;jobs.mjs
+- 状態: 実装済み・実ホスト未検証
+- 互換性と境界: 元FEATURE_BUILD子プロセス全体と、特徴量・refresh・registry/loop・active・client/live全保存値を比較。既存activeは据置、初回のみ初期研究championで初期化。新frontier待機は旧のactive公開を抑止。物理queueと研究opt-in差はDEPENDENCIES.md参照。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "対象経路のlocal実装済み", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "開発用の対象画面/APIへ接続済み", "localUnattended": "対象local Queue/DEV driverを検証済み", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "実装済み・実ホスト未検証", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["API-01", "JOB-01"]
 - 障害: ["B-HOST"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: active初期化/store-read snapshot/live predictionの元transactionと権限を比較して移植。holdout勝者からの無条件切替は追加しない
+- 次作業: 元schedulerと受付coalescing全体、hostでの大容量確定を検証する
+
 
 ## BT-01 研究BACKTEST/学習・検証予測行
 
@@ -238,6 +251,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## BT-02 大容量BACKTEST保存・再開
 
 - 元ファイル/関数/API: vps/src/jobs/backtest.mjs:persistSplit
@@ -253,6 +267,7 @@
 - 障害: ["R-D1", "R-COST"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## SEARCH-01 軸探索/最大128候補/未昇格評価保存
 
@@ -270,6 +285,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## CYCLE-01 BACKTEST→MODEL_SEARCH自動受付
 
 - 元ファイル/関数/API: vps/src/analysis/research-cycle.mjs:recordBacktestCompletion,scheduleModelSearch
@@ -285,6 +301,7 @@
 - 障害: ["B-PIPELINE"]
 - 完成条件: 元logical identity/入力/モデル/round/holdout分離の一致、再試行/重複/権限/画面の試験を維持しhost無人実行を検証
 - 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
+
 
 ## CYCLE-02 研究loop/frontier/generation/再試行履歴
 
@@ -302,6 +319,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
 
+
 ## CYCLE-03 champion昇格・候補棄却/履歴
 
 - 元ファイル/関数/API: vps/src/analysis/research-cycle.mjs:recordModelSearchCompletion,upsertCandidate
@@ -317,6 +335,7 @@
 - 障害: ["B-PIPELINE"]
 - 完成条件: 対象採否/履歴/次logical job/権限/競合の比較を維持し、実hostで同じ決定・復旧を確認。正式採用と混同しない
 - 次作業: ホストQueue/運用制約と正式PREを検証。activeモデル採用を研究championと分離
+
 
 ## CYCLE-04 反復/無改善収束/holdout解禁
 
@@ -334,69 +353,74 @@
 - 完成条件: ローカルの正式holdout計算/保存/統合/障害/画面は比較完了。実Sitesホストでメモリ/CPU/query/transaction/再配信/監視と大規模歴代モデル集合を検証し全体gateを満たす
 - 次作業: PRE v2正式trialの保存/逐次評価・モデル固定へ進む。source FEATURE_BUILDのactive初期化とrefreshは別の残機能として確認し、holdout勝者を自動反映しない
 
+
 ## PRE-01 active model/store-read生成・説明
 
 - 元ファイル/関数/API: vps/src/research/store-read-output.mjs;store-read-explain.mjs
-- Sites対応: read subsetのみ
-- 状態: 未実装
-- 互換性と境界: 現行予測を正式PREと呼ばない
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/active-store-read.mjs;lib/active-model-view.mjs;lib/store-read-api.mjs
+- 状態: 実装済み・実ホスト未検証
+- 互換性と境界: 元buildStoreReadPayload/説明/normalize/hash再利用。active・snapshot・live保存値とAPI/権限が一致。研究winnerへ自動同期しない。1.5MB超snapshotは安全に拒否し大容量adapterが残る。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "未実装", "originalComparison": "原本の個別証拠以外は未確認", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "実装済み・実ホスト未検証", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["CYCLE-04"]
 - 障害: ["B-PRE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+- 次作業: 大容量snapshot/R2公開adapterと正式権限・実hostを検証する
+
 
 ## PRE-02 PRE-v2正式trial/champion/challenger
 
 - 元ファイル/関数/API: vps/src/research/pre-v2/trial.mjs;trial-store.mjs;formal-start.mjs
-- Sites対応: 未接続
-- 状態: 未実装
-- 互換性と境界: 元正式試験開始/権限/状態を再利用する必要
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/pre-v2.mjs;formal-pre-job.mjs;generated-pre-trial-kernel.mjs
+- 状態: 実装済み・実ホスト未検証
+- 互換性と境界: 正式trial開始、元の開始条件・再利用/拒否・固定モデル・champion/challengerの2予測を元SQLite全列比較。active切替は含めない。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "未実装", "originalComparison": "原本の個別証拠以外は未確認", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "実装済み・実ホスト未検証", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["PRE-01", "AUTH-01"]
 - 障害: ["B-PRE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+- 次作業: 逐次評価でpromoted/blockedへ至る長期統合、active採用後続と監視を移植する
+
 
 ## PRE-03 PRE-v2 relevance/outcome/NDCG/sequential
 
 - 元ファイル/関数/API: vps/src/research/pre-v2/relevance.mjs;outcome.mjs;ndcg.mjs;sequential.mjs
-- Sites対応: 原sourceのみ
-- 状態: 未実装
-- 互換性と境界: 元定義/時系列評価/閾値を変更しない
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/pre-v2.mjs;compiled-worker.mjs;元pre-v2純粋計算
+- 状態: 部分実装
+- 互換性と境界: 元target dayの全q/expectedSetting、outcome hash、NDCG、逐次状態/evidence、次日予測の保存を比較。実到着日のjob統合一致。全停止境界/全terminal trialの統合は未網羅。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "未実装", "originalComparison": "原本の個別証拠以外は未確認", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["PRE-02"]
 - 障害: ["B-PRE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+- 次作業: 正式昇格/棄却に至る長期逐次経路と全回復分岐を検証する
+
 
 ## PRE-04 正式model/prediction store・日次loop・auto start
 
 - 元ファイル/関数/API: vps/src/research/pre-v2/formal-model-store.mjs;formal-prediction-store.mjs;formal-daily-loop.mjs;formal-auto-start.mjs
-- Sites対応: 未接続
-- 状態: 未実装
-- 互換性と境界: 履歴・予測時点・結果確定の互換が必要
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- Sites対応: lib/analysis/pre-v2.mjs;formal-pre-job.mjs;pre-atomic.mjs
+- 状態: 部分実装
+- 互換性と境界: 正式model/prediction/outcome/trial day不変保存、CAS・世代/lease・private checkpoint・Queue・実OOM復旧。DEV formal-pre経路で日次実行、元daily-analysisの定期呼出は未接続。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "未実装", "originalComparison": "原本の個別証拠以外は未確認", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["PRE-02", "JOB-03"]
 - 障害: ["B-PRE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+- 次作業: 元daily-analysis/schedulerの依存・active採用・同日自動再開の全境界を統合する
+
 
 ## COMP-01 予測と実績・shadow/答え合わせ
 
@@ -414,6 +438,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## COMP-02 過去比較/歴史PRE/walk-forward
 
 - 元ファイル/関数/API: vps/src/jobs/historical-compare.mjs;research/historical-comparison.mjs;historical-pre-simulator.mjs;historical-summary.mjs
@@ -429,6 +454,7 @@
 - 障害: ["B-PRE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## JOB-01 lease/attempt/固定入力/結果確定/回収
 
@@ -446,6 +472,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## JOB-02 永続outbox/Queue無人配信/復旧
 
 - 元ファイル/関数/API: vps/src/coordinator.mjs;coordinator-supervisor.mjs
@@ -461,6 +488,7 @@
 - 障害: ["U-QUEUE", "B-UNATTENDED"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: ホストbinding供給とdispatch自動回復を検証。公開なしでは実host完了としない
+
 
 ## JOB-03 定期scheduler/日次実行/collector barrier
 
@@ -478,6 +506,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## COLL-01 PIA自動収集・fetch cadence・scheduler
 
 - 元ファイル/関数/API: vps/src/collectors/pia-public.mjs;pia-scheduler.mjs
@@ -493,6 +522,7 @@
 - 障害: ["U-EXTERNAL"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## COLL-02 PIAバックフィル/取得queue
 
@@ -510,6 +540,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## COLL-03 iOS/Launcher/collector状態・batch-v3・連携コード
 
 - 元ファイル/関数/API: api/_relay-web.js;api/_collector-state-v3.js;api/_collector-batch-v3.js;ana-launcher.js
@@ -525,6 +556,7 @@
 - 障害: ["B-SYNC", "U-EXTERNAL"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## COLL-04 canonical ingest/品質/生データarchive/device backfill API
 
@@ -542,6 +574,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## SYNC-01 Relay永続revision/条件付き更新
 
 - 元ファイル/関数/API: vps/src/relay-store.mjs:createRelayStore
@@ -557,6 +590,7 @@
 - 障害: ["B-SYNC"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## SYNC-02 端末Sync/競合/履歴/チャンク同期
 
@@ -574,6 +608,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## SYNC-03 既存端末localStorage/IndexedDB引継ぎ
 
 - 元ファイル/関数/API: index.html;core-v510.js;sync-core.js
@@ -589,6 +624,7 @@
 - 障害: ["B-MIGRATE", "U-PWA"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## AUTH-01 正式WebAuthn/passkey/RP ID/session
 
@@ -606,6 +642,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
 
+
 ## AUTH-02 receiver/assistant-read/店舗閲覧scope
 
 - 元ファイル/関数/API: vps/src/assistant-read-key.mjs;store-access.mjs
@@ -622,21 +659,23 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## AUTH-03 招待/追加管理者/再認証/失効・rate limit
 
 - 元ファイル/関数/API: vps/src/access/handler.mjs;access/store.mjs
-- Sites対応: lib/access/d1-sessions.mjs（admin/credential/invite失効部分）
+- Sites対応: lib/access/d1-sessions.mjs;lib/access/generated-primitives.mjs
 - 状態: 部分実装
-- 互換性と境界: 元失効のSQL・auditを比較。招待/追加管理者発行、正式管理画面は未移植。保存版15はviewer単独失効/audit、厳密expiry、consumeRateのreset/保持と並列上限も元専用SQLiteと比較
-- 証拠: tests/port-access-sessions.test.mjs（4件）; evidence/v15/AUTH_SCOPE.md; logs/access-expanded.log（初期失敗と修正）; port-final.log/github-final.log
-- 画面/API: 公開API/画面への接続なし
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- 互換性と境界: 専用ACCESSのみ。既存session/challenge/rate/失効にenrollment lookupのissuer/expiry/used/revokedとchallenge作成の元validationを追加比較。発行/登録/invite公開routeは未有効。
+- 証拠: evidence/v16/RESEARCH_COMPARISON.md・formal-comparisons/・feature-child-*.json・logs/・BROWSER_CHECK.md・FAULT_REPORT.md
+- 画面/API: DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし
+- 開発環境: 記載範囲のローカル実装・比較済み。未網羅境界は本文を参照
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "対象範囲のみ合格（互換性欄の境界を参照）", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "部分実装", "originalComparison": "記載された元SQLite計算/保存値比較合格。全機能保証ではない", "screenApi": "DEV認証の既存画面/analysis job APIに接続。ACCESS部品は公開routeなし", "localUnattended": "PRE/featureは実local Queue検証。ACCESSは部品比較のみ", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["AUTH-01"]
 - 障害: ["B-AUTH", "U-ACCESS-BINDING", "U-RPID"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
-- 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
+- 次作業: 専用D1正式供給、invite/enrollment発行・WebAuthn/CSRF/Originを順次移植する
+
 
 ## PACHI-01 パチンコcollector/生snapshot/台履歴
 
@@ -654,6 +693,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## PACHI-02 推定/回転率/遊タイムranking/モデル
 
 - 元ファイル/関数/API: vps/src/pachinko/estimator.mjs;models.mjs;store.mjs;pachinko-rotation-ranking.mjs
@@ -669,6 +709,7 @@
 - 障害: ["B-PACHI"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## PACHI-03 パチンコ全API/画面/閲覧権限
 
@@ -686,6 +727,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## MCP-01 公開judge_machines/MCP schema
 
 - 元ファイル/関数/API: vps/src/mcp-handler.mjs:judge_machines
@@ -701,6 +743,7 @@
 - 障害: ["B-MCP"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## MCP-02 list_stores/get_store_days/day/analysis/status/history
 
@@ -718,6 +761,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## MCP-03 get_store_prediction/get_store_comparison
 
 - 元ファイル/関数/API: vps/src/mcp-handler.mjs:get_store_prediction,get_store_comparison
@@ -733,6 +777,7 @@
 - 障害: ["B-MCP"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## OAUTH-01 discovery/register/authorize/token/refresh/revoke
 
@@ -750,12 +795,13 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## DATA-01 canonical SQLite全table/key/FK/history→D1/R2
 
 - 元ファイル/関数/API: vps/src/schema.mjs;db.mjs
 - Sites対応: db/schema.ts;drizzle/;lib/storage/
 - 状態: 部分実装
-- 互換性と境界: read/解析に必要なsubset。全table移行未完
+- 互換性と境界: read/解析に必要なsubset。全table移行未完。v16でactive/store-read/PREの元保存表を追加。全DB変換・本番移行ではない
 - 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
 - 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
 - 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
@@ -765,6 +811,7 @@
 - 障害: ["B-MIGRATE", "R-D1"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## DATA-02 raw取得ファイル/archive/参照/容量
 
@@ -782,6 +829,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## DATA-03 access SQLite全table/secret境界
 
 - 元ファイル/関数/API: vps/src/access/schema.mjs
@@ -797,6 +845,7 @@
 - 障害: ["B-AUTH", "U-ACCESS-BINDING", "U-RPID"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 独立ACCESS bindingの正式提供interface確認。WebAuthn ceremony/Origin/RPID/招待・発行・CSRF/再登録と回復の統合。正式API未接続
+
 
 ## DATA-04 pachinko SQLite全table/membership/history
 
@@ -814,6 +863,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## DATA-05 R2不変保存/復旧/不要data保護
 
 - 元ファイル/関数/API: vps/src/relay-store.mjs;ingest/raw-archive.mjs
@@ -829,6 +879,7 @@
 - 障害: ["R-D1", "R-COST"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## OPS-01 resource telemetry/運用ログ/監視
 
@@ -846,6 +897,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## OPS-02 backup/整合snapshot/復元/切戻し
 
 - 元ファイル/関数/API: vps/src/deploy-core.mjs;deploy-runner.mjs;vps/scripts/
@@ -861,6 +913,7 @@
 - 障害: ["B-MIGRATE"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## OPS-03 配信/build/source保存/非公開/公開境界
 
@@ -878,6 +931,7 @@
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
 
+
 ## OPS-04 外部通信/CORS/origin/容量/料金/運用上限
 
 - 元ファイル/関数/API: vps/src/config.mjs;web-main.mjs;api/
@@ -893,6 +947,7 @@
 - 障害: ["U-EXTERNAL", "U-CAPACITY"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない
 - 次作業: 依存IDとblockerの次検証を解決し、元入出力の統合証拠を追加。ファイル存在だけで昇格しない
+
 
 ## 元DB全表と対応領域（空DBの元migration実行結果）
 
@@ -949,3 +1004,7 @@
 API/guard全抽出と関数索引はsource-inventory.json。MCP9tool、access13action、OAuth discovery/register/authorize/token、pachinko stores/matrix/records/yutime、analytics stores/days/analysis/history/status/research/comparison/resources、relay/sync/backfillを上記IDへ対応。動的routeと本番Nginx下の実配信経路の全semantic照合は未完（B-COVERAGE）。未移植catchallは503 sites_port_not_implementedであり成功応答にしない。公開judge以外のMCP toolは未対応として拒否。
 
 全ファイルごとの分類はevidence/v13/source-coverage.json。推定分類は元pathに基づく監査入口であり、関数単位の意味・到達可能性・UI全分岐確認は未完のまま記録する。
+
+## 保存版16の判定
+
+55機能IDを削除せず保持。FEAT-01/PRE-01/PRE-02をlocal実装・実host未検証へ、PRE-03/PRE-04を部分実装へ進めた。API-03とAUTH-03の範囲を拡張。正式PRE全体、active採用、正式認証/全MCP/Sync/Collector/パチンコ/実データ移行は未完。12完成ゲートは全体として未達。全hostVerified=falseを維持。

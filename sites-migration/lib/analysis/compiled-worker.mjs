@@ -1,4 +1,4 @@
-export const WORKER_IMPLEMENTATION_HASH='ff2ad8208151f393c843adb5ccd5cf34839a6058a71197dfaa2cc880dbc58e3a';
+export const WORKER_IMPLEMENTATION_HASH='21108dbc017d6ea414b08743226109b6503105b4bf31ada6e1674b68b0faaa98';
 // Generated from fixed production files; no eval/vm/fs at runtime.
 const host=globalThis;
 function memoryStorage(seed={}){
@@ -3169,4 +3169,28 @@ export async function runCompiledMachineBatchStream({shop,sourceStoreId,days,raw
 export async function runCompiledStoreModel(args){
  if(!Array.isArray(args.days))throw new TypeError('days are required');
  return runCompiledStoreModelStream({...args,days:args.days.filter(Boolean).sort((a,b)=>String(a.date).localeCompare(String(b.date)))});
+}
+
+function plain(value){return JSON.parse(JSON.stringify(value))}
+function mustFunction(value,name){if(typeof value!=="function")throw new Error(`JUGEST runtime missing ${name}`);return value}
+function validTargetDate(value){const text=String(value??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(text)||!Number.isFinite(Date.parse(`${text}T00:00:00Z`)))throw new TypeError('targetDate must be YYYY-MM-DD');return text}
+
+
+export async function runCompiledStoreDayJudgement({rootDir,shop,sourceStoreId,days,targetDate}={}){
+  const target=validTargetDate(targetDate);
+  if(!Array.isArray(days)||!days.some(day=>String(day?.date||'')===target))throw new TypeError('targetDate must exist in days');
+  const {bridge,name}=await importedStream({shop,sourceStoreId,days});
+  const getStoreDay=mustFunction(bridge.getStoreDay,'getStoreDay');
+  const result=plain(await getStoreDay(name,target));
+  if(!result||result.date!==target||!Array.isArray(result.rows))throw new Error('JUGEST protected day judgement returned no exact target day');
+  const rows=result.rows.map((row,index)=>{
+    const tableNo=String(row?.tableNo??'').trim();
+    if(!tableNo)throw new Error(`JUGEST protected day judgement row ${index} is missing tableNo`);
+    const q=Array.isArray(row?.q)?row.q.map(Number):null;
+    if(!q||!q.length||q.some(value=>!Number.isFinite(value)))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing posterior q`);
+    const expectedSetting=Number(row?.expectedSetting);
+    if(!Number.isFinite(expectedSetting))throw new Error(`JUGEST protected day judgement row ${tableNo} is missing expectedSetting`);
+    return Object.freeze({...row,tableNo,q:Object.freeze(q),expectedSetting});
+  });
+  return Object.freeze({shop:name,date:target,rows:Object.freeze(rows)});
 }

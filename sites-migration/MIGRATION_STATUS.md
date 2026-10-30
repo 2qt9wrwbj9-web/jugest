@@ -1,3 +1,42 @@
+> 保存版16向けの未保存開発状態。環境中断後にコードを回収し、最終全回帰・Sites非公開保存・証拠ZIP再作成を実施中。現時点の確実なSites保存版は15。
+
+# 現在の再開正本：保存版16（2026-10-30 UTC / 非公開開発）
+
+保存版15のSite 15ab06a6145755106e4611c3559bd543d92d5fa3、GitHub開発35b3fa305aca758ca092ed59924cf7c2612bbe59を、永続成果物ZIP/1581個別hash/CRCとremote1540source一致で復元して継続した。以前の保存版へ戻していない。新しい保存後の完全SHAは外部SITES_SAVED_VERSION.json、GitHubはevidence/v16/GITHUB_COMMIT.jsonを参照する（sourceへ自己SHAを埋め込まない）。本書後半は過去保存版の無省略記録で、現在判定はこの先頭と4管理正本のv16節を優先する。
+
+## ① 今回localで完成した境界
+
+- FEATURE_BUILDの元子プロセス全体と比較し、最新特徴量/refresh確定、古いfrontier公開抑止、初回のみactive初期化、既存active据置、store-read説明/台score/rank/payload/hash、次営業日live predictionを復元。初期/更新/別研究champion/後続待機の全business保存値が一致。
+- 正式PRE v2のモデル固定・trial開始・holdout確定後の元開始条件・champion/challenger予測pair不変保存・再利用/競合拒否を移植。元SQLiteのtrial/model/予測全行/hashを比較。
+- 正式PREの日次実績待機、元day judgement全q/期待設定、outcome/NDCG/sequential evidence/trial CAS、次日予測pairまで元保存値と一致。新formal-pre DEV job/既存outbox・Queue・固定入力・private checkpoint・最終CASへ接続。
+- 元店舗画面から店舗/日付/台データ/店舗分析/現行予測、研究/正式holdout/PRE開始/待機/実績採点/翌日予測/履歴を確認。研究受付後タブを閉じてもlocal研究7jobが完走。active・研究winner・正式試験2モデルを区別して表示。
+- ACCESS専用部品のenrollment lookupとchallenge作成validationを元SQLite比較で追加。公開認証route/新bindingは有効化していない。
+
+## ② 解消・部分改善した障害
+
+FEATURE_BUILD副作用とPRE開始/日次保存の未実装という局所原因を改善した。新active/PRE private plan後の実local V8 OOM、DB確定失敗、lease回復、古い世代、重複、応答消失で正常旧値を保持し、一度だけ正式公開することを確認。以前の7OOM条件と正式holdout比較も回帰。B-PRE/B-PIPELINE/B-AUTHは部分改善で、全体解消ではない。
+
+## ③ 未解消・新しく判明した制約
+
+- B-HOST/B-UNATTENDED/B-MEM：実Sitesの総128MB/CPU/Queue再配信/無人運用は未実証。U-QUEUE/U-ACCESS-BINDING/U-OBSERVE/U-CAPACITYはUNKNOWNのまま。公開・deploy/schedule追加・外部恒久基盤導入は行わない。
+- 新active/PRE開始4規模の観測used heap18.92〜23.19MiB。現行予測/正式holdoutの別工程と混同しない。MEMORY_REPORT.mdに全工程のraw指標、I/O、wall、前版比較。安定しない現行予測最適化は採用せず、元全model/8中間値/最終hash一致を維持。
+- R-PRE-LARGE：active snapshot/CAS期待行の大容量1.5MB超は安全に拒否。R2公開adapterは未実装。R-D1：local feature batch1301SQLのhost確定/CPU/query制限は未検証。
+- R-SCHEMA：PK nullability/DEFAULTの物理差。strict schema同値監査は未達のまま保存、元writerの全保存値一致とは別。詳細schema-comparison.json/FAULT_REPORT.md。
+- 正式PREの長期terminal採否/active採用後続・元daily-analysisの定期自動受付、全compare APIは未完。研究championとactiveの無条件同期はしていない。
+- 正式認証の全route/WebAuthn/Origin/CSRF/invite/復旧、第2ACCESS D1供給は未完。
+
+## ④ 完全移植までに残る作業と次回
+
+55機能と12gateを削除せず維持。全hostVerified=false、完成ゲート全体は未達。PRE/activeの進捗をlocal/元一致/画面API/無人/host/全体で分けて記録した。次はevidence/v16/REPRODUCE.mdの順に、元PRE terminal→active採用/日次呼出・大容量公開adapter・正式認証を比較して進める。Sync/Relay全体、Collector/自動収集、iOS移行、パチンコ、全MCP/OAuth、予測比較、許可済み実データ独立移行・backup/切戻しも残る。
+
+検証の全コマンド/exit/件数はevidence/v16/command-results.json、全ログはlogs/、元全列比較はfeature-child-*.json/formal-comparisons/。最終回帰結果とreceiptは保存時の外部delivery indexも参照。初期失敗を消さず修正前と最終を区別する。成果物作成・保存・再取得・共有は外部delivery receiptで別管理し、実際に確認前の共有完了を主張しない。
+
+本番jugest.net/VPS/DB/domain、GitHub deploy/vps/mainへ書き込みなし。本番データ・秘密・利用者情報を取得/移行せず、独立合成fixtureのみ。Sitesは保存のみで公開/本番デプロイしない。完全移植完了とは呼ばない。
+
+---
+
+# 以下は保存版15までの原本記録（省略なし）
+
 # JUGEST → Sites 移植の作業記録
 
 更新日：2026-10-28（日本時間）

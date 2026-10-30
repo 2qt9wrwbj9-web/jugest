@@ -1,3 +1,6 @@
+import{enrichStoredStoreReadPayload}from'../upstream/vps/src/research/store-read-output.mjs';
+import{getActiveStoreModel}from'./active-model-view.mjs';
+import{openStoreHistory}from'./store-history.mjs';
 import {handleAnalysisJobs} from './analysis/job-api.mjs';
 import {createStoreReadHandler} from './generated-store-read.mjs';
 import {authenticateReceiver,authenticateAssistantRead} from './generated-store-auth.mjs';
@@ -38,6 +41,7 @@ export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',p
   authenticateAssistantRead:req=>authenticateAssistantRead(req,stores),
   // Passkeys, invitations and viewer sessions have not been ported: no cookie
   // is interpreted as permission. PIA owner policy remains explicit and closed.
+  auditStoreRead:async(_db,storeId,payload)=>{if(!payload||payload.explanationVersion==='pre-audit-v1')return payload;try{const activeModel=await getActiveStoreModel(db,{storeId});if(!activeModel||activeModel.fingerprint!==String(payload.modelFingerprint||''))return payload;const input=await openStoreHistory(db,storeId,{limit:400}),days=[];for await(const d of input.days)days.push(d);return enrichStoredStoreReadPayload({payload,activeModel,days})}catch{return payload}},
   storeMetadata,canAccessStoreMetadata:(metadata,channel)=>canAccessStoreMetadata(metadata,channel,{piaAccessMode,piaOwnerChannelIds}),sendJson});
  const req={url:request.url,method:request.method,headers:Object.fromEntries(request.headers)};
  await handler(req,{});

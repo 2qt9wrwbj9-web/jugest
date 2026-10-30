@@ -1,0 +1,4 @@
+import{readFileSync}from'node:fs';import{resolve,relative,dirname}from'node:path';
+// Test harness only. Collect actual static imports so infrastructure additions
+// cannot silently leave an incomplete native Worker module graph in a probe.
+export function workerModuleClosure(root,entries){const seen=new Set();function walk(name){const path=resolve(root,name),key=relative(root,path);if(key.startsWith('..'))throw Error('Worker test import escapes source root');if(seen.has(key))return;seen.add(key);const source=readFileSync(path,'utf8');const patterns=[/^\s*import\b(?:(?!;)[\s\S])*?\bfrom\s*['"](\.[^'"]+)['"]/gm,/^\s*import\s*['"](\.[^'"]+)['"]/gm,/^\s*export\b(?:(?!;)[\s\S])*?\bfrom\s*['"](\.[^'"]+)['"]/gm];for(const pattern of patterns)for(const m of source.matchAll(pattern))walk(relative(root,resolve(dirname(path),m[1])))}for(const entry of entries)walk(entry);return[...seen]}

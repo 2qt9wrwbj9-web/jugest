@@ -74,3 +74,22 @@
 |AC-12|元画面で研究収束/holdout確定と個別履歴、店舗/日付/予測を検証|正式認証/host/PRE/全機能統合|
 
 local正式holdout合格はAC-02/05/06/12の対象範囲を前進させるが、全体gateを完成にしない。公開/デプロイ許可ではない。receipt/検証ログを最終根拠とする。
+
+## 保存版16の12gate更新（全体の合格項目数は増やさない）
+
+|gate|今回満たした局所条件|残る条件|
+|---|---|---|
+|AC-01|55機能を保持しPRE/active/認証の対応を更新|未移植全領域の実装と統合|
+|AC-02|元FEATURE_BUILD子プロセス全保存値、正式trial/全予測/日次outcome/evidence/hash、従来4規模全model8段階一致|active正式採用・長期PRE・未移植数学|
+|AC-03|4規模active/PRE開始・holdout負荷|本番相当履歴/全機能の実host負荷|
+|AC-04|workerd old-space96の全工程観測|Sites総128MB/CPU/同時request実測|
+|AC-05|local Queue研究7job→PRE開始、タブclose後研究完走|host無人収集/日次PRE/正式採用の定期運用|
+|AC-06|active/PRE private checkpoint後の実V8 OOM復旧、DB rollback、stale generation、応答消失・重複|全terminal境界とhost異常終了|
+|AC-07|ACCESS部品のenrollment/challenge互換追加|正式認証全route/ceremony/専用binding|
+|AC-08|既存Relay CASを維持|既存端末Sync/データ引継ぎ|
+|AC-09|既存公開判別を維持|全MCP/OAuth/外部API|
+|AC-10|元パチンコテストを維持|移植版パチンコ全経路|
+|AC-11|成果物Git/ZIP復元手順を維持|本番の許可済み整合snapshot移行・切戻し|
+|AC-12|既存画面からactive、研究holdout、正式PRE開始/待機/採点/次日保存を区別|正式認証/host/全機能の統合|
+
+保存版16は非公開開発の進展であり、完全移植完了または公開許可ではない。
