@@ -234,3 +234,6 @@ export const sitesFeatureRequests=sqliteTable('sites_feature_requests',{jobId:in
 export const sitesFeaturePublications=sqliteTable('sites_feature_publications',{storeId:text('store_id').notNull(),featureVersion:text('feature_version').notNull(),asOfDate:text('as_of_date').notNull(),jobId:integer('job_id').notNull()},t=>[primaryKey({columns:[t.storeId,t.featureVersion,t.asOfDate]})]);
 
 export const sitesDailyRuns=sqliteTable('sites_daily_runs',{storeId:text('store_id').notNull().references(()=>stores.id),businessDate:text('business_date').notNull(),channelId:text('channel_id').notNull(),parentId:integer('parent_id').notNull().unique().references(()=>sitesAnalysisJobs.id),featureId:integer('feature_id').references(()=>sitesAnalysisJobs.id),preId:integer('pre_id').references(()=>sitesAnalysisJobs.id),state:text('state').notNull()},t=>[primaryKey({columns:[t.storeId,t.businessDate,t.channelId]})]);
+
+// Transaction-local acceptance guard, removed before each successful commit.
+export const sitesDailyFences=sqliteTable('sites_daily_fences',{operationId:text('operation_id').primaryKey(),valid:integer('valid').notNull()},t=>[check('sites_daily_fence_valid',sql`valid=1`)]);

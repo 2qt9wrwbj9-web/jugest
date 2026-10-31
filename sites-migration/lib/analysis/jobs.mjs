@@ -1,3 +1,4 @@
+import{dailyFenceStatements,isDailyFenceError}from'./daily-fence.mjs';
 import{runFrozenFormalPre,formalPreWrites}from'./formal-pre-job.mjs';
 import{prepareFeatureStoreRead,featureStoreReadWrites}from'./active-store-read.mjs';
 import{advanceHoldoutModels,runFrozenHoldout,holdoutPublicationWrites}from'./research-holdout.mjs';
@@ -22,7 +23,8 @@ const iso=n=>new Date(n).toISOString();
 const fail=code=>Object.assign(Error(code),{code});
 export async function getAnalysisJob(db,id){return db.prepare('SELECT j.*,c.child_job_id AS next_job_id,d.action AS research_action,d.reason AS convergence_reason,c.state AS research_state,m.enabled AS research_cycle FROM sites_analysis_jobs j LEFT JOIN sites_research_context c ON c.job_id=j.id LEFT JOIN sites_research_decisions d ON d.job_id=j.id AND d.applied_at IS NOT NULL LEFT JOIN sites_research_cycle_jobs m ON m.job_id=j.id WHERE j.id=?').bind(id).first()}
 export function publicAnalysisJob(j){if(!j)return null;return{id:j.id,storeId:j.store_id,kind:j.kind,nextJobId:j.next_job_id??null,researchCycle:!!j.research_cycle,researchState:j.research_state??null,researchAction:j.research_action??null,convergenceReason:j.convergence_reason??null,targetDate:j.target_date,historyLimit:j.history_limit,state:j.state,phase:j.result_key?'verify':j.manifest_key?'analysis':'capture',attempts:j.attempts,failureCount:j.failure_count,maxAttempts:j.max_attempts,inputHash:j.input_hash,outputHash:j.output_hash,error:j.last_error_class,availableAt:j.available_at,createdAt:j.created_at,updatedAt:j.updated_at}}
-export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analysis',targetDate,historyLimit=180,requestKey,machineBatchSize=null,researchCycle=false,now=Date.now}){
+export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analysis',targetDate,historyLimit=180,requestKey,machineBatchSize=null,researchCycle=false,dailyReception=false,dailyParentId=null,now=Date.now}){
+ if(typeof dailyReception!=='boolean'||(dailyReception&&kind!=='store-analysis')||(dailyParentId!==null&&(!Number.isSafeInteger(dailyParentId)||dailyParentId<1||!['feature-build','formal-pre'].includes(kind)))||(dailyReception&&dailyParentId!==null))throw fail('bad_daily_acceptance');
  if(!['store-analysis','current-model','feature-build','research-backtest','research-model-search','formal-pre'].includes(kind))throw fail('bad_analysis_kind');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)||!Number.isFinite(Date.parse(targetDate+'T00:00:00Z'))||new Date(targetDate+'T00:00:00Z').toISOString().slice(0,10)!==targetDate)throw fail('bad_target_date');
  if(['feature-build','research-backtest','research-model-search','formal-pre'].includes(kind)&&historyLimit!==180)throw fail('bad_feature_history_limit');
@@ -33,18 +35,22 @@ export async function enqueueAnalysisJob({db,storeId,channelId,kind='store-analy
  const key=await sha256Text(JSON.stringify([storeId,channelId,kind,requestKey])),at=iso(now());
  const prior=await getAnalysisJobByKey();if(prior&&!!prior.research_cycle!==researchCycle)throw fail('idempotency_conflict');
  async function getAnalysisJobByKey(){return db.prepare('SELECT j.*,m.enabled AS research_cycle FROM sites_analysis_jobs j LEFT JOIN sites_research_cycle_jobs m ON m.job_id=j.id WHERE j.idempotency_key=?').bind(key).first()}
- await db.batch([
+ const fence=dailyReception||dailyParentId!==null?dailyFenceStatements({db,storeId,channelId,targetDate,parentId:dailyParentId}):null;
+ try{await db.batch([
+  ...(fence?[fence.begin]:[]),
   db.prepare('INSERT OR IGNORE INTO sites_analysis_jobs(store_id,channel_id,kind,target_date,history_limit,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(storeId,channelId,kind,targetDate,historyLimit,key,at,at),
   db.prepare('INSERT INTO sites_research_cycle_jobs(job_id,root_job_id,enabled) SELECT id,id,? FROM sites_analysis_jobs WHERE idempotency_key=? AND changes()=1 ON CONFLICT(job_id) DO NOTHING').bind(researchCycle?1:0,key),
   db.prepare('INSERT INTO sites_analysis_heads(store_id,kind,latest_job_id) SELECT store_id,kind,id FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(store_id,kind) DO UPDATE SET latest_job_id=excluded.latest_job_id WHERE excluded.latest_job_id>sites_analysis_heads.latest_job_id').bind(key),
   db.prepare("INSERT OR IGNORE INTO sites_analysis_dispatch(job_id) SELECT id FROM sites_analysis_jobs WHERE idempotency_key=? AND state NOT IN ('succeeded','failed','cancelled')").bind(key),
   ...(machineBatchSize===null?[]:[db.prepare('INSERT INTO sites_analysis_partitions(job_id,batch_size) SELECT id,? FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(job_id) DO NOTHING').bind(machineBatchSize,key)]),
   ...(['research-backtest','research-model-search'].includes(kind)?researchRequestStatements({db,storeId,targetDate,key,at}):[]),
+  ...(dailyReception?[db.prepare("INSERT INTO sites_daily_runs(store_id,business_date,channel_id,parent_id,state) SELECT store_id,target_date,channel_id,id,'analysis_pending' FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(store_id,business_date,channel_id) DO NOTHING").bind(key)]:[]),
   ...(kind==='feature-build'?[
    db.prepare('INSERT INTO sites_feature_requests(job_id) SELECT id FROM sites_analysis_jobs WHERE idempotency_key=? ON CONFLICT(job_id) DO NOTHING').bind(key),
    db.prepare("INSERT INTO feature_refresh_state(store_id,feature_version,generation,completed_generation,active_job_id,frontier_date,requested_frontier_date,completed_frontier_date,updated_at) SELECT store_id,'store-features-v1',1,0,id,NULL,target_date,NULL,? FROM sites_analysis_jobs WHERE idempotency_key=? AND changes()=1 ON CONFLICT(store_id,feature_version) DO UPDATE SET generation=feature_refresh_state.generation+1,requested_frontier_date=MAX(feature_refresh_state.requested_frontier_date,excluded.requested_frontier_date),active_job_id=COALESCE(feature_refresh_state.active_job_id,excluded.active_job_id),updated_at=excluded.updated_at").bind(at,key)
-  ]:[])
- ]);
+  ]:[]),
+  ...(fence?[fence.end]:[])
+ ]);}catch(error){if(isDailyFenceError(error))throw fail('daily_frontier_changed');throw error}
  const job=await db.prepare('SELECT * FROM sites_analysis_jobs WHERE idempotency_key=?').bind(key).first();
  const partition=await db.prepare('SELECT batch_size FROM sites_analysis_partitions WHERE job_id=?').bind(job.id).first();
  if((partition?.batch_size??null)!==machineBatchSize)throw fail('idempotency_conflict');

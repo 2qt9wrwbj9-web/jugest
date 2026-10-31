@@ -1,4 +1,4 @@
-export const WORKER_IMPLEMENTATION_HASH='21108dbc017d6ea414b08743226109b6503105b4bf31ada6e1674b68b0faaa98';
+export const WORKER_IMPLEMENTATION_HASH='400c563edc74aed2648fcb796b8f4fbfa80044addc9420cdda43b22330612098';
 // Generated from fixed production files; no eval/vm/fs at runtime.
 const host=globalThis;
 function memoryStorage(seed={}){
