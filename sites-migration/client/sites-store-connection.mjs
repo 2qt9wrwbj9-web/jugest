@@ -13,7 +13,7 @@ export function createSitesStoreConnection({fetchFn=globalThis.fetch.bind(global
 function install(){
  let app=null,root=null,panel=null,connection=null,state={loading:true,error:null},details=null,selected='',sequence=0,scheduled=false,jobPanel=null,jobStoreId='';
  function schedule(){if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;render()})}
- async function load(shop){const version=++sequence;details=null;try{const[status,history]=await Promise.all([connection.client.getStatus(shop),connection.client.getAnalysisHistory(shop)]);if(version!==sequence)return;details={status:status.status,history:history.history||[]}}catch(error){if(version===sequence)details={error:String(error.message)}}finally{schedule()}}
+ async function load(shop){const version=++sequence;details=null;try{const[status,history]=await Promise.all([connection.client.getStatus(shop),connection.client.getAnalysisHistory(shop)]);if(version!==sequence)return;details={status:status.status,collection:status.collection,history:history.history||[]}}catch(error){if(version===sequence)details={error:String(error.message)}}finally{schedule()}}
  function render(){
   app=document.querySelector('jugest-app');root=app?.shadowRoot;if(!root||!connection)return;
   const screen=root.querySelector('#view > section.workspace');if(app.state?.workspace!=='store'||!screen)return;
@@ -25,12 +25,19 @@ function install(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const history=app.state.screen==='analysis'&&details?.history?`<details><summary>サーバー解析履歴（${details.history.length}件）</summary>${details.history.map(x=>`<p>${esc(x.targetDate)} · ${esc(x.component)} · ${esc(x.version)}<br><small>${esc(x.createdAt)}</small></p>`).join('')||'<p>保存された解析履歴はまだありません。</p>'}</details>`:'';
   const currentStore=connection.cache.getStores().find(x=>x.name===shop);if(currentStore&&jobStoreId!==currentStore.id){jobStoreId=currentStore.id;void jobPanel.load(currentStore.id)}
+  const collection=details?.collection;
+  const collectionLabel=collection?.running?'取得中':({
+    seeded:'初回の基準データを保存',gap_seeded:'日付に間隔があり、基準を取り直しました',
+    ingested:'営業日データを保存済み',already_collected:'同じ基準日のため更新なし',
+    not_ready:'取得元の履歴更新待ち',failed:'取得できませんでした',access_denied:'取得先へのアクセスが拒否されました',
+  })[collection?.status]??'取得結果待ち';
+  const time=value=>value?new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(new Date(value)):'—';
+  const collectionMarkup=collection?`<div data-pia-collection><p>PIA取得状況：${esc(collectionLabel)}</p><p>最終取得成功：${esc(time(collection.lastSuccessAt))}（日本時間）<br>最終試行：${esc(time(collection.lastAttemptAt))}（日本時間）<br>最新保存営業日：${esc(collection.businessDate??'—')}</p></div>`:'';
   const jobs=app.state.screen==='analysis'&&currentStore?jobPanel.markup(currentStore):'';
-  const html=`<p role="${error?'alert':'status'}" aria-live="polite">${esc(text)}</p>${history}${jobs}<button type="button" class="secondary-btn" data-sites-refresh>店舗データを更新</button>`;
+  const html=`<p role="${error?'alert':'status'}" aria-live="polite">${esc(text)}</p>${collectionMarkup}${history}${jobs}<button type="button" class="secondary-btn" data-sites-refresh>店舗データを更新</button>`;
   if(panel.__sitesMarkup!==html){panel.__sitesMarkup=html;panel.innerHTML=html;jobPanel.bind(panel);panel.querySelector('[data-sites-refresh]').onclick=()=>{selected='';void connection.refresh().catch(()=>{});schedule()}}
-  // Collection is not connected in this port. Do not present the inherited
-  // remote-cache default `enabled:true` as a working scheduler.
-  for(const badge of screen.querySelectorAll('.sv2-status strong,.sv2-collector b'))if(badge.textContent.includes('自動取得'))badge.textContent='取得状態は未接続';
+  // The browser cache cannot confirm that a hosted schedule is enabled.
+  for(const badge of screen.querySelectorAll('.sv2-status strong,.sv2-collector b'))if(badge.textContent.includes('自動取得'))badge.textContent=collection?'取得履歴あり':'定期取得は未確認';
  }
  async function start(){
   let cookieAuth=false;try{const response=await fetch('/api/dev-session',{headers:{accept:'application/json'},cache:'no-store'});if(response.ok)cookieAuth=!!(await response.json()).authenticated}catch{}

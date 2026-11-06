@@ -237,3 +237,37 @@ export const sitesDailyRuns=sqliteTable('sites_daily_runs',{storeId:text('store_
 
 // Transaction-local acceptance guard, removed before each successful commit.
 export const sitesDailyFences=sqliteTable('sites_daily_fences',{operationId:text('operation_id').primaryKey(),valid:integer('valid').notNull()},t=>[check('sites_daily_fence_valid',sql`valid=1`)]);
+
+// Source response bytes live in R2. D1 keeps the current verified reference
+// and one attempt record per lease, including interrupted attempts.
+export const piaCollectionState = sqliteTable('sites_pia_collection_state', {
+  collectorId: text('collector_id').primaryKey().notNull(),
+  lastSnapshotDate: text('last_snapshot_date'),
+  lastSnapshotHash: text('last_snapshot_hash'),
+  lastSnapshotKey: text('last_snapshot_key'),
+  lastResult: text('last_result'),
+  lastIngestedDate: text('last_ingested_date'),
+  lastAttemptAt: text('last_attempt_at'),
+  lastSuccessAt: text('last_success_at'),
+  lastError: text('last_error'),
+  retryNotBefore: integer('retry_not_before'),
+  leaseOwner: text('lease_owner'),
+  leaseUntil: integer('lease_until'),
+});
+
+export const piaCollectionAttempts = sqliteTable('sites_pia_collection_attempts', {
+  id: text('id').primaryKey().notNull(),
+  jstDate: text('jst_date').notNull(),
+  startedAt: text('started_at').notNull(),
+  finishedAt: text('finished_at'),
+  status: text('status').notNull(),
+  snapshotDate: text('snapshot_date'),
+  snapshotHash: text('snapshot_hash'),
+  rawKey: text('raw_key'),
+  businessDate: text('business_date'),
+  rowCount: integer('row_count'),
+  machineCount: integer('machine_count'),
+  importedCount: integer('imported_count'),
+  diagnosticsJson: text('diagnostics_json'),
+  error: text('error'),
+}, table => [index('sites_pia_collection_attempts_started').on(table.startedAt)]);

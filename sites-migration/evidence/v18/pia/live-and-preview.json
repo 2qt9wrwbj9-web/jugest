@@ -1,0 +1,15 @@
+{
+  "attemptedAtJST": "2026-11-06T21:45:07+09:00",
+  "url": "https://piagroupapp.com/api/stores/getRankingTop",
+  "method": "POST",
+  "form": "machine_type=S&store_id=35&limit=5000",
+  "httpStatus": 403,
+  "contentType": "text/html",
+  "bytes": 118,
+  "rowsAcquired": 0,
+  "newLiveBusinessDays": 0,
+  "previewStarted": true,
+  "browserError": "net::ERR_CONNECTION_REFUSED",
+  "browserVerified": false,
+  "hostVerified": false
+}

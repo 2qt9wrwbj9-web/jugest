@@ -1,0 +1,233 @@
+✖ enrollment creation replaces bootstrap grants and consumes registration exactly once (2.516709ms)
+✖ additional enrollment enforces issuer revocation while recovery retains source grant rules (0.287307ms)
+✖ duplicate credential rolls back enrollment consumption and audit insertion (0.20875ms)
+✖ admin session completion preserves counter, zero-counter, reauthentication and rollback rules (0.260798ms)
+✖ invite creation and normalized redemption persist every field including null session expiry (0.280036ms)
+✖ invite expiry is strict and issuer revocation does not revoke existing source invitations (0.223302ms)
+✖ concurrent invite and enrollment consumers have exactly one durable winner (0.313887ms)
+✖ concurrent positive authentication counter cannot create duplicate sessions (0.252335ms)
+✖ ceremony persistence rejects the analysis database rather than creating auth tables (0.339414ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 0
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 163.878445
+
+✖ failing tests:
+
+test at tests/port-access-ceremonies.test.mjs:62:1
+✖ enrollment creation replaces bootstrap grants and consumes registration exactly once (2.516709ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:63:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:77:1
+✖ additional enrollment enforces issuer revocation while recovery retains source grant rules (0.287307ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:78:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:90:1
+✖ duplicate credential rolls back enrollment consumption and audit insertion (0.20875ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:91:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:99:1
+✖ admin session completion preserves counter, zero-counter, reauthentication and rollback rules (0.260798ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:100:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:121:1
+✖ invite creation and normalized redemption persist every field including null session expiry (0.280036ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:122:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:138:1
+✖ invite expiry is strict and issuer revocation does not revoke existing source invitations (0.223302ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:139:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:151:1
+✖ concurrent invite and enrollment consumers have exactly one durable winner (0.313887ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:152:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:167:1
+✖ concurrent positive authentication counter cannot create duplicate sessions (0.252335ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:168:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/port-access-ceremonies.test.mjs:177:1
+✖ ceremony persistence rejects the analysis database rather than creating auth tables (0.339414ms)
+  AssertionError [ERR_ASSERTION]: independent ACCESS ceremony persistence is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at setup (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:35:9)
+      at TestContext.<anonymous> (file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:178:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

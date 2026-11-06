@@ -1,3 +1,7 @@
+# 保存版18の優先順位（2026-11-06 JST）
+
+最優先はPIA大船1のデータを取得し、店舗画面で過去データ・判別・分析を利用できるようにすること。まず取得元から許可された接続を確立し、独立した保存先で連続する2日を観測する。収集処理は開発試験と実データ取得、ホストの無人運転を別々に評価する。完全移植の55機能と12ゲートは継続し、正式PRE、元日次処理、同期、正式認証、パチンコ、MCP/OAuth、実データ移行の行を維持する。
+
 # 保存版17・中断後の継続（2026-10-31）
 
 GitHub実リモート `work/sites-migration-20261027@f6e3a510a354fca983cafb226ac362ec46c64d40` と同じtreeを保持するローカル原本、Sites保存版16 `5440af1d06bac874f33523843ef84a70e37cc5e0`、Sites未保存変更120件と旧GitHub作業領域57件を照合・保全した。旧GitHub作業領域は35b3fa3で止まっていたため採用せず、f6e3a51を正本として続行。元本番固定ソースの差分は0。本節が今回の優先記録、以下は歴史を含む。
@@ -520,14 +524,14 @@ GitHub実リモート `work/sites-migration-20261027@f6e3a510a354fca983cafb226ac
 ## COLL-01 PIA自動収集・fetch cadence・scheduler
 
 - 元ファイル/関数/API: vps/src/collectors/pia-public.mjs;pia-scheduler.mjs
-- Sites対応: 未接続
-- 状態: 未実装
+- Sites対応: 固定元パーサー、D1/R2保存、受取API、画面の状態表示
+- 状態: ローカル部分実装。実データ収集とホスト運用は未達
 - 互換性と境界: 外部取得/parse/頻度/利用条件/許可を検証
-- 証拠: evidence/v12/command-results.json・model-comparison.json・BROWSER_CHECK.md（既存対象範囲のみ）。今回evidence/v13/へ追記
-- 画面/API: 実装済み経路のみ。詳細original API/guard一覧はsource-inventory.json
-- 開発環境: 実装済み対象のみ検証済み。未実装/未確認部分は未検証
+- 証拠: evidence/v18/pia/REPRODUCE.md、観測値比較、テストログ
+- 画面/API: 既存の権限で取得状態を返す。公式プレビューはブラウザから接続拒否
+- 開発環境: 30日履歴・台入替・重複・停止復旧・元SQLite比較を確認
 - 実Sites検証: false
-- 段階別判定: {"localImplementation": "未実装", "originalComparison": "原本の個別証拠以外は未確認", "screenApi": "全体接続は未確認/未実装", "localUnattended": "未検証または対象外", "sitesHost": "未検証", "fullAcceptance": "未達"}
+- 段階別判定: {"localImplementation": "部分達成", "originalComparison": "合成入力の正常保存一致", "screenApi": "既存読取APIと106台判別一致・画面未検証", "localUnattended": "時刻と再試行条件を検証", "sitesHost": "未検証", "fullAcceptance": "未達"}
 - 依存: ["DATA-02", "JOB-03"]
 - 障害: ["U-EXTERNAL"]
 - 完成条件: AC-01〜AC-12の該当全条件と、この機能の元API/数学/データ/権限/障害/画面の比較に合格。host証拠がない間は完全完成にしない

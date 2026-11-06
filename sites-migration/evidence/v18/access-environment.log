@@ -1,0 +1,34 @@
+node:internal/modules/cjs/loader:1564
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module 'wrangler/package.json'
+Require stack:
+- /workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+    at require.resolve (node:internal/modules/helpers:175:31)
+    at file:///workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs:31:106 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/workspace/scratch/c936d6954889/jugest/sites-migration/tests/port-access-ceremonies.test.mjs'
+  ]
+}
+
+Node.js v24.22.1
+✖ tests/port-access-ceremonies.test.mjs (72.40793ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 82.093389
+
+✖ failing tests:
+
+test at tests/port-access-ceremonies.test.mjs:1:1
+✖ tests/port-access-ceremonies.test.mjs (72.40793ms)
+  'test failed'

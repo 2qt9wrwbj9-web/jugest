@@ -1,0 +1,102 @@
+✔ enrollment creation replaces bootstrap grants and consumes registration exactly once (1636.332424ms)
+✔ additional enrollment enforces issuer revocation while recovery retains source grant rules (1386.932962ms)
+✔ duplicate credential rolls back enrollment consumption and audit insertion (875.425341ms)
+✔ admin session completion preserves counter, zero-counter, reauthentication and rollback rules (1716.44818ms)
+✔ invite creation and normalized redemption persist every field including null session expiry (1646.100313ms)
+✔ invite expiry is strict and issuer revocation does not revoke existing source invitations (1181.319169ms)
+✔ concurrent invite and enrollment consumers have exactly one durable winner (961.141173ms)
+✔ concurrent positive authentication counter cannot create duplicate sessions (645.621263ms)
+✔ SQLite and D1 roll back grant, credential, counter and session writes on an audit persistence fault (921.239489ms)
+✔ ceremony persistence rejects the analysis database rather than creating auth tables (272.664388ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ dedicated D1 sessions preserve original authentication, null expiry, revocation and audit rows (721.578436ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ challenge claim is one-use under concurrency and returns original pre-claim fields (646.466665ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ viewer-session revocation and expiry boundaries match SQLite without revoking the invite (672.773664ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ rate limit exact reset/retention semantics match SQLite and concurrent admissions never exceed max (991.227889ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ enrollment lookup preserves kind, issuer revocation, consumption and exact expiry; challenge creation matches original fields (535.26363ms)
+ACCESS_TABLE_NAMES [
+  'access_meta',
+  '_cf_METADATA',
+  'admin_credentials',
+  'admin_sessions',
+  'admin_enrollment_tokens',
+  'access_challenges',
+  'access_audit_events',
+  'sqlite_sequence',
+  'access_rate_limits',
+  'pia_access_invites',
+  'pia_viewer_sessions'
+]
+✔ dedicated credential lookup retains source revoked rows and missing identity behavior (550.995783ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11346.320039

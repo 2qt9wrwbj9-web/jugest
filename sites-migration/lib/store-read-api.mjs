@@ -1,6 +1,7 @@
 import{enrichStoredStoreReadPayload}from'../upstream/vps/src/research/store-read-output.mjs';
 import{getActiveStoreModel}from'./active-model-view.mjs';
 import{openStoreHistory}from'./store-history.mjs';
+import {readPiaCollectionStatus} from './collectors/pia-collection.mjs';
 import {handleAnalysisJobs} from './analysis/job-api.mjs';
 import {createStoreReadHandler} from './generated-store-read.mjs';
 import {authenticateReceiver,authenticateAssistantRead} from './generated-store-auth.mjs';
@@ -21,7 +22,14 @@ export function readDatabase(binding){
 export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',piaOwnerChannelIds='',executionEnabled=false}={}){
  const headers={'cache-control':'no-store','x-content-type-options':'nosniff'};
  if(!db||!bucket)return Response.json({ok:false,code:'sites_storage_unavailable'},{status:503,headers});
- const jobsResponse=await handleAnalysisJobs(request,{db,bucket,piaAccessMode,piaOwnerChannelIds,executionEnabled});if(jobsResponse)return jobsResponse;
+ const piaStatus=request.method==='GET'&&/^\/api\/vps\/stores\/pia(?:%3a|:)35\/status$/i.test(new URL(request.url).pathname);
+ async function attachCollection(response) {
+  if(!piaStatus||response?.status!==200)return response;
+  const collection=await readPiaCollectionStatus(db);
+  if(!collection)return response;
+  return Response.json({...await response.json(),collection},{headers:response.headers});
+ }
+ const jobsResponse=await handleAnalysisJobs(request,{db,bucket,piaAccessMode,piaOwnerChannelIds,executionEnabled});if(jobsResponse)return attachCollection(jobsResponse);
  const stores=name=>createSitesRelayStore(name,{db,bucket});
  if(new URL(request.url).pathname==='/api/vps/judge/machines'){
   const reply=(value,status=200,extra={})=>Response.json(value,{status,headers:{...headers,...extra}});
@@ -45,5 +53,5 @@ export async function handleStoreRead(request,{db,bucket,piaAccessMode='owner',p
   storeMetadata,canAccessStoreMetadata:(metadata,channel)=>canAccessStoreMetadata(metadata,channel,{piaAccessMode,piaOwnerChannelIds}),sendJson});
  const req={url:request.url,method:request.method,headers:Object.fromEntries(request.headers)};
  await handler(req,{});
- return response;
+ return attachCollection(response);
 }
