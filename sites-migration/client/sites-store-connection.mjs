@@ -2,14 +2,36 @@ import {createAnalysisJobController} from './analysis-job-panel.mjs';
 import{createVpsAnalyticsClient}from'../lib/generated-browser-client.mjs';
 import{createRemoteStoreCache}from'../upstream/vps-ui-remote-stores.mjs';
 
+export function withDisplayMachineNames(payload, registry = globalThis.JugestMachineNames) {
+ const rows = payload?.day?.machines;
+ if (!registry || !Array.isArray(rows)) return payload;
+ return {...payload, day: {...payload.day, machines: rows.map(row => {
+  if (!row || row.sourceMachineName || row.machineName) return row;
+  const name = registry.full(row.machine);
+  return name ? {...row, machineName: name} : row;
+ })}};
+}
+
 export function createSitesStoreConnection({fetchFn=globalThis.fetch.bind(globalThis),storage=globalThis.localStorage,cookieAuth=false,eventTarget=globalThis,onState=()=>{}}={}){
  let active=0,state={loading:false,error:null};
  const emit=()=>onState({...state,loading:active>0});
  const tracked=async(...args)=>{active++;emit();try{const response=await fetchFn(...args);if(!response.ok){state.error={status:response.status,message:response.status===401?'店舗データを読むための認証が必要です。':response.status===403?'この店舗を閲覧する権限がありません。':'店舗データを読み込めませんでした。'};let detail=null;try{detail=await response.clone().json()}catch{}if(detail?.code)state.error.message+='（'+String(detail.code)+'）';if(detail?.code==='development_request_failed')state.error.message+=' '+String(detail.message)}else state.error=null;return response}catch(error){state.error={status:0,message:'店舗データへの通信に失敗しました。'};throw error}finally{active--;emit()}};
  const client=createVpsAnalyticsClient({fetchFn:tracked,storage,cookieAuth});
- const cache=createRemoteStoreCache({client,eventTarget});
+ const cache=createRemoteStoreCache({client: {
+  ...client,
+  async getStoreDayById(id, date) {
+   return withDisplayMachineNames(await client.getStoreDayById(id, date));
+  },
+ },eventTarget});
  return{client,cache,getState:()=>({...state,loading:active>0}),async refresh(){try{return await cache.refresh()}catch(error){if(!state.error)state.error={status:error.status||0,message:String(error.message)};emit();throw error}}};
 }
+// The original app can display the first remote store before the core bridge
+// has selected one. The matrix and its detail panel read the bridge selection.
+export function initializeRemoteStoreSelection(bridge, store) {
+ if (!store?.remote || !bridge || bridge.getActiveStore?.()) return false;
+ return bridge.setActiveStore?.(store.name, {silent: true}) === true;
+}
+
 function install(){
  let app=null,root=null,panel=null,connection=null,state={loading:true,error:null},details=null,selected='',sequence=0,scheduled=false,jobPanel=null,jobStoreId='';
  function schedule(){if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;render()})}
@@ -17,14 +39,17 @@ function install(){
  function render(){
   app=document.querySelector('jugest-app');root=app?.shadowRoot;if(!root||!connection)return;
   const screen=root.querySelector('#view > section.workspace');if(app.state?.workspace!=='store'||!screen)return;
-  const shop=String(app.state.activeStore||'');if(shop!==selected){selected=shop;if(shop){void load(shop);const store=connection.cache.getStores().find(x=>x.name===shop);if(store&&jobStoreId!==store.id){jobStoreId=store.id;void jobPanel.load(store.id)}}}
+  const shop=String(app.state.activeStore||'');
+  const currentStore=connection.cache.getStores().find(x=>x.name===shop);
+  initializeRemoteStoreSelection(globalThis.JUGEST_CORE_BRIDGE,currentStore);
+  if(shop!==selected){selected=shop;if(shop){void load(shop);const store=connection.cache.getStores().find(x=>x.name===shop);if(store&&jobStoreId!==store.id){jobStoreId=store.id;void jobPanel.load(store.id)}}}
   panel=screen.querySelector('[data-sites-server]');if(!panel){panel=document.createElement('section');panel.className='info-card';panel.dataset.sitesServer='';screen.append(panel)}
   const localHistory=screen.querySelector('.analysis-history-title');if(localHistory&&localHistory.textContent!=='端末の解析スナップショット')localHistory.textContent='端末の解析スナップショット';
   const error=state.error?.message||details?.error,empty=!state.loading&&!connection.cache.getStores().length;
   const text=error|| (state.loading?'店舗データを読み込み中…':empty?'閲覧できる店舗データはまだありません。':details?.status?.status==='pending'?'店舗解析は実行待ちです。':details?.status?.status==='completed'?'保存済みの店舗解析を表示できます。':'店舗データを取得しました。');
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const history=app.state.screen==='analysis'&&details?.history?`<details><summary>サーバー解析履歴（${details.history.length}件）</summary>${details.history.map(x=>`<p>${esc(x.targetDate)} · ${esc(x.component)} · ${esc(x.version)}<br><small>${esc(x.createdAt)}</small></p>`).join('')||'<p>保存された解析履歴はまだありません。</p>'}</details>`:'';
-  const currentStore=connection.cache.getStores().find(x=>x.name===shop);if(currentStore&&jobStoreId!==currentStore.id){jobStoreId=currentStore.id;void jobPanel.load(currentStore.id)}
+  if(currentStore&&jobStoreId!==currentStore.id){jobStoreId=currentStore.id;void jobPanel.load(currentStore.id)}
   const collection=details?.collection;
   const collectionLabel=collection?.running?'取得中':({
     seeded:'初回の基準データを保存',gap_seeded:'日付に間隔があり、基準を取り直しました',
@@ -33,11 +58,22 @@ function install(){
   })[collection?.status]??'取得結果待ち';
   const time=value=>value?new Intl.DateTimeFormat('ja-JP',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Tokyo'}).format(new Date(value)):'—';
   const collectionMarkup=collection?`<div data-pia-collection><p>PIA取得状況：${esc(collectionLabel)}</p><p>最終取得成功：${esc(time(collection.lastSuccessAt))}（日本時間）<br>最終試行：${esc(time(collection.lastAttemptAt))}（日本時間）<br>最新保存営業日：${esc(collection.businessDate??'—')}</p></div>`:'';
+  const archived=currentStore?.id==='dev-pia-observed';
+  const archivedMarkup=archived?`<p data-pia-observed><strong>過去の公開観測</strong> · 営業日 ${esc(currentStore.latestDate)}。今回の新規取得データはありません。</p>`:'';
   const jobs=app.state.screen==='analysis'&&currentStore?jobPanel.markup(currentStore):'';
-  const html=`<p role="${error?'alert':'status'}" aria-live="polite">${esc(text)}</p>${collectionMarkup}${history}${jobs}<button type="button" class="secondary-btn" data-sites-refresh>店舗データを更新</button>`;
+  const html=`<p role="${error?'alert':'status'}" aria-live="polite">${esc(text)}</p>${archivedMarkup}${collectionMarkup}${history}${jobs}<button type="button" class="secondary-btn" data-sites-refresh>店舗データを更新</button>`;
   if(panel.__sitesMarkup!==html){panel.__sitesMarkup=html;panel.innerHTML=html;jobPanel.bind(panel);panel.querySelector('[data-sites-refresh]').onclick=()=>{selected='';void connection.refresh().catch(()=>{});schedule()}}
   // The browser cache cannot confirm that a hosted schedule is enabled.
-  for(const badge of screen.querySelectorAll('.sv2-status strong,.sv2-collector b'))if(badge.textContent.includes('自動取得'))badge.textContent=collection?'取得履歴あり':'定期取得は未確認';
+  for(const badge of screen.querySelectorAll('.sv2-status strong,.sv2-collector b')){
+   const label=archived?'過去の公開観測':collection?'取得履歴あり':'定期取得は未確認';
+   if((archived||badge.textContent.includes('自動取得'))&&badge.textContent!==label)badge.textContent=label;
+  }
+  if(archived){
+   for(const label of screen.querySelectorAll('.sv2-status small,.sv2-collector small')){
+    const next='観測日 '+currentStore.latestDate;
+    if(label.textContent!==next)label.textContent=next;
+   }
+  }
  }
  async function start(){
   let cookieAuth=false;try{const response=await fetch('/api/dev-session',{headers:{accept:'application/json'},cache:'no-store'});if(response.ok)cookieAuth=!!(await response.json()).authenticated}catch{}

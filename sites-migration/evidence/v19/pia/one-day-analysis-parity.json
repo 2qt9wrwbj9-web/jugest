@@ -1,0 +1,13 @@
+{
+  "days": 1,
+  "machines": 106,
+  "original": {
+    "completed": false,
+    "message": "分析できる日数が足りないよ。最低3日くらい必要。"
+  },
+  "sites": {
+    "completed": false,
+    "message": "分析できる日数が足りないよ。最低3日くらい必要。"
+  },
+  "equal": true
+}

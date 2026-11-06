@@ -1,0 +1,13 @@
+{
+  "provenance": "Public PIA observations archived in earlier JUGEST investigation; judge outputs deliberately excluded. No known setting labels.",
+  "currentLiveCapture": false,
+  "date": "2026-09-21",
+  "count": 106,
+  "inputHash": "929aa477e0b6e20bcbb29b08935aebb45e9db42e3a9cce618f343be660d93b93",
+  "originalJudgeHash": "327676bf18a74837191937ec34143dee9c671aea9964a336ce3020a6283faf32",
+  "sitesJudgeHash": "327676bf18a74837191937ec34143dee9c671aea9964a336ce3020a6283faf32",
+  "inputsMatch": true,
+  "judgeOutputsMatch": true,
+  "storeAnalysisHistoryDays": 1,
+  "browserVerified": false
+}
