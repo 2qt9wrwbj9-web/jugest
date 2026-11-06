@@ -6,12 +6,13 @@ export function POST(request: Request) {
     DB?: D1Database;
     BUCKET?: R2Bucket;
     JUGEST_PIA_COLLECTOR?: string;
+    JUGEST_OWNER_VIEW?: string;
     JUGEST_PIA_WRITER_SHA256?: string;
   };
   return handlePiaCollection(request, {
     db: bindings.DB,
     bucket: bindings.BUCKET,
-    enabled: bindings.JUGEST_PIA_COLLECTOR === 'enabled',
+    enabled: bindings.JUGEST_OWNER_VIEW !== '1' && bindings.JUGEST_PIA_COLLECTOR === 'enabled',
     writerHash: bindings.JUGEST_PIA_WRITER_SHA256,
   });
 }

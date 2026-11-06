@@ -1,0 +1,21 @@
+{
+  "preview": "Official managed Sites local preview, no hosted deployment",
+  "engine": "Chrome, 390 CSS px in a same-origin frame; mouse interactions, no actual iPhone",
+  "archive": {
+    "businessDate": "2026-09-21", "machineCount": 106, "machineKinds": 5,
+    "dateSelection": true, "table": "3097", "games": 7713, "bb": 31, "rb": 29, "diff": 679,
+    "expectedSettingDisplay": 3.72, "provenanceLabel": "過去の公開観測",
+    "minimumAnalysisDays": 3, "availableDays": 1, "historyCount": 0, "analysisStartDisabled": true
+  },
+  "syntheticImport": {
+    "businessDate": "2026-10-15", "machineCount": 2,
+    "previewAndConfirmation": true, "storeReadBackAfterReload": true, "sourceBadge": "原本取り込み",
+    "originalSha256": "e8ad12438de145313ed9f3ac1e42fbdbd726ff84afdf55023ec5f8b762c185de",
+    "normalizedSha256": "8313badb968ff3eb4e79598eb9d3bc4437bf9694f9712786f502c1acfe1b7618"
+  },
+  "syntheticAnalysis": {"machineDays": 600, "historyCount": 1},
+  "emptyStore": true,
+  "session": "Persisted through reload, rejected after expiry, and resumed after renewing the development session",
+  "screenshot": "Inspected in the browser; browser-created file did not synchronize to the workspace",
+  "previewStopped": true
+}

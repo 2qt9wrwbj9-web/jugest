@@ -15,7 +15,7 @@ export function canReadPiaRoute(parts,method){
 }
 export function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson,auditStoreRead=async(_db,_id,payload)=>payload}){
 function safeJson(text,fallback=null){try{return JSON.parse(text)}catch{return fallback}}
-async function authorizedStore(db,storeId,channelId,piaOnly=false){const row=await db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,channelId))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
+async function authorizedStore(db,storeId,channelId,piaOnly=false){const row=await db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').get(storeId);if(!row)return {status:404,store:null};const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,channelId,row.id))return {status:403,store:null};return {status:200,store:{id:row.id,name:row.name,createdAt:row.created_at,updatedAt:row.updated_at}}}
 function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathname)}catch{return null}if(decoded.includes('\0')||decoded.includes('\\'))return null;return decoded.split('/').filter(Boolean)}
   return async function analyticsHandler(req,res){
     const method=String(req.method||'GET').toUpperCase();
@@ -35,7 +35,7 @@ function parseApiPath(pathname){let decoded;try{decoded=decodeURIComponent(pathn
 
       if(parts.length===3&&parts[2]==='stores'){
         const rows=await db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores ORDER BY name,id').all();
-        const stores=(await Promise.all(rows.map(async row=>{const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,auth.channelId))return [];const latest=await db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at,source:String(metadata.source||''),visibility:metadata.visibility==='public'?'public':'private'}]}))).flat();
+        const stores=(await Promise.all(rows.map(async row=>{const metadata=storeMetadata(row.source_metadata_json);if(piaOnly?metadata.source!=='pia-public-ranking-top':!canAccessStoreMetadata(metadata,auth.channelId,row.id))return [];const latest=await db.prepare("SELECT MAX(business_date) AS latest,COUNT(*) AS days FROM store_days WHERE store_id=? AND quality_status='valid'").get(row.id);return [{id:row.id,name:row.name,latestDate:latest?.latest??null,dayCount:Number(latest?.days)||0,updatedAt:row.updated_at,source:String(metadata.source||''),visibility:metadata.visibility==='public'?'public':'private'}]}))).flat();
         sendJson(req,res,200,{ok:true,stores});return;
       }
       if(parts[2]!=='stores'||parts.length<4){sendJson(req,res,404,{ok:false,code:'not_found'});return}

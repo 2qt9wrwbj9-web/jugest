@@ -5,21 +5,24 @@ import {storeMetadata,canAccessStoreMetadata} from '../generated-store-policy.mj
 import {createSitesRelayStore} from '../storage/relay-store.mjs';
 import {enqueueAnalysisJob,advanceAnalysisJob,getAnalysisJob,publicAnalysisJob,readAnalysisJobResult,readLatestAnalysisResult,verifiedResultBody,jsonWrappedStream} from './jobs.mjs';
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-export async function handleAnalysisJobs(request,{db,bucket,piaAccessMode='owner',piaOwnerChannelIds='',executionEnabled=false}={}){
+export async function handleAnalysisJobs(request,{db,bucket,piaAccessMode='owner',piaOwnerChannelIds='',executionEnabled=false,scopedRead,canAccess}={}){
  const url=new URL(request.url);let parts;try{parts=url.pathname.split('/').filter(Boolean).map(decodeURIComponent)}catch{return null}
  if(parts[0]!=='api'||parts[1]!=='vps'||parts[2]!=='stores')return null;
  const isJobs=parts[4]==='analysis'&&parts[5]==='jobs';
  const isDefault=parts.length===6&&parts[4]==='analysis'&&parts[5]==='default';
  const isStatus=parts.length===5&&parts[4]==='status';
  if(!isJobs&&!isDefault&&!isStatus)return null;
+ if(scopedRead && (isJobs || !['GET','HEAD'].includes(request.method)))return reply({ok:false,code:'owner_view_scope_denied'},403);
  if(!db||!bucket)return reply({ok:false,code:'sites_storage_unavailable'},503);
  const stores=name=>createSitesRelayStore(name,{db,bucket}),req={headers:Object.fromEntries(request.headers)};
- const auth=await authenticateReceiver(req,stores)||await authenticateAssistantRead(req,stores);
+ const auth=scopedRead?.principal||await authenticateReceiver(req,stores)||await authenticateAssistantRead(req,stores);
  if(!auth)return reply({ok:false,code:'unauthorized'},401);
  if(auth.authType==='assistant-read')return reply({ok:false,code:'assistant_read_scope_denied'},403);
  const storeId=parts[3],store=await db.prepare('SELECT id,name,source_metadata_json,created_at,updated_at FROM stores WHERE id=?').bind(storeId).first();
  if(!store)return reply({ok:false,code:'store_not_found'},404);
- if(!canAccessStoreMetadata(storeMetadata(store.source_metadata_json),auth.channelId,{piaAccessMode,piaOwnerChannelIds}))return reply({ok:false,code:'forbidden'},403);
+ const metadata=storeMetadata(store.source_metadata_json);
+ const allowed=canAccess ? canAccess(metadata,auth.channelId,storeId) : canAccessStoreMetadata(metadata,auth.channelId,{piaAccessMode,piaOwnerChannelIds});
+ if(!allowed)return reply({ok:false,code:'forbidden'},403);
  const publicStore={id:store.id,name:store.name,createdAt:store.created_at,updatedAt:store.updated_at};
  try{
   if(isDefault||isStatus){

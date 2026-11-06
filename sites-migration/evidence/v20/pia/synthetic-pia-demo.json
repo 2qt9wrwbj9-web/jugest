@@ -1,0 +1,11 @@
+{
+  "format": "jugest-pia-day-v1",
+  "storeId": 35,
+  "sourceKey": "demo",
+  "permissionRef": "synthetic-v20",
+  "date": "2026-10-15",
+  "machines": [
+    {"tableNo": "2991", "machine": "go", "machineName": "ゴーゴージャグラー3", "games": 3200, "bb": 14, "rb": 9, "diff": -193},
+    {"tableNo": "2992", "machine": "my", "machineName": "マイジャグラーⅤ", "games": 4800, "bb": 18, "rb": 19, "diff": 433}
+  ]
+}

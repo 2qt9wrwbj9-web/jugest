@@ -34,6 +34,8 @@ handler=replace(handler,".all(storeId,date).map(row=>safeJson(row.payload_json,n
 handler=replace(handler,'access=authorizedStore(', 'access=await authorizedStore(');
 handler=replace(handler,'||authenticatePia(req);','||await authenticatePia(req);');
 handler=handler.replaceAll('(req,relayDbPath)','(req)');
+authorized=replace(authorized,'canAccessStoreMetadata(metadata,channelId)','canAccessStoreMetadata(metadata,channelId,row.id)');
+handler=replace(handler,'canAccessStoreMetadata(metadata,auth.channelId)','canAccessStoreMetadata(metadata,auth.channelId,row.id)');
 writeFileSync(new URL('../lib/generated-store-read.mjs',import.meta.url),`// Generated from frozen JUGEST source. Regenerate with scripts/generate-store-read.mjs.\nconst ANALYSIS_VERSION='vps-runtime-v1',STORE_READ_VERSION='store-read-v1';\n${assistantScope}\n${piaScope}\nexport function createStoreReadHandler({db,authenticateReceiver,authenticateAssistantRead,authenticatePia=()=>null,canAccessStoreMetadata,storeMetadata,sendJson,auditStoreRead=async(_db,_id,payload)=>payload}){\n${authorized}\n${handler}\n}\n`);
 // Reuse the original cryptographic checks, token records and revocation checks.
 let auth=read('assistant-read-key.mjs');
