@@ -1,7 +1,6 @@
 import {env} from 'cloudflare:workers';
 import {handleStoreRead} from './store-read-api.mjs';
-import {handleOwnerView} from './owner-view.mjs';
-import {getChatGPTUser} from '../app/chatgpt-auth';
+import {ownerTrialBlocksWrites} from './owner-trial.mjs';
 
 function unavailable(request:Request) {
  const body=JSON.stringify({ok:false,code:'sites_port_not_implemented'});
@@ -10,11 +9,8 @@ function unavailable(request:Request) {
 async function routeInternal(request:Request){
  const path=new URL(request.url).pathname;
  if(path==='/api/vps/judge/machines'||path==='/api/vps/stores'||path.startsWith('/api/vps/stores/')){
-  const bindings=env as typeof env & {DB?:D1Database;BUCKET?:R2Bucket;JUGEST_PIA_ACCESS_MODE?:string;JUGEST_PIA_OWNER_CHANNEL_IDS?:string;JUGEST_OWNER_VIEW?:string;JUGEST_OWNER_USER_ID?:string};
-  if(bindings.JUGEST_OWNER_VIEW==='1'){
-   const user=import.meta.env.DEV?null:await getChatGPTUser();
-   return handleOwnerView(request,{enabled:true,ownerId:bindings.JUGEST_OWNER_USER_ID,userId:user?.userId,db:bindings.DB,bucket:bindings.BUCKET});
-  }
+  const bindings=env as typeof env & {DB?:D1Database;BUCKET?:R2Bucket;JUGEST_PIA_ACCESS_MODE?:string;JUGEST_PIA_OWNER_CHANNEL_IDS?:string;JUGEST_OWNER_VIEW?:string;JUGEST_OWNER_TRIAL_STOP?:string};
+  if(ownerTrialBlocksWrites(bindings))return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
   if(import.meta.env.DEV && (env as any).JUGEST_DEV_SESSION==='1'){
    const {readDevelopmentPrincipal}=await import('../dev/session.mjs');
    const principal=await readDevelopmentPrincipal(request,{enabled:true,db:bindings.DB,bucket:bindings.BUCKET});

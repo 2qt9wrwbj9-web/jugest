@@ -24,9 +24,6 @@ export async function handleOwnerView(request, options) {
   const denied = ownerViewAccess(options);
   if (denied) return denied;
   const path = new URL(request.url).pathname;
-  if (path === '/api/owner-view' && request.method === 'GET') {
-    return Response.json({ok: true, authenticated: true}, {headers: {'cache-control': 'no-store'}});
-  }
   const read = ['GET', 'HEAD'].includes(request.method) &&
     /^\/api\/vps\/stores(?:\/[a-z0-9%:-]+\/(?:status|days(?:\/\d{4}-\d{2}-\d{2})?|analysis\/(?:default|history)|research\/store-read))?$/i.test(path);
   const judge = request.method === 'POST' && path === '/api/vps/judge/machines';
@@ -34,10 +31,17 @@ export async function handleOwnerView(request, options) {
   if (judge && request.headers.get('origin') !== new URL(request.url).origin) {
     return reply('origin_denied', 403);
   }
+  if (read && options.allowedStoreIds) {
+    let storeId;
+    try { storeId = decodeURIComponent(path.split('/')[4] ?? ''); }
+    catch { return reply('owner_view_scope_denied', 403); }
+    if (storeId && !options.allowedStoreIds.has(storeId)) return reply('owner_view_scope_denied', 403);
+  }
   return handleStoreRead(request, {
     db: options.db, bucket: options.bucket,
     // This principal is confined to the allowlist above. It has no relay
     // identity and is never persisted or handed to an analysis write endpoint.
-    scopedRead: {principal: {authType: 'owner-view'}, canAccess: canReadPia},
+    scopedRead: {principal: {authType: 'owner-view'}, canAccess: (metadata, id) =>
+      (!options.allowedStoreIds || options.allowedStoreIds.has(id)) && canReadPia(metadata, id)},
   });
 }

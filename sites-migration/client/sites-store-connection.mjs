@@ -15,7 +15,7 @@ export function withDisplayMachineNames(payload, registry = globalThis.JugestMac
 export function createSitesStoreConnection({fetchFn=globalThis.fetch.bind(globalThis),storage=globalThis.localStorage,cookieAuth=false,eventTarget=globalThis,onState=()=>{}}={}){
  let active=0,state={loading:false,error:null};
  const emit=()=>onState({...state,loading:active>0});
- const tracked=async(...args)=>{active++;emit();try{const response=await fetchFn(...args);if(!response.ok){state.error={status:response.status,message:response.status===401?'店舗データを読むための認証が必要です。':response.status===403?'この店舗を閲覧する権限がありません。':'店舗データを読み込めませんでした。'};let detail=null;try{detail=await response.clone().json()}catch{}if(detail?.code)state.error.message+='（'+String(detail.code)+'）';if(detail?.code==='development_request_failed')state.error.message+=' '+String(detail.message)}else state.error=null;return response}catch(error){state.error={status:0,message:'店舗データへの通信に失敗しました。'};throw error}finally{active--;emit()}};
+ const tracked=async(...args)=>{active++;emit();try{const response=await fetchFn(...args);if(!response.ok){state.error={status:response.status,message:response.status===401?'店舗データを読むための認証が必要です。':response.status===403?'この店舗を閲覧する権限がありません。':'店舗データを読み込めませんでした。'};let detail=null;try{detail=await response.clone().json()}catch{}if(detail?.code==='owner_trial_data_locked')state.error.message='本人限定試用の接続確認中です。店舗データはまだ開いていません。';else if(detail?.code)state.error.message+='（'+String(detail.code)+'）';if(detail?.code==='development_request_failed')state.error.message+=' '+String(detail.message)}else state.error=null;return response}catch(error){state.error={status:0,message:'店舗データへの通信に失敗しました。'};throw error}finally{active--;emit()}};
  const client=createVpsAnalyticsClient({fetchFn:tracked,storage,cookieAuth});
  const remote=createRemoteStoreCache({client: {
   ...client,
@@ -88,7 +88,7 @@ function install(){
   const jobs=!ownerView&&app.state.screen==='analysis'&&currentStore?jobPanel.markup(currentStore):'';
   const ownerMarkup=ownerView
    ? '<p>本人向け閲覧。台データ・設定判別・保存済み分析を表示します。</p>' +
-     (state.error?.status===401?'<a href="/signin-with-chatgpt?return_to=%2F" target="_top">ChatGPTでログイン</a>':'')
+     (state.error?.status===401?'<a href="/signin-with-chatgpt?return_to=%2F" target="_top">ChatGPTでログイン</a>':'<a href="/signout-with-chatgpt?return_to=%2F" target="_top">ChatGPTからログアウト</a>')
    : devSession?'<p><a href="/api/dev-pia-import">許可済み原本の照合・取り込み（開発用）</a></p>':'';
   const html=`<p role="${error?'alert':'status'}" aria-live="polite">${esc(text)}</p>${archivedMarkup}${originMarkup}${collectionMarkup}${shortage}${history}${jobs}${ownerMarkup}<button type="button" class="secondary-btn" data-sites-refresh>店舗データを更新</button>`;
   if(panel.__sitesMarkup!==html){panel.__sitesMarkup=html;panel.innerHTML=html;jobPanel.bind(panel);panel.querySelector('[data-sites-refresh]').onclick=()=>{selected='';void connection.refresh().catch(()=>{});schedule()}}
@@ -114,6 +114,7 @@ function install(){
     if(dev.ok)devSession=!!(await dev.json()).authenticated;
    }
   }catch{}
+  if(ownerView)globalThis.addEventListener('pageshow', event=>{if(event.persisted)globalThis.location.reload()});
   connection=createSitesStoreConnection({cookieAuth:ownerView||devSession,...(ownerView?{storage:null}:{}),onState:next=>{state=next;schedule()}});
   jobPanel=createAnalysisJobController({client:connection.client,onChange:schedule,onComplete:async(job)=>{if(job.kind==='store-analysis'&&app?.state?.activeStore===selected)await app.loadVpsStoreAnalysis();if(selected)await load(selected)}});
   globalThis.JUGEST_VPS_ANALYTICS_CLIENT=connection.client;
